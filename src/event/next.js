@@ -1,22 +1,24 @@
+import { Vault } from "../vault"
+
 function nextPage() {
-    if (localStorage.getItem("viewer") === "on") {
+    if (new Vault().viewer) {
         return
     }
-    var x = document.querySelector("a.active + a")
-    var xx = document.querySelector("li.active + li > a")
-    var xxx = document.querySelector("a.vrow.column")
+    var x = $("a.active + a")
+    var xx = $("li.active + li > a")
+    var xxx = $("a.vrow.column")
     var endOfPage = (location.pathname.match(/\//g) || []).length === 2
     if(x == null && endOfPage) {
-        location.href = xxx.href
+        location.href = xxx.attr("href")
     } else if (x === null && !endOfPage) {
-        location.href = xx.href
+        location.href = xx.attr("href")
     } else {
-        location.href = x.href
+        location.href = x.attr("href")
     }
 }
 
 function prevPage() {
-    if (localStorage.getItem("viewer") === "on") {
+    if (new Vault().viewer) {
         return
     }
     history.back()

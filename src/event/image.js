@@ -9,6 +9,8 @@
  * Date: 2023-09-17T03:16:38.052Z
  */
 
+import { Vault } from "../vault";
+
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
         typeof define === 'function' && define.amd ? define(factory) :
@@ -3267,7 +3269,7 @@ let gallery;
 let t = false;
 
 function viewInit() {
-    localStorage.setItem("viewer", "off")
+    $('head').append('<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.css">');
 
     let article = document.querySelector('.article-body');
 
@@ -3283,7 +3285,7 @@ function viewInit() {
     );
 
     article.addEventListener('view', function () {
-        localStorage.setItem("viewer", "on")
+        new Vault().viewer = true
     });
     article.addEventListener('viewed', function (event) {
         let image = event.detail.image
@@ -3292,12 +3294,12 @@ function viewInit() {
         }
     });
     article.addEventListener('hide', function () {
-        localStorage.setItem("viewer", "off")
+        new Vault().viewer = false
     });
 }
 
 function view() {
-    if (localStorage.getItem("viewer") === "on") {
+    if (new Vault().viewer) {
         gallery.hide();
     } else {
         gallery.show()
@@ -3313,6 +3315,8 @@ function doToggle() {
     if (t) {
         gallery.toggle()
         gallery.moveTo(0, 0)
+    } else {
+        gallery.reset()
     }
 }
 
