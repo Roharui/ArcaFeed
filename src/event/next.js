@@ -4,16 +4,16 @@ function nextPage() {
     if (new Vault().viewer) {
         return
     }
-    var x = $("a.active + a")
-    var xx = $("li.active + li > a")
-    var xxx = $("a.vrow.column")
+    var x = document.querySelector("a.active + a")
+    var xx = document.querySelector("li.active + li > a")
+    var xxx = document.querySelector("a.vrow.column")
     var endOfPage = (location.pathname.match(/\//g) || []).length === 2
     if(x == null && endOfPage) {
-        location.href = xxx.attr("href")
+        location.href = xxx.href
     } else if (x === null && !endOfPage) {
-        location.href = xx.attr("href")
+        location.href = xx.href
     } else {
-        location.href = x.attr("href")
+        location.href = x.href
     }
 }
 
