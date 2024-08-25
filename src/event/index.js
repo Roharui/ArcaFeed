@@ -1,16 +1,15 @@
 
 import { resetConfig } from "../config";
+import { nextComment, prevComment } from "./comment";
 import { disableFullScreen, enableFullscreen } from "./fullscreen";
 import { toggle, view } from "./image"
-import { nextComment, nextPage, prevComment, prevPage } from "./next";
+import { nextPage, prevPage } from "./next";
 
 const KEYBORD_EVENT = {
     "ArrowLeft": prevPage,
     "ArrowRight": nextPage,
     "ArrowDown": enableFullscreen,
-    "Enter": () => {
-        $('html, body').animate({scrollTop: $("#comment").offset().top}, 200)
-    },
+    "Enter": nextComment,
     "Shift": view,
     "/": toggle,
     "\\": disableFullScreen,
@@ -18,12 +17,14 @@ const KEYBORD_EVENT = {
 }
 
 const CONTROL_KEYBORD_EVENT = {
-    "ArrowLeft": prevComment,
-    "ArrowRight": nextComment,
+    "Enter": prevComment,
+    "ArrowLeft": () => history.back(),
+    "ArrowRight": () => history.forward(),
 }
 
 function event() {
     $(document).on("keydown", function(e) {
+        console.log(e.key)
         if (KEYBORD_EVENT[e.key] == undefined) return;
         if (e.ctrlKey) {
             CONTROL_KEYBORD_EVENT[e.key]()

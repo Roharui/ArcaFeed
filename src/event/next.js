@@ -20,7 +20,7 @@ function nextPage() {
         href = x.href
     }
 
-    location.href = href
+    location.href = href + "&cp=1"
 }
 
 function prevPage(e) {
@@ -42,35 +42,8 @@ function prevPage(e) {
         href = x.attr("href")
     }
 
-    location.href = href
+    location.href = href + "&cp=1"
 }
 
-function nextComment() {
-    if (new Vault().viewer) {
-        return
-    }
 
-    var x = document.querySelector("div.article-comment li.page-item.active + li > a")
-
-    if (x === undefined) {
-        return
-    }
-
-    location.href = x.href
-}
-
-function prevComment() {
-    if (new Vault().viewer) {
-        return
-    }
-
-    var x = $("div.article-comment li.page-item.active").prev("li").find("a")
-
-    if (!x.length) {
-        return
-    }
-
-    location.href = x.attr("href")
-}
-
-export { prevPage, nextPage, nextComment, prevComment }
+export { prevPage, nextPage }
