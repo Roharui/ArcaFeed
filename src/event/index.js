@@ -23,7 +23,7 @@ const CONTROL_KEYBORD_EVENT = {
 }
 
 function event() {
-    $(document).on("keyup", function(e) {
+    $(document).on("keydown", function(e) {
         if (KEYBORD_EVENT[e.key] == undefined) return;
         if (e.ctrlKey) {
             CONTROL_KEYBORD_EVENT[e.key]()
