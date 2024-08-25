@@ -1,3 +1,4 @@
+
 import { Vault } from "../vault"
 
 function nextPage() {
@@ -17,7 +18,7 @@ function nextPage() {
     }
 }
 
-function prevPage() {
+function prevPage(e) {
     if (new Vault().viewer) {
         return
     }

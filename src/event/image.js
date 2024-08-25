@@ -2610,7 +2610,8 @@ import { Vault } from "../vault";
             if (this.imageData.ratio === 1) {
                 this.zoomTo(this.imageData.oldRatio, true, null, _originalEvent);
             } else {
-                this.zoomTo(1, true, null, _originalEvent);
+                this.zoomTo(1, true, {x: window.innerWidth}, _originalEvent);
+                this.moveTo(this.imageData.left, 0)
             }
 
             return this;
@@ -3266,7 +3267,6 @@ import { Vault } from "../vault";
 }));
 
 let gallery;
-let t = false;
 
 function viewInit() {
     $('head').append('<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.css">');
@@ -3285,13 +3285,9 @@ function viewInit() {
     );
 
     article.addEventListener('view', function () {
-        new Vault().viewer = true
     });
     article.addEventListener('viewed', function (event) {
-        let image = event.detail.image
-        if (image.naturalWidth < image.naturalHeight) {
-            doToggle()
-        }
+        new Vault().viewer = true
     });
     article.addEventListener('hide', function () {
         new Vault().viewer = false
@@ -3307,17 +3303,7 @@ function view() {
 }
 
 function toggle() {
-    t = !t
-    doToggle()
-}
-
-function doToggle() {
-    if (t) {
-        gallery.toggle()
-        gallery.moveTo(0, 0)
-    } else {
-        gallery.reset()
-    }
+    gallery.toggle()
 }
 
 export { viewInit, view, toggle }

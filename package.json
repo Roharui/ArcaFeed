@@ -11,9 +11,6 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "jquery": "^3.7.1",
-    "jquery-viewer": "^1.0.1",
-    "viewerjs": "^1.11.6"
   },
   "devDependencies": {
     "@types/jquery": "^3.5.30",
