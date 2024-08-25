@@ -2622,6 +2622,10 @@ import { Vault } from "../vault";
                 this.zoomTo(window.innerWidth / this.imageData.naturalWidth, true, {x: window.innerWidth / 2});
             }
 
+            if (this.imageData.naturalHeight > this.imageData.naturalWidth) {
+                this.moveTo(this.imageData.left, 0)
+            }
+
             return this;
         },
         // Reset the image to its initial state
@@ -3305,7 +3309,6 @@ function viewInit() {
     article.addEventListener('viewed', function () {
         if (widthToggle) {
             gallery.fitWidth();
-            gallery.moveTo(gallery.imageData.left, 0)
         }
     });
     article.addEventListener('hide', function () {
@@ -3326,7 +3329,6 @@ function toggle() {
     gallery.tooltip()
     if (widthToggle) {
         gallery.fitWidth();
-        gallery.moveTo(gallery.imageData.left, 0)
     } else {
         gallery.zoomTo(gallery.imageData.oldRatio, true, null);
         gallery.reset()
