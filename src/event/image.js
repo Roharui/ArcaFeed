@@ -3302,6 +3302,7 @@ function viewInit() {
     article.addEventListener('viewed', function () {
         if (widthToggle) {
             gallery.fitWidth();
+            gallery.moveTo(gallery.imageData.left, 0)
         }
     });
     article.addEventListener('hide', function () {
