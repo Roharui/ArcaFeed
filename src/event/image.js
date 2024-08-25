@@ -3279,7 +3279,6 @@ import { Vault } from "../vault";
 }));
 
 let gallery;
-let widthToggle = false;
 
 function viewInit() {
     let article = document.querySelector('.article-body');
@@ -3305,7 +3304,7 @@ function viewInit() {
         new Vault().viewer = true
     });
     article.addEventListener('viewed', function () {
-        if (widthToggle) {
+        if (new Vault().widthToggle) {
             gallery.fitWidth();
         }
     });
@@ -3323,9 +3322,8 @@ function view() {
 }
 
 function toggle() {
-    widthToggle = !widthToggle;
-    gallery.tooltip()
-    if (widthToggle) {
+    new Vault().widthToggle = !new Vault().widthToggle;
+    if (new Vault().widthToggle) {
         gallery.fitWidth();
     } else {
         gallery.zoomTo(gallery.imageData.oldRatio, true, null);

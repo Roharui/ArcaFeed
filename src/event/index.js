@@ -14,13 +14,12 @@ const KEYBORD_EVENT = {
     "Shift": view,
     "/": toggle,
     "\\": disableFullScreen,
-    "~": () => {}
+    "`": () => resetConfig(),
 }
 
 const CONTROL_KEYBORD_EVENT = {
     "ArrowLeft": prevComment,
     "ArrowRight": nextComment,
-    "~": () => resetConfig(),
 }
 
 function event() {

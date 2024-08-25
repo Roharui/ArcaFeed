@@ -5,6 +5,7 @@ class Vault {
     constructor() {
         if (Vault.instance) return Vault.instance;
         this.viewer = false;
+        this.widthToggle = false;
         Vault.instance = this;
     }
 }
