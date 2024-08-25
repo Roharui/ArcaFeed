@@ -1,12 +1,14 @@
 
 import Toastify from 'toastify-js'
 import { Vault } from "../vault";
+import { enableFullscreen } from '../event/fullscreen';
 
 const DEFAULT_CONFIG_KEY = "arcalive_tampermonkey_config"
 
 const DEFAULT_CONFIG = {
     default_comment_hide: false,
     default_right_sidebar_hide: true,
+    default_fullscreen: true,
     default_widthfit: true,
 }
 

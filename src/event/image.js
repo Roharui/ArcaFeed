@@ -10,7 +10,6 @@
  */
 
 import { Vault } from "../vault";
-import { enableFullscreen } from "./fullscreen";
 
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
@@ -3315,11 +3314,10 @@ function viewInit() {
 }
 
 function view() {
-    enableFullscreen()
-    if (new Vault().viewer) {
-        gallery.hide();
-    } else {
+    if (!new Vault().viewer) {
         gallery.show()
+    } else {
+        gallery.hide();
     }
 }
 

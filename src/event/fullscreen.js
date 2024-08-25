@@ -1,11 +1,14 @@
 
-import { Vault } from "../vault";
+function isFullscreen() {
+    return (
+        (document.fullscreenElement && document.fullscreenElement !== null) ||
+        (document.webkitFullscreenElement && document.webkitFullscreenElement !== null) ||
+        (document.mozFullScreenElement && document.mozFullScreenElement !== null) ||
+        (document.msFullscreenElement && document.msFullscreenElement !== null)
+    )
+}
 
 function enableFullscreen() {
-    if (new Vault().viewer) {
-        return;
-    }
-
     var elem = document.documentElement;
     var rfs = elem.requestFullscreen
         || elem.webkitRequestFullScreen
@@ -15,17 +18,10 @@ function enableFullscreen() {
 }
 
 function disableFullScreen() {
-    let isFullscreen = (
-        (document.fullscreenElement && document.fullscreenElement !== null) ||
-        (document.webkitFullscreenElement && document.webkitFullscreenElement !== null) ||
-        (document.mozFullScreenElement && document.mozFullScreenElement !== null) ||
-        (document.msFullscreenElement && document.msFullscreenElement !== null)
-    )
-
-    if (isFullscreen) {
+    if (isFullscreen()) {
         const cancellFullScreen = document.exitFullscreen || document.mozCancelFullScreen || document.webkitExitFullscreen || document.msExitFullscreen;
         cancellFullScreen.call(document);
     }
 }
 
-export { enableFullscreen, disableFullScreen }
+export { isFullscreen, enableFullscreen, disableFullScreen }

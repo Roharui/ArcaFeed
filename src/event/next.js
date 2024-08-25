@@ -23,7 +23,7 @@ function nextPage() {
     location.href = href + "&cp=1"
 }
 
-function prevPage(e) {
+function prevPage() {
     if (new Vault().viewer) {
         return
     }
