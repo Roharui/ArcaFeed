@@ -31,7 +31,7 @@ function event() {
     })
     $(document).on("keyup", function(e) {
         if (["Shift", "ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp"].includes(e.key) && !isFullscreen()) {
-            enableFullscreen()
+            // enableFullscreen()
         }
     })
 }
