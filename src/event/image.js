@@ -2616,7 +2616,7 @@ import { Vault } from "../vault";
             return this;
         },
         fitWidth: function fitWdith() {
-            if (window.innerWidth > this.imageData.naturalWidth) {
+            if (window.innerHeight > window.innerWidth) {
                 this.zoomTo(1, true, {x: window.innerWidth / 2, y: 0});
             } else {
                 this.zoomTo(window.innerWidth / this.imageData.naturalWidth, true, {x: window.innerWidth / 2, y: 0});
