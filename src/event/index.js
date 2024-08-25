@@ -1,21 +1,30 @@
 
 import { resetConfig } from "../config";
 import { toggle, view } from "./image"
-import { nextPage, prevPage } from "./next";
+import { nextComment, nextPage, prevComment, prevPage } from "./next";
 
 const KEYBORD_EVENT = {
     "ArrowLeft": prevPage,
     "ArrowRight": nextPage,
-    "Enter": () => $('html, body').animate({scrollTop: $("#comment").offset().top}, 200),
+    "Enter": () => $('body').animate({scrollTop: $("#comment").offset().top}, 200),
     "Shift": view,
     "/": toggle,
     "\\": resetConfig
 }
 
+const CONTROL_KEYBORD_EVENT = {
+    "ArrowLeft": prevComment,
+    "ArrowRight": nextComment,
+}
+
 function event() {
     $(document).on("keyup", function(e) {
         if (KEYBORD_EVENT[e.key] == undefined) return;
-        KEYBORD_EVENT[e.key]()
+        if (e.ctrlKey) {
+            CONTROL_KEYBORD_EVENT[e.key]()
+        } else {
+            KEYBORD_EVENT[e.key]()
+        }
     })
 }
 

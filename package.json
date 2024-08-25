@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node app.js",
     "dev": "webpack-dev-server --mode development",
-    "build": "webpack --mode production"
+    "build": "webpack --mode production",
+    "build-watch": "webpack --watch --mode production"
   },
   "author": "",
   "license": "ISC",

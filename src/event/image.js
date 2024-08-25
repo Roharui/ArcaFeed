@@ -2610,8 +2610,16 @@ import { Vault } from "../vault";
             if (this.imageData.ratio === 1) {
                 this.zoomTo(this.imageData.oldRatio, true, null, _originalEvent);
             } else {
-                this.zoomTo(1, true, {x: window.innerWidth}, _originalEvent);
-                this.moveTo(this.imageData.left, 0)
+                this.zoomTo(1, true, null, _originalEvent);
+            }
+
+            return this;
+        },
+        fitWidth: function fitWdith() {
+            if (window.innerWidth > this.imageData.naturalWidth) {
+                this.zoomTo(1, true, {x: window.innerWidth / 2, y: 0});
+            } else {
+                this.zoomTo(window.innerWidth / this.imageData.naturalWidth, true, {x: window.innerWidth / 2, y: 0});
             }
 
             return this;
@@ -3267,6 +3275,7 @@ import { Vault } from "../vault";
 }));
 
 let gallery;
+let widthToggle = false;
 
 function viewInit() {
     $('head').append('<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.css">');
@@ -3281,13 +3290,19 @@ function viewInit() {
         {
             loop: false,
             zoomOnWheel: false,
+            filter(image) {
+                return !image.className.includes("twemoji")
+            }
         }
     );
 
     article.addEventListener('view', function () {
-    });
-    article.addEventListener('viewed', function (event) {
         new Vault().viewer = true
+    });
+    article.addEventListener('viewed', function () {
+        if (widthToggle) {
+            gallery.fitWidth();
+        }
     });
     article.addEventListener('hide', function () {
         new Vault().viewer = false
@@ -3303,7 +3318,12 @@ function view() {
 }
 
 function toggle() {
-    gallery.toggle()
+    widthToggle = !widthToggle;
+    if (widthToggle) {
+        gallery.fitWidth();
+    } else {
+        gallery.zoomTo(gallery.imageData.oldRatio, true, null);
+    }
 }
 
 export { viewInit, view, toggle }
