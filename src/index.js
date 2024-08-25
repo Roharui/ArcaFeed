@@ -1,9 +1,9 @@
-import { config } from "./config"
+import { init } from "./config"
 import { event } from "./event"
 import { viewInit } from "./event/image"
 
-(function() {
-    config()
+$(function () {
+    init()
     viewInit()
     event()
-})()
+})

@@ -1,20 +1,24 @@
 
 import { resetConfig } from "../config";
+import { disableFullScreen, enableFullscreen } from "./fullscreen";
 import { toggle, view } from "./image"
 import { nextComment, nextPage, prevComment, prevPage } from "./next";
 
 const KEYBORD_EVENT = {
     "ArrowLeft": prevPage,
     "ArrowRight": nextPage,
+    "ArrowDown": enableFullscreen,
     "Enter": () => $('body').animate({scrollTop: $("#comment").offset().top}, 200),
     "Shift": view,
     "/": toggle,
-    "\\": resetConfig
+    "\\": disableFullScreen,
+    "~": () => {}
 }
 
 const CONTROL_KEYBORD_EVENT = {
     "ArrowLeft": prevComment,
     "ArrowRight": nextComment,
+    "~": () => resetConfig(),
 }
 
 function event() {

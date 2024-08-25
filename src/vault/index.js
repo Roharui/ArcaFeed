@@ -4,7 +4,7 @@ class Vault {
 
     constructor() {
         if (Vault.instance) return Vault.instance;
-        this.viewer = false
+        this.viewer = false;
         Vault.instance = this;
     }
 }

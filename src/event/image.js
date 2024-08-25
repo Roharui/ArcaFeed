@@ -1448,7 +1448,7 @@ import { Vault } from "../vault";
                 // ArrowLeft
                 case 37:
                     if (event.ctrlKey) {
-                        this.move(-20, 0)
+                        this.move(-30, 0)
                         break;
                     }
                     if (this.played && this.playing) {
@@ -1469,13 +1469,13 @@ import { Vault } from "../vault";
                     }
 
                     // Zoom in
-                    this.move(0, 20)
+                    this.move(0, 30)
                     break;
 
                 // ArrowRight
                 case 39:
                     if (event.ctrlKey) {
-                        this.move(20, 0)
+                        this.move(30, 0)
                         break;
                     }
                     if (this.played && this.playing) {
@@ -1496,7 +1496,7 @@ import { Vault } from "../vault";
                     }
 
                     // Zoom out
-                    this.move(0, -20)
+                    this.move(0, -30)
                     break;
 
                 // Ctrl + 0
@@ -3282,8 +3282,6 @@ let gallery;
 let widthToggle = false;
 
 function viewInit() {
-    $('head').append('<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.css">');
-
     let article = document.querySelector('.article-body');
 
     if (article == null) {
