@@ -2617,9 +2617,9 @@ import { Vault } from "../vault";
         },
         fitWidth: function fitWdith() {
             if (window.innerWidth > window.innerHeight) {
-                this.zoomTo(1, true, {x: window.innerWidth / 2, y: 0});
+                this.zoomTo(1, true, {x: window.innerWidth / 2});
             } else {
-                this.zoomTo(window.innerWidth / this.imageData.naturalWidth, true, {x: window.innerWidth / 2, y: 0});
+                this.zoomTo(window.innerWidth / this.imageData.naturalWidth, true, {x: window.innerWidth / 2});
             }
 
             return this;
@@ -3319,10 +3319,13 @@ function view() {
 
 function toggle() {
     widthToggle = !widthToggle;
+    gallery.tooltip()
     if (widthToggle) {
         gallery.fitWidth();
+        gallery.moveTo(gallery.imageData.left, 0)
     } else {
         gallery.zoomTo(gallery.imageData.oldRatio, true, null);
+        gallery.reset()
     }
 }
 
