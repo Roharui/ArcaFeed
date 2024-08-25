@@ -3290,6 +3290,9 @@ function viewInit() {
         {
             loop: false,
             zoomOnWheel: false,
+            tooltip: false,
+            title: false,
+            navbar: false,
             filter(image) {
                 return !image.className.includes("twemoji")
             }
