@@ -8,7 +8,9 @@ const KEYBORD_EVENT = {
     "ArrowLeft": prevPage,
     "ArrowRight": nextPage,
     "ArrowDown": enableFullscreen,
-    "Enter": () => $('body').animate({scrollTop: $("#comment").offset().top}, 200),
+    "Enter": () => {
+        $('html, body').animate({scrollTop: $("#comment").offset().top}, 200)
+    },
     "Shift": view,
     "/": toggle,
     "\\": disableFullScreen,
