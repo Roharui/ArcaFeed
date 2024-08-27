@@ -1174,7 +1174,7 @@ import { Vault } from "../vault";
                 imageData = this.imageData;
 
             setStyle(image, assign(
-                this.isFitWidth 
+                this.isFitWidth ?? this.options.isFitWidth
                 ? 
                 {
                     width: imageData.naturalWidth * imageData.fitRatio,
