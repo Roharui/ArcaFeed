@@ -12,6 +12,7 @@ class Vault {
 
     isViewer() {
         let gallery = this.gallery
+        if (gallery === null) return false;
         return gallery.showing || gallery.isShown || gallery.showing
     }
 }
