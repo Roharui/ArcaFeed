@@ -1134,6 +1134,14 @@ import { Vault } from "../vault";
                 var left = (viewerWidth - width) / 2;
                 var top = (viewerHeight - height) / 2;
                 var ratio = width / naturalWidth
+                                
+                if (options.isFitWidth) {
+                    left = 0
+                    top = 0
+                    ratio = window.innerWidth / naturalWidth
+                    width = naturalWidth * ratio;
+                    height = naturalHeight * ratio;
+                }
 
                 var imageData = {
                     left: left,
@@ -1174,15 +1182,6 @@ import { Vault } from "../vault";
                 imageData = this.imageData;
 
             setStyle(image, assign(
-                this.isFitWidth ?? this.options.isFitWidth
-                ? 
-                {
-                    width: imageData.naturalWidth * imageData.fitRatio,
-                    height: imageData.naturalHeight * imageData.fitRatio,
-                    marginLeft: 0,
-                    marginTop: 0
-                }                
-                :
                 {
                     width: imageData.width,
                     height: imageData.height,
@@ -2637,21 +2636,6 @@ import { Vault } from "../vault";
 
             return this;
         },
-        fitWidth: function fitWdith() {
-            // if (window.innerWidth > window.innerHeight) {
-            //     this.zoomTo(1, true, {x: window.innerWidth / 2});
-            // } else {
-            //     this.zoomTo(window.innerWidth / this.imageData.naturalWidth, true, {x: window.innerWidth / 2});
-            // }
-
-            // if (this.imageData.naturalHeight > this.imageData.naturalWidth) {
-            //     this.moveTo(this.imageData.left, 0)
-            // }
-
-            this.zoomTo(1, true, {x: window.innerWidth / 2});
-
-            return this;
-        },
         // Reset the image to its initial state
         reset: function reset() {
             if (this.viewed && !this.played) {
@@ -2712,7 +2696,12 @@ import { Vault } from "../vault";
                             var changedIndex = changedIndexes.indexOf(this.index);
                             if (changedIndex >= 0) {
                                 this.viewed = false;
-                                this.view(Math.max(Math.min(this.index - changedIndex, this.length - 1), 0));
+                                this.view(this.index)
+                                // console.log(this.index)
+                                // console.log(Math.max(Math.min(this.index - changedIndex, this.length - 1), 0))
+                                // console.log(changedIndexes)
+                                // console.log(changedIndex)
+                                // this.view(Math.max(Math.min(this.index - changedIndex, this.length - 1), 0));
                             } else {
                                 var activeItem = this.items[this.index];
 
@@ -3328,7 +3317,7 @@ function viewInit(defaultShow) {
             isFitWidth: v.widthToggle,
             filter(image) {
                 return !image.className.includes("twemoji")
-            }
+            },
         }
     );
 
@@ -3359,9 +3348,9 @@ function toggle() {
     let gallery = v.gallery
 
     v.widthToggle = !v.widthToggle;
-    gallery.isFitWidth = v.widthToggle
+    gallery.options.isFitWidth = v.widthToggle
     
-    gallery.update();
+    gallery.update()
 }
 
 export { viewInit, view, toggle }
