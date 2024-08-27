@@ -13,19 +13,25 @@ const KEYBORD_EVENT = {
     "/": toggle,
     "\\": () => changeConfig("default_viewer"),
     "`": () => resetConfig(),
+    "Tab": () => {
+        let v = new Vault()
+        console.log(v.isViewer())
+    },
 }
 
 const CONTROL_KEYBORD_EVENT = {
     "Enter": prevComment,
     "/": () => changeConfig("default_widthfit"),
     "ArrowLeft": () => {
-        if (new Vault().viewer) {
+        let v = new Vault()
+        if (v.isViewer()) {
             return
         }
         history.back()
     },
     "ArrowRight": () => {
-        if (new Vault().viewer) {
+        let v = new Vault()
+        if (v.isViewer()) {
             return
         }
         history.forward()
@@ -34,6 +40,7 @@ const CONTROL_KEYBORD_EVENT = {
 
 function event() {
     $(document).on("keydown", function(e) {
+        console.log(e.key)
         if (KEYBORD_EVENT[e.key] == undefined) return;
         if (e.ctrlKey) {
             CONTROL_KEYBORD_EVENT[e.key]()

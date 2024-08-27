@@ -192,6 +192,8 @@ import { Vault } from "../vault";
          * @type {boolean}
          */
         loop: true,
+        hideAtEnd: false,
+        isFitWidth: false,
         /**
          * Min width of the viewer in inline mode.
          * @type {number}
@@ -1131,6 +1133,8 @@ import { Vault } from "../vault";
                 height = Math.min(height * initialCoverage, naturalHeight);
                 var left = (viewerWidth - width) / 2;
                 var top = (viewerHeight - height) / 2;
+                var ratio = width / naturalWidth
+
                 var imageData = {
                     left: left,
                     top: top,
@@ -1139,11 +1143,13 @@ import { Vault } from "../vault";
                     width: width,
                     height: height,
                     oldRatio: 1,
-                    ratio: width / naturalWidth,
+                    ratio: ratio,
+                    fitRatio: window.innerWidth / naturalWidth,
                     aspectRatio: aspectRatio,
                     naturalWidth: naturalWidth,
                     naturalHeight: naturalHeight
                 };
+
                 var initialImageData = assign({}, imageData);
                 if (options.rotatable) {
                     imageData.rotate = oldImageData.rotate || 0;
@@ -1166,13 +1172,25 @@ import { Vault } from "../vault";
             var _this3 = this;
             var image = this.image,
                 imageData = this.imageData;
-            setStyle(image, assign({
-                width: imageData.width,
-                height: imageData.height,
-                // XXX: Not to use translateX/Y to avoid image shaking when zooming
-                marginLeft: imageData.x,
-                marginTop: imageData.y
-            }, getTransforms(imageData)));
+
+            setStyle(image, assign(
+                this.isFitWidth 
+                ? 
+                {
+                    width: imageData.naturalWidth * imageData.fitRatio,
+                    height: imageData.naturalHeight * imageData.fitRatio,
+                    marginLeft: 0,
+                    marginTop: 0
+                }                
+                :
+                {
+                    width: imageData.width,
+                    height: imageData.height,
+                    marginLeft: imageData.x,
+                    marginTop: imageData.y
+                }
+                , getTransforms(imageData)
+            ));
             if (done) {
                 if ((this.viewing || this.moving || this.rotating || this.scaling || this.zooming) && this.options.transition && hasClass(image, CLASS_TRANSITION)) {
                     var onTransitionEnd = function onTransitionEnd() {
@@ -1993,9 +2011,12 @@ import { Vault } from "../vault";
             var loop = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
             var maxIndex = this.length - 1;
             var index = this.index + 1;
-            if (index > maxIndex) {
-                // index = loop ? 0 : maxIndex;
+            if (index > maxIndex && this.options.hideAtEnd) {
                 this.hide()
+                return this;
+            }
+            if (index > maxIndex) {
+                index = loop ? 0 : maxIndex;
             }
             this.view(index);
             return this;
@@ -2617,15 +2638,17 @@ import { Vault } from "../vault";
             return this;
         },
         fitWidth: function fitWdith() {
-            if (window.innerWidth > window.innerHeight) {
-                this.zoomTo(1, true, {x: window.innerWidth / 2});
-            } else {
-                this.zoomTo(window.innerWidth / this.imageData.naturalWidth, true, {x: window.innerWidth / 2});
-            }
+            // if (window.innerWidth > window.innerHeight) {
+            //     this.zoomTo(1, true, {x: window.innerWidth / 2});
+            // } else {
+            //     this.zoomTo(window.innerWidth / this.imageData.naturalWidth, true, {x: window.innerWidth / 2});
+            // }
 
-            if (this.imageData.naturalHeight > this.imageData.naturalWidth) {
-                this.moveTo(this.imageData.left, 0)
-            }
+            // if (this.imageData.naturalHeight > this.imageData.naturalWidth) {
+            //     this.moveTo(this.imageData.left, 0)
+            // }
+
+            this.zoomTo(1, true, {x: window.innerWidth / 2});
 
             return this;
         },
@@ -3279,46 +3302,52 @@ import { Vault } from "../vault";
 
 }));
 
-let gallery;
+function viewInit(defaultShow) {
+    let v = new Vault()
 
-function viewInit() {
+    if (!!v.gallery) {
+        return
+    }
+
     let article = document.querySelector('.article-body');
 
     if (article == null) {
         return;
     }
 
-    gallery = new Viewer(article,
+    let gallery = new Viewer(article,
         {
             loop: false,
             zoomOnWheel: false,
             tooltip: false,
+            button: false,
+            toolbar: false,
             title: false,
             navbar: false,
+            hideAtEnd: true,
+            isFitWidth: v.widthToggle,
             filter(image) {
                 return !image.className.includes("twemoji")
             }
         }
     );
 
-    article.addEventListener('view', function () {
-        new Vault().viewer = true
-    });
-    article.addEventListener('viewed', function () {
-        if (new Vault().widthToggle) {
-            gallery.fitWidth();
-        }
-    });
-    article.addEventListener('hide', function () {
-        new Vault().viewer = false
-    });
+    if (defaultShow) {
+        gallery.show()
+    }
+
+    v.gallery = gallery;
 }
 
 function view() {
+    let v = new Vault()
+    let gallery = v.gallery;
+
     if (gallery == null) {
         return
     }
-    if (!new Vault().viewer) {
+
+    if (!v.isViewer()) {
         gallery.show()
     } else {
         gallery.hide();
@@ -3326,13 +3355,13 @@ function view() {
 }
 
 function toggle() {
-    new Vault().widthToggle = !new Vault().widthToggle;
-    if (new Vault().widthToggle) {
-        gallery.fitWidth();
-    } else {
-        gallery.zoomTo(gallery.imageData.oldRatio, true, null);
-        gallery.reset()
-    }
+    let v = new Vault()
+    let gallery = v.gallery
+
+    v.widthToggle = !v.widthToggle;
+    gallery.isFitWidth = v.widthToggle
+    
+    gallery.update();
 }
 
 export { viewInit, view, toggle }

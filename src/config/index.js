@@ -1,7 +1,7 @@
 
 import Toastify from 'toastify-js'
 import { Vault } from "../vault";
-import { view } from '../event/image';
+import { viewInit } from '../event/image';
 
 const DEFAULT_CONFIG_KEY = "arcalive_tampermonkey_config"
 
@@ -32,12 +32,10 @@ function config() {
     if (config.default_right_sidebar_hide) {
         $(".right-sidebar").hide()
     }
-    if (config.default_viewer) {
-        view()
-    }
 
     new Vault().widthToggle = config.default_widthfit
 
+    viewInit(config.default_viewer)
 }
 
 function resetConfig() {

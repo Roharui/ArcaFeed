@@ -2,7 +2,7 @@ import { Vault } from "../vault"
 
 function nextComment() {
     let v = new Vault()
-    if (v.viewer) {
+    if (v.isViewer()) {
         return
     }
 
@@ -28,7 +28,7 @@ function nextComment() {
 
 function prevComment() {
     let v = new Vault()
-    if (v.viewer) {
+    if (v.isViewer()) {
         return
     }
 
