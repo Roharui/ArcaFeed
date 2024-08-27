@@ -3,7 +3,7 @@ import { event } from "./event"
 import { viewInit } from "./event/image"
 
 $(function () {
-    init()
     viewInit()
+    init()
     event()
 })

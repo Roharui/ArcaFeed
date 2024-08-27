@@ -1,7 +1,7 @@
 
-import { resetConfig } from "../config";
+import { changeConfig, resetConfig } from "../config";
+import { Vault } from "../vault";
 import { nextComment, prevComment } from "./comment";
-import { enableFullscreen, isFullscreen } from "./fullscreen";
 import { toggle, view } from "./image"
 import { nextPage, prevPage } from "./next";
 
@@ -11,13 +11,25 @@ const KEYBORD_EVENT = {
     "Enter": nextComment,
     "Shift": view,
     "/": toggle,
+    "\\": () => changeConfig("default_viewer"),
     "`": () => resetConfig(),
 }
 
 const CONTROL_KEYBORD_EVENT = {
     "Enter": prevComment,
-    "ArrowLeft": () => history.back(),
-    "ArrowRight": () => history.forward(),
+    "/": () => changeConfig("default_widthfit"),
+    "ArrowLeft": () => {
+        if (new Vault().viewer) {
+            return
+        }
+        history.back()
+    },
+    "ArrowRight": () => {
+        if (new Vault().viewer) {
+            return
+        }
+        history.forward()
+    },
 }
 
 function event() {
@@ -27,11 +39,6 @@ function event() {
             CONTROL_KEYBORD_EVENT[e.key]()
         } else {
             KEYBORD_EVENT[e.key]()
-        }
-    })
-    $(document).on("keyup", function(e) {
-        if (["Shift", "ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp"].includes(e.key) && !isFullscreen()) {
-            // enableFullscreen()
         }
     })
 }

@@ -1,12 +1,14 @@
 
 import Toastify from 'toastify-js'
 import { Vault } from "../vault";
+import { view } from '../event/image';
 
 const DEFAULT_CONFIG_KEY = "arcalive_tampermonkey_config"
 
 const DEFAULT_CONFIG = {
     default_comment_hide: false,
     default_right_sidebar_hide: true,
+    default_viewer: false,
     default_widthfit: false,
 }
 
@@ -29,6 +31,9 @@ function config() {
     }
     if (config.default_right_sidebar_hide) {
         $(".right-sidebar").hide()
+    }
+    if (config.default_viewer) {
+        view()
     }
 
     new Vault().widthToggle = config.default_widthfit
@@ -56,6 +61,14 @@ function changeConfig(key) {
     localStorage.setItem(DEFAULT_CONFIG_KEY, JSON.stringify(_config))
 
     config()
+
+    Toastify({
+        text: `Config - ${key} : ${_config[key] ? "ON" : "OFF"}`,
+        className: "info",
+        style: {
+            background: "linear-gradient(to right, #00b09b, #96c93d)",
+        }
+    }).showToast();
 }
 
 export { init, resetConfig, changeConfig }

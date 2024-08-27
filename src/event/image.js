@@ -1994,7 +1994,8 @@ import { Vault } from "../vault";
             var maxIndex = this.length - 1;
             var index = this.index + 1;
             if (index > maxIndex) {
-                index = loop ? 0 : maxIndex;
+                // index = loop ? 0 : maxIndex;
+                this.hide()
             }
             this.view(index);
             return this;
@@ -3314,6 +3315,9 @@ function viewInit() {
 }
 
 function view() {
+    if (gallery == null) {
+        return
+    }
     if (!new Vault().viewer) {
         gallery.show()
     } else {
