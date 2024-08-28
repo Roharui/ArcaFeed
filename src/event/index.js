@@ -4,6 +4,7 @@ import { Vault } from "../vault";
 import { nextComment, prevComment } from "./comment";
 import { toggle, view } from "./image"
 import { nextPage, prevPage } from "./next";
+import { scrap } from "./scrap";
 
 const KEYBORD_EVENT = {
     "ArrowLeft": prevPage,
@@ -13,6 +14,7 @@ const KEYBORD_EVENT = {
     "/": toggle,
     "\\": () => changeConfig("default_viewer"),
     "`": () => resetConfig(),
+    ".": scrap
 }
 
 const CONTROL_KEYBORD_EVENT = {
