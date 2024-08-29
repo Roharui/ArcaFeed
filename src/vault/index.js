@@ -36,6 +36,10 @@ class Vault {
         return this.cursorLoc
     }
 
+    setCursorLoc(loc) {
+        this.cursorLoc = loc
+    }
+
     setGallery(gallery) {
         this.gallery = gallery
     }

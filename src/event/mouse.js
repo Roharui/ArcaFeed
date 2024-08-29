@@ -24,16 +24,25 @@ function createCursor(e) {
     $('body').append(cursor)
 }
 
+function moveCursor() {
+    let v = new Vault()
+
+    let loc = v.getCursorLoc()
+    let cursor = v.getCursor()
+    
+    cursor.css(Object.assign(CURSOR_CSS, loc))
+}
+
 function cursorMoveLeft(e) {
     e.preventDefault()
 
     let v = new Vault()
     let loc = v.getCursorLoc()
-    let cursor = v.getCursor()
 
     loc.left -= 10;
-    
-    cursor.css(Object.assign(CURSOR_CSS, loc))
+
+    v.setCursorLoc(loc)
+    moveCursor()
 }
 
 function cursorMoveRight(e) {
@@ -41,11 +50,12 @@ function cursorMoveRight(e) {
 
     let v = new Vault()
     let loc = v.getCursorLoc()
-    let cursor = v.getCursor()
 
     loc.left += 10;
     
-    cursor.css(Object.assign(CURSOR_CSS, loc))
+
+    v.setCursorLoc(loc)
+    moveCursor()
 }
 
 function cursorMoveUp(e) {
@@ -53,11 +63,11 @@ function cursorMoveUp(e) {
 
     let v = new Vault()
     let loc = v.getCursorLoc()
-    let cursor = v.getCursor()
 
     loc.top -= 10;
     
-    cursor.css(Object.assign(CURSOR_CSS, loc))
+    v.setCursorLoc(loc)
+    moveCursor()
 }
 
 function cursorMoveDown(e) {
@@ -65,22 +75,21 @@ function cursorMoveDown(e) {
 
     let v = new Vault()
     let loc = v.getCursorLoc()
-    let cursor = v.getCursor()
 
     loc.top += 10;
     
-    cursor.css(Object.assign(CURSOR_CSS, loc))
+    v.setCursorLoc(loc)
+    moveCursor()
 }
 
 function clickCursor(e) {
     e.preventDefault()
 
+    let loc = new Vault().getCursorLoc()
+
     removeCursor(e)
 
-    let loc = new Vault().getCursorLoc()
     let ele = document.elementFromPoint(loc.left + 25, loc.top + 25)
-
-    console.log(ele)
 
     ele.click()
 }
