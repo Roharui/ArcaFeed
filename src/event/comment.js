@@ -2,9 +2,6 @@ import { Vault } from "../vault"
 
 function nextComment() {
     let v = new Vault()
-    if (v.isViewer()) {
-        return
-    }
 
     if (v.currentComment == null) {
         v.currentComment = $("div.article-comment div.comment-item").attr("id")
@@ -28,9 +25,6 @@ function nextComment() {
 
 function prevComment() {
     let v = new Vault()
-    if (v.isViewer()) {
-        return
-    }
 
     if (v.currentComment == null) {
         v.currentComment = $("div.article-comment div.comment-item:last").attr("id")

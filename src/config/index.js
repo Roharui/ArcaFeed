@@ -1,9 +1,17 @@
 
 import Toastify from 'toastify-js'
-import { Vault } from "../vault";
+
+import { CSS_URL } from './css';
 import { viewInit } from '../event/image';
 
 const DEFAULT_CONFIG_KEY = "arcalive_tampermonkey_config"
+
+const CONFIG = {
+    DEFAULT_COMMENT_HIDE: "default_comment_hide",
+    DEFAULT_RIGHT_SIDEBAR_HIDE: "default_right_sidebar_hide",
+    DEFAULT_VIEWER: "default_viewer",
+    DEFAULT_WIDTHFIT: "default_widthfit"
+}
 
 const DEFAULT_CONFIG = {
     default_comment_hide: false,
@@ -13,8 +21,7 @@ const DEFAULT_CONFIG = {
 }
 
 function init() {
-    $('head').append('<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/viewerjs/1.11.6/viewer.min.css">');
-    $('head').append('<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">');
+    CSS_URL.forEach(url => $('head').append($('<link>', {type: "text/css", rel: "stylesheet", href: url})))
     
     config()
 }
@@ -33,9 +40,7 @@ function config() {
         $(".right-sidebar").hide()
     }
 
-    new Vault().widthToggle = config.default_widthfit
-
-    viewInit(config.default_viewer)
+    viewInit(config.default_viewer, config.default_widthfit)
 }
 
 function resetConfig() {
@@ -69,4 +74,4 @@ function changeConfig(key) {
     }).showToast();
 }
 
-export { init, resetConfig, changeConfig }
+export { init, CONFIG, resetConfig, changeConfig }

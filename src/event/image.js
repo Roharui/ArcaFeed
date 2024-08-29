@@ -2636,6 +2636,13 @@ import { Vault } from "../vault";
 
             return this;
         },
+        widthToggle: function widthToggle() {
+            this.options.isFitWidth = !this.options.isFitWidth
+    
+            this.update()
+
+            return this;
+        },
         // Reset the image to its initial state
         reset: function reset() {
             if (this.viewed && !this.played) {
@@ -3291,7 +3298,7 @@ import { Vault } from "../vault";
 
 }));
 
-function viewInit(defaultShow) {
+function viewInit(defaultShow, widthToggle) {
     let v = new Vault()
 
     if (!!v.gallery) {
@@ -3313,8 +3320,9 @@ function viewInit(defaultShow) {
             toolbar: false,
             title: false,
             navbar: false,
+            keyboard: false,
             hideAtEnd: true,
-            isFitWidth: v.widthToggle,
+            isFitWidth: widthToggle,
             filter(image) {
                 return !image.className.includes("twemoji")
             },
@@ -3325,32 +3333,132 @@ function viewInit(defaultShow) {
         gallery.show()
     }
 
-    v.gallery = gallery;
+    v.setGallery(gallery)
 }
 
-function view() {
-    let v = new Vault()
-    let gallery = v.gallery;
-
-    if (gallery == null) {
-        return
-    }
-
-    if (!v.isViewer()) {
-        gallery.show()
-    } else {
-        gallery.hide();
-    }
+function showViewer() {
+    new Vault().runViewer((g) => g.show())
 }
 
-function toggle() {
-    let v = new Vault()
-    let gallery = v.gallery
-
-    v.widthToggle = !v.widthToggle;
-    gallery.options.isFitWidth = v.widthToggle
-    
-    gallery.update()
+function hideViewer() {
+    new Vault().runViewer((g) => g.hide())
 }
 
-export { viewInit, view, toggle }
+function nextImage() {
+    new Vault().runViewer((g) => g.next())
+}
+
+function prevImage() {
+    new Vault().runViewer((g) => g.prev())
+}
+
+function moveDown(e) {
+    e.preventDefault()
+    new Vault().runViewer((g) => g.move(0, 30))
+}
+
+function moveUp(e) {
+    e.preventDefault()
+    new Vault().runViewer((g) => g.move(0, -30))
+}
+
+function widthFit() {
+    new Vault().runViewer((g) => g.widthToggle())
+}
+
+/* 
+
+                // Escape
+                case 27:
+                    if (this.played) {
+                        this.stop();
+                    } else if (options.inline) {
+                        if (this.fulled) {
+                            this.exit();
+                        }
+                    } else {
+                        this.hide();
+                    }
+                    break;
+
+                // Space
+                case 32:
+                    if (this.played) {
+                        this.stop();
+                    }
+                    break;
+
+                // ArrowLeft
+                case 37:
+                    if (event.ctrlKey) {
+                        this.move(-30, 0)
+                        break;
+                    }
+                    if (this.played && this.playing) {
+                        this.playing.prev();
+                    } else {
+                        this.prev(options.loop);
+                    }
+                    break;
+
+                // ArrowUp
+                case 38:
+                    // Prevent scroll on Firefox
+                    event.preventDefault();
+
+                    if (event.ctrlKey) {
+                        this.zoom(options.zoomRatio, true);
+                        break;
+                    }
+
+                    // Zoom in
+                    this.move(0, 30)
+                    break;
+
+                // ArrowRight
+                case 39:
+                    if (event.ctrlKey) {
+                        this.move(30, 0)
+                        break;
+                    }
+                    if (this.played && this.playing) {
+                        this.playing.next();
+                    } else {
+                        this.next(options.loop);
+                    }
+                    break;
+
+                // ArrowDown
+                case 40:
+                    // Prevent scroll on Firefox
+                    event.preventDefault();
+
+                    if (event.ctrlKey) {
+                        this.zoom(-options.zoomRatio, true);
+                        break;
+                    }
+
+                    // Zoom out
+                    this.move(0, -30)
+                    break;
+
+                // Ctrl + 0
+                case 48:
+                // Fall through
+
+                // Ctrl + 1
+                // eslint-disable-next-line no-fallthrough
+                case 49:
+                    if (event.ctrlKey) {
+                        event.preventDefault();
+                        this.toggle();
+                    }
+                    break;
+                // '/'
+                case 47:
+                    this.widthToggle();
+                    break;
+
+*/
+
+export { viewInit, showViewer, hideViewer, nextImage, prevImage, moveDown, moveUp, widthFit }

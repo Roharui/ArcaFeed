@@ -1,12 +1,7 @@
 
-import { Vault } from "../vault"
+const COMMENT = "cp"
 
 function nextPage() {
-    let v = new Vault()
-    if (v.isViewer()) {
-        return
-    }
-    
     let href = "";
 
     var x = document.querySelector("a.active + a")
@@ -21,15 +16,13 @@ function nextPage() {
         href = x.href
     }
 
-    location.href = href + "&cp=1"
+    const url = new URL(href, location.origin)
+    url.searchParams.append(COMMENT, 1)
+
+    location.replace(url.href)
 }
 
 function prevPage() {
-    let v = new Vault()
-    if (v.isViewer()) {
-        return
-    }
-
     let href = "";
 
     var x = $("a.vrow.column.active").prev("a:not(.notice)")
@@ -44,7 +37,12 @@ function prevPage() {
         href = x.attr("href")
     }
 
-    location.href = href + "&cp=1"
+    console.log(href)
+
+    const url = new URL(href, location.origin)
+    url.searchParams.append(COMMENT, 1)
+
+    location.replace(url.href)
 }
 
 
