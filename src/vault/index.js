@@ -20,6 +20,11 @@ class Vault {
         this.cursor = cursor
     }
 
+    removeCursor() {
+        this.cursor = null
+        this.cursorLoc = null
+    }
+
     getCursorLoc() {
         if (this.cursorLoc == null) {
             let left = parseInt(window.innerWidth / 2)

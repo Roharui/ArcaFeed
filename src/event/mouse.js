@@ -75,10 +75,14 @@ function cursorMoveDown(e) {
 function clickCursor(e) {
     e.preventDefault()
 
-    removeCursor()
+    removeCursor(e)
 
     let loc = new Vault().getCursorLoc()
-    document.elementFromPoint(loc.left + 25, loc.top + 25).click()
+    let ele = document.elementFromPoint(loc.left + 25, loc.top + 25)
+
+    console.log(ele)
+
+    ele.click()
 }
 
 function removeCursor(e) {
@@ -88,6 +92,7 @@ function removeCursor(e) {
     v.eventType = EVENT_TYPE.DEFAULT
 
     v.getCursor().remove()
+    v.removeCursor()
 }
 
 export { createCursor, clickCursor, removeCursor, cursorMoveRight, cursorMoveLeft, cursorMoveUp, cursorMoveDown }
