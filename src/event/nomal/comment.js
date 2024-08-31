@@ -1,4 +1,4 @@
-import { Vault } from "../vault"
+import { Vault } from "../../vault"
 
 function nextComment() {
     let v = new Vault()

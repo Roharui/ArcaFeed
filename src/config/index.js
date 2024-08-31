@@ -2,7 +2,8 @@
 import Toastify from 'toastify-js'
 
 import { CSS_URL } from './css';
-import { viewInit } from '../event/image';
+import { viewInit } from '../event/viewer';
+import { seriesInit } from '../event/nomal/series';
 
 const DEFAULT_CONFIG_KEY = "arcalive_tampermonkey_config"
 
@@ -41,6 +42,7 @@ function config() {
     }
 
     viewInit(config.default_viewer, config.default_widthfit)
+    seriesInit()
 }
 
 function resetConfig() {

@@ -9,7 +9,7 @@
  * Date: 2023-09-17T03:16:38.052Z
  */
 
-import { Vault } from "../vault";
+import { Vault } from "../../vault";
 
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
@@ -3366,99 +3366,13 @@ function widthFit() {
     new Vault().runViewer((g) => g.widthToggle())
 }
 
-/* 
+const VIEWER_EVENT = {
+    "ArrowLeft": prevImage,
+    "ArrowRight": nextImage,
+    "ArrowDown": moveDown,
+    "ArrowUp": moveUp,
+    "/": widthFit,
+    "Shift": hideViewer,
+}
 
-                // Escape
-                case 27:
-                    if (this.played) {
-                        this.stop();
-                    } else if (options.inline) {
-                        if (this.fulled) {
-                            this.exit();
-                        }
-                    } else {
-                        this.hide();
-                    }
-                    break;
-
-                // Space
-                case 32:
-                    if (this.played) {
-                        this.stop();
-                    }
-                    break;
-
-                // ArrowLeft
-                case 37:
-                    if (event.ctrlKey) {
-                        this.move(-30, 0)
-                        break;
-                    }
-                    if (this.played && this.playing) {
-                        this.playing.prev();
-                    } else {
-                        this.prev(options.loop);
-                    }
-                    break;
-
-                // ArrowUp
-                case 38:
-                    // Prevent scroll on Firefox
-                    event.preventDefault();
-
-                    if (event.ctrlKey) {
-                        this.zoom(options.zoomRatio, true);
-                        break;
-                    }
-
-                    // Zoom in
-                    this.move(0, 30)
-                    break;
-
-                // ArrowRight
-                case 39:
-                    if (event.ctrlKey) {
-                        this.move(30, 0)
-                        break;
-                    }
-                    if (this.played && this.playing) {
-                        this.playing.next();
-                    } else {
-                        this.next(options.loop);
-                    }
-                    break;
-
-                // ArrowDown
-                case 40:
-                    // Prevent scroll on Firefox
-                    event.preventDefault();
-
-                    if (event.ctrlKey) {
-                        this.zoom(-options.zoomRatio, true);
-                        break;
-                    }
-
-                    // Zoom out
-                    this.move(0, -30)
-                    break;
-
-                // Ctrl + 0
-                case 48:
-                // Fall through
-
-                // Ctrl + 1
-                // eslint-disable-next-line no-fallthrough
-                case 49:
-                    if (event.ctrlKey) {
-                        event.preventDefault();
-                        this.toggle();
-                    }
-                    break;
-                // '/'
-                case 47:
-                    this.widthToggle();
-                    break;
-
-*/
-
-export { viewInit, showViewer, hideViewer, nextImage, prevImage, moveDown, moveUp, widthFit }
+export { VIEWER_EVENT, showViewer, viewInit }

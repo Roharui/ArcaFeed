@@ -1,5 +1,5 @@
-import { Vault } from "../vault"
-import { EVENT_TYPE } from "../vault/eventType"
+import { Vault } from "../../vault"
+import { EVENT_TYPE } from "../../vault/eventType"
 
 const CURSOR_CSS = {
     width: '50px',
