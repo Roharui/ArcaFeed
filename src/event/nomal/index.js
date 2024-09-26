@@ -1,3 +1,4 @@
+import { changeConfig } from "../../config"
 import { createCursor } from "../mouse/mouse"
 import { showViewer } from "../viewer"
 import { nextComment, prevComment } from "./comment"
