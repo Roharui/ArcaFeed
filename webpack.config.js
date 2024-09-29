@@ -26,6 +26,7 @@ module.exports = {
             "jquery-ui-css": "jquery-ui-dist/jquery-ui.css",
             "toastify-css": "toastify-js/src/toastify.css",
             "viewerjs-css": path.resolve(__dirname, "src/css/viewer.min.css"),
+            "arcalive-css": path.resolve(__dirname, "src/css/arcalive.css"),
         }
     },
 

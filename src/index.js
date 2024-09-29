@@ -6,6 +6,7 @@ import 'jquery-ui-css'
 
 import "toastify-css"
 import "viewerjs-css"
+import "arcalive-css"
 
 $(function () {
     config()
