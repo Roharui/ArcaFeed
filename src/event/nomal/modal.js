@@ -15,6 +15,7 @@ const INIT_CONFIG_MODAL_HTML = `
 <div id="dialog" title="기본 설정">
     <p>댓글 숨기기<input type="checkbox" id="default_comment_hide" style="float: right;"></p>
     <p>우측 사이드바 숨기기<input type="checkbox" id="default_right_sidebar_hide" style="float: right;"></p>
+    <p>다음 페이지 버튼 추가<input type="checkbox" id="default_widthfit" style="float: right;"></p>
     <p>뷰어 기본 표시<input type="checkbox" id="default_viewer" style="float: right;"></p>
     <p>뷰어 기본 화면 맞춤<input type="checkbox" id="default_widthfit" style="float: right;"></p>
 </div>
@@ -102,11 +103,13 @@ function initConfigModal() {
                 let DEFAULT_RIGHT_SIDEBAR_HIDE = $('#dialog').find(`#${CONFIG.DEFAULT_RIGHT_SIDEBAR_HIDE}`).is(":checked")
                 let DEFAULT_VIEWER = $('#dialog').find(`#${CONFIG.DEFAULT_VIEWER}`).is(":checked")
                 let DEFAULT_WIDTHFIT = $('#dialog').find(`#${CONFIG.DEFAULT_WIDTHFIT}`).is(":checked")
+                let NEXT_BTN = $('#dialog').find(`#${CONFIG.NEXT_BTN}`).is(":checked")
 
                 changeConfigWithValue(CONFIG.DEFAULT_COMMENT_HIDE, DEFAULT_COMMENT_HIDE)
                 changeConfigWithValue(CONFIG.DEFAULT_RIGHT_SIDEBAR_HIDE, DEFAULT_RIGHT_SIDEBAR_HIDE)
                 changeConfigWithValue(CONFIG.DEFAULT_VIEWER, DEFAULT_VIEWER)
                 changeConfigWithValue(CONFIG.DEFAULT_WIDTHFIT, DEFAULT_WIDTHFIT)
+                changeConfigWithValue(CONFIG.NEXT_BTN, NEXT_BTN)
 
                 $(this).dialog("close");
             },
@@ -119,6 +122,7 @@ function initConfigModal() {
             $('#dialog').find(`#${CONFIG.DEFAULT_RIGHT_SIDEBAR_HIDE}`).prop('checked', getConfigWithKey(CONFIG.DEFAULT_RIGHT_SIDEBAR_HIDE))
             $('#dialog').find(`#${CONFIG.DEFAULT_VIEWER}`).prop('checked', getConfigWithKey(CONFIG.DEFAULT_VIEWER))
             $('#dialog').find(`#${CONFIG.DEFAULT_WIDTHFIT}`).prop('checked', getConfigWithKey(CONFIG.DEFAULT_WIDTHFIT))
+            $('#dialog').find(`#${CONFIG.NEXT_BTN}`).prop('checked', getConfigWithKey(CONFIG.NEXT_BTN))
         },
         close: function() {
             $('#dialog').remove()

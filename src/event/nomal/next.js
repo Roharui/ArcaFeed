@@ -11,10 +11,10 @@ function moveLink(href) {
 }
 
 function filterLink(rows) {
-    rows = rows.filter(ele => !($(ele).hasClass("notice") || $(ele).hasClass("head")))
+    rows = rows.filter(ele => !($(ele).hasClass("notice") || $(ele).hasClass("head") || $(ele).attr("href").includes("#c_")))
 
     const channelId = getChannelId()
-    
+
     let pageFilter = getConfigWithKey(CONFIG.PAGE_FILTER)[channelId]
 
     if (pageFilter === undefined) {
@@ -24,7 +24,7 @@ function filterLink(rows) {
         }
     }
 
-    let {include, exclude} = pageFilter
+    let { include, exclude } = pageFilter
 
     if (include.length == 0 && exclude.length == 0 === undefined) {
         return rows;
@@ -60,8 +60,8 @@ function nextPage() {
     } else {
         let isCurrent = $("a.vrow.active").length == 0;
 
-        let rows = !isCurrent 
-            ? filterLink($("a.vrow.active").nextAll().get()) 
+        let rows = !isCurrent
+            ? filterLink($("a.vrow.active").nextAll().get())
             : filterLink($("a.vrow:not(.notice)").get())
 
         if (rows.length === 0) {
@@ -93,15 +93,15 @@ function prevPage() {
     } else {
         let isCurrent = $("a.vrow.active").length == 0;
 
-        let rows = !isCurrent 
-            ? filterLink($("a.vrow.active").prevAll().get()) 
+        let rows = !isCurrent
+            ? filterLink($("a.vrow.active").prevAll().get())
             : filterLink($("a.vrow:not(.notice)").get())
 
         if (rows.length === 0) {
             let page = $(".page-item.active").prev()
             href = page.find("a").attr("href")
         } else {
-            href = rows[rows.length - 1].href
+            href = rows[0].href
         }
     }
 

@@ -3,6 +3,9 @@ import Toastify from 'toastify-js'
 
 import { viewInit } from '../event/viewer';
 import { seriesInit } from '../event/nomal/series';
+import { Vault } from '../vault';
+import { EVENT_TYPE } from '../vault/eventType';
+import { nextPage } from '../event/nomal/next';
 
 const DEFAULT_CONFIG_KEY = "arcalive_tampermonkey_config"
 
@@ -11,6 +14,7 @@ const CONFIG = {
     DEFAULT_RIGHT_SIDEBAR_HIDE: "default_right_sidebar_hide",
     DEFAULT_VIEWER: "default_viewer",
     DEFAULT_WIDTHFIT: "default_widthfit",
+    NEXT_BTN: "next_btn",
     PAGE_FILTER: "page_filter"
 }
 
@@ -19,6 +23,7 @@ const DEFAULT_CONFIG = {
     default_right_sidebar_hide: true,
     default_viewer: false,
     default_widthfit: false,
+    next_btn: true,
     page_filter: {},
 }
 
@@ -41,6 +46,22 @@ function config() {
 
     $("#comment").toggle(!config.default_comment_hide)
     $(".right-sidebar").toggle(!config.default_right_sidebar_hide)
+
+    if (config.next_btn) {
+        const btn = $("<div>", {id:"nextBtn"});
+
+        btn.on("click", function(){
+            const v = new Vault()
+
+            if (v.getEventType() === EVENT_TYPE.VIEWER) {
+                v.runViewer((g) => g.next())
+            } else {
+                nextPage()
+            }
+        })
+
+        $("body").append(btn)
+    }
 
     viewInit(config.default_viewer, config.default_widthfit)
     seriesInit()

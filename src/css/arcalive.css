@@ -1,3 +1,14 @@
 .body .content-wrapper {
     grid-template-columns: none !important;
 }
+
+#nextBtn {
+    position: fixed;
+    right: 19px;
+    bottom: 60px;
+    border-radius: 999px;
+    opacity: .7;
+    background-color: #3d414d;
+    width: 2.7rem;
+    height: 2.7rem;
+}
