@@ -1,7 +1,6 @@
 
 import Toastify from 'toastify-js'
 
-import { CSS_URL } from './css';
 import { viewInit } from '../event/viewer';
 import { seriesInit } from '../event/nomal/series';
 
@@ -11,7 +10,9 @@ const CONFIG = {
     DEFAULT_COMMENT_HIDE: "default_comment_hide",
     DEFAULT_RIGHT_SIDEBAR_HIDE: "default_right_sidebar_hide",
     DEFAULT_VIEWER: "default_viewer",
-    DEFAULT_WIDTHFIT: "default_widthfit"
+    DEFAULT_WIDTHFIT: "default_widthfit",
+    NEXT_PAGE_INCLUDE: "next_page_include",
+    NEXT_PAGE_EXCLUDE: "next_page_exclude"
 }
 
 const DEFAULT_CONFIG = {
@@ -19,12 +20,18 @@ const DEFAULT_CONFIG = {
     default_right_sidebar_hide: true,
     default_viewer: false,
     default_widthfit: false,
+    next_page_include: "",
+    next_page_exclude: ""
 }
 
-function init() {
-    CSS_URL.forEach(url => $('head').append($('<link>', {type: "text/css", rel: "stylesheet", href: url})))
-    
-    config()
+function getConfigWithKey(key) {
+    if (localStorage.getItem(DEFAULT_CONFIG_KEY) == undefined) {
+        localStorage.setItem(DEFAULT_CONFIG_KEY, JSON.stringify(DEFAULT_CONFIG))
+    }
+
+    let config = JSON.parse(localStorage.getItem(DEFAULT_CONFIG_KEY))
+
+    return config[key]
 }
 
 function config() {
@@ -76,4 +83,14 @@ function changeConfig(key) {
     }).showToast();
 }
 
-export { init, CONFIG, resetConfig, changeConfig }
+function changeConfigWithValue(key, value) {
+    let _config = JSON.parse(localStorage.getItem(DEFAULT_CONFIG_KEY))
+
+    _config[key] = value ?? ""
+
+    localStorage.setItem(DEFAULT_CONFIG_KEY, JSON.stringify(_config))
+
+    config()
+}
+
+export { config, CONFIG, getConfigWithKey, resetConfig, changeConfig, changeConfigWithValue }

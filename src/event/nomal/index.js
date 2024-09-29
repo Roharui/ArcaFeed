@@ -1,7 +1,7 @@
-import { CONFIG, changeConfig } from "../../config"
 import { createCursor } from "../mouse/mouse"
 import { showViewer } from "../viewer"
 import { nextComment, prevComment } from "./comment"
+import { nextPageConfigModal, initConfigModal } from "./modal"
 import { nextPage, prevPage } from "./next"
 import { scrap } from "./scrap"
 import { clearSeries } from "./series"
@@ -11,8 +11,7 @@ const CONTROL_KEYBORD_EVENT = {
     "Enter": prevComment,
     "ArrowLeft": () => history.back(),
     "ArrowRight": () => history.forward(),
-    "\\": () => changeConfig(CONFIG.DEFAULT_VIEWER),
-    "/": () => changeConfig(CONFIG.DEFAULT_WIDTHFIT),
+    "0": () => nextPageConfigModal()
 }
 
 const KEYBORD_EVENT = {
@@ -20,10 +19,10 @@ const KEYBORD_EVENT = {
     "ArrowRight": nextPage,
     "Enter": nextComment,
     "Shift": showViewer,
-    "`": () => resetConfig(),
+    "`": () => initConfigModal(),
     ".": scrap,
     "'": createCursor,
-    ";": clearSeries,
+    ";": clearSeries
 }
 
 export { CONTROL_KEYBORD_EVENT, KEYBORD_EVENT }

@@ -1,5 +1,36 @@
+import { CONFIG, getConfigWithKey } from "../../config";
 
 const COMMENT = "cp"
+
+function moveLink(href) {
+    const url = new URL(href, location.origin)
+    url.searchParams.append(COMMENT, 1)
+
+    location.replace(url.href)
+}
+
+function filterLink(rows) {
+    rows = rows.filter(ele => !($(ele).hasClass("notice") || $(ele).hasClass("head")))
+    
+    let badgeInclude = getConfigWithKey(CONFIG.NEXT_PAGE_INCLUDE)
+    let badgeExclude = getConfigWithKey(CONFIG.NEXT_PAGE_EXCLUDE)
+
+    if (badgeInclude.length == 0 && badgeExclude.length == 0) {
+        return rows;
+    }
+
+    let badgeIncludeList = badgeInclude.length != 0 ? badgeInclude.split(",") : []
+    let badgeExcludeList = badgeExclude.length != 0 ? badgeExclude.split(",") : []
+
+    return rows.filter(ele => {
+        let eleText = $(ele).find(".badge-success").text()
+
+        let isInclude = badgeInclude.length != 0 ? badgeIncludeList.reduce((prev, cur) => prev || eleText.includes(cur), false) : true
+        let isExclude = badgeExclude.length != 0 ? badgeExcludeList.reduce((prev, cur) => prev && !eleText.includes(cur), true) : true
+
+        return isInclude && isExclude
+    })
+}
 
 function nextPage() {
     let href = "";
@@ -19,23 +50,21 @@ function nextPage() {
 
         href = arr[idx]
     } else {
-        var x = document.querySelector("a.active + a")
-        var xx = document.querySelector("li.active + li > a")
-        var xxx = document.querySelector("a.vrow.column:not(.notice)")
-        var endOfPage = (location.pathname.match(/\//g) || []).length === 2
-        if(x == null && endOfPage) {
-            href = xxx.href
-        } else if (x === null && !endOfPage) {
-            href = xx.href
+        let isCurrent = $("a.vrow.active").length == 0;
+
+        let rows = !isCurrent 
+            ? filterLink($("a.vrow.active").nextAll().get()) 
+            : filterLink($("a.vrow:not(.notice)").get())
+
+        if (rows.length === 0) {
+            let page = $(".page-item.active").next()
+            href = page.find("a").attr("href")
         } else {
-            href = x.href
+            href = rows[0].href
         }
     }
 
-    const url = new URL(href, location.origin)
-    url.searchParams.append(COMMENT, 1)
-
-    location.replace(url.href)
+    moveLink(href)
 }
 
 function prevPage() {
@@ -54,23 +83,21 @@ function prevPage() {
 
         href = arr[idx]
     } else {
-        var x = $("a.vrow.column.active").prev("a:not(.notice)")
-        var xx = $("li.active").prev("li").find("a")
-        var xxx = $("a.vrow.column:not(.notice):last")
-        var endOfPage = (location.pathname.match(/\//g) || []).length === 2
-        if(!x.length && endOfPage) {
-            href = xxx.attr("href")
-        } else if (!x.length && !endOfPage) {
-            href = xx.attr("href")
+        let isCurrent = $("a.vrow.active").length == 0;
+
+        let rows = !isCurrent 
+            ? filterLink($("a.vrow.active").prevAll().get()) 
+            : filterLink($("a.vrow:not(.notice)").get())
+
+        if (rows.length === 0) {
+            let page = $(".page-item.active").prev()
+            href = page.find("a").attr("href")
         } else {
-            href = x.attr("href")
+            href = rows[rows.length - 1].href
         }
     }
 
-    const url = new URL(href, location.origin)
-    url.searchParams.append(COMMENT, 1)
-
-    location.replace(url.href)
+    moveLink(href)
 }
 
 

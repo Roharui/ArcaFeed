@@ -1122,25 +1122,33 @@ import { Vault } from "../../vault";
                 var initialCoverage = Math.max(0, Math.min(1, options.initialCoverage));
                 var width = viewerWidth;
                 var height = viewerHeight;
+
                 _this2.imageInitializing = false;
+
                 if (viewerHeight * aspectRatio > viewerWidth) {
                     height = viewerWidth / aspectRatio;
                 } else {
                     width = viewerHeight * aspectRatio;
                 }
+
                 initialCoverage = isNumber(initialCoverage) ? initialCoverage : 0.9;
                 width = Math.min(width * initialCoverage, naturalWidth);
                 height = Math.min(height * initialCoverage, naturalHeight);
+
                 var left = (viewerWidth - width) / 2;
                 var top = (viewerHeight - height) / 2;
                 var ratio = width / naturalWidth
-                                
+
                 if (options.isFitWidth) {
                     left = 0
                     top = 0
                     ratio = window.innerWidth / naturalWidth
                     width = naturalWidth * ratio;
                     height = naturalHeight * ratio;
+                }
+
+                if (window.innerHeight > height) {
+                    top = (window.innerHeight - height) / 2
                 }
 
                 var imageData = {
@@ -2638,7 +2646,7 @@ import { Vault } from "../../vault";
         },
         widthToggle: function widthToggle() {
             this.options.isFitWidth = !this.options.isFitWidth
-    
+
             this.update()
 
             return this;
@@ -3305,13 +3313,13 @@ function viewInit(defaultShow, widthToggle) {
         return
     }
 
-    let article = document.querySelector('.article-body');
+    let article = $(".article-content").find("img").not(".twemoji")
 
-    if (article == null) {
+    if (article.length == 0) {
         return;
     }
 
-    let gallery = new Viewer(article,
+    let gallery = new Viewer(document.querySelector('.article-body'),
         {
             loop: false,
             zoomOnWheel: false,
@@ -3324,7 +3332,7 @@ function viewInit(defaultShow, widthToggle) {
             hideAtEnd: true,
             isFitWidth: widthToggle,
             filter(image) {
-                return !image.className.includes("twemoji")
+                return !image.className.includes("twemoji") && !image.style.cssText.includes("width: 0px;")
             },
         }
     );
@@ -3354,12 +3362,12 @@ function prevImage() {
 
 function moveDown(e) {
     e.preventDefault()
-    new Vault().runViewer((g) => g.move(0, 30))
+    new Vault().runViewer((g) => g.move(0, -30))
 }
 
 function moveUp(e) {
     e.preventDefault()
-    new Vault().runViewer((g) => g.move(0, -30))
+    new Vault().runViewer((g) => g.move(0, 30))
 }
 
 function widthFit() {

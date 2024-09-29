@@ -4,7 +4,6 @@
   "main": "main.js",
   "scripts": {
     "start": "node app.js",
-    "dev": "webpack-dev-server --mode development",
     "build": "webpack --mode production",
     "build-watch": "webpack --watch --mode production"
   },
@@ -13,12 +12,15 @@
   "description": "",
   "dependencies": {
     "jquery": "^3.7.1",
+    "jquery-ui-dist": "^1.13.3",
     "toastify-js": "^1.12.0"
   },
   "devDependencies": {
     "@types/jquery": "^3.5.30",
+    "@types/jqueryui": "^1.12.23",
+    "css-loader": "^7.1.2",
+    "style-loader": "^4.0.0",
     "webpack": "^5.93.0",
-    "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^4.0.0-rc.1"
+    "webpack-cli": "^5.1.4"
   }
 }
