@@ -11,8 +11,7 @@ const CONFIG = {
     DEFAULT_RIGHT_SIDEBAR_HIDE: "default_right_sidebar_hide",
     DEFAULT_VIEWER: "default_viewer",
     DEFAULT_WIDTHFIT: "default_widthfit",
-    NEXT_PAGE_INCLUDE: "next_page_include",
-    NEXT_PAGE_EXCLUDE: "next_page_exclude"
+    PAGE_FILTER: "page_filter"
 }
 
 const DEFAULT_CONFIG = {
@@ -20,8 +19,7 @@ const DEFAULT_CONFIG = {
     default_right_sidebar_hide: true,
     default_viewer: false,
     default_widthfit: false,
-    next_page_include: "",
-    next_page_exclude: ""
+    page_filter: {},
 }
 
 function getConfigWithKey(key) {
@@ -41,12 +39,8 @@ function config() {
 
     let config = JSON.parse(localStorage.getItem(DEFAULT_CONFIG_KEY))
 
-    if (config.default_comment_hide) {
-        $("#comment").hide()
-    }
-    if (config.default_right_sidebar_hide) {
-        $(".right-sidebar").hide()
-    }
+    $("#comment").toggle(!config.default_comment_hide)
+    $(".right-sidebar").toggle(!config.default_right_sidebar_hide)
 
     viewInit(config.default_viewer, config.default_widthfit)
     seriesInit()
@@ -86,7 +80,7 @@ function changeConfig(key) {
 function changeConfigWithValue(key, value) {
     let _config = JSON.parse(localStorage.getItem(DEFAULT_CONFIG_KEY))
 
-    _config[key] = value ?? ""
+    _config[key] = value
 
     localStorage.setItem(DEFAULT_CONFIG_KEY, JSON.stringify(_config))
 

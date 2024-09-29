@@ -1,0 +1,1 @@
+when-changed -r ./src -c npm run build

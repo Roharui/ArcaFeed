@@ -1,4 +1,5 @@
 import { CONFIG, getConfigWithKey } from "../../config";
+import { getChannelId } from "../../utils";
 
 const COMMENT = "cp"
 
@@ -11,22 +12,29 @@ function moveLink(href) {
 
 function filterLink(rows) {
     rows = rows.filter(ele => !($(ele).hasClass("notice") || $(ele).hasClass("head")))
-    
-    let badgeInclude = getConfigWithKey(CONFIG.NEXT_PAGE_INCLUDE)
-    let badgeExclude = getConfigWithKey(CONFIG.NEXT_PAGE_EXCLUDE)
 
-    if (badgeInclude.length == 0 && badgeExclude.length == 0) {
-        return rows;
+    const channelId = getChannelId()
+    
+    let pageFilter = getConfigWithKey(CONFIG.PAGE_FILTER)[channelId]
+
+    if (pageFilter === undefined) {
+        pageFilter = {
+            include: [],
+            exclude: []
+        }
     }
 
-    let badgeIncludeList = badgeInclude.length != 0 ? badgeInclude.split(",") : []
-    let badgeExcludeList = badgeExclude.length != 0 ? badgeExclude.split(",") : []
+    let {include, exclude} = pageFilter
+
+    if (include.length == 0 && exclude.length == 0 === undefined) {
+        return rows;
+    }
 
     return rows.filter(ele => {
         let eleText = $(ele).find(".badge-success").text()
 
-        let isInclude = badgeInclude.length != 0 ? badgeIncludeList.reduce((prev, cur) => prev || eleText.includes(cur), false) : true
-        let isExclude = badgeExclude.length != 0 ? badgeExcludeList.reduce((prev, cur) => prev && !eleText.includes(cur), true) : true
+        let isInclude = include.length != 0 ? include.reduce((prev, cur) => prev || eleText.includes(cur), false) : true
+        let isExclude = exclude.length != 0 ? exclude.reduce((prev, cur) => prev && !eleText.includes(cur), true) : true
 
         return isInclude && isExclude
     })
