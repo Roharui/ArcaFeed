@@ -1,6 +1,8 @@
 const path = require('path')
 const webpack = require('webpack');
 
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+
 module.exports = {
     entry: './src/index.js',
 
@@ -9,15 +11,6 @@ module.exports = {
         filename: 'dist.js',
         clean: true
     },
-
-    plugins: [
-        new webpack.ProvidePlugin({
-            $: "jquery",
-            jQuery: "jquery",
-            "window.jQuery": "jquery'",
-            "window.$": "jquery"
-        })
-    ],
 
     resolve: {
         extensions: [".js"],
@@ -35,9 +28,7 @@ module.exports = {
             {
                 test: /\.css$/,
                 use: [
-                    {
-                        loader: "style-loader", 
-                    },
+                    MiniCssExtractPlugin.loader,
                     {
                         loader: "css-loader",
                     },
@@ -47,9 +38,7 @@ module.exports = {
                 test: /jquery-ui\.css$/,
                 type: "asset/inline",
                 use: [
-                    {
-                        loader: "style-loader", 
-                    },
+                    MiniCssExtractPlugin.loader,
                     {
                         loader: "css-loader",
                     },
@@ -57,4 +46,14 @@ module.exports = {
             },
         ],
     },
+    
+    plugins: [
+        new MiniCssExtractPlugin({ filename: 'app.css' }),
+        new webpack.ProvidePlugin({
+            $: "jquery",
+            jQuery: "jquery",
+            "window.jQuery": "jquery'",
+            "window.$": "jquery"
+        })
+    ],
 }

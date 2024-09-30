@@ -1,4 +1,4 @@
-import { config } from "./config"
+import { config, loadCss } from "./config"
 import { event } from "./event"
 
 import 'jquery-ui'
@@ -9,6 +9,7 @@ import "viewerjs-css"
 import "arcalive-css"
 
 $(function () {
+    loadCss()
     config()
     event()
 })

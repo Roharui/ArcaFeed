@@ -3,9 +3,7 @@ import Toastify from 'toastify-js'
 
 import { viewInit } from '../event/viewer';
 import { seriesInit } from '../event/nomal/series';
-import { Vault } from '../vault';
-import { EVENT_TYPE } from '../vault/eventType';
-import { nextPage } from '../event/nomal/next';
+import { toggleBtn } from '../utils/btn';
 
 const DEFAULT_CONFIG_KEY = "arcalive_tampermonkey_config"
 
@@ -37,6 +35,10 @@ function getConfigWithKey(key) {
     return config[key]
 }
 
+function loadCss() {
+    $('head').append($('<style>', {text: helperCss}))
+}
+
 function config() {
     if (localStorage.getItem(DEFAULT_CONFIG_KEY) == undefined) {
         localStorage.setItem(DEFAULT_CONFIG_KEY, JSON.stringify(DEFAULT_CONFIG))
@@ -47,21 +49,7 @@ function config() {
     $("#comment").toggle(!config.default_comment_hide)
     $(".right-sidebar").toggle(!config.default_right_sidebar_hide)
 
-    if (config.next_btn) {
-        const btn = $("<div>", {id:"nextBtn"});
-
-        btn.on("click", function(){
-            const v = new Vault()
-
-            if (v.getEventType() === EVENT_TYPE.VIEWER) {
-                v.runViewer((g) => g.next())
-            } else {
-                nextPage()
-            }
-        })
-
-        $("body").append(btn)
-    }
+    toggleBtn(config.next_btn);
 
     viewInit(config.default_viewer, config.default_widthfit)
     seriesInit()
@@ -108,4 +96,4 @@ function changeConfigWithValue(key, value) {
     config()
 }
 
-export { config, CONFIG, getConfigWithKey, resetConfig, changeConfig, changeConfigWithValue }
+export { loadCss, config, CONFIG, getConfigWithKey, resetConfig, changeConfig, changeConfigWithValue }

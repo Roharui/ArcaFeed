@@ -15,7 +15,7 @@ const INIT_CONFIG_MODAL_HTML = `
 <div id="dialog" title="기본 설정">
     <p>댓글 숨기기<input type="checkbox" id="default_comment_hide" style="float: right;"></p>
     <p>우측 사이드바 숨기기<input type="checkbox" id="default_right_sidebar_hide" style="float: right;"></p>
-    <p>다음 페이지 버튼 추가<input type="checkbox" id="default_widthfit" style="float: right;"></p>
+    <p>모바일 버튼 추가<input type="checkbox" id="next_btn" style="float: right;"></p>
     <p>뷰어 기본 표시<input type="checkbox" id="default_viewer" style="float: right;"></p>
     <p>뷰어 기본 화면 맞춤<input type="checkbox" id="default_widthfit" style="float: right;"></p>
 </div>

@@ -1,13 +1,23 @@
-import { CONFIG, getConfigWithKey } from "../../config";
+import { config, CONFIG, getConfigWithKey, loadCss } from "../../config";
 import { getChannelId } from "../../utils";
 
 const COMMENT = "cp"
+
+function processAjaxData(html, url){
+    window.history.pushState({}, null, url);
+    document.querySelector("html").innerHTML = html
+
+    loadCss()
+    config()
+}
 
 function moveLink(href) {
     const url = new URL(href, location.origin)
     url.searchParams.append(COMMENT, 1)
 
-    location.replace(url.href)
+    fetch(url)
+        .then(res => res.text())
+        .then(text => processAjaxData(text, url))
 }
 
 function filterLink(rows) {
@@ -34,7 +44,7 @@ function filterLink(rows) {
         let eleText = $(ele).find(".badge-success").text()
 
         let isInclude = include.length != 0 ? include.reduce((prev, cur) => prev || eleText.includes(cur), false) : true
-        let isExclude = exclude.length != 0 ? exclude.reduce((prev, cur) => prev && !eleText.includes(cur), true) : true
+        let isExclude = exclude.length != 0 ? exclude.reduce((prev, cur) => prev && !eleText.includes(cur) && !(eleText.length == 0 && cur == '노탭'), true) : true
 
         return isInclude && isExclude
     })
