@@ -5,6 +5,7 @@ import { viewInit } from '../event/viewer';
 import { seriesInit } from '../event/nomal/series';
 import { toggleBtn } from '../utils/btn';
 import { renderPage } from '../utils/link';
+import { Vault } from '../vault';
 
 const DEFAULT_CONFIG_KEY = "arcalive_tampermonkey_config"
 
@@ -64,10 +65,13 @@ function config() {
             }
 
         })
+
     }
-
+    
+    new Vault().pullPage()
+    
     toggleBtn(config.next_btn);
-
+    
     viewInit(config.default_viewer, config.default_fitscreen)
     seriesInit()
 }

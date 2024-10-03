@@ -1157,7 +1157,7 @@ import { Vault } from "../../vault";
                     if (widthFit) {
                         left = (window.innerWidth - width) / 2
                     } 
-                    if (!widthFit && (naturalWidth > naturalHeight)) {
+                    if (!widthFit && (window.innerHeight - height) > 0) {
                         top = (window.innerHeight - height) / 2
                     }
                 }
@@ -2065,7 +2065,8 @@ import { Vault } from "../../vault";
             var element = this.element,
                 options = this.options,
                 imageData = this.imageData;
-            x = Number(x);
+            // x = Number(x);
+            x = imageData.x;
             y = Number(y);
             if (this.viewed && !this.played && options.movable) {
                 var oldX = imageData.x;
@@ -3341,6 +3342,8 @@ function viewInit(defaultShow, fitScreen) {
             navbar: false,
             keyboard: false,
             hideAtEnd: true,
+            scalable: false,
+            zoomable: false,
             isFitScreen: fitScreen,
             filter(image) {
                 return !image.className.includes("twemoji") && !image.style.cssText.includes("width: 0px;")

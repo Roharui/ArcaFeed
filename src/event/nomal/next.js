@@ -1,19 +1,16 @@
 import { CONFIG, getConfigWithKey } from "../../config";
 import { getChannelId } from "../../utils";
-import { renderPage } from "../../utils/link";
+import { renderNextPage, renderPage, renderPrevPage } from "../../utils/link";
+import { Vault } from "../../vault";
 import { clearSeries } from "./series";
 
 const COMMENT = "cp"
 
-function moveLink(href) {
+function parseLink(href) {
     const url = new URL(href, location.origin)
     url.searchParams.append(COMMENT, 1)
 
-    if (getConfigWithKey(CONFIG.NO_REFRESH)) {
-        renderPage(url)
-    } else {
-        location.replace(url)
-    }
+    return url
 }
 
 function filterLink(rows) {
@@ -46,7 +43,7 @@ function filterLink(rows) {
     })
 }
 
-function nextPage() {
+function getNextPageUrl() {
     let href = "";
 
     let series = localStorage.getItem("arcalive_tampermonkey_series")
@@ -77,10 +74,18 @@ function nextPage() {
         }
     }
 
-    moveLink(href)
+    return parseLink(href)
 }
 
-function prevPage() {
+function nextPage() {
+    if (getConfigWithKey(CONFIG.NO_REFRESH)) {
+        renderNextPage()
+    } else {
+        location.replace(new Vault().nextPageUrl)
+    }
+}
+
+function getPrevPageUrl() {
     let href = "";
 
     let series = localStorage.getItem("arcalive_tampermonkey_series")
@@ -110,8 +115,16 @@ function prevPage() {
         }
     }
 
-    moveLink(href)
+    return parseLink(href)
+}
+
+function prevPage() {
+    if (getConfigWithKey(CONFIG.NO_REFRESH)) {
+        renderPrevPage()
+    } else {
+        location.replace(new Vault().prevPageUrl)
+    }
 }
 
 
-export { prevPage, nextPage }
+export { prevPage, nextPage, getNextPageUrl, getPrevPageUrl }

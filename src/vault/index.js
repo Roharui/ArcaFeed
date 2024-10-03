@@ -1,3 +1,6 @@
+import { CONFIG, getConfigWithKey } from "../config";
+import { getNextPageUrl, getPrevPageUrl } from "../event/nomal/next";
+import { fetchPage } from "../utils/link";
 import { EVENT_TYPE } from "./eventType";
 
 class Vault {
@@ -9,11 +12,39 @@ class Vault {
         this.eventType = EVENT_TYPE.DEFAULT
         this.currentComment = null;
         this.cursor = null;
+
+        this.nextPageUrl = null;
+        this.nextPageHtml = null;
+        this.prevPageUrl = null;
+        this.prevPageHtml = null;
+
         Vault.instance = this;
     }
 
     clear() {
         Vault.instance = null;
+    }
+
+    pullPage() {
+        if (!location.pathname.includes("/b/")) {
+            return;
+        }
+
+        this.nextPageUrl = getNextPageUrl()
+        this.prevPageUrl = getPrevPageUrl()
+
+        if (getConfigWithKey(CONFIG.NO_REFRESH)) {
+            fetchPage(this.nextPageUrl, (html) => new Vault().setNextPageHtml(html))
+            fetchPage(this.prevPageUrl, (html) => new Vault().setPrevPageHtml(html))
+        }
+    }
+
+    setNextPageHtml(html) {
+        this.nextPageHtml = html
+    }
+
+    setPrevPageHtml(html) {
+        this.prevPageHtml = html
     }
 
     getCursor() {

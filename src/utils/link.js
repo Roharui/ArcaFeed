@@ -8,24 +8,50 @@ function processAjaxData(html, url){
     const parser = new DOMParser();
     const htmlDoc = parser.parseFromString(html, 'text/html');
 
-    $("body").html($(htmlDoc).find("body").html())
-    $("title").html($(htmlDoc).find("title").html())
+    $("body").empty()
+    $("title").empty()
 
-    $("script").each((i, ele) => {
-        let src = $(ele).attr("src")
-        let html = $(ele).html()
+    document.querySelector("body").innerHTML = htmlDoc.querySelector("body").innerHTML
+    document.querySelector("title").innerHTML = htmlDoc.querySelector("title").innerHTML
 
-        $(ele).remove()
+    document.querySelectorAll("script").forEach(ele => ele.remove())
+
+    htmlDoc.querySelectorAll("script").forEach(ele => {
+        let src = ele.src
+        let html = ele.innerHTML
+        
+        var script= document.createElement('script');
 
         if (src !== undefined) {
-            $('<script/>').attr('src', src).appendTo('head');
+            script.src = src
         } else {
-            $('<script/>').html(html).appendTo('head');
+            script.innerHTML = html
         }
 
+        document.querySelector("head").appendChild(script)
     })
-    
+
     $('html, body').animate({ scrollTop: 0 }, 200)
+}
+
+function fetchPage(url, callback) {
+    fetch(url)
+        .then(res => res.text())
+        .then(html => callback(html))
+}
+
+function renderNextPage() {
+    const v = new Vault()
+    processAjaxData(v.nextPageHtml, v.nextPageUrl)
+    v.clear()
+    config()
+}
+
+function renderPrevPage() {
+    const v = new Vault()
+    processAjaxData(v.prevPageHtml, v.prevPageUrl)
+    v.clear()
+    config()
 }
 
 function renderPage(url) {
@@ -36,4 +62,4 @@ function renderPage(url) {
         .then(() => config())
 }
 
-export { renderPage }
+export { fetchPage, renderPage, renderNextPage, renderPrevPage }
