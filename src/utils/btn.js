@@ -89,6 +89,8 @@ function pagenationBtn () {
 
 function toggleBtn (flag) {
     $(".btn-wrapper").remove()
+    $(".next-btn").remove()
+    $(".prev-btn").remove()
     
     if (!flag) {
         return;
