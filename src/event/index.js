@@ -20,6 +20,10 @@ const EVENT = {
     [EVENT_TYPE.MOUSE]: {
         [CONTROL]: {},
         [NORMAL]: MOUSE_EVENT
+    },
+    [EVENT_TYPE.MODAL]: {
+        [CONTROL]: {},
+        [NORMAL]: {}
     }
 }
 

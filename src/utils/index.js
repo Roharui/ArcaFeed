@@ -4,4 +4,10 @@ function getChannelId() {
     return x.split("/")[0]
 }
 
-export { getChannelId }
+function getArticleId() {
+    let x = location.pathname.split("/b/")[1]
+    let xx = x.split("/")[1]
+    return xx
+}
+
+export { getChannelId, getArticleId }

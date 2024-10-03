@@ -1,21 +1,33 @@
-import { nextPageConfigModal } from "../event/nomal/modal";
+import { toggleFullScreen } from "../event/nomal/fullscreen";
+import { initConfigModal, nextPageConfigModal } from "../event/nomal/modal";
 import { nextPage, prevPage } from "../event/nomal/next";
 import { clearSeries } from "../event/nomal/series";
+import { toggleViewer } from "../event/viewer";
 import { Vault } from "../vault";
 import { EVENT_TYPE } from "../vault/eventType";
 
+function createBtn(icon, callback) {
+    const btn = $("<div>", {class:"helper-btn"});
+    btn.append($("<span>", {class: icon}))
+
+    btn.on("click", callback)
+
+    return btn
+}
+
 function toggleBtn (flag) {
+    $(".btn-wrapper").remove()
+    
     if (!flag) {
-        $(".btn-wrapper").remove()
         return;
     }
 
     const btnWrapper = $("<div>", {class:"btn-wrapper"});
-        
-    const prevBtn = $("<div>", {class:"helper-btn"});
-    prevBtn.append($("<span>", {class: "ion-android-arrow-back"}))
 
-    prevBtn.on("click", function(){
+    const firstLine = $("<div>", {class: "btn-line"})
+    const secondLine = $("<div>", {class: "btn-line"})
+
+    const prevBtn = createBtn("ion-android-arrow-back", function(){
         const v = new Vault()
 
         if (v.getEventType() === EVENT_TYPE.VIEWER) {
@@ -25,10 +37,7 @@ function toggleBtn (flag) {
         }
     })
 
-    const nextBtn = $("<div>", {class:"helper-btn"});
-    nextBtn.append($("<span>", {class: "ion-android-arrow-forward"}))
-
-    nextBtn.on("click", function(){
+    const nextBtn = createBtn("ion-android-arrow-forward",function(){
         const v = new Vault()
 
         if (v.getEventType() === EVENT_TYPE.VIEWER) {
@@ -38,24 +47,30 @@ function toggleBtn (flag) {
         }
     })
 
-    const clearSeriesBtn = $("<div>", {class:"helper-btn"});
-    clearSeriesBtn.append($("<span>", {class: "ion-trash-a"}))
+    const clearSeriesBtn = createBtn("ion-trash-a", clearSeries)
 
-    clearSeriesBtn.on("click", function(){
-        clearSeries()
-    })
+    const pageModalBtn = createBtn("ion-hammer", nextPageConfigModal)
 
-    const pageModal = $("<div>", {class:"helper-btn"});
-    pageModal.append($("<span>", {class: "ion-hammer"}))
+    const settingModalBtn = createBtn("ion-ios-gear", initConfigModal)
 
-    pageModal.on("click", function(){
-        nextPageConfigModal()
-    })
+    const fullScreenBtn = createBtn("ion-android-expand", toggleFullScreen)
 
-    btnWrapper.append(pageModal)
-    btnWrapper.append(clearSeriesBtn)
-    btnWrapper.append(prevBtn)
-    btnWrapper.append(nextBtn)
+    const imageViewBtn = createBtn("ion-android-image", toggleViewer)
+    
+    if (location.href.includes("/b/")) {
+        firstLine.append(nextBtn)
+        firstLine.append(prevBtn)
+        firstLine.append(clearSeriesBtn)
+
+        secondLine.append(fullScreenBtn)
+        secondLine.append(imageViewBtn)
+    }
+
+    firstLine.append(settingModalBtn)
+    firstLine.append(pageModalBtn)
+
+    btnWrapper.append(secondLine)
+    btnWrapper.append(firstLine)
 
     $("body").append(btnWrapper)
 }

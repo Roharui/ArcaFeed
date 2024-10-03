@@ -8,20 +8,18 @@ function isFullscreen() {
     )
 }
 
-function enableFullscreen() {
-    var elem = document.documentElement;
-    var rfs = elem.requestFullscreen
-        || elem.webkitRequestFullScreen
-        || elem.mozRequestFullScreen
-        || elem.msRequestFullScreen;
-    rfs.call(elem);
-}
-
-function disableFullScreen() {
+function toggleFullScreen() {
     if (isFullscreen()) {
         const cancellFullScreen = document.exitFullscreen || document.mozCancelFullScreen || document.webkitExitFullscreen || document.msExitFullscreen;
         cancellFullScreen.call(document);
+    } else {
+        var elem = document.documentElement;
+        var rfs = elem.requestFullscreen
+            || elem.webkitRequestFullScreen
+            || elem.mozRequestFullScreen
+            || elem.msRequestFullScreen;
+        rfs.call(elem);
     }
 }
 
-export { isFullscreen, enableFullscreen, disableFullScreen }
+export { isFullscreen, toggleFullScreen }

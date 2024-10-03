@@ -193,7 +193,7 @@ import { Vault } from "../../vault";
          */
         loop: true,
         hideAtEnd: false,
-        isFitWidth: false,
+        isFitScreen: false,
         /**
          * Min width of the viewer in inline mode.
          * @type {number}
@@ -1139,16 +1139,27 @@ import { Vault } from "../../vault";
                 var top = (viewerHeight - height) / 2;
                 var ratio = width / naturalWidth
 
-                if (options.isFitWidth) {
+                let widthFit = window.innerWidth > window.innerHeight;
+                
+                if (options.isFitScreen) { 
                     left = 0
                     top = 0
-                    ratio = window.innerWidth / naturalWidth
+
+                    ratio = (widthFit) ? window.innerHeight / naturalHeight : window.innerWidth / naturalWidth
+
+                    if (widthFit && naturalWidth * ratio < 700 && (naturalHeight * (700 / naturalWidth)) - window.innerHeight > 200) {
+                        ratio = 700 / naturalWidth
+                    }
+                    
                     width = naturalWidth * ratio;
                     height = naturalHeight * ratio;
-                }
-
-                if (window.innerHeight > height) {
-                    top = (window.innerHeight - height) / 2
+                                   
+                    if (widthFit) {
+                        left = (window.innerWidth - width) / 2
+                    } 
+                    if (!widthFit && (naturalWidth > naturalHeight)) {
+                        top = (window.innerHeight - height) / 2
+                    }
                 }
 
                 var imageData = {
@@ -2644,8 +2655,8 @@ import { Vault } from "../../vault";
 
             return this;
         },
-        widthToggle: function widthToggle() {
-            this.options.isFitWidth = !this.options.isFitWidth
+        fitScreen: function fitScreen() {
+            this.options.isFitScreen = !this.options.isFitScreen
 
             this.update()
 
@@ -3306,7 +3317,7 @@ import { Vault } from "../../vault";
 
 }));
 
-function viewInit(defaultShow, widthToggle) {
+function viewInit(defaultShow, fitScreen) {
     let v = new Vault()
 
     if (!!v.gallery) {
@@ -3330,7 +3341,7 @@ function viewInit(defaultShow, widthToggle) {
             navbar: false,
             keyboard: false,
             hideAtEnd: true,
-            isFitWidth: widthToggle,
+            isFitScreen: fitScreen,
             filter(image) {
                 return !image.className.includes("twemoji") && !image.style.cssText.includes("width: 0px;")
             },
@@ -3352,6 +3363,12 @@ function hideViewer() {
     new Vault().runViewer((g) => g.hide())
 }
 
+function toggleViewer() {
+    new Vault().runViewer((g) => {
+        ((g.showing || g.isShown || g.showing) ? g.hide() : g.show())
+    })
+}
+
 function nextImage() {
     new Vault().runViewer((g) => g.next())
 }
@@ -3370,8 +3387,8 @@ function moveUp(e) {
     new Vault().runViewer((g) => g.move(0, 30))
 }
 
-function widthFit() {
-    new Vault().runViewer((g) => g.widthToggle())
+function fitScreen() {
+    new Vault().runViewer((g) => g.fitScreen())
 }
 
 const VIEWER_EVENT = {
@@ -3379,8 +3396,8 @@ const VIEWER_EVENT = {
     "ArrowRight": nextImage,
     "ArrowDown": moveDown,
     "ArrowUp": moveUp,
-    "/": widthFit,
+    "/": fitScreen,
     "Shift": hideViewer,
 }
 
-export { VIEWER_EVENT, showViewer, viewInit }
+export { VIEWER_EVENT, showViewer, viewInit, toggleViewer }

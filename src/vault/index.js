@@ -12,6 +12,10 @@ class Vault {
         Vault.instance = this;
     }
 
+    clear() {
+        Vault.instance = null;
+    }
+
     getCursor() {
         return this.cursor
     }
@@ -52,6 +56,7 @@ class Vault {
     getEventType() {
         let gallery = this.gallery
         if (gallery !== null && (gallery.showing || gallery.isShown || gallery.showing)) return EVENT_TYPE.VIEWER
+        if ($('#dialog').length) return EVENT_TYPE.MODAL
         return this.eventType
     }
 }

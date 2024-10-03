@@ -5,8 +5,14 @@
 .btn-wrapper {
     position: fixed;
     right: 1rem;
-    bottom: 4rem;
+    bottom: 3.8rem;
     z-index: 999999;
+}
+
+.btn-line {
+    overflow: auto; 
+    clear: both;
+    padding-bottom: 0.2rem;
 }
 
 .helper-btn {
@@ -16,7 +22,7 @@
     width: 2.7rem;
     height: 2.7rem;
     margin-right: .2rem;
-    float: left;
+    float: right;
     z-index: 999999;
 }
 

@@ -1,23 +1,19 @@
-import { config, CONFIG, getConfigWithKey, loadCss } from "../../config";
+import { CONFIG, getConfigWithKey } from "../../config";
 import { getChannelId } from "../../utils";
+import { renderPage } from "../../utils/link";
+import { clearSeries } from "./series";
 
 const COMMENT = "cp"
-
-function processAjaxData(html, url){
-    window.history.pushState({}, null, url);
-    document.querySelector("html").innerHTML = html
-
-    loadCss()
-    config()
-}
 
 function moveLink(href) {
     const url = new URL(href, location.origin)
     url.searchParams.append(COMMENT, 1)
 
-    fetch(url)
-        .then(res => res.text())
-        .then(text => processAjaxData(text, url))
+    if (getConfigWithKey(CONFIG.NO_REFRESH)) {
+        renderPage(url)
+    } else {
+        location.replace(url)
+    }
 }
 
 function filterLink(rows) {
@@ -36,7 +32,7 @@ function filterLink(rows) {
 
     let { include, exclude } = pageFilter
 
-    if (include.length == 0 && exclude.length == 0 === undefined) {
+    if (include.length == 0 && exclude.length == 0) {
         return rows;
     }
 
@@ -61,8 +57,7 @@ function nextPage() {
         let idx = arr.indexOf(location.pathname) + 1
 
         if (arr.length == idx + 1) {
-            localStorage.removeItem("arcalive_tampermonkey_series")
-            window.close()
+            clearSeries()
             return;
         }
 
