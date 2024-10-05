@@ -61,9 +61,23 @@ function pagenationBtn () {
     const nextBtnWrapper = $("<div>", {class:"next-btn"});
     const prevBtnWrapper = $("<div>", {class:"prev-btn"});
 
-    const prevBtn = createPageBtn("ion-android-arrow-back", () => toPage(false))
+    const prevBtn = createPageBtn("ion-android-arrow-back", () => {
+        const g = v.gallery;
+        if ((g.showing || g.isShown || g.showing)) {
+            v.runViewer((g) => g.prev())
+        } else {
+            toPage(false)
+        }
+    })
 
-    const nextBtn = createPageBtn("ion-android-arrow-forward", () => toPage(true))
+    const nextBtn = createPageBtn("ion-android-arrow-forward", () => {
+        const g = v.gallery;
+        if ((g.showing || g.isShown || g.showing)) {
+            v.runViewer((g) => g.next())
+        } else {
+            toPage(true)
+        }
+    })
 
     nextBtnWrapper.append(nextBtn)
     prevBtnWrapper.append(prevBtn)
