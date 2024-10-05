@@ -1,6 +1,6 @@
 import { CONFIG, getConfigWithKey } from "../../config";
 import { getChannelId } from "../../utils";
-import { renderNextPage, renderPage, renderPrevPage } from "../../utils/link";
+import { renderNextPage, renderPrevPage } from "../../utils/link";
 import { Vault } from "../../vault";
 import { clearSeries } from "./series";
 
@@ -74,6 +74,10 @@ function getNextPageUrl() {
         }
     }
 
+    if (href === undefined) {
+        return undefined;
+    }
+
     return parseLink(href)
 }
 
@@ -114,11 +118,21 @@ function getPrevPageUrl() {
             href = rows[0].href
         }
     }
+    
+    if (href === undefined) {
+        return undefined;
+    }
 
     return parseLink(href)
 }
 
 function prevPage() {
+    const v = new Vault()
+
+    if (v.prevPageUrl == undefined) {
+        return;
+    } 
+
     if (getConfigWithKey(CONFIG.NO_REFRESH)) {
         renderPrevPage()
     } else {

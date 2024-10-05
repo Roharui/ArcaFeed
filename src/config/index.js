@@ -59,7 +59,7 @@ function config() {
     if (config.no_refresh) {
         $("a").on("click", function(e) {
 
-            if ($(this).attr("href") !== "#") {
+            if ($(this).attr("href").includes("/b/") && $(".article-wrapper").length > 0) {
                 e.preventDefault();
                 renderPage(this.href)
             }

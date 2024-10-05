@@ -1,3 +1,4 @@
+import { isArticle } from ".";
 import { config } from "../config";
 import { Vault } from "../vault";
 
@@ -5,31 +6,15 @@ import { Vault } from "../vault";
 function processAjaxData(html, url){
     window.history.pushState({ prevUrl: window.location.href }, null, url);
 
-    const parser = new DOMParser();
-    const htmlDoc = parser.parseFromString(html, 'text/html');
+    const dom = $(html)
 
-    $("body").empty()
-    $("title").empty()
+    if (!isArticle(dom)) {
+        location.replace(url)
+    }
 
-    document.querySelector("body").innerHTML = htmlDoc.querySelector("body").innerHTML
-    document.querySelector("title").innerHTML = htmlDoc.querySelector("title").innerHTML
-
-    document.querySelectorAll("script").forEach(ele => ele.remove())
-
-    htmlDoc.querySelectorAll("script").forEach(ele => {
-        let src = ele.src
-        let html = ele.innerHTML
-        
-        var script= document.createElement('script');
-
-        if (src !== undefined) {
-            script.src = src
-        } else {
-            script.innerHTML = html
-        }
-
-        document.querySelector("head").appendChild(script)
-    })
+    $("title").html(dom.find("title").html())
+    $(".article-wrapper").html(dom.find(".article-wrapper").html())
+    $(".article-list").html(dom.find(".article-list").html())
 
     $('html, body').animate({ scrollTop: 0 }, 200)
 }

@@ -53,3 +53,7 @@
     height: 2.7rem;
     display: inline-block;
 }
+
+.ui-dialog {
+    z-index: 9997 !important;
+}

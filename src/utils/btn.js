@@ -57,6 +57,10 @@ function helperBtn () {
 }
 
 function pagenationBtn () {
+    if (!location.href.includes("/b/")) {   
+        return;
+    }
+    
     const nextBtnWrapper = $("<div>", {class:"next-btn"});
     const prevBtnWrapper = $("<div>", {class:"prev-btn"});
 

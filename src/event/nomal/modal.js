@@ -28,6 +28,11 @@ function nextPageConfigModal() {
         return;
     }
 
+    if ($('#dialog').length) {
+        $('#dialog').remove()
+        return;
+    }
+
     const dialog = $(NEXT_PAGE_MODAL_HTML)
 
     $("body").append(dialog)
@@ -90,6 +95,11 @@ function nextPageConfigModal() {
 }
 
 function initConfigModal() {
+    if ($('#dialog').length) {
+        $('#dialog').remove()
+        return;
+    }
+
     const dialog = $(INIT_CONFIG_MODAL_HTML)
 
     $("body").append(dialog)

@@ -34,8 +34,8 @@ class Vault {
         this.prevPageUrl = getPrevPageUrl()
 
         if (getConfigWithKey(CONFIG.NO_REFRESH)) {
-            fetchPage(this.nextPageUrl, (html) => new Vault().setNextPageHtml(html))
-            fetchPage(this.prevPageUrl, (html) => new Vault().setPrevPageHtml(html))
+            if (this.nextPageUrl !== undefined) fetchPage(this.nextPageUrl, (html) => new Vault().setNextPageHtml(html))
+            if (this.prevPageUrl !== undefined) fetchPage(this.prevPageUrl, (html) => new Vault().setPrevPageHtml(html))
         }
     }
 

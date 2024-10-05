@@ -1,4 +1,8 @@
 
+function isArticle(dom) {
+    return dom.find(".article-wrapper").length > 0
+}
+
 function getChannelId() {
     let x = location.pathname.split("/b/")[1]
     return x.split("/")[0]
@@ -10,4 +14,4 @@ function getArticleId() {
     return xx
 }
 
-export { getChannelId, getArticleId }
+export { isArticle, getChannelId, getArticleId }
