@@ -3322,7 +3322,7 @@ import { Vault } from "../../vault";
 function viewInit() {
     let v = new Vault()
 
-    if (!!v.data.gallery) {
+    if (!!v.gallery) {
         return
     }
 
