@@ -1,94 +1,173 @@
-import { CONFIG, getConfigWithKey } from "../config";
-import { getNextPageUrl, getPrevPageUrl } from "../event/nomal/next";
-import { fetchPage } from "../utils/link";
-import { EVENT_TYPE } from "./eventType";
+import { getChannelId } from "../utils/url";
+
+const DEFAULT_CONFIG = {
+    pageFilter: {},
+    viewer: {
+        fitScreen: false,
+        defaultStart: false,
+    }
+}
+
+const DEFAULT_VAULT = {
+    htmlSaver: {},
+    urlSort: [],
+    nextPageUrl: "",
+    prevPageUrl: "",
+}
 
 class Vault {
     static instance = null;
 
     constructor() {
         if (Vault.instance) return Vault.instance;
-        this.gallery = null;
-        this.eventType = EVENT_TYPE.DEFAULT
-        this.currentComment = null;
-        this.cursor = null;
 
-        this.nextPageUrl = null;
-        this.nextPageHtml = null;
-        this.prevPageUrl = null;
-        this.prevPageHtml = null;
+        this.config = localStorage.getItem("aralive_helper_config") 
+            ? JSON.parse(localStorage.getItem("aralive_helper_config")) 
+            : {...DEFAULT_CONFIG}
+        this.data = {...DEFAULT_VAULT}
+        this.gallery = null
 
         Vault.instance = this;
     }
 
-    clear() {
-        Vault.instance = null;
+    getEventType() {
+        const gallery = this.gallery;
+        if (gallery !== null && (gallery.showing || gallery.isShown || gallery.showing)) return "VIEWER";
+        return "DEFAULT"
     }
 
-    pullPage() {
-        if (!location.pathname.includes("/b/")) {
-            return;
+    getHtml(url) {
+        if (!url in this.data.htmlSaver) return;
+        return this.data.htmlSaver[url];
+    }
+
+    setHtml(url, html) {
+        if (url in this.data.htmlSaver) return;
+        this.data.urlSort.push(url)
+
+        if (this.data.urlSort > 10) {
+            const u = this.data.urlSort.shift()
+            delete this.data.htmlSaver[u];
         }
 
-        this.nextPageUrl = getNextPageUrl()
-        this.prevPageUrl = getPrevPageUrl()
+        this.data.htmlSaver[url] = html
+    }
 
-        if (getConfigWithKey(CONFIG.NO_REFRESH)) {
-            if (this.nextPageUrl !== undefined) fetchPage(this.nextPageUrl, (html) => new Vault().setNextPageHtml(html))
-            if (this.prevPageUrl !== undefined) fetchPage(this.prevPageUrl, (html) => new Vault().setPrevPageHtml(html))
+    getPageFilter(channelId) {
+        if (!channelId in this.config.pageFilter) return;
+        return this.config.pageFilter[channelId]
+    }
+
+    setPageFilter(channelId, pageFilter) {
+        this.config.pageFilter[channelId] = pageFilter
+        this.setPageUrl()
+        this.saveConfig()
+    }
+
+    setViewerConfig(config) {
+        this.config.viewer = config
+        this.saveConfig()
+    }
+    
+    saveConfig() {
+        localStorage.setItem("aralive_helper_config", JSON.stringify(this.config))
+    }
+    
+    filterLink(rows) {
+        rows = rows.filter(ele => !($(ele).hasClass("notice") || $(ele).hasClass("head") || $(ele).attr("href").includes("#c_")))
+
+        const channelId = getChannelId()
+        
+        let pageFilter = this.getPageFilter(channelId)
+
+        if (pageFilter === undefined) {
+            pageFilter = {
+                include: [],
+                exclude: []
+            }
+        }
+
+        let { include, exclude } = pageFilter
+
+        if (include.length == 0 && exclude.length == 0) {
+            return rows;
+        }
+
+        return rows.filter(ele => {
+            let eleText = $(ele).find(".badge-success").text()
+
+            let isInclude = include.length != 0 ? include.reduce((prev, cur) => prev || eleText.includes(cur), false) : true
+            let isExclude = exclude.length != 0 ? exclude.reduce((prev, cur) => prev && !eleText.includes(cur) && !(eleText.length == 0 && cur == '노탭'), true) : true
+
+            return isInclude && isExclude
+        })
+    }
+
+    getNextPageUrl() {
+        let href = undefined;
+        
+        let isCurrent = $("a.vrow.active").length == 0;
+
+        let rows = !isCurrent
+            ? this.filterLink($("a.vrow.active").nextAll().get())
+            : this.filterLink($("a.vrow:not(.notice)").get())
+
+        if (rows.length === 0) {
+            let page = $(".page-item.active").next()
+            href = page.find("a").attr("href")
+        } else {
+            href = rows[0].href
+        }
+
+        return href;
+    }
+
+    getPrevPageUrl() {
+        let href = undefined;
+
+        let isCurrent = $("a.vrow.active").length == 0;
+
+        let rows = !isCurrent
+            ? this.filterLink($("a.vrow.active").prevAll().get())
+            : this.filterLink($("a.vrow:not(.notice)").get())
+
+        if (rows.length === 0) {
+            let page = $(".page-item.active").prev()
+            href = page.find("a").attr("href")
+        } else {
+            href = rows[0].href
+        }
+
+        return href;
+    }
+
+    setPageUrl() {
+        this.data.nextPageUrl = this.getNextPageUrl()
+        this.data.prevPageUrl = this.getPrevPageUrl()
+
+        if (!this.data.nextPageUrl in this.data.htmlSaver) {
+            fetch(nextUrl)
+                .then(res => res.text())
+                .then(res => this.setHtml(nextUrl, res));
+
+        }
+
+        if (this.data.prevPageUrl == undefined) return;
+
+        if (!this.data.prevPageUrl in this.data.htmlSaver) {
+            fetch(prevUrl)
+                .then(res => res.text())
+                .then(res => this.setHtml(prevUrl, res));
         }
     }
-
-    setNextPageHtml(html) {
-        this.nextPageHtml = html
-    }
-
-    setPrevPageHtml(html) {
-        this.prevPageHtml = html
-    }
-
-    getCursor() {
-        return this.cursor
-    }
-
-    setCursor(cursor) {
-        this.cursor = cursor
-    }
-
-    removeCursor() {
-        this.cursor = null
-        this.cursorLoc = null
-    }
-
-    getCursorLoc() {
-        if (this.cursorLoc == null) {
-            let left = parseInt(window.innerWidth / 2)
-            let top = parseInt(window.innerHeight / 2)
-
-            this.cursorLoc = {left, top}
-        }
-
-        return this.cursorLoc
-    }
-
-    setCursorLoc(loc) {
-        this.cursorLoc = loc
-    }
-
-    setGallery(gallery) {
-        this.gallery = gallery
+    
+    setGallery(g) {
+        this.gallery = g
     }
 
     runViewer(f) {
         if (this.gallery == null) return;
         f(this.gallery)
-    }
-
-    getEventType() {
-        let gallery = this.gallery
-        if (gallery !== null && (gallery.showing || gallery.isShown || gallery.showing)) return EVENT_TYPE.VIEWER
-        if ($('#dialog').length) return EVENT_TYPE.MODAL
-        return this.eventType
     }
 }
 

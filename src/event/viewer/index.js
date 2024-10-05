@@ -3318,10 +3318,10 @@ import { Vault } from "../../vault";
 
 }));
 
-function viewInit(defaultShow, fitScreen) {
+function viewInit() {
     let v = new Vault()
 
-    if (!!v.gallery) {
+    if (!!v.data.gallery) {
         return
     }
 
@@ -3344,14 +3344,14 @@ function viewInit(defaultShow, fitScreen) {
             hideAtEnd: true,
             scalable: false,
             zoomable: false,
-            isFitScreen: fitScreen,
+            isFitScreen: v.config.viewer.fitScreen,
             filter(image) {
                 return !image.className.includes("twemoji") && !image.style.cssText.includes("width: 0px;")
             },
         }
     );
 
-    if (defaultShow) {
+    if (v.config.viewer.defaultStart) {
         gallery.show()
     }
 

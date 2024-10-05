@@ -1,9 +1,12 @@
 
 import { Vault } from "../vault";
-import { EVENT_TYPE } from "../vault/eventType";
-import { MOUSE_EVENT } from "./mouse";
-import { CONTROL_KEYBORD_EVENT, KEYBORD_EVENT } from "./nomal";
+import { CONTROL_KEYBORD_EVENT, KEYBORD_EVENT } from "./default";
 import { VIEWER_EVENT } from "./viewer";
+
+const EVENT_TYPE = {
+    DEFAULT: "DEFAULT",
+    VIEWER: "VIEWER"
+}
 
 const CONTROL = "CONTROL"
 const NORMAL = "NORMAL"
@@ -17,14 +20,6 @@ const EVENT = {
         [CONTROL]: {},
         [NORMAL]: VIEWER_EVENT
     },
-    [EVENT_TYPE.MOUSE]: {
-        [CONTROL]: {},
-        [NORMAL]: MOUSE_EVENT
-    },
-    [EVENT_TYPE.MODAL]: {
-        [CONTROL]: {},
-        [NORMAL]: {}
-    }
 }
 
 function event() {

@@ -1,6 +1,6 @@
 {
   "name": "acalive_tampermonkey",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "main": "main.js",
   "scripts": {
     "start": "node app.js",
@@ -20,6 +20,7 @@
     "@types/jquery": "^3.5.30",
     "@types/jqueryui": "^1.12.23",
     "@types/node": "^22.7.4",
+    "@types/toastify-js": "^1.12.3",
     "chokidar": "^4.0.1",
     "css-loader": "^7.1.2",
     "style-loader": "^4.0.0",

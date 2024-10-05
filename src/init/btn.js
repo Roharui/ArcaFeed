@@ -1,10 +1,10 @@
-import { toggleFullScreen } from "../event/nomal/fullscreen";
-import { initConfigModal, nextPageConfigModal } from "../event/nomal/modal";
-import { nextPage, prevPage } from "../event/nomal/next";
-import { clearSeries } from "../event/nomal/series";
 import { toggleViewer } from "../event/viewer";
+import { toggleFullScreen } from "../utils/fullscreen";
+import { initConfigModal, nextPageConfigModal } from "../utils/modal";
+import { toPage } from "../utils/toPage";
 import { Vault } from "../vault";
-import { EVENT_TYPE } from "../vault/eventType";
+
+const v = new Vault()
 
 function createPageBtn(icon, callback) {
     const btn = $("<div>", {class:"helper-btn page-btn"});
@@ -30,8 +30,6 @@ function helperBtn () {
     const firstLine = $("<div>", {class: "btn-line"})
     const secondLine = $("<div>", {class: "btn-line"})
 
-    const clearSeriesBtn = createHelperBtn("ion-trash-a", clearSeries)
-
     const pageModalBtn = createHelperBtn("ion-hammer", nextPageConfigModal)
 
     const settingModalBtn = createHelperBtn("ion-ios-gear", initConfigModal)
@@ -41,7 +39,6 @@ function helperBtn () {
     const imageViewBtn = createHelperBtn("ion-android-image", toggleViewer)
     
     if (location.href.includes("/b/")) {        
-        firstLine.append(clearSeriesBtn)
         firstLine.append(pageModalBtn)
 
         secondLine.append(fullScreenBtn)
@@ -64,25 +61,9 @@ function pagenationBtn () {
     const nextBtnWrapper = $("<div>", {class:"next-btn"});
     const prevBtnWrapper = $("<div>", {class:"prev-btn"});
 
-    const prevBtn = createPageBtn("ion-android-arrow-back", function(){
-        const v = new Vault()
+    const prevBtn = createPageBtn("ion-android-arrow-back", () => toPage(false))
 
-        if (v.getEventType() === EVENT_TYPE.VIEWER) {
-            v.runViewer((g) => g.prev())
-        } else {
-            prevPage()
-        }
-    })
-
-    const nextBtn = createPageBtn("ion-android-arrow-forward", function(){
-        const v = new Vault()
-
-        if (v.getEventType() === EVENT_TYPE.VIEWER) {
-            v.runViewer((g) => g.next())
-        } else {
-            nextPage()
-        }
-    })
+    const nextBtn = createPageBtn("ion-android-arrow-forward", () => toPage(true))
 
     nextBtnWrapper.append(nextBtn)
     prevBtnWrapper.append(prevBtn)
@@ -91,14 +72,10 @@ function pagenationBtn () {
     $("body").append(prevBtnWrapper)
 }
 
-function toggleBtn (flag) {
+function toggleBtn() {
     $(".btn-wrapper").remove()
     $(".next-btn").remove()
     $(".prev-btn").remove()
-    
-    if (!flag) {
-        return;
-    }
     
     helperBtn()
     pagenationBtn()

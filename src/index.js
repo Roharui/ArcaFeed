@@ -1,4 +1,4 @@
-import { config } from "./config"
+import { init } from "./init"
 import { event } from "./event"
 
 import 'jquery-ui'
@@ -8,7 +8,7 @@ import "toastify-css"
 import "viewerjs-css"
 import "arcalive-css"
 
-$(function () {
-    config()
+(function() {
+    init()
     event()
-})
+})()
