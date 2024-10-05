@@ -3322,10 +3322,6 @@ import { Vault } from "../../vault";
 function viewInit() {
     let v = new Vault()
 
-    if (!!v.gallery) {
-        return
-    }
-
     let article = $(".article-content").find("img").not(".twemoji")
 
     if (article.length == 0) {

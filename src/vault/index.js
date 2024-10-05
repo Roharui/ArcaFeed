@@ -37,12 +37,12 @@ class Vault {
     }
 
     getHtml(url) {
-        if (!url in this.data.htmlSaver) return;
-        return this.data.htmlSaver[url];
+        if (!this.data.htmlSaver.hasOwnProperty(btoa(url))) return;
+        return this.data.htmlSaver[btoa(url)];
     }
 
     setHtml(url, html) {
-        if (url in this.data.htmlSaver) return;
+        if (this.data.htmlSaver.hasOwnProperty(btoa(url))) return;
         this.data.urlSort.push(url)
 
         if (this.data.urlSort > 10) {
@@ -50,7 +50,7 @@ class Vault {
             delete this.data.htmlSaver[u];
         }
 
-        this.data.htmlSaver[url] = html
+        this.data.htmlSaver[btoa(url)] = html
     }
 
     getPageFilter(channelId) {
@@ -145,7 +145,7 @@ class Vault {
         this.data.nextPageUrl = this.getNextPageUrl()
         this.data.prevPageUrl = this.getPrevPageUrl()
 
-        if (!this.data.nextPageUrl in this.data.htmlSaver) {
+        if (!this.data.htmlSaver.hasOwnProperty(btoa(this.data.nextPageUrl))) {
             fetch(this.data.nextPageUrl)
                 .then(res => res.text())
                 .then(res => this.setHtml(this.data.nextPageUrl, res));
@@ -153,7 +153,7 @@ class Vault {
 
         if (this.data.prevPageUrl == undefined) return;
 
-        if (!this.data.prevPageUrl in this.data.htmlSaver) {
+        if (!this.data.htmlSaver.hasOwnProperty(btoa(this.data.prevPageUrl))) {
             fetch(this.data.prevPageUrl)
                 .then(res => res.text())
                 .then(res => this.setHtml(this.data.prevPageUrl, res));

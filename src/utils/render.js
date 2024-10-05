@@ -14,8 +14,7 @@ function render(url){
             .then(renderCallback)
             .then(afterRender)
     } else {
-        new Promise()
-            .then(() => renderCallback(html))
+        new Promise((res) => res(renderCallback(html)))
             .then(afterRender)
     }
 }
@@ -24,8 +23,8 @@ function renderCallback(html) {
     const dom = $(html)
 
     $(".article-wrapper").toggle(dom.find(".article-wrapper").length > 0)
-
-    $("title").html(dom.find("title").html())
+    
+    $("title").html(dom.find("div.title-row div.title").clone().children().remove().end().text())
     $(".article-wrapper").html(dom.find(".article-wrapper").html())
 
     $(".article-list").html(dom.find(".article-list").html())
