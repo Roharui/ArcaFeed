@@ -39,10 +39,10 @@ watcher
         console.log('filename provided: ' + path);
 
         exec('npm run build', (err, stdout, stderr) => {
+            mutex = false;
             if (err) return;
 
             console.log("client: RELOAD REQUEST")
             wc.send("reload")
-            mutex = false;
         });
     })

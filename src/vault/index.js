@@ -146,18 +146,17 @@ class Vault {
         this.data.prevPageUrl = this.getPrevPageUrl()
 
         if (!this.data.nextPageUrl in this.data.htmlSaver) {
-            fetch(nextUrl)
+            fetch(this.data.nextPageUrl)
                 .then(res => res.text())
-                .then(res => this.setHtml(nextUrl, res));
-
+                .then(res => this.setHtml(this.data.nextPageUrl, res));
         }
 
         if (this.data.prevPageUrl == undefined) return;
 
         if (!this.data.prevPageUrl in this.data.htmlSaver) {
-            fetch(prevUrl)
+            fetch(this.data.prevPageUrl)
                 .then(res => res.text())
-                .then(res => this.setHtml(prevUrl, res));
+                .then(res => this.setHtml(this.data.prevPageUrl, res));
         }
     }
     

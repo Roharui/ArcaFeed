@@ -1,6 +1,5 @@
 
 import { Vault } from "../vault";
-import { getArticleId } from "../utils/url"
 import { isCurPageArticle } from "./check";
 import { render } from "./render";
 
@@ -11,8 +10,7 @@ function toPage(flag) {
     const href = flag ? v.data.nextPageUrl : v.data.prevPageUrl
 
     if (href === undefined) return;
-    if (getArticleId(href) === undefined) return;
-    if (!isCurPageArticle()) {
+    if (!href.includes("/b/") || !isCurPageArticle()) {
         location.replace(href)
         return;
     }

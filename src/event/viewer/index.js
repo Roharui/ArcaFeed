@@ -9,6 +9,7 @@
  * Date: 2023-09-17T03:16:38.052Z
  */
 
+import { getArticleId } from "../../utils/url";
 import { Vault } from "../../vault";
 
 (function (global, factory) {
@@ -3351,7 +3352,7 @@ function viewInit() {
         }
     );
 
-    if (v.config.viewer.defaultStart) {
+    if (v.config.viewer.defaultStart && $(".article-wrapper").is(":visible")) {
         gallery.show()
     }
 
