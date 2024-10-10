@@ -1,4 +1,4 @@
-import { getChannelId } from "../utils/url";
+import { getArticleId, getChannelId } from "../utils/url";
 
 const DEFAULT_CONFIG = {
     pageFilter: {},
@@ -105,12 +105,12 @@ class Vault {
 
     getNextPageUrl() {
         let href = undefined;
-        
-        let isCurrent = $("a.vrow.active").length == 0;
 
-        let rows = !isCurrent
-            ? this.filterLink($("a.vrow.active").nextAll().get())
-            : this.filterLink($("a.vrow:not(.notice)").get())
+        let articleId = getArticleId()
+
+        let rows = (articleId === undefined) 
+            ? this.filterLink($(`a.vrow.column`).nextAll().get()) 
+            : this.filterLink($(`a.vrow.column[href="${location.pathname + location.search}"]`).nextAll().get())
 
         if (rows.length === 0) {
             let page = $(".page-item.active").next()
@@ -125,11 +125,11 @@ class Vault {
     getPrevPageUrl() {
         let href = undefined;
 
-        let isCurrent = $("a.vrow.active").length == 0;
+        let articleId = getArticleId()
 
-        let rows = !isCurrent
-            ? this.filterLink($("a.vrow.active").prevAll().get())
-            : this.filterLink($("a.vrow:not(.notice)").get())
+        let rows = (articleId === undefined) 
+            ? this.filterLink($(`a.vrow.column`).prevAll().get()) 
+            : this.filterLink($(`a.vrow.column[href="${location.pathname + location.search}"]`).prevAll().get())
 
         if (rows.length === 0) {
             let page = $(".page-item.active").prev()
