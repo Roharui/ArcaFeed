@@ -24,7 +24,7 @@ const CONFIG_FN = {
         $('head').append($('<style>', {text: `.btn-wrapper { bottom: 1rem !important; }`}))
     },
     hideBanner: () => {
-        $('head').append($('<style>', {text: `#wall { display: none !important; }`}))
+        $("#wall").hide()
     }
 }
 
