@@ -3400,4 +3400,4 @@ const VIEWER_EVENT = {
     "Shift": hideViewer,
 }
 
-export { VIEWER_EVENT, showViewer, viewInit, toggleViewer }
+export { VIEWER_EVENT, showViewer, viewInit, toggleViewer, fitScreen }

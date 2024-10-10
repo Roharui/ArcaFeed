@@ -1,7 +1,8 @@
-import { toggleViewer } from "../event/viewer";
+import { fitScreen, toggleViewer } from "../event/viewer";
 import { toggleFullScreen } from "../utils/fullscreen";
 import { initConfigModal, nextPageConfigModal } from "../utils/modal";
 import { toPage } from "../utils/toPage";
+import { getArticleId } from "../utils/url";
 import { Vault } from "../vault";
 
 const v = new Vault()
@@ -37,12 +38,22 @@ function helperBtn () {
     const fullScreenBtn = createHelperBtn("ion-android-expand", toggleFullScreen)
 
     const imageViewBtn = createHelperBtn("ion-android-image", toggleViewer)
+
+    const imageFitWidth = createHelperBtn("ion-arrow-resize", fitScreen)
+
+    const refresh = createHelperBtn("ion-ios-refresh-outline", () => location.reload())
+    
+    firstLine.append(refresh)
     
     if (location.href.includes("/b/")) {        
         firstLine.append(pageModalBtn)
 
         secondLine.append(fullScreenBtn)
-        secondLine.append(imageViewBtn)
+
+        if (getArticleId() !== undefined) {
+            secondLine.append(imageViewBtn)
+            secondLine.append(imageFitWidth)
+        }
     }
 
     firstLine.append(settingModalBtn)
@@ -63,7 +74,7 @@ function pagenationBtn () {
 
     const prevBtn = createPageBtn("ion-android-arrow-back", () => {
         const g = v.gallery;
-        if ((g.showing || g.isShown || g.showing)) {
+        if (g != null && (g.showing || g.isShown || g.showing)) {
             v.runViewer((g) => g.prev())
         } else {
             toPage(false)
@@ -72,7 +83,7 @@ function pagenationBtn () {
 
     const nextBtn = createPageBtn("ion-android-arrow-forward", () => {
         const g = v.gallery;
-        if ((g.showing || g.isShown || g.showing)) {
+        if (g != null && (g.showing || g.isShown || g.showing)) {
             v.runViewer((g) => g.next())
         } else {
             toPage(true)

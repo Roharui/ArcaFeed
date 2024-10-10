@@ -28,7 +28,7 @@ function renderCallback(html) {
     $(".article-wrapper").html(dom.find(".article-wrapper").html())
 
     $(".article-list").html(dom.find(".article-list").html())
-    $(".pagination-wrapper").html(dom.find(".pagination-wrapper").html())
+    $("board-article-list .pagination-wrapper").html(dom.find("board-article-list .pagination-wrapper").html())
 
     $('html, body').animate({ scrollTop: 0 }, 200)
 }
