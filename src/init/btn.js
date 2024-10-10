@@ -3,7 +3,7 @@ import { toggleFullScreen } from "../utils/fullscreen";
 import { initConfigModal, nextPageConfigModal } from "../utils/modal";
 import { toPage } from "../utils/toPage";
 import { getArticleId } from "../utils/url";
-import { Vault } from "../vault";
+import { Vault } from "@vault";
 
 const v = new Vault()
 

@@ -16,8 +16,10 @@ module.exports = {
             "jquery-ui": "jquery-ui-dist/jquery-ui.js",
             "jquery-ui-css": "jquery-ui-dist/jquery-ui.css",
             "toastify-css": "toastify-js/src/toastify.css",
-            "viewerjs-css": path.resolve(__dirname, "src/css/viewer.min.css"),
+            "viewerjs-css": path.resolve(__dirname, "packages/viewerjs/src/css/viewer.css"),
             "arcalive-css": path.resolve(__dirname, "src/css/arcalive.css"),
+            "@viewerjs": path.resolve(__dirname, "packages/viewerjs/src"),
+            "@vault": path.resolve(__dirname, "src/vault"),
         }
     },
 
@@ -48,11 +50,11 @@ module.exports = {
             },
         ],
     },
-    
+
     plugins: [
         new webpack.ProvidePlugin({
-            $: "jquery",
-            jQuery: "jquery",
+            "$": "jquery",
+            "jQuery": "jquery",
             "window.jQuery": "jquery'",
             "window.$": "jquery"
         })

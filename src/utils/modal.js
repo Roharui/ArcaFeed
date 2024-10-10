@@ -2,7 +2,7 @@
 import Toastify from 'toastify-js'
 
 import { getChannelId } from './url';
-import { Vault } from '../vault';
+import { Vault } from "@vault";
 
 const v = new Vault()
 

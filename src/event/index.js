@@ -1,5 +1,5 @@
 
-import { Vault } from "../vault";
+import { Vault } from "@vault";
 import { CONTROL_KEYBORD_EVENT, KEYBORD_EVENT } from "./default";
 import { VIEWER_EVENT } from "./viewer";
 

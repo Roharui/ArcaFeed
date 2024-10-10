@@ -1,5 +1,5 @@
 
-import { Vault } from "../vault";
+import { Vault } from "@vault";
 import { isCurPageArticle } from "./check";
 import { render } from "./render";
 

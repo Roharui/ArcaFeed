@@ -1,7 +1,7 @@
 import { toggleBtn } from "./btn";
 import { noRefrershLink } from "./noRefresh";
 import { viewInit } from "../event/viewer";
-import { Vault } from "../vault";
+import { Vault } from "@vault";
 
 const v = new Vault()
 
