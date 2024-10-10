@@ -41,8 +41,12 @@ function helperBtn () {
 
     const imageFitWidth = createHelperBtn("ion-arrow-resize", fitScreen)
 
+    const comment = createHelperBtn("ion-android-list", () => {
+        $('html, body').animate({ scrollTop: $("#comment").height() }, 200)
+    })
     const refresh = createHelperBtn("ion-ios-refresh-outline", () => location.reload())
     
+    firstLine.append(comment)
     firstLine.append(refresh)
     
     if (location.href.includes("/b/")) {        

@@ -10,7 +10,8 @@ const CONFIG = {
     noRefresh: true,
     toggleBtn: true,
     viewer: true,
-    hideControlBtn: true
+    hideControlBtn: true,
+    hideBanner: true,
 }
 
 const CONFIG_FN = {
@@ -21,6 +22,9 @@ const CONFIG_FN = {
     hideControlBtn: () => {
         $(".nav-control").hide()
         $('head').append($('<style>', {text: `.btn-wrapper { bottom: 1rem !important; }`}))
+    },
+    hideBanner: () => {
+        $('head').append($('<style>', {text: `#wall { display: none !important; }`}))
     }
 }
 
