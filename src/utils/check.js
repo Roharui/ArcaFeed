@@ -1,6 +1,5 @@
-
 function isCurPageArticle() {
-    return $(".article-wrapper").length > 0
+  return $('.article-wrapper').length > 0;
 }
 
-export { isCurPageArticle }
+export { isCurPageArticle };

@@ -1,42 +1,45 @@
-
-import { Vault } from "@vault";
-import { CONTROL_KEYBORD_EVENT, KEYBORD_EVENT } from "./default";
-import { VIEWER_EVENT } from "./viewer";
+import { Vault } from '@vault';
+import { CONTROL_KEYBORD_EVENT, KEYBORD_EVENT } from './default';
+import { VIEWER_EVENT } from './viewer';
 
 const EVENT_TYPE = {
-    DEFAULT: "DEFAULT",
-    VIEWER: "VIEWER"
-}
+  DEFAULT: 'DEFAULT',
+  VIEWER: 'VIEWER',
+};
 
-const CONTROL = "CONTROL"
-const NORMAL = "NORMAL"
+const CONTROL = 'CONTROL';
+const NORMAL = 'NORMAL';
 
 const EVENT = {
-    [EVENT_TYPE.DEFAULT]: {
-        [CONTROL]: CONTROL_KEYBORD_EVENT,
-        [NORMAL]: KEYBORD_EVENT
-    },
-    [EVENT_TYPE.VIEWER]: {
-        [CONTROL]: {},
-        [NORMAL]: VIEWER_EVENT
-    },
-}
+  [EVENT_TYPE.DEFAULT]: {
+    [CONTROL]: CONTROL_KEYBORD_EVENT,
+    [NORMAL]: KEYBORD_EVENT,
+  },
+  [EVENT_TYPE.VIEWER]: {
+    [CONTROL]: {},
+    [NORMAL]: VIEWER_EVENT,
+  },
+};
 
 function event() {
-    $(document).on("keydown", function(e) {
-        let v = new Vault()
+  $(document).on('keydown', function (e) {
+    let v = new Vault();
 
-        const E = EVENT[v.getEventType()]
+    const E = EVENT[v.getEventType()];
 
-        const C = E[CONTROL]
-        const N = E[NORMAL]
+    const C = E[CONTROL];
+    const N = E[NORMAL];
 
-        const F = (e.ctrlKey ? C : N)[e.key]
+    const F = (e.ctrlKey ? C : N)[e.key];
 
-        if (F == undefined) return;
+    if (F == undefined) return;
 
-        F(e);
-    })
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    e.stopPropagation();
+
+    F(e);
+  });
 }
 
-export { event }
+export { event };
