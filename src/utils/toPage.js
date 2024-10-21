@@ -1,19 +1,18 @@
-import { Vault } from '@vault';
-import { isCurPageArticle } from './check';
+import { Vault } from 'src/vault';
 import { render } from './render';
 
 const v = new Vault();
 
-function toPage(flag) {
-  const href = flag ? v.data.nextPageUrl : v.data.prevPageUrl;
-
-  if (href === undefined) return;
-  if (!href.includes('/b/') || !isCurPageArticle()) {
-    location.replace(href);
-    return;
-  }
+function toNextPage() {
+  const href = v.getNextPageUrl();
 
   render(href);
 }
 
-export { toPage };
+function toPrevPage() {
+  const href = v.getPrevPageUrl();
+
+  render(href);
+}
+
+export { toNextPage, toPrevPage };

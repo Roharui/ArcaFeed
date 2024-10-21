@@ -1,9 +1,9 @@
-import { fitScreen, toggleViewer } from '@src/event/viewer';
-import { toggleFullScreen } from '@src/utils/fullscreen';
-import { initConfigModal, nextPageConfigModal } from '@src/utils/modal';
-import { toPage } from '@src/utils/toPage';
-import { getArticleId } from '@src/utils/url';
-import { Vault } from '@vault';
+import { fitScreen, toggleViewer } from 'src/event/viewer';
+import { toggleFullScreen } from 'src/utils/fullscreen';
+import { initConfigModal, nextPageConfigModal } from 'src/utils/modal';
+import { toPage } from 'src/utils/toPage';
+import { getArticleId } from 'src/utils/url';
+import { Vault } from 'src/vault';
 
 const v = new Vault();
 

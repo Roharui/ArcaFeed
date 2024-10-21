@@ -1,15 +1,13 @@
-import Toastify from 'toastify-js';
-
 import { getChannelId } from './url';
-import { Vault } from '@vault';
-import { enterCallback } from './eventCallback';
+import { Vault } from 'src/vault';
 
 const v = new Vault();
 
 const NEXT_PAGE_MODAL_HTML = `
 <div id="dialog" title="게시글 이동 설정">
-    <p>허용 : <input type="text" id="include"></p>
-    <p>차단 : <input type="text" id="exclude"></p>
+    <div id="category"></div>
+    <hr>
+    <p>차단 제목 : <input type="text" id="exclude-title" style="float: right; width: 275px"></p>
 </div>
 `;
 
@@ -37,23 +35,20 @@ function nextPageConfigModal() {
   const checkFn = function () {
     const channelId = getChannelId();
 
-    const pageInclude = $('#dialog').find('#include').val();
-    const pageExclude = $('#dialog').find('#exclude').val();
+    const excludeCategory = $('#dialog')
+      .find('.ele-category')
+      .filter((i, ele) => !$(ele).is(':checked'))
+      .map((i, ele) => $(ele).val())
+      .get();
+    const excludeTitle = $('#dialog').find('#exclude-title').val();
 
     const pageFilter = {
-      include: pageInclude.trim().length > 0 ? pageInclude.split(',') : [],
-      exclude: pageExclude.trim().length > 0 ? pageExclude.split(',') : [],
+      excludeCategory: excludeCategory,
+      excludeTitle:
+        excludeTitle.trim().length > 0 ? excludeTitle.split(',') : [],
     };
 
     v.setPageFilter(channelId, pageFilter);
-
-    Toastify({
-      text: `게시글 허용 : ${pageInclude.length == 0 ? '<없음>' : pageInclude} / 게시글 차단 : ${pageExclude.length == 0 ? '<없음>' : pageExclude}`,
-      className: 'info',
-      style: {
-        background: 'linear-gradient(to right, #00b09b, #96c93d)',
-      },
-    }).showToast();
 
     $(this).dialog('close');
   };
@@ -65,8 +60,9 @@ function nextPageConfigModal() {
   $('body').append(dialog);
 
   $('#dialog').dialog({
-    modal: true, // 배경색 어둡게 true, false
-    resizeable: false, // 사이즈 조절가능 여부
+    modal: true,
+    resizeable: false,
+    width: '400px',
     buttons: {
       확인: checkFn,
       취소: cancelFn,
@@ -78,18 +74,37 @@ function nextPageConfigModal() {
 
       if (pageFilter === undefined) {
         pageFilter = {
-          include: [],
-          exclude: [],
+          excludeCategory: [],
+          excludeTitle: [],
         };
       }
 
-      let { include, exclude } = pageFilter;
+      let { excludeCategory, excludeTitle } = pageFilter;
 
-      $('#dialog').find('#include').val(include.join(','));
-      $('#dialog').find('#exclude').val(exclude.join(','));
+      $('.board-category > span').each(function (i, ele) {
+        let text = $(ele).text().includes('전체')
+          ? '노탭'
+          : $(ele).text().trim();
 
-      $('#dialog').find('#include').on('keydown', enterCallback(checkFn));
-      $('#dialog').find('#exclude').on('keydown', enterCallback(checkFn));
+        const checkBox = $('<input>', {
+          type: 'checkbox',
+          class: 'ele-category',
+          value: text,
+        });
+        const tabName = $('<span>', { text: text });
+
+        const span = $('<span>', {
+          style: `display: inline-block; background-color: #ddd; padding: 5px; margin: 3px; border-radius: 20px;`,
+        });
+
+        span.append(checkBox).append(tabName);
+
+        checkBox.prop('checked', !excludeCategory.includes(text));
+
+        $('#dialog').find('#category').append(span);
+      });
+
+      $('#dialog').find('#exclude-title').val(excludeTitle.join(','));
     },
     close: function () {
       $('#dialog').remove();
@@ -116,12 +131,12 @@ function initConfigModal() {
     let BTN_NEXTBTN = $('#dialog').find(`#btn_nextBtn`).is(':checked');
     let BTN_NAVEXPAND = $('#dialog').find(`#btn_navExpand`).is(':checked');
 
-    v.setViewerConfig({
+    v.setConfig('viewer', {
       defaultStart: DEFAULT_VIEWER,
       fitScreen: DEFAULT_FITSCREEN,
     });
 
-    v.setBtnConfig({
+    v.setConfig('btn', {
       nextBtn: BTN_NEXTBTN,
       navExpand: BTN_NAVEXPAND,
     });
@@ -134,8 +149,8 @@ function initConfigModal() {
   };
 
   $('#dialog').dialog({
-    modal: true, // 배경색 어둡게 true, false
-    resizeable: false, // 사이즈 조절가능 여부
+    modal: true,
+    resizeable: false,
     buttons: {
       초기화: function () {
         resetConfig();

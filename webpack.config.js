@@ -15,15 +15,13 @@ module.exports = {
     alias: {
       'jquery-ui': 'jquery-ui-dist/jquery-ui.js',
       'jquery-ui-css': 'jquery-ui-dist/jquery-ui.css',
-      'toastify-css': 'toastify-js/src/toastify.css',
       'viewerjs-css': path.resolve(
         __dirname,
         'packages/viewerjs/src/css/viewer.css',
       ),
       'arcalive-css': path.resolve(__dirname, 'src/css/arcalive.css'),
       '@viewerjs': path.resolve(__dirname, 'packages/viewerjs/src'),
-      '@vault': path.resolve(__dirname, 'src/vault'),
-      '@src': path.resolve(__dirname, 'src'),
+      src: path.resolve(__dirname, 'src'),
     },
   },
 

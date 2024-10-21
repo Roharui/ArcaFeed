@@ -13,14 +13,12 @@
   "description": "",
   "dependencies": {
     "jquery": "^3.7.1",
-    "jquery-ui-dist": "^1.13.3",
-    "toastify-js": "^1.12.0"
+    "jquery-ui-dist": "^1.13.3"
   },
   "devDependencies": {
     "@types/jquery": "^3.5.30",
     "@types/jqueryui": "^1.12.23",
     "@types/node": "^22.7.4",
-    "@types/toastify-js": "^1.12.3",
     "chokidar": "^4.0.1",
     "css-loader": "^7.1.2",
     "eslint": "^6.6.0",

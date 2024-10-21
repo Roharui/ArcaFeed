@@ -1,4 +1,4 @@
-import { getArticleId, getChannelId } from '@src/utils/url';
+import { getArticleId, getChannelId } from 'src/utils/url';
 
 const DEFAULT_CONFIG = {
   pageFilter: {},
@@ -13,10 +13,13 @@ const DEFAULT_CONFIG = {
 };
 
 const DEFAULT_VAULT = {
-  htmlSaver: {},
   urlSort: [],
-  nextPageUrl: '',
-  prevPageUrl: '',
+  articeList: [],
+  nextArticleUrl: '',
+  nextArticleHtml: '',
+  prevArticleUrl: '',
+  prevArticleHtml: '',
+  lastArticleId: getArticleId(),
 };
 
 class Vault {
@@ -28,10 +31,15 @@ class Vault {
     this.config = localStorage.getItem('aralive_helper_config')
       ? JSON.parse(localStorage.getItem('aralive_helper_config'))
       : { ...DEFAULT_CONFIG };
+
     this.data = { ...DEFAULT_VAULT };
     this.gallery = null;
 
     Vault.instance = this;
+  }
+
+  getHtml(url) {
+    if (this.data.nextArticleUrl === url) return this.data.nextArticleHtml;
   }
 
   getEventType() {
@@ -44,23 +52,6 @@ class Vault {
     return 'DEFAULT';
   }
 
-  getHtml(url) {
-    if (!this.data.htmlSaver.hasOwnProperty(btoa(url))) return;
-    return this.data.htmlSaver[btoa(url)];
-  }
-
-  setHtml(url, html) {
-    if (this.data.htmlSaver.hasOwnProperty(btoa(url))) return;
-    this.data.urlSort.push(url);
-
-    if (this.data.urlSort > 10) {
-      const u = this.data.urlSort.shift();
-      delete this.data.htmlSaver[u];
-    }
-
-    this.data.htmlSaver[btoa(url)] = html;
-  }
-
   getPageFilter(channelId) {
     if ((!channelId) in this.config.pageFilter) return;
     return this.config.pageFilter[channelId];
@@ -68,17 +59,12 @@ class Vault {
 
   setPageFilter(channelId, pageFilter) {
     this.config.pageFilter[channelId] = pageFilter;
-    this.setPageUrl();
+    this.loadArticleUrlList();
     this.saveConfig();
   }
 
-  setViewerConfig(config) {
-    this.config.viewer = config;
-    this.saveConfig();
-  }
-
-  setBtnConfig(config) {
-    this.config.btn = config;
+  setConfig(type, config) {
+    this.config[type] = config;
     this.saveConfig();
   }
 
@@ -102,110 +88,119 @@ class Vault {
 
     if (pageFilter === undefined) {
       pageFilter = {
-        include: [],
-        exclude: [],
+        excludeCategory: [],
+        excludeTitle: [],
       };
     }
 
-    let { include, exclude } = pageFilter;
+    let { excludeCategory, excludeTitle } = pageFilter;
 
-    if (include.length == 0 && exclude.length == 0) {
-      return rows;
-    }
+    return rows
+      .filter((ele) => {
+        if (excludeCategory.length == 0 && excludeTitle.length == 0) {
+          return true;
+        }
 
-    return rows.filter((ele) => {
-      let eleText = $(ele).find('.badge-success').text();
+        let tabTypeText = $(ele).find('.badge-success').text();
+        let titleText = $(ele).find('.title').text();
 
-      let isInclude =
-        include.length != 0
-          ? include.reduce((prev, cur) => prev || eleText.includes(cur), false)
-          : true;
-      let isExclude =
-        exclude.length != 0
-          ? exclude.reduce(
-              (prev, cur) =>
-                prev &&
-                !eleText.includes(cur) &&
-                !(eleText.length == 0 && cur == '노탭'),
-              true,
-            )
-          : true;
+        let isExcludeCategory = true;
 
-      return isInclude && isExclude;
-    });
+        if (excludeCategory.length != 0) {
+          isExcludeCategory = excludeCategory.reduce(
+            (prev, cur) =>
+              prev &&
+              !tabTypeText.includes(cur) &&
+              !(tabTypeText.length == 0 && cur == '노탭'),
+            true,
+          );
+        }
+
+        let isExcludeTitle = true;
+
+        if (excludeTitle.length != 0) {
+          isExcludeTitle = excludeTitle.reduce(
+            (prev, cur) => prev && !titleText.includes(cur),
+            true,
+          );
+        }
+
+        return isExcludeCategory && isExcludeTitle;
+      })
+      .map((ele) => $(ele).attr('href'));
+  }
+
+  loadArticleUrlList() {
+    const articleList = $(`a.vrow.column`)
+      .map(function () {
+        return this;
+      })
+      .get();
+    this.data.articeList = this.filterLink(articleList);
   }
 
   getNextPageUrl() {
-    let href = undefined;
+    const idx = this.data.articeList.findIndex((url) => {
+      return url.includes(this.data.lastArticleId);
+    });
 
-    let articleId = getArticleId();
+    let nextUrl = '';
 
-    let unFilterRows =
-      articleId === undefined
-        ? $(`a.vrow.column`).get()
-        : $(`a.vrow.column[href="${location.pathname + location.search}"]`)
-            .nextAll()
-            .remove(
-              `a.vrow.column[href="${location.pathname + location.search}"]`,
-            )
-            .get();
-
-    let rows = this.filterLink(unFilterRows);
-
-    if (rows.length === 0) {
-      let page = $('.page-item.active').next();
-      href = page.find('a').attr('href');
+    if (
+      this.data.articeList.length === 0 ||
+      this.data.articeList.length <= idx + 1
+    ) {
+      nextUrl = $('.page-item.active').next().find('a').attr('href');
     } else {
-      href = rows[0].href;
+      nextUrl = this.data.articeList[idx + 1];
     }
 
-    return href;
+    return nextUrl;
   }
 
   getPrevPageUrl() {
-    let href = undefined;
+    const idx = this.data.articeList.findIndex((url) => {
+      return url.includes(this.data.lastArticleId);
+    });
 
-    let articleId = getArticleId();
+    let prevUrl = '';
 
-    let unFilterRows =
-      articleId === undefined
-        ? $(`a.vrow.column`).get()
-        : $(`a.vrow.column[href="${location.pathname + location.search}"]`)
-            .prevAll()
-            .remove(
-              `a.vrow.column[href="${location.pathname + location.search}"]`,
-            )
-            .get();
-
-    let rows = this.filterLink(unFilterRows);
-
-    if (rows.length === 0) {
-      let page = $('.page-item.active').prev();
-      href = page.find('a').attr('href');
+    if (this.data.articeList.length === 0 || idx === 0) {
+      prevUrl = $('.page-item.active').prev().find('a').attr('href');
+    } else if (idx === -1) {
+      prevUrl = this.data.articeList[this.data.articeList.length - 1];
     } else {
-      href = rows[0].href;
+      prevUrl = this.data.articeList[idx - 1];
     }
 
-    return href;
+    return prevUrl;
   }
 
   setPageUrl() {
-    this.data.nextPageUrl = this.getNextPageUrl();
-    this.data.prevPageUrl = this.getPrevPageUrl();
+    const nextUrl = this.getNextPageUrl();
+    const prevUrl = this.getPrevPageUrl();
 
-    if (!this.data.htmlSaver.hasOwnProperty(btoa(this.data.nextPageUrl))) {
-      fetch(this.data.nextPageUrl)
-        .then((res) => res.text())
-        .then((res) => this.setHtml(this.data.nextPageUrl, res));
-    }
+    this.data.nextArticleUrl = nextUrl;
+    this.data.prevArticleUrl = prevUrl;
 
-    if (this.data.prevPageUrl == undefined) return;
+    console.log({
+      nextUrl,
+      prevUrl,
+    });
 
-    if (!this.data.htmlSaver.hasOwnProperty(btoa(this.data.prevPageUrl))) {
-      fetch(this.data.prevPageUrl)
-        .then((res) => res.text())
-        .then((res) => this.setHtml(this.data.prevPageUrl, res));
-    }
+    fetch(nextUrl)
+      .then((res) => res.text())
+      .then((res) => (this.data.nextArticleHtml = res));
+
+    if (prevUrl === undefined) return;
+
+    fetch(prevUrl)
+      .then((res) => res.text())
+      .then((res) => (this.data.prevArticleHtml = res));
+  }
+
+  setLastArticle(articleId) {
+    this.data.lastArticleId = articleId ?? this.data.lastArticleId;
   }
 
   setGallery(g) {

@@ -1,6 +1,6 @@
 import Viewer from '@viewerjs';
 
-import { Vault } from '@vault';
+import { Vault } from 'src/vault';
 
 let v = new Vault();
 

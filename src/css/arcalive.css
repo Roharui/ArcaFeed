@@ -2,6 +2,12 @@
     grid-template-columns: none !important;
 }
 
+@media screen and (min-width: 1024px){
+	.body .content-wrapper {
+        max-width: 800px !important;
+    }
+}
+
 .next-btn {
     position: fixed;
     right: 1rem;
@@ -56,4 +62,8 @@
 
 .ui-dialog {
     z-index: 9997 !important;
+}
+
+.blur {
+    filter: none !important;
 }

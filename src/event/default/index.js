@@ -1,5 +1,6 @@
-import { initConfigModal, nextPageConfigModal } from '@src/utils/modal';
-import { toPage } from '@src/utils/toPage';
+import { initConfigModal, nextPageConfigModal } from 'src/utils/modal';
+import { toNextPage, toPrevPage } from 'src/utils/toPage';
+import { showViewer } from '../viewer';
 
 const CONTROL_KEYBORD_EVENT = {
   p: () => initConfigModal(),
@@ -7,8 +8,9 @@ const CONTROL_KEYBORD_EVENT = {
 };
 
 const KEYBORD_EVENT = {
-  ArrowLeft: () => toPage(false),
-  ArrowRight: () => toPage(true),
+  ArrowLeft: () => toPrevPage(),
+  ArrowRight: () => toNextPage(),
+  Shift: () => showViewer(),
 };
 
 export { CONTROL_KEYBORD_EVENT, KEYBORD_EVENT };

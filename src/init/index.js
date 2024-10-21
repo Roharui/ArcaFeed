@@ -1,7 +1,8 @@
+import { style, hide, remove } from 'src/utils/jutils';
 import { toggleBtn } from './btn';
 import { noRefrershLink } from './noRefresh';
-import { viewInit } from '@src/event/viewer';
-import { Vault } from '@vault';
+import { viewInit } from 'src/event/viewer';
+import { Vault } from 'src/vault';
 
 const v = new Vault();
 
@@ -12,21 +13,22 @@ const CONFIG = {
   viewer: true,
   hideControlBtn: true,
   hideBanner: true,
+  hideCommentForm: true,
 };
 
 const CONFIG_FN = {
   noRefresh: noRefrershLink,
-  nextPageUrl: () => v.setPageUrl(),
+  nextPageUrl: () => v.loadArticleUrlList(),
   toggleBtn: toggleBtn,
   viewer: viewInit,
   hideControlBtn: () => {
-    $('.nav-control').hide();
-    $('head').append(
-      $('<style>', { text: `.btn-wrapper { bottom: 1rem !important; }` }),
-    );
+    hide('.nav-control');
+    style('.btn-wrapper { bottom: 1rem !important; }');
   },
-  hideBanner: () => {
-    $('#wall').hide();
+  hideBanner: () => hide('#wall'),
+  hideCommentForm: () => {
+    remove('#commentForm');
+    remove('#comment .title');
   },
 };
 

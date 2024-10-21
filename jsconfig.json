@@ -1,15 +1,15 @@
 {
-    "compilerOptions": {
-      "baseUrl": ".",
-      "paths": {
-        "jquery-ui": ["node_modules/jquery-ui-dist/jquery-ui.js"],
-        "jquery-ui-css": ["node_modules/jquery-ui-dist/jquery-ui.css"],
-        "toastify-css": ["node_modules/toastify-js/src/toastify.css"],
-        "viewerjs-css": ["src/css/viewer.min.css"],
-        "arcalive-css": ["src/css/arcalive.css"],
-        "@viewerjs": ["packages/viewerjs/src"],
-        "@vault": ["src/vault"],
-        "@src": ["src"],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "jquery-ui": ["node_modules/jquery-ui-dist/jquery-ui.js"],
+      "jquery-ui-css": ["node_modules/jquery-ui-dist/jquery-ui.css"],
+      "viewerjs-css": ["src/css/viewer.min.css"],
+      "arcalive-css": ["src/css/arcalive.css"],
+      "@viewerjs": ["packages/viewerjs/src"],
+      "@src": ["src"]
     }
-    }
-  }
+  },
+  "include": ["**/*.js"],
+  "checkJs": true
+}

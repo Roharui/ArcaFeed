@@ -1,10 +1,13 @@
-import { Vault } from '@vault';
-import { viewInit } from '@src/event/viewer';
+import { Vault } from 'src/vault';
+import { viewInit } from 'src/event/viewer';
+import { getArticleId } from './url';
 
 const v = new Vault();
 
 function render(url) {
-  window.history.pushState({ prevUrl: window.location.href }, null, url);
+  window.history.pushState(null, null, url);
+
+  v.setLastArticle(getArticleId(url));
 
   const html = v.getHtml(url);
 
@@ -23,32 +26,40 @@ function renderCallback(html) {
 
   $('.article-wrapper').toggle(dom.find('.article-wrapper').length > 0);
 
-  $('title').html(
-    dom
-      .find('div.title-row div.title')
-      .clone()
-      .children()
-      .remove()
-      .end()
-      .text(),
-  );
+  $('title').html(dom.find('meta[name=title]').attr('content'));
   $('.article-wrapper').html(dom.find('.article-wrapper').html());
 
-  $('.article-list').html(dom.find('.article-list').html());
+  $('.article-list').html(
+    dom
+      .find('.article-list')
+      .remove('#commentForm')
+      .remove('#comment .title')
+      .html(),
+  );
 
   $('.board-article-list .pagination-wrapper').html(
     dom.find('.board-article-list .pagination-wrapper').html() ||
       dom.find('.included-article-list .pagination-wrapper').html(),
   );
+
   $('.included-article-list .pagination-wrapper').html(
     dom.find('.board-article-list .pagination-wrapper').html() ||
       dom.find('.included-article-list .pagination-wrapper').html(),
+  );
+
+  $('a.vrow.column, a.page-link, .board-category a, .btns-board a').on(
+    'click',
+    function (e) {
+      e.preventDefault();
+      render($(this).attr('href'));
+    },
   );
 
   $('html, body').animate({ scrollTop: 0 }, 200);
 }
 
 function afterRender() {
+  v.loadArticleUrlList();
   v.setPageUrl();
   viewInit();
 }
