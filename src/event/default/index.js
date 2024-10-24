@@ -1,7 +1,7 @@
-import { initConfigModal, nextPageConfigModal } from 'src/utils/modal';
+import { initConfigModal, nextPageConfigModal } from 'src/feature/modal';
 import { showViewer } from '../viewer';
-import { toNextPage, toPrevPage } from 'src/utils/toPage';
-import { show } from 'src/utils/jutils';
+import { toNextPage, toPrevPage } from 'src/feature/toPage';
+import { showImage } from 'src/feature/hideImage';
 
 const CONTROL_KEYBORD_EVENT = {
   p: () => initConfigModal(),
@@ -12,14 +12,7 @@ const KEYBORD_EVENT = {
   ArrowLeft: () => toPrevPage(),
   ArrowRight: () => toNextPage(),
   Shift: () => showViewer(),
-  '\\': () => {
-    $('.article-content')
-      .find('img')
-      .not('.twemoji')
-      .not('.arca-emoticon')
-      .show();
-    show('.article-content > p > br');
-  },
+  '\\': () => showImage(),
 };
 
 export { CONTROL_KEYBORD_EVENT, KEYBORD_EVENT };

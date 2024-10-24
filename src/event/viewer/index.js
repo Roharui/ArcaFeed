@@ -1,63 +1,6 @@
-import Viewer from '@viewerjs';
-
-import { hide } from 'src/utils/jutils';
 import { Vault } from 'src/vault';
 
 const v = new Vault();
-
-function viewInit() {
-  const article = $('.article-content')
-    .find('img')
-    .not('.twemoji')
-    .not('.arca-emoticon');
-
-  if (v.config.viewer.hideOriImg) {
-    article.hide();
-    $('.article-content > p').each((i, ele) => {
-      if ($(ele).text().length === 0) {
-        $(ele).find('br').hide();
-      }
-    });
-    hide('#defaultImage');
-    hide('.spoiler-alert-content');
-    hide('.safeframe');
-  }
-
-  if (article.length == 0) {
-    v.setGallery(null);
-    return;
-  }
-
-  const gallery = new Viewer(document.querySelector('.article-body'), {
-    loop: false,
-    zoomable: false,
-    zoomOnWheel: false,
-    moveOnWheel: true,
-    tooltip: false,
-    button: false,
-    toolbar: false,
-    title: false,
-    navbar: true,
-    keyboard: false,
-    hideAtEnd: true,
-    scalable: false,
-    isFitScreen: v.config.viewer.fitScreen,
-    filter(image) {
-      return (
-        !image.className.includes('twemoji') &&
-        !image.className.includes('arca-emoticon') &&
-        !image.alt.includes('Spoiler ALERT!') &&
-        !image.style.cssText.includes('width: 0px;')
-      );
-    },
-  });
-
-  if (v.config.viewer.defaultStart && $('.article-wrapper').is(':visible')) {
-    gallery.show();
-  }
-
-  v.setGallery(gallery);
-}
 
 function showViewer() {
   v.runViewer((g) => g.show());
@@ -69,7 +12,7 @@ function hideViewer() {
 
 function toggleViewer() {
   v.runViewer((g) => {
-    g.showing || g.isShown || g.showing ? g.hide() : g.show();
+    v.isViewerActive() ? g.hide() : g.show();
   });
 }
 
@@ -104,4 +47,4 @@ const VIEWER_EVENT = {
   Shift: hideViewer,
 };
 
-export { VIEWER_EVENT, showViewer, viewInit, toggleViewer, fitScreen };
+export { VIEWER_EVENT, showViewer, toggleViewer, fitScreen };

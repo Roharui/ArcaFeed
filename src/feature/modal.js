@@ -1,6 +1,7 @@
-import { toggleBtn } from 'src/init/btn';
-import { getChannelId } from './url';
 import { Vault } from 'src/vault';
+
+import { toggleBtn } from './btn';
+import { getChannelId } from 'src/utils/url';
 
 const v = new Vault();
 

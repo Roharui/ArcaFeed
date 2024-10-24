@@ -1,6 +1,7 @@
-import { render } from 'src/utils/render';
-import { getArticleId, getChannelId } from 'src/utils/url';
 import { Vault } from 'src/vault';
+
+import { render } from './render';
+import { getArticleId, getChannelId } from 'src/utils/url';
 
 function noRefrershLink() {
   if (getChannelId()) {

@@ -1,6 +1,6 @@
 import { Vault } from 'src/vault';
-import { viewInit } from 'src/event/viewer';
-import { getArticleId } from './url';
+import { getArticleId } from 'src/utils/url';
+import { renderInit } from 'src/init/renderInit';
 
 const v = new Vault();
 
@@ -15,9 +15,9 @@ function render(url) {
     fetch(url)
       .then((res) => res.text())
       .then(renderCallback)
-      .then(afterRender);
+      .then(renderInit);
   } else {
-    new Promise((res) => res(renderCallback(html))).then(afterRender);
+    new Promise((res) => res(renderCallback(html))).then(renderInit);
   }
 }
 
@@ -77,11 +77,6 @@ function renderCallback(html) {
   });
 
   $('html, body').animate({ scrollTop: 0 }, 200);
-}
-
-function afterRender() {
-  v.setPageUrl();
-  viewInit();
 }
 
 export { render };

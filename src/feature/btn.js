@@ -1,9 +1,10 @@
-import { fitScreen, toggleViewer } from 'src/event/viewer';
-import { toggleFullScreen } from 'src/utils/fullscreen';
-import { initConfigModal, nextPageConfigModal } from 'src/utils/modal';
-import { toNextPage, toPrevPage } from 'src/utils/toPage';
-import { getArticleId } from 'src/utils/url';
 import { Vault } from 'src/vault';
+
+import { fitScreen, toggleViewer } from 'src/event/viewer';
+
+import { toggleFullScreen } from './fullscreen';
+import { initConfigModal, nextPageConfigModal } from './modal';
+import { toNextPage, toPrevPage } from './toPage';
 
 const v = new Vault();
 
@@ -33,26 +34,19 @@ function helperBtn() {
   const secondLine = $('<div>', { class: 'btn-line' });
 
   const pageModalBtn = createHelperBtn('ion-hammer', nextPageConfigModal);
-
   const settingModalBtn = createHelperBtn('ion-ios-gear', initConfigModal);
-
   const fullScreenBtn = createHelperBtn('ion-android-expand', toggleFullScreen);
-
   const imageViewBtn = createHelperBtn('ion-android-image', toggleViewer);
-
   const imageFitWidth = createHelperBtn('ion-arrow-resize', fitScreen);
-
   const refresh = createHelperBtn('ion-ios-refresh-empty', () =>
     location.reload(),
   );
-
   const navBtnShowAllBtn = createHelperBtn('ion-ios-toggle-outline', () => {
     v.setConfig('btn', {
       navExpand: true,
     });
     toggleBtn();
   });
-
   const navBtnHideBtn = createHelperBtn('ion-ios-toggle-outline', () => {
     v.setConfig('btn', {
       navExpand: false,
@@ -62,17 +56,13 @@ function helperBtn() {
 
   if (v.config.btn.navExpand) {
     firstLine.append(navBtnHideBtn);
-
     firstLine.append(refresh);
-
     if (location.href.includes('/b/')) {
       firstLine.append(pageModalBtn);
-
       secondLine.append(fullScreenBtn);
       secondLine.append(imageViewBtn);
       secondLine.append(imageFitWidth);
     }
-
     firstLine.append(settingModalBtn);
   } else {
     firstLine.append(navBtnShowAllBtn);
@@ -95,8 +85,7 @@ function pagenationBtn() {
   const prevBtn = createPageBtn(
     'ion-android-arrow-back',
     () => {
-      const g = v.gallery;
-      if (g != null && (g.showing || g.isShown || g.showing)) {
+      if (v.isViewerActive()) {
         v.runViewer((g) => g.prev());
       } else {
         toPrevPage();
@@ -106,8 +95,7 @@ function pagenationBtn() {
       e.stopPropagation();
       e.preventDefault();
 
-      const g = v.gallery;
-      if (g != null && (g.showing || g.isShown || g.showing)) {
+      if (v.isViewerActive()) {
         v.runViewer((g) => g.hide());
       }
       toPrevPage();
@@ -118,8 +106,7 @@ function pagenationBtn() {
   const nextBtn = createPageBtn(
     'ion-android-arrow-forward',
     () => {
-      const g = v.gallery;
-      if (g != null && (g.showing || g.isShown || g.showing)) {
+      if (v.isViewerActive()) {
         v.runViewer((g) => g.next());
       } else {
         toNextPage();
@@ -129,8 +116,7 @@ function pagenationBtn() {
       e.stopPropagation();
       e.preventDefault();
 
-      const g = v.gallery;
-      if (g != null && (g.showing || g.isShown || g.showing)) {
+      if (v.isViewerActive()) {
         v.runViewer((g) => g.hide());
       }
       toNextPage();
