@@ -4,15 +4,19 @@ import { render } from './render';
 const v = new Vault();
 
 function toNextPage() {
-  const href = v.getNextPageUrl();
+  v.reserveAction(() => {
+    const href = v.getNextPageUrl();
 
-  render(href);
+    render(href);
+  });
 }
 
 function toPrevPage() {
-  const href = v.getPrevPageUrl();
+  v.reserveAction(() => {
+    const href = v.getPrevPageUrl();
 
-  render(href);
+    render(href);
+  });
 }
 
 export { toNextPage, toPrevPage };

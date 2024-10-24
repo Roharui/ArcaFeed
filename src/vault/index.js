@@ -5,6 +5,7 @@ const DEFAULT_CONFIG = {
   viewer: {
     fitScreen: false,
     defaultStart: false,
+    hideOriImg: false,
   },
   btn: {
     nextBtn: true,
@@ -19,6 +20,8 @@ const DEFAULT_VAULT = {
   nextArticleHtml: '',
   prevArticleUrl: '',
   prevArticleHtml: '',
+  htmlActive: false,
+  reserveAction: undefined,
   lastArticleId: getArticleId(),
 };
 
@@ -35,11 +38,14 @@ class Vault {
     this.data = { ...DEFAULT_VAULT };
     this.gallery = null;
 
+    console.log(this.data);
+
     Vault.instance = this;
   }
 
   getHtml(url) {
     if (this.data.nextArticleUrl === url) return this.data.nextArticleHtml;
+    if (this.data.prevArticleUrl === url) return this.data.prevArticleHtml;
   }
 
   getEventType() {
@@ -59,12 +65,12 @@ class Vault {
 
   setPageFilter(channelId, pageFilter) {
     this.config.pageFilter[channelId] = pageFilter;
-    this.loadArticleUrlList();
+    this.setPageUrl();
     this.saveConfig();
   }
 
   setConfig(type, config) {
-    this.config[type] = config;
+    this.config[type] = Object.assign(this.config[type], config);
     this.saveConfig();
   }
 
@@ -130,77 +136,78 @@ class Vault {
       .map((ele) => $(ele).attr('href'));
   }
 
-  loadArticleUrlList() {
-    const articleList = $(`a.vrow.column`)
-      .map(function () {
-        return this;
-      })
-      .get();
-    this.data.articeList = this.filterLink(articleList);
-  }
-
   getNextPageUrl() {
-    const idx = this.data.articeList.findIndex((url) => {
-      return url.includes(this.data.lastArticleId);
+    const nextUrl = this.data.articeList.find((url) => {
+      if (this.data.lastArticleId === undefined) return true;
+      return parseInt(getArticleId(url)) < parseInt(this.data.lastArticleId);
     });
 
-    let nextUrl = '';
-
-    if (
-      this.data.articeList.length === 0 ||
-      this.data.articeList.length <= idx + 1
-    ) {
-      nextUrl = $('.page-item.active').next().find('a').attr('href');
-    } else {
-      nextUrl = this.data.articeList[idx + 1];
+    if (this.data.articeList.length === 0 || nextUrl === undefined) {
+      return $('.page-item.active').next().find('a').attr('href');
     }
 
     return nextUrl;
   }
 
   getPrevPageUrl() {
-    const idx = this.data.articeList.findIndex((url) => {
-      return url.includes(this.data.lastArticleId);
-    });
+    const prevUrl = this.data.articeList
+      .slice()
+      .reverse()
+      .find((url) => {
+        if (this.data.lastArticleId === undefined) return true;
+        return parseInt(getArticleId(url)) > parseInt(this.data.lastArticleId);
+      });
 
-    let prevUrl = '';
-
-    if (this.data.articeList.length === 0 || idx === 0) {
-      prevUrl = $('.page-item.active').prev().find('a').attr('href');
-    } else if (idx === -1) {
-      prevUrl = this.data.articeList[this.data.articeList.length - 1];
-    } else {
-      prevUrl = this.data.articeList[idx - 1];
+    if (this.data.articeList.length === 0 || prevUrl === undefined) {
+      return $('.page-item.active').prev().find('a').attr('href');
     }
 
     return prevUrl;
   }
 
+  reserveAction(fn) {
+    if (this.data.htmlActive) {
+      fn();
+      return;
+    }
+
+    this.data.reserveAction = fn;
+  }
+
   setPageUrl() {
+    const articleList = $(`a.vrow.column`)
+      .map(function () {
+        return this;
+      })
+      .get();
+    this.data.articeList = this.filterLink(articleList);
+
+    this.data.htmlActive = false;
+
     const nextUrl = this.getNextPageUrl();
     const prevUrl = this.getPrevPageUrl();
 
     this.data.nextArticleUrl = nextUrl;
     this.data.prevArticleUrl = prevUrl;
 
-    console.log({
-      nextUrl,
-      prevUrl,
-    });
-
-    fetch(nextUrl)
-      .then((res) => res.text())
-      .then((res) => (this.data.nextArticleHtml = res));
-
-    if (prevUrl === undefined) return;
-
-    fetch(prevUrl)
-      .then((res) => res.text())
-      .then((res) => (this.data.prevArticleHtml = res));
+    Promise.all([
+      fetch(nextUrl)
+        .then((res) => res.text())
+        .then((res) => (this.data.nextArticleHtml = res)),
+      prevUrl !== undefined
+        ? fetch(prevUrl)
+            .then((res) => res.text())
+            .then((res) => (this.data.prevArticleHtml = res))
+        : undefined,
+    ])
+      .then(() => this.data.reserveAction?.apply())
+      .then(() => (this.data.reserveAction = undefined))
+      .then(() => (this.data.htmlActive = true));
   }
 
   setLastArticle(articleId) {
-    this.data.lastArticleId = articleId ?? this.data.lastArticleId;
+    if (!articleId) return;
+    this.data.lastArticleId = articleId;
   }
 
   setGallery(g) {

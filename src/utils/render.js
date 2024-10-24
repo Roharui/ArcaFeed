@@ -1,6 +1,7 @@
 import { Vault } from 'src/vault';
 import { viewInit } from 'src/event/viewer';
 import { getArticleId } from './url';
+import { remove } from './jutils';
 
 const v = new Vault();
 
@@ -29,13 +30,7 @@ function renderCallback(html) {
   $('title').html(dom.find('meta[name=title]').attr('content'));
   $('.article-wrapper').html(dom.find('.article-wrapper').html());
 
-  $('.article-list').html(
-    dom
-      .find('.article-list')
-      .remove('#commentForm')
-      .remove('#comment .title')
-      .html(),
-  );
+  $('.article-list').html(dom.find('.article-list').html());
 
   $('.board-article-list .pagination-wrapper').html(
     dom.find('.board-article-list .pagination-wrapper').html() ||
@@ -55,11 +50,40 @@ function renderCallback(html) {
     },
   );
 
+  remove('#commentForm');
+  remove('#comment .title');
+  remove('#vote');
+  remove('.article-menu.mt-2 > *');
+  remove('.article-link');
+
+  $('video.arca-emoticon')
+    .get()
+    .forEach((ele) => ele.play());
+
+  let videos = $('video.emoticon').get();
+
+  new Promise(function (resolve) {
+    var loaded = 0;
+
+    videos.forEach(function (v) {
+      v.addEventListener('loadedmetadata', function () {
+        loaded++;
+
+        if (loaded === videos.length) {
+          resolve();
+        }
+      });
+    });
+  }).then(function () {
+    videos.forEach(function (v) {
+      v.play();
+    });
+  });
+
   $('html, body').animate({ scrollTop: 0 }, 200);
 }
 
 function afterRender() {
-  v.loadArticleUrlList();
   v.setPageUrl();
   viewInit();
 }

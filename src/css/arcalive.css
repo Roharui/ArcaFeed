@@ -67,3 +67,7 @@
 .blur {
     filter: none !important;
 }
+
+.spoiler-filter {
+    filter: none !important;
+}

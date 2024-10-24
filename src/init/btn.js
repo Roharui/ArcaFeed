@@ -1,7 +1,7 @@
 import { fitScreen, toggleViewer } from 'src/event/viewer';
 import { toggleFullScreen } from 'src/utils/fullscreen';
 import { initConfigModal, nextPageConfigModal } from 'src/utils/modal';
-import { toPage } from 'src/utils/toPage';
+import { toNextPage, toPrevPage } from 'src/utils/toPage';
 import { getArticleId } from 'src/utils/url';
 import { Vault } from 'src/vault';
 
@@ -46,6 +46,13 @@ function helperBtn() {
     location.reload(),
   );
 
+  const navBtnShowAllBtn = createHelperBtn('ion-ios-gear', () => {
+    v.setConfig('btn', {
+      navExpand: true,
+    });
+    toggleBtn();
+  });
+
   if (v.config.btn.navExpand) {
     firstLine.append(refresh);
 
@@ -59,9 +66,10 @@ function helperBtn() {
         secondLine.append(imageFitWidth);
       }
     }
+    firstLine.append(settingModalBtn);
+  } else {
+    firstLine.append(navBtnShowAllBtn);
   }
-
-  firstLine.append(settingModalBtn);
 
   btnWrapper.append(secondLine);
   btnWrapper.append(firstLine);
@@ -84,7 +92,7 @@ function pagenationBtn() {
       if (g != null && (g.showing || g.isShown || g.showing)) {
         v.runViewer((g) => g.prev());
       } else {
-        toPage(false);
+        toPrevPage();
       }
     },
     (e) => {
@@ -95,7 +103,7 @@ function pagenationBtn() {
       if (g != null && (g.showing || g.isShown || g.showing)) {
         v.runViewer((g) => g.hide());
       }
-      toPage(false);
+      toPrevPage();
       return false;
     },
   );
@@ -107,7 +115,7 @@ function pagenationBtn() {
       if (g != null && (g.showing || g.isShown || g.showing)) {
         v.runViewer((g) => g.next());
       } else {
-        toPage(true);
+        toNextPage();
       }
     },
     (e) => {
@@ -118,7 +126,7 @@ function pagenationBtn() {
       if (g != null && (g.showing || g.isShown || g.showing)) {
         v.runViewer((g) => g.hide());
       }
-      toPage(true);
+      toNextPage();
       return false;
     },
   );

@@ -6,8 +6,12 @@ function hide(selector) {
   $(selector).hide();
 }
 
+function show(selector) {
+  $(selector).show();
+}
+
 function remove(selector) {
   $(selector).remove();
 }
 
-export { style, hide, remove };
+export { style, hide, show, remove };

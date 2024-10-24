@@ -1,13 +1,26 @@
 import Viewer from '@viewerjs';
 
+import { hide, remove } from 'src/utils/jutils';
 import { Vault } from 'src/vault';
 
 let v = new Vault();
 
 function viewInit() {
-  let article = $('.article-content').find('img').not('.twemoji');
+  let article = $('.article-content')
+    .find('img')
+    .not('.twemoji')
+    .not('.arca-emoticon');
+
+  if (v.config.viewer.hideOriImg) {
+    article.hide();
+    hide('.article-content > p > br');
+    hide('#defaultImage');
+    hide('.spoiler-alert-content');
+    remove('.safeframe');
+  }
 
   if (article.length == 0) {
+    v.setGallery(null);
     return;
   }
 
@@ -28,6 +41,8 @@ function viewInit() {
     filter(image) {
       return (
         !image.className.includes('twemoji') &&
+        !image.className.includes('arca-emoticon') &&
+        !image.alt.includes('Spoiler ALERT!') &&
         !image.style.cssText.includes('width: 0px;')
       );
     },

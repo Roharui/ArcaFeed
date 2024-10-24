@@ -216,8 +216,13 @@ export default {
   view(index = this.options.initialViewIndex) {
     index = Number(index) || 0;
 
-    if (this.hiding || this.played || index < 0 || index >= this.length
-      || (this.viewed && index === this.index)) {
+    if (
+      this.hiding ||
+      this.played ||
+      index < 0 ||
+      index >= this.length ||
+      (this.viewed && index === this.index)
+    ) {
       return this;
     }
 
@@ -230,12 +235,7 @@ export default {
       this.viewing.abort();
     }
 
-    const {
-      element,
-      options,
-      title,
-      canvas,
-    } = this;
+    const { element, options, title, canvas } = this;
     const item = this.items[index];
     const img = item.querySelector('img');
     const url = getData(img, 'originalUrl');
@@ -259,11 +259,16 @@ export default {
       });
     }
 
-    if (dispatchEvent(element, EVENT_VIEW, {
-      originalImage: this.images[index],
-      index,
-      image,
-    }) === false || !this.isShown || this.hiding || this.played) {
+    if (
+      dispatchEvent(element, EVENT_VIEW, {
+        originalImage: this.images[index],
+        index,
+        image,
+      }) === false ||
+      !this.isShown ||
+      this.hiding ||
+      this.played
+    ) {
       return this;
     }
 
@@ -303,11 +308,15 @@ export default {
     // Generate title after viewed
     const onViewed = () => {
       const { imageData } = this;
-      const render = Array.isArray(options.title) ? options.title[1] : options.title;
+      const render = Array.isArray(options.title)
+        ? options.title[1]
+        : options.title;
 
-      title.innerHTML = escapeHTMLEntities(isFunction(render)
-        ? render.call(this, image, imageData)
-        : `${alt} (${imageData.naturalWidth} × ${imageData.naturalHeight})`);
+      title.innerHTML = escapeHTMLEntities(
+        isFunction(render)
+          ? render.call(this, image, imageData)
+          : `${alt} (${imageData.naturalWidth} × ${imageData.naturalHeight})`,
+      );
     };
     let onLoad;
     let onError;
@@ -341,28 +350,38 @@ export default {
     if (image.complete) {
       this.load();
     } else {
-      addListener(image, EVENT_LOAD, onLoad = () => {
-        removeListener(image, EVENT_ERROR, onError);
-        this.load();
-      }, {
-        once: true,
-      });
-      addListener(image, EVENT_ERROR, onError = () => {
-        removeListener(image, EVENT_LOAD, onLoad);
+      addListener(
+        image,
+        EVENT_LOAD,
+        (onLoad = () => {
+          removeListener(image, EVENT_ERROR, onError);
+          this.load();
+        }),
+        {
+          once: true,
+        },
+      );
+      addListener(
+        image,
+        EVENT_ERROR,
+        (onError = () => {
+          removeListener(image, EVENT_LOAD, onLoad);
 
-        if (this.timeout) {
-          clearTimeout(this.timeout);
-          this.timeout = false;
-        }
+          if (this.timeout) {
+            clearTimeout(this.timeout);
+            this.timeout = false;
+          }
 
-        removeClass(image, CLASS_INVISIBLE);
+          removeClass(image, CLASS_INVISIBLE);
 
-        if (options.loading) {
-          removeClass(this.canvas, CLASS_LOADING);
-        }
-      }, {
-        once: true,
-      });
+          if (options.loading) {
+            removeClass(this.canvas, CLASS_LOADING);
+          }
+        }),
+        {
+          once: true,
+        },
+      );
 
       if (this.timeout) {
         clearTimeout(this.timeout);
@@ -387,6 +406,11 @@ export default {
   prev(loop = false) {
     let index = this.index - 1;
 
+    if (index < 0 && this.options.hideAtEnd) {
+      this.hide();
+      return this;
+    }
+
     if (index < 0) {
       index = loop ? this.length - 1 : 0;
     }
@@ -406,8 +430,8 @@ export default {
     let index = this.index + 1;
 
     if (index > maxIndex && this.options.hideAtEnd) {
-        this.hide()
-        return this;
+      this.hide();
+      return this;
     }
 
     if (index > maxIndex) {
@@ -473,13 +497,15 @@ export default {
           });
         }
 
-        if (dispatchEvent(element, EVENT_MOVE, {
-          x,
-          y,
-          oldX,
-          oldY,
-          originalEvent: _originalEvent,
-        }) === false) {
+        if (
+          dispatchEvent(element, EVENT_MOVE, {
+            x,
+            y,
+            oldX,
+            oldY,
+            originalEvent: _originalEvent,
+          }) === false
+        ) {
           return this;
         }
 
@@ -497,15 +523,20 @@ export default {
             });
           }
 
-          dispatchEvent(element, EVENT_MOVED, {
-            x,
-            y,
-            oldX,
-            oldY,
-            originalEvent: _originalEvent,
-          }, {
-            cancelable: false,
-          });
+          dispatchEvent(
+            element,
+            EVENT_MOVED,
+            {
+              x,
+              y,
+              oldX,
+              oldY,
+              originalEvent: _originalEvent,
+            },
+            {
+              cancelable: false,
+            },
+          );
         });
       }
     }
@@ -543,10 +574,12 @@ export default {
         });
       }
 
-      if (dispatchEvent(element, EVENT_ROTATE, {
-        degree,
-        oldDegree,
-      }) === false) {
+      if (
+        dispatchEvent(element, EVENT_ROTATE, {
+          degree,
+          oldDegree,
+        }) === false
+      ) {
         return this;
       }
 
@@ -561,12 +594,17 @@ export default {
           });
         }
 
-        dispatchEvent(element, EVENT_ROTATED, {
-          degree,
-          oldDegree,
-        }, {
-          cancelable: false,
-        });
+        dispatchEvent(
+          element,
+          EVENT_ROTATED,
+          {
+            degree,
+            oldDegree,
+          },
+          {
+            cancelable: false,
+          },
+        );
       });
     }
 
@@ -631,12 +669,14 @@ export default {
           });
         }
 
-        if (dispatchEvent(element, EVENT_SCALE, {
-          scaleX,
-          scaleY,
-          oldScaleX,
-          oldScaleY,
-        }) === false) {
+        if (
+          dispatchEvent(element, EVENT_SCALE, {
+            scaleX,
+            scaleY,
+            oldScaleX,
+            oldScaleY,
+          }) === false
+        ) {
           return this;
         }
 
@@ -652,14 +692,19 @@ export default {
             });
           }
 
-          dispatchEvent(element, EVENT_SCALED, {
-            scaleX,
-            scaleY,
-            oldScaleX,
-            oldScaleY,
-          }, {
-            cancelable: false,
-          });
+          dispatchEvent(
+            element,
+            EVENT_SCALED,
+            {
+              scaleX,
+              scaleY,
+              oldScaleX,
+              oldScaleY,
+            },
+            {
+              cancelable: false,
+            },
+          );
         });
       }
     }
@@ -705,25 +750,24 @@ export default {
    * @param {Event} [_zoomable=false] - Indicates if the current zoom is available or not.
    * @returns {Viewer} this
    */
-  zoomTo(ratio, showTooltip = false, pivot = null, _originalEvent = null, _zoomable = false) {
-    const {
-      element,
-      options,
-      pointers,
-      imageData,
-    } = this;
-    const {
-      x,
-      y,
-      width,
-      height,
-      naturalWidth,
-      naturalHeight,
-    } = imageData;
+  zoomTo(
+    ratio,
+    showTooltip = false,
+    pivot = null,
+    _originalEvent = null,
+    _zoomable = false,
+  ) {
+    const { element, options, pointers, imageData } = this;
+    const { x, y, width, height, naturalWidth, naturalHeight } = imageData;
 
     ratio = Math.max(0, ratio);
 
-    if (isNumber(ratio) && this.viewed && !this.played && (_zoomable || options.zoomable)) {
+    if (
+      isNumber(ratio) &&
+      this.viewed &&
+      !this.played &&
+      (_zoomable || options.zoomable)
+    ) {
       if (!_zoomable) {
         const minZoomRatio = Math.max(0.01, options.minZoomRatio);
         const maxZoomRatio = Math.min(100, options.maxZoomRatio);
@@ -763,11 +807,13 @@ export default {
         });
       }
 
-      if (dispatchEvent(element, EVENT_ZOOM, {
-        ratio,
-        oldRatio,
-        originalEvent: _originalEvent,
-      }) === false) {
+      if (
+        dispatchEvent(element, EVENT_ZOOM, {
+          ratio,
+          oldRatio,
+          originalEvent: _originalEvent,
+        }) === false
+      ) {
         return this;
       }
 
@@ -775,17 +821,23 @@ export default {
 
       if (_originalEvent) {
         const offset = getOffset(this.viewer);
-        const center = pointers && Object.keys(pointers).length > 0
-          ? getPointersCenter(pointers)
-          : {
-            pageX: _originalEvent.pageX,
-            pageY: _originalEvent.pageY,
-          };
+        const center =
+          pointers && Object.keys(pointers).length > 0
+            ? getPointersCenter(pointers)
+            : {
+                pageX: _originalEvent.pageX,
+                pageY: _originalEvent.pageY,
+              };
 
         // Zoom from the triggering point of the event
-        imageData.x -= offsetWidth * (((center.pageX - offset.left) - x) / width);
-        imageData.y -= offsetHeight * (((center.pageY - offset.top) - y) / height);
-      } else if (isPlainObject(pivot) && isNumber(pivot.x) && isNumber(pivot.y)) {
+        imageData.x -= offsetWidth * ((center.pageX - offset.left - x) / width);
+        imageData.y -=
+          offsetHeight * ((center.pageY - offset.top - y) / height);
+      } else if (
+        isPlainObject(pivot) &&
+        isNumber(pivot.x) &&
+        isNumber(pivot.y)
+      ) {
         imageData.x -= offsetWidth * ((pivot.x - x) / width);
         imageData.y -= offsetHeight * ((pivot.y - y) / height);
       } else {
@@ -809,13 +861,18 @@ export default {
           });
         }
 
-        dispatchEvent(element, EVENT_ZOOMED, {
-          ratio,
-          oldRatio,
-          originalEvent: _originalEvent,
-        }, {
-          cancelable: false,
-        });
+        dispatchEvent(
+          element,
+          EVENT_ZOOMED,
+          {
+            ratio,
+            oldRatio,
+            originalEvent: _originalEvent,
+          },
+          {
+            cancelable: false,
+          },
+        );
       });
 
       if (showTooltip) {
@@ -950,12 +1007,7 @@ export default {
 
   // Enter modal mode (only available in inline mode)
   full() {
-    const {
-      options,
-      viewer,
-      image,
-      list,
-    } = this;
+    const { options, viewer, image, list } = this;
 
     if (!this.isShown || this.played || this.fulled || !options.inline) {
       return this;
@@ -1008,12 +1060,7 @@ export default {
 
   // Exit modal mode (only available in inline mode)
   exit() {
-    const {
-      options,
-      viewer,
-      image,
-      list,
-    } = this;
+    const { options, viewer, image, list } = this;
 
     if (!this.isShown || this.played || !this.fulled || !options.inline) {
       return this;
@@ -1097,15 +1144,20 @@ export default {
 
     this.tooltipping = setTimeout(() => {
       if (options.transition) {
-        addListener(tooltipBox, EVENT_TRANSITION_END, () => {
-          removeClass(tooltipBox, CLASS_SHOW);
-          removeClass(tooltipBox, CLASS_FADE);
-          removeClass(tooltipBox, CLASS_TRANSITION);
-          tooltipBox.setAttribute('aria-hidden', true);
-          this.fading = false;
-        }, {
-          once: true,
-        });
+        addListener(
+          tooltipBox,
+          EVENT_TRANSITION_END,
+          () => {
+            removeClass(tooltipBox, CLASS_SHOW);
+            removeClass(tooltipBox, CLASS_FADE);
+            removeClass(tooltipBox, CLASS_TRANSITION);
+            tooltipBox.setAttribute('aria-hidden', true);
+            this.fading = false;
+          },
+          {
+            once: true,
+          },
+        );
 
         removeClass(tooltipBox, CLASS_IN);
         this.fading = true;
@@ -1136,11 +1188,11 @@ export default {
   },
 
   fitScreen: function fitScreen() {
-      this.options.isFitScreen = !this.options.isFitScreen
+    this.options.isFitScreen = !this.options.isFitScreen;
 
-      this.update()
+    this.update();
 
-      return this;
+    return this;
   },
 
   // Reset the image to its initial state
@@ -1190,10 +1242,9 @@ export default {
 
         if (image && img) {
           if (
-            image.src !== img.src
-
+            image.src !== img.src ||
             // Title changed (#408)
-            || image.alt !== img.alt
+            image.alt !== img.alt
           ) {
             changedIndexes.push(i);
           }
@@ -1215,7 +1266,12 @@ export default {
 
             if (changedIndex >= 0) {
               this.viewed = false;
-              this.view(Math.max(Math.min(this.index - changedIndex, this.length - 1), 0));
+              this.view(
+                Math.max(
+                  Math.min(this.index - changedIndex, this.length - 1),
+                  0,
+                ),
+              );
             } else {
               const activeItem = this.items[this.index];
 

@@ -9,7 +9,7 @@ const v = new Vault();
 const CONFIG = {
   nextPageUrl: true,
   noRefresh: true,
-  toggleBtn: false,
+  toggleBtn: true,
   viewer: true,
   hideControlBtn: true,
   hideBanner: true,
@@ -18,7 +18,7 @@ const CONFIG = {
 
 const CONFIG_FN = {
   noRefresh: noRefrershLink,
-  nextPageUrl: () => v.loadArticleUrlList(),
+  nextPageUrl: () => v.setPageUrl(),
   toggleBtn: toggleBtn,
   viewer: viewInit,
   hideControlBtn: () => {
@@ -29,6 +29,9 @@ const CONFIG_FN = {
   hideCommentForm: () => {
     remove('#commentForm');
     remove('#comment .title');
+    remove('#vote');
+    remove('.article-menu.mt-2 > *');
+    remove('.article-link');
   },
 };
 

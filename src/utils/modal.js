@@ -1,3 +1,4 @@
+import { toggleBtn } from 'src/init/btn';
 import { getChannelId } from './url';
 import { Vault } from 'src/vault';
 
@@ -15,6 +16,7 @@ const INIT_CONFIG_MODAL_HTML = `
 <div id="dialog" title="기본 설정">
     <p>뷰어 기본 표시<input type="checkbox" id="default_viewer" style="float: right;"></p>
     <p>뷰어 기본 화면 맞춤<input type="checkbox" id="default_fitscreen" style="float: right;"></p>
+    <p>원본 이미지 숨기기<input type="checkbox" id="hide_ori_img" style="float: right;"></p>
     <p>페이지 이동 버튼 활성화<input type="checkbox" id="btn_nextBtn" style="float: right;"></p>
     <p>설정 버튼 확장<input type="checkbox" id="btn_navExpand" style="float: right;"></p>
 </div>
@@ -127,6 +129,7 @@ function initConfigModal() {
     let DEFAULT_FITSCREEN = $('#dialog')
       .find(`#default_fitscreen`)
       .is(':checked');
+    let HIDE_ORI_IMG = $('#dialog').find(`#hide_ori_img`).is(':checked');
 
     let BTN_NEXTBTN = $('#dialog').find(`#btn_nextBtn`).is(':checked');
     let BTN_NAVEXPAND = $('#dialog').find(`#btn_navExpand`).is(':checked');
@@ -134,12 +137,15 @@ function initConfigModal() {
     v.setConfig('viewer', {
       defaultStart: DEFAULT_VIEWER,
       fitScreen: DEFAULT_FITSCREEN,
+      hideOriImg: HIDE_ORI_IMG,
     });
 
     v.setConfig('btn', {
       nextBtn: BTN_NEXTBTN,
       navExpand: BTN_NAVEXPAND,
     });
+
+    toggleBtn();
 
     $(this).dialog('close');
   };
@@ -166,6 +172,9 @@ function initConfigModal() {
       $('#dialog')
         .find(`#default_fitscreen`)
         .prop('checked', v.config.viewer.fitScreen);
+      $('#dialog')
+        .find(`#hide_ori_img`)
+        .prop('checked', v.config.viewer.hideOriImg);
       $('#dialog').find(`#btn_nextBtn`).prop('checked', v.config.btn.nextBtn);
       $('#dialog')
         .find(`#btn_navExpand`)
