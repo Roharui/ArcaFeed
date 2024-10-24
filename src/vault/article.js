@@ -35,44 +35,40 @@ const VaultArticle = (superClass) =>
 
       const channelId = getChannelId();
 
-      const { excludeCategory, excludeTitle } = this.getPageFilter(
-        channelId,
-      ) ?? {
-        excludeCategory: [],
-        excludeTitle: [],
-      };
+      const { imageInclude, excludeCategory, excludeTitle } =
+        this.getPageFilter(channelId) ?? {
+          imageInclude: false,
+          excludeCategory: [],
+          excludeTitle: [],
+        };
 
       return rows
         .filter((ele) => {
-          if (excludeCategory.length == 0 && excludeTitle.length == 0) {
+          if (
+            !imageInclude &&
+            excludeCategory.length == 0 &&
+            excludeTitle.length == 0
+          ) {
             return true;
           }
 
-          const tabTypeText = $(ele).find('.badge-success').text();
+          const _tabTypeText = $(ele).find('.badge-success').text();
+          const tabTypeText = _tabTypeText.length === 0 ? '노탭' : _tabTypeText;
+
           const titleText = $(ele).find('.title').text();
           const mediaIcon = $(ele).find('.ion-ios-photos-outline').length > 0;
 
-          let isExcludeCategory = true;
+          const isImageInclude = !(imageInclude && !mediaIcon);
 
-          if (excludeCategory.length != 0) {
-            isExcludeCategory =
-              excludeCategory.every((ele) => !tabTypeText.includes(ele)) &&
-              !(
-                tabTypeText.length == 0 &&
-                ((!mediaIcon && excludeCategory.includes('노탭')) ||
-                  (mediaIcon && excludeCategory.includes('노탭(이미지)')))
-              );
-          }
+          const isExcludeCategory =
+            excludeCategory.length == 0 ||
+            !excludeCategory.includes(tabTypeText);
 
-          let isExcludeTitle = true;
+          const isExcludeTitle =
+            excludeTitle.length == 0 ||
+            excludeTitle.every((cur) => !titleText.includes(cur));
 
-          if (excludeTitle.length != 0) {
-            isExcludeTitle = excludeTitle.every(
-              (cur) => !titleText.includes(cur),
-            );
-          }
-
-          return isExcludeCategory && isExcludeTitle;
+          return isImageInclude && isExcludeCategory && isExcludeTitle;
         })
         .map((ele) => $(ele).attr('href'));
     }

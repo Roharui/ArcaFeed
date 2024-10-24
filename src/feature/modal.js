@@ -7,6 +7,8 @@ const v = new Vault();
 
 const NEXT_PAGE_MODAL_HTML = `
 <div id="dialog" title="게시글 이동 설정">
+    <div id="category-notab"></div>
+    <hr>
     <div id="category"></div>
     <hr>
     <p>차단 제목 : <input type="text" id="exclude-title" style="float: right; width: 275px"></p>
@@ -37,6 +39,7 @@ function nextPageConfigModal() {
   const checkFn = function () {
     const channelId = getChannelId();
 
+    const imageInclude = $('#dialog .image-include').is(':checked');
     const excludeCategory = $('#dialog .ele-category')
       .filter((i, ele) => !$(ele).is(':checked'))
       .map((i, ele) => $(ele).val())
@@ -44,7 +47,8 @@ function nextPageConfigModal() {
     const excludeTitle = $('#dialog #exclude-title').val();
 
     const pageFilter = {
-      excludeCategory: excludeCategory,
+      imageInclude,
+      excludeCategory,
       excludeTitle:
         excludeTitle.trim().length > 0 ? excludeTitle.split(',') : [],
     };
@@ -71,40 +75,47 @@ function nextPageConfigModal() {
     open: function () {
       const channelId = getChannelId();
 
-      const { excludeCategory, excludeTitle } = v.getPageFilter(channelId) ?? {
+      const { imageInclude, excludeCategory, excludeTitle } = v.getPageFilter(
+        channelId,
+      ) ?? {
+        imageInclude: false,
         excludeCategory: [],
         excludeTitle: [],
       };
 
-      const spanArray = $('.board-category > span').get();
-
-      spanArray.unshift('노탭', '노탭(이미지)');
-
-      spanArray
-        .filter((ele) =>
-          typeof ele === 'string' ? ele : $(ele).text().trim() !== '전체',
-        )
-        .forEach(function (ele) {
-          const text = typeof ele === 'string' ? ele : $(ele).text().trim();
-
-          const checkBox = $('<input>', {
-            type: 'checkbox',
-            class: 'ele-category',
-            value: text,
-          });
-
-          const tabName = $('<span>', { text: text });
-
-          const span = $('<span>', {
-            style: `display: inline-block; background-color: #ddd; padding: 5px; margin: 3px; border-radius: 20px;`,
-          });
-
-          span.append(checkBox).append(tabName);
-
-          checkBox.prop('checked', !excludeCategory.includes(text));
-
-          $('#dialog #category').append(span);
+      const spanFn = (text, clsName, prop) => {
+        const checkBox = $('<input>', {
+          type: 'checkbox',
+          class: clsName,
+          value: text,
         });
+        const tabName = $('<span>', { text: text });
+        const span = $('<span>', {
+          style: `display: inline-block; background-color: #ddd; padding: 5px; margin: 3px; border-radius: 20px;`,
+        });
+
+        checkBox.prop('checked', prop);
+
+        span.append(checkBox).append(tabName);
+        return span;
+      };
+
+      $('#dialog #category-notab').append(
+        spanFn('이미지', 'image-include', imageInclude),
+      );
+
+      const category = $('.board-category > span')
+        .get()
+        .map((ele) => $(ele).text().trim())
+        .filter((text) => text !== '전체');
+
+      category.splice(0, 0, '노탭');
+
+      category
+        .map((text) =>
+          spanFn(text, 'ele-category', !excludeCategory.includes(text)),
+        )
+        .forEach((ele) => $('#dialog #category').append(ele));
 
       $('#dialog #exclude-title').val(excludeTitle.join(','));
     },
