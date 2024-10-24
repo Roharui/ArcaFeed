@@ -1,8 +1,6 @@
 import { render } from 'src/utils/render';
-import { getChannelId } from 'src/utils/url';
+import { getArticleId, getChannelId } from 'src/utils/url';
 import { Vault } from 'src/vault';
-
-const v = new Vault();
 
 function noRefrershLink() {
   if (getChannelId()) {
@@ -26,7 +24,10 @@ function noRefrershLink() {
     'click',
     function (e) {
       e.preventDefault();
-      render($(this).attr('href'));
+      const href = $(this).attr('href');
+
+      new Vault().setLastArticle(getArticleId(href), true);
+      render(href);
     },
   );
 }

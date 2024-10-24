@@ -1,4 +1,4 @@
-import { style, hide, remove } from 'src/utils/jutils';
+import { style, styleHide } from 'src/utils/jutils';
 import { toggleBtn } from './btn';
 import { noRefrershLink } from './noRefresh';
 import { viewInit } from 'src/event/viewer';
@@ -22,16 +22,19 @@ const CONFIG_FN = {
   toggleBtn: toggleBtn,
   viewer: viewInit,
   hideControlBtn: () => {
-    hide('.nav-control');
     style('.btn-wrapper { bottom: 1rem !important; }');
+    styleHide('.nav-control');
   },
-  hideBanner: () => hide('#wall'),
+  hideBanner: () => {
+    styleHide('#wall');
+  },
   hideCommentForm: () => {
-    remove('#commentForm');
-    remove('#comment .title');
-    remove('#vote');
-    remove('.article-menu.mt-2 > *');
-    remove('.article-link');
+    styleHide('.article-menu.mt-2 > *');
+    styleHide('#commentForm');
+    styleHide('#comment .title');
+    styleHide('#vote');
+    styleHide('.article-link');
+    styleHide('.sidebar');
   },
 };
 

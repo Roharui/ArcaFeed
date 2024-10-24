@@ -23,7 +23,7 @@ const EVENT = {
 
 function event() {
   $(document).on('keydown', function (e) {
-    let v = new Vault();
+    const v = new Vault();
 
     const E = EVENT[v.getEventType()];
 

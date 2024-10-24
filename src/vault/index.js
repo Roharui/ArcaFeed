@@ -38,8 +38,6 @@ class Vault {
     this.data = { ...DEFAULT_VAULT };
     this.gallery = null;
 
-    console.log(this.data);
-
     Vault.instance = this;
   }
 
@@ -90,16 +88,10 @@ class Vault {
 
     const channelId = getChannelId();
 
-    let pageFilter = this.getPageFilter(channelId);
-
-    if (pageFilter === undefined) {
-      pageFilter = {
-        excludeCategory: [],
-        excludeTitle: [],
-      };
-    }
-
-    let { excludeCategory, excludeTitle } = pageFilter;
+    const { excludeCategory, excludeTitle } = this.getPageFilter(channelId) ?? {
+      excludeCategory: [],
+      excludeTitle: [],
+    };
 
     return rows
       .filter((ele) => {
@@ -107,27 +99,27 @@ class Vault {
           return true;
         }
 
-        let tabTypeText = $(ele).find('.badge-success').text();
-        let titleText = $(ele).find('.title').text();
+        const tabTypeText = $(ele).find('.badge-success').text();
+        const titleText = $(ele).find('.title').text();
+        const mediaIcon = $(ele).find('.ion-ios-photos-outline').length > 0;
 
         let isExcludeCategory = true;
 
         if (excludeCategory.length != 0) {
-          isExcludeCategory = excludeCategory.reduce(
-            (prev, cur) =>
-              prev &&
-              !tabTypeText.includes(cur) &&
-              !(tabTypeText.length == 0 && cur == '노탭'),
-            true,
-          );
+          isExcludeCategory =
+            excludeCategory.every((ele) => !tabTypeText.includes(ele)) &&
+            !(
+              tabTypeText.length == 0 &&
+              ((!mediaIcon && excludeCategory.includes('노탭')) ||
+                (mediaIcon && excludeCategory.includes('노탭(이미지)')))
+            );
         }
 
         let isExcludeTitle = true;
 
         if (excludeTitle.length != 0) {
-          isExcludeTitle = excludeTitle.reduce(
-            (prev, cur) => prev && !titleText.includes(cur),
-            true,
+          isExcludeTitle = excludeTitle.every(
+            (cur) => !titleText.includes(cur),
           );
         }
 
@@ -205,8 +197,8 @@ class Vault {
       .then(() => (this.data.htmlActive = true));
   }
 
-  setLastArticle(articleId) {
-    if (!articleId) return;
+  setLastArticle(articleId, force = false) {
+    if (!articleId && !force) return;
     this.data.lastArticleId = articleId;
   }
 

@@ -18,7 +18,6 @@ const INIT_CONFIG_MODAL_HTML = `
     <p>뷰어 기본 화면 맞춤<input type="checkbox" id="default_fitscreen" style="float: right;"></p>
     <p>원본 이미지 숨기기<input type="checkbox" id="hide_ori_img" style="float: right;"></p>
     <p>페이지 이동 버튼 활성화<input type="checkbox" id="btn_nextBtn" style="float: right;"></p>
-    <p>설정 버튼 확장<input type="checkbox" id="btn_navExpand" style="float: right;"></p>
 </div>
 `;
 
@@ -37,12 +36,11 @@ function nextPageConfigModal() {
   const checkFn = function () {
     const channelId = getChannelId();
 
-    const excludeCategory = $('#dialog')
-      .find('.ele-category')
+    const excludeCategory = $('#dialog .ele-category')
       .filter((i, ele) => !$(ele).is(':checked'))
       .map((i, ele) => $(ele).val())
       .get();
-    const excludeTitle = $('#dialog').find('#exclude-title').val();
+    const excludeTitle = $('#dialog #exclude-title').val();
 
     const pageFilter = {
       excludeCategory: excludeCategory,
@@ -72,41 +70,42 @@ function nextPageConfigModal() {
     open: function () {
       const channelId = getChannelId();
 
-      let pageFilter = v.getPageFilter(channelId);
+      const { excludeCategory, excludeTitle } = v.getPageFilter(channelId) ?? {
+        excludeCategory: [],
+        excludeTitle: [],
+      };
 
-      if (pageFilter === undefined) {
-        pageFilter = {
-          excludeCategory: [],
-          excludeTitle: [],
-        };
-      }
+      const spanArray = $('.board-category > span').get();
 
-      let { excludeCategory, excludeTitle } = pageFilter;
+      spanArray.unshift('노탭', '노탭(이미지)');
 
-      $('.board-category > span').each(function (i, ele) {
-        let text = $(ele).text().includes('전체')
-          ? '노탭'
-          : $(ele).text().trim();
+      spanArray
+        .filter((ele) =>
+          typeof ele === 'string' ? ele : $(ele).text().trim() !== '전체',
+        )
+        .forEach(function (ele) {
+          const text = typeof ele === 'string' ? ele : $(ele).text().trim();
 
-        const checkBox = $('<input>', {
-          type: 'checkbox',
-          class: 'ele-category',
-          value: text,
+          const checkBox = $('<input>', {
+            type: 'checkbox',
+            class: 'ele-category',
+            value: text,
+          });
+
+          const tabName = $('<span>', { text: text });
+
+          const span = $('<span>', {
+            style: `display: inline-block; background-color: #ddd; padding: 5px; margin: 3px; border-radius: 20px;`,
+          });
+
+          span.append(checkBox).append(tabName);
+
+          checkBox.prop('checked', !excludeCategory.includes(text));
+
+          $('#dialog #category').append(span);
         });
-        const tabName = $('<span>', { text: text });
 
-        const span = $('<span>', {
-          style: `display: inline-block; background-color: #ddd; padding: 5px; margin: 3px; border-radius: 20px;`,
-        });
-
-        span.append(checkBox).append(tabName);
-
-        checkBox.prop('checked', !excludeCategory.includes(text));
-
-        $('#dialog').find('#category').append(span);
-      });
-
-      $('#dialog').find('#exclude-title').val(excludeTitle.join(','));
+      $('#dialog #exclude-title').val(excludeTitle.join(','));
     },
     close: function () {
       $('#dialog').remove();
@@ -125,24 +124,20 @@ function initConfigModal() {
   $('body').append(dialog);
 
   const checkFn = function () {
-    let DEFAULT_VIEWER = $('#dialog').find(`#default_viewer`).is(':checked');
-    let DEFAULT_FITSCREEN = $('#dialog')
-      .find(`#default_fitscreen`)
-      .is(':checked');
-    let HIDE_ORI_IMG = $('#dialog').find(`#hide_ori_img`).is(':checked');
-
-    let BTN_NEXTBTN = $('#dialog').find(`#btn_nextBtn`).is(':checked');
-    let BTN_NAVEXPAND = $('#dialog').find(`#btn_navExpand`).is(':checked');
+    const defaultStart = $('#dialog #default_viewer').is(':checked');
+    const fitScreen = $('#dialog #default_fitscreen').is(':checked');
+    const hideOriImg = $('#dialog #hide_ori_img').is(':checked');
 
     v.setConfig('viewer', {
-      defaultStart: DEFAULT_VIEWER,
-      fitScreen: DEFAULT_FITSCREEN,
-      hideOriImg: HIDE_ORI_IMG,
+      defaultStart,
+      fitScreen,
+      hideOriImg,
     });
 
+    const nextBtn = $('#dialog #btn_nextBtn').is(':checked');
+
     v.setConfig('btn', {
-      nextBtn: BTN_NEXTBTN,
-      navExpand: BTN_NAVEXPAND,
+      nextBtn,
     });
 
     toggleBtn();
@@ -166,19 +161,16 @@ function initConfigModal() {
       취소: cancelFn,
     },
     open: function () {
-      $('#dialog')
-        .find(`#default_viewer`)
-        .prop('checked', v.config.viewer.defaultStart);
-      $('#dialog')
-        .find(`#default_fitscreen`)
-        .prop('checked', v.config.viewer.fitScreen);
-      $('#dialog')
-        .find(`#hide_ori_img`)
-        .prop('checked', v.config.viewer.hideOriImg);
-      $('#dialog').find(`#btn_nextBtn`).prop('checked', v.config.btn.nextBtn);
-      $('#dialog')
-        .find(`#btn_navExpand`)
-        .prop('checked', v.config.btn.navExpand);
+      $('#dialog #default_viewer').prop(
+        'checked',
+        v.config.viewer.defaultStart,
+      );
+      $('#dialog #default_fitscreen').prop(
+        'checked',
+        v.config.viewer.fitScreen,
+      );
+      $('#dialog #hide_ori_img').prop('checked', v.config.viewer.hideOriImg);
+      $('#dialog #btn_nextBtn').prop('checked', v.config.btn.nextBtn);
     },
     close: function () {
       $('#dialog').remove();

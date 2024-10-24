@@ -6,8 +6,7 @@
       "jquery-ui-css": ["node_modules/jquery-ui-dist/jquery-ui.css"],
       "viewerjs-css": ["src/css/viewer.min.css"],
       "arcalive-css": ["src/css/arcalive.css"],
-      "@viewerjs": ["packages/viewerjs/src"],
-      "@src": ["src"]
+      "@viewerjs": ["packages/viewerjs/src"]
     }
   },
   "include": ["**/*.js"],

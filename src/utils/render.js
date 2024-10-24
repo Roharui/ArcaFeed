@@ -1,7 +1,6 @@
 import { Vault } from 'src/vault';
 import { viewInit } from 'src/event/viewer';
 import { getArticleId } from './url';
-import { remove } from './jutils';
 
 const v = new Vault();
 
@@ -46,21 +45,18 @@ function renderCallback(html) {
     'click',
     function (e) {
       e.preventDefault();
-      render($(this).attr('href'));
+      const href = $(this).attr('href');
+
+      new Vault().setLastArticle(getArticleId(href), true);
+      render(href);
     },
   );
-
-  remove('#commentForm');
-  remove('#comment .title');
-  remove('#vote');
-  remove('.article-menu.mt-2 > *');
-  remove('.article-link');
 
   $('video.arca-emoticon')
     .get()
     .forEach((ele) => ele.play());
 
-  let videos = $('video.emoticon').get();
+  const videos = $('video.emoticon').get();
 
   new Promise(function (resolve) {
     var loaded = 0;

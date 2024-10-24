@@ -46,26 +46,33 @@ function helperBtn() {
     location.reload(),
   );
 
-  const navBtnShowAllBtn = createHelperBtn('ion-ios-gear', () => {
+  const navBtnShowAllBtn = createHelperBtn('ion-ios-toggle-outline', () => {
     v.setConfig('btn', {
       navExpand: true,
     });
     toggleBtn();
   });
 
+  const navBtnHideBtn = createHelperBtn('ion-ios-toggle-outline', () => {
+    v.setConfig('btn', {
+      navExpand: false,
+    });
+    toggleBtn();
+  });
+
   if (v.config.btn.navExpand) {
+    firstLine.append(navBtnHideBtn);
+
     firstLine.append(refresh);
 
     if (location.href.includes('/b/')) {
       firstLine.append(pageModalBtn);
 
       secondLine.append(fullScreenBtn);
-
-      if (getArticleId() !== undefined) {
-        secondLine.append(imageViewBtn);
-        secondLine.append(imageFitWidth);
-      }
+      secondLine.append(imageViewBtn);
+      secondLine.append(imageFitWidth);
     }
+
     firstLine.append(settingModalBtn);
   } else {
     firstLine.append(navBtnShowAllBtn);

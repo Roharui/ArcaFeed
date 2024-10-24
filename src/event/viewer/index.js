@@ -1,22 +1,26 @@
 import Viewer from '@viewerjs';
 
-import { hide, remove } from 'src/utils/jutils';
+import { hide } from 'src/utils/jutils';
 import { Vault } from 'src/vault';
 
-let v = new Vault();
+const v = new Vault();
 
 function viewInit() {
-  let article = $('.article-content')
+  const article = $('.article-content')
     .find('img')
     .not('.twemoji')
     .not('.arca-emoticon');
 
   if (v.config.viewer.hideOriImg) {
     article.hide();
-    hide('.article-content > p > br');
+    $('.article-content > p').each((i, ele) => {
+      if ($(ele).text().length === 0) {
+        $(ele).find('br').hide();
+      }
+    });
     hide('#defaultImage');
     hide('.spoiler-alert-content');
-    remove('.safeframe');
+    hide('.safeframe');
   }
 
   if (article.length == 0) {
@@ -24,7 +28,7 @@ function viewInit() {
     return;
   }
 
-  let gallery = new Viewer(document.querySelector('.article-body'), {
+  const gallery = new Viewer(document.querySelector('.article-body'), {
     loop: false,
     zoomable: false,
     zoomOnWheel: false,
