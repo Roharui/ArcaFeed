@@ -19,7 +19,6 @@
     "@types/jquery": "^3.5.30",
     "@types/jqueryui": "^1.12.23",
     "@types/node": "^22.7.4",
-    "chokidar": "^4.0.1",
     "css-loader": "^7.1.2",
     "eslint": "^6.6.0",
     "eslint-config-airbnb": "18.2.0",
@@ -29,7 +28,6 @@
     "prettier": "^3.3.3",
     "style-loader": "^4.0.0",
     "webpack": "^5.93.0",
-    "webpack-cli": "^5.1.4",
-    "ws": "^8.18.0"
+    "webpack-cli": "^5.1.4"
   }
 }
