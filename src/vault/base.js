@@ -5,6 +5,7 @@ const DEFAULT_CONFIG = {
   viewer: {
     fitScreen: false,
     defaultStart: false,
+    viewerNav: false,
     hideOriImg: false,
   },
   btn: {

@@ -17,6 +17,8 @@ const INIT_CONFIG_MODAL_HTML = `
 <div id="dialog" title="기본 설정">
     <p>뷰어 기본 표시<input type="checkbox" id="default_viewer" style="float: right;"></p>
     <p>뷰어 기본 화면 맞춤<input type="checkbox" id="default_fitscreen" style="float: right;"></p>
+    <p>미리보기 Nav 표시<input type="checkbox" id="viewer_nav" style="float: right;"></p>
+    <hr>
     <p>원본 이미지 숨기기<input type="checkbox" id="hide_ori_img" style="float: right;"></p>
     <p>페이지 이동 버튼 활성화<input type="checkbox" id="btn_nextBtn" style="float: right;"></p>
 </div>
@@ -128,11 +130,13 @@ function initConfigModal() {
     const defaultStart = $('#dialog #default_viewer').is(':checked');
     const fitScreen = $('#dialog #default_fitscreen').is(':checked');
     const hideOriImg = $('#dialog #hide_ori_img').is(':checked');
+    const viewerNav = $('#dialog #viewer_nav').is(':checked');
 
     v.setConfig('viewer', {
       defaultStart,
       fitScreen,
       hideOriImg,
+      viewerNav,
     });
 
     const nextBtn = $('#dialog #btn_nextBtn').is(':checked');
@@ -170,6 +174,7 @@ function initConfigModal() {
         'checked',
         v.config.viewer.fitScreen,
       );
+      $('#dialog #viewer_nav').prop('checked', v.config.viewer.fitScreen);
       $('#dialog #hide_ori_img').prop('checked', v.config.viewer.hideOriImg);
       $('#dialog #btn_nextBtn').prop('checked', v.config.btn.nextBtn);
     },

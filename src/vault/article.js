@@ -118,8 +118,6 @@ const VaultArticle = (superClass) =>
         .get();
       this.articleList = this.filterLink(articleList);
 
-      console.log(this.articleList);
-
       this.htmlActive = false;
 
       const nextUrl = this.getNextPageUrl();

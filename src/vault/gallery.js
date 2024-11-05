@@ -22,6 +22,7 @@ const DEFAULT_VIEWER_SETTING = {
   keyboard: false,
   hideAtEnd: true,
   scalable: false,
+  transition: false,
   filter: IMG_FILTER,
 };
 
@@ -32,6 +33,7 @@ const VaultGallery = (superClass) =>
 
       this.viewerConfig = {
         isFitScreen: this.config.viewer.fitScreen,
+        navbar: this.config.viewer.viewerNav,
       };
     }
 
