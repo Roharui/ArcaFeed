@@ -35,20 +35,16 @@ const VaultArticle = (superClass) =>
 
       const channelId = getChannelId();
 
-      const { imageInclude, excludeCategory, excludeTitle } =
-        this.getPageFilter(channelId) ?? {
-          imageInclude: false,
-          excludeCategory: [],
-          excludeTitle: [],
-        };
+      const { excludeCategory, excludeTitle } = this.getPageFilter(
+        channelId,
+      ) ?? {
+        excludeCategory: [],
+        excludeTitle: [],
+      };
 
       return rows
         .filter((ele) => {
-          if (
-            !imageInclude &&
-            excludeCategory.length == 0 &&
-            excludeTitle.length == 0
-          ) {
+          if (excludeCategory.length == 0 && excludeTitle.length == 0) {
             return true;
           }
 
@@ -56,9 +52,6 @@ const VaultArticle = (superClass) =>
           const tabTypeText = _tabTypeText.length === 0 ? '노탭' : _tabTypeText;
 
           const titleText = $(ele).find('.title').text();
-          const mediaIcon = $(ele).find('.ion-ios-photos-outline').length > 0;
-
-          const isImageInclude = !(imageInclude && !mediaIcon);
 
           const isExcludeCategory =
             excludeCategory.length == 0 ||
@@ -68,7 +61,7 @@ const VaultArticle = (superClass) =>
             excludeTitle.length == 0 ||
             excludeTitle.every((cur) => !titleText.includes(cur));
 
-          return isImageInclude && isExcludeCategory && isExcludeTitle;
+          return isExcludeCategory && isExcludeTitle;
         })
         .map((ele) => $(ele).attr('href'));
     }
@@ -124,6 +117,8 @@ const VaultArticle = (superClass) =>
         })
         .get();
       this.articleList = this.filterLink(articleList);
+
+      console.log(this.articleList);
 
       this.htmlActive = false;
 

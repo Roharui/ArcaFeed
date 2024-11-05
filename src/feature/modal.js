@@ -7,8 +7,6 @@ const v = new Vault();
 
 const NEXT_PAGE_MODAL_HTML = `
 <div id="dialog" title="게시글 이동 설정">
-    <div id="category-notab"></div>
-    <hr>
     <div id="category"></div>
     <hr>
     <p>차단 제목 : <input type="text" id="exclude-title" style="float: right; width: 275px"></p>
@@ -39,7 +37,6 @@ function nextPageConfigModal() {
   const checkFn = function () {
     const channelId = getChannelId();
 
-    const imageInclude = $('#dialog .image-include').is(':checked');
     const excludeCategory = $('#dialog .ele-category')
       .filter((i, ele) => !$(ele).is(':checked'))
       .map((i, ele) => $(ele).val())
@@ -47,7 +44,6 @@ function nextPageConfigModal() {
     const excludeTitle = $('#dialog #exclude-title').val();
 
     const pageFilter = {
-      imageInclude,
       excludeCategory,
       excludeTitle:
         excludeTitle.trim().length > 0 ? excludeTitle.split(',') : [],
@@ -75,10 +71,7 @@ function nextPageConfigModal() {
     open: function () {
       const channelId = getChannelId();
 
-      const { imageInclude, excludeCategory, excludeTitle } = v.getPageFilter(
-        channelId,
-      ) ?? {
-        imageInclude: false,
+      const { excludeCategory, excludeTitle } = v.getPageFilter(channelId) ?? {
         excludeCategory: [],
         excludeTitle: [],
       };
@@ -99,10 +92,6 @@ function nextPageConfigModal() {
         span.append(checkBox).append(tabName);
         return span;
       };
-
-      $('#dialog #category-notab').append(
-        spanFn('이미지', 'image-include', imageInclude),
-      );
 
       const category = $('.board-category > span')
         .get()

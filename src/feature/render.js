@@ -65,6 +65,8 @@ function renderCallback(html) {
       v.addEventListener('loadedmetadata', function () {
         loaded++;
 
+        v.pause();
+
         if (loaded === videos.length) {
           resolve();
         }

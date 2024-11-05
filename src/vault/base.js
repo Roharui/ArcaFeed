@@ -1,3 +1,5 @@
+import deepmerge from 'deepmerge';
+
 const DEFAULT_CONFIG = {
   pageFilter: {},
   viewer: {
@@ -14,7 +16,9 @@ const DEFAULT_CONFIG = {
 class VaultBase {
   constructor() {
     const configJSON = localStorage.getItem('aralive_helper_config');
-    this.config = configJSON ? JSON.parse(configJSON) : { ...DEFAULT_CONFIG };
+    this.config = configJSON
+      ? deepmerge(DEFAULT_CONFIG, JSON.parse(configJSON), { clone: true })
+      : deepmerge(DEFAULT_CONFIG, {}, { clone: true });
   }
 
   // === interface
