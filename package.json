@@ -3,10 +3,8 @@
   "version": "2.0.0",
   "main": "main.js",
   "scripts": {
-    "start": "node app.js",
     "build": "webpack --mode production",
-    "build:dev": "webpack --mode development",
-    "watch": "node ws.js"
+    "build:dev": "webpack --mode development"
   },
   "author": "",
   "license": "ISC",

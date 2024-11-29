@@ -41,6 +41,7 @@ function fitScreen() {
 const VIEWER_EVENT = {
   ArrowLeft: prevImage,
   ArrowRight: nextImage,
+  ' ': nextImage,
   ArrowDown: moveDown,
   ArrowUp: moveUp,
   '/': fitScreen,

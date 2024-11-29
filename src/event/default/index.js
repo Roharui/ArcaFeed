@@ -13,6 +13,7 @@ const CONTROL_KEYBORD_EVENT = {
 const KEYBORD_EVENT = {
   ArrowLeft: () => toPrevPage(),
   ArrowRight: () => toNextPage(),
+  ' ': () => toNextPage(),
   Shift: () => showViewer(),
   '\\': () => showImage(),
 };

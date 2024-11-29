@@ -158,10 +158,6 @@ function initConfigModal() {
     modal: true,
     resizeable: false,
     buttons: {
-      초기화: function () {
-        resetConfig();
-        $(this).dialog('close');
-      },
       확인: checkFn,
       취소: cancelFn,
     },

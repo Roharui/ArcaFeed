@@ -58,6 +58,10 @@ function loop() {
 }
 
 function webcamSnapToggle() {
+  alert('IN PROGRESS');
+
+  return;
+
   if (isOn) {
     location.reload();
     return;

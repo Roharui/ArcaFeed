@@ -28,12 +28,21 @@ function createHelperBtn(icon, callback) {
   return btn;
 }
 
+function btnWrapper(cls, content) {
+  const btnWrapperDiv = $('<div>', { class: cls });
+
+  content.reverse().forEach((line) => {
+    const lineDiv = $('<div>', { class: 'btn-line' });
+    line.forEach((btn) => {
+      lineDiv.append(btn);
+    });
+    btnWrapperDiv.append(lineDiv);
+  });
+
+  return btnWrapperDiv;
+}
+
 function helperBtn() {
-  const btnWrapper = $('<div>', { class: 'btn-wrapper' });
-
-  const firstLine = $('<div>', { class: 'btn-line' });
-  const secondLine = $('<div>', { class: 'btn-line' });
-
   const pageModalBtn = createHelperBtn('ion-hammer', nextPageConfigModal);
   const settingModalBtn = createHelperBtn('ion-ios-gear', initConfigModal);
   const fullScreenBtn = createHelperBtn('ion-android-expand', toggleFullScreen);
@@ -58,26 +67,26 @@ function helperBtn() {
     webcamSnapToggle();
   });
 
-  if (v.config.btn.navExpand) {
-    firstLine.append(navBtnHideBtn);
-    firstLine.append(refresh);
-    if (location.href.includes('/b/')) {
-      firstLine.append(pageModalBtn);
-      secondLine.append(fullScreenBtn);
-      secondLine.append(imageViewBtn);
-      secondLine.append(imageFitWidth);
+  const firstLine = [];
+  const secondLine = [];
 
-      secondLine.append(mouthOpenBtm);
+  if (v.config.btn.navExpand) {
+    firstLine.push(navBtnHideBtn);
+    firstLine.push(refresh);
+    if (location.href.includes('/b/')) {
+      firstLine.push(pageModalBtn);
+
+      secondLine.push(fullScreenBtn);
+      secondLine.push(imageViewBtn);
+      secondLine.push(imageFitWidth);
+      secondLine.push(mouthOpenBtm);
     }
-    firstLine.append(settingModalBtn);
+    firstLine.push(settingModalBtn);
   } else {
-    firstLine.append(navBtnShowAllBtn);
+    firstLine.push(navBtnShowAllBtn);
   }
 
-  btnWrapper.append(secondLine);
-  btnWrapper.append(firstLine);
-
-  $('body').append(btnWrapper);
+  $('body').append(btnWrapper('btn-wrapper right', [firstLine, secondLine]));
 }
 
 function pagenationBtn() {
