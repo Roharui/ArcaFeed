@@ -15,12 +15,18 @@ const NEXT_PAGE_MODAL_HTML = `
 
 const INIT_CONFIG_MODAL_HTML = `
 <div id="dialog" title="기본 설정">
-    <p>뷰어 기본 표시<input type="checkbox" id="default_viewer" style="float: right;"></p>
-    <p>뷰어 기본 화면 맞춤<input type="checkbox" id="default_fitscreen" style="float: right;"></p>
-    <p>미리보기 Nav 표시<input type="checkbox" id="viewer_nav" style="float: right;"></p>
-    <hr>
-    <p>원본 이미지 숨기기<input type="checkbox" id="hide_ori_img" style="float: right;"></p>
-    <p>페이지 이동 버튼 활성화<input type="checkbox" id="btn_nextBtn" style="float: right;"></p>
+  <p><b>뷰어 설정</b></p>  
+  <p>뷰어 기본 표시<input type="checkbox" id="default_viewer" style="float: right;"></p>
+  <p>뷰어 기본 화면 맞춤<input type="checkbox" id="default_fitscreen" style="float: right;"></p>
+  <p><b>표시 설정</b></p>
+  <p>원본 이미지 숨기기<input type="checkbox" id="hide_ori_img" style="float: right;"></p>
+  <p>비활성화 탭 숨기기<input type="checkbox" id="hide_tab" style="float: right;"></p>
+  <p>댓글 숨기기<input type="checkbox" id="hide_comment" style="float: right;"></p>
+  <p><b>버튼 설정</b></p>
+  <p>페이지 이동 버튼 활성화<input type="checkbox" id="btn_nextBtn" style="float: right;"></p>
+  <p><b>단축키 설정</b></p>
+  <p>단축키 활성화<input type="checkbox" id="shortcut" style="float: right;"></p>
+  <br>
 </div>
 `;
 
@@ -130,13 +136,23 @@ function initConfigModal() {
     const defaultStart = $('#dialog #default_viewer').is(':checked');
     const fitScreen = $('#dialog #default_fitscreen').is(':checked');
     const hideOriImg = $('#dialog #hide_ori_img').is(':checked');
-    const viewerNav = $('#dialog #viewer_nav').is(':checked');
+    const hideTab = $('#dialog #hide_tab').is(':checked');
+    const hideComment = $('#dialog #hide_comment').is(':checked');
+    const shortcut = $('#dialog #shortcut').is(':checked');
 
     v.setConfig('viewer', {
       defaultStart,
       fitScreen,
+    });
+
+    v.setConfig('hide', {
       hideOriImg,
-      viewerNav,
+      hideTab,
+      hideComment,
+    });
+
+    v.setConfig('event', {
+      shortcut,
     });
 
     const nextBtn = $('#dialog #btn_nextBtn').is(':checked');
@@ -162,6 +178,7 @@ function initConfigModal() {
       취소: cancelFn,
     },
     open: function () {
+      // 뷰어 설정정
       $('#dialog #default_viewer').prop(
         'checked',
         v.config.viewer.defaultStart,
@@ -171,8 +188,19 @@ function initConfigModal() {
         v.config.viewer.fitScreen,
       );
       $('#dialog #viewer_nav').prop('checked', v.config.viewer.fitScreen);
-      $('#dialog #hide_ori_img').prop('checked', v.config.viewer.hideOriImg);
+
+      // 게시글 설정
+      $('#dialog #hide_ori_img').prop('checked', v.config.hide.hideOriImg);
+
+      // 버튼 설정
       $('#dialog #btn_nextBtn').prop('checked', v.config.btn.nextBtn);
+
+      // 목록 설정정
+      $('#dialog #hide_tab').prop('checked', v.config.hide.hideTab);
+      $('#dialog #hide_comment').prop('checked', v.config.hide.hideComment);
+
+      //단축키 설정
+      $('#dialog #shortcut').prop('checked', v.config.event.shortcut);
     },
     close: function () {
       $('#dialog').remove();

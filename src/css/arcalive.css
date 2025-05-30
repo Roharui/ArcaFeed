@@ -85,6 +85,59 @@ html::-webkit-scrollbar {
 }
 
 html {
-  -ms-overflow-style: none; /* 인터넷 익스플로러 */
-  scrollbar-width: none; /* 파이어폭스 */
+  -ms-overflow-style: none;
+  /* 인터넷 익스플로러 */
+  scrollbar-width: none;
+  /* 파이어폭스 */
+}
+
+.vrow.column.notice {
+  display: none !important;
+}
+
+footer {
+  display: none !important;
+}
+
+.body .board-article {
+  min-height: 0px !important;
+  padding-bottom: 200px;
+}
+
+.board-relay {
+  display: none !important;
+}
+
+.body .board-article .pagination .page-item {
+  display: none;
+}
+
+.body .board-article .pagination .page-item.active {
+  display: list-item;
+}
+
+.body .board-article .pagination .page-item.active+.page-item {
+  display: list-item;
+}
+
+.body .board-article .pagination .page-item:has(+ .active) {
+  display: list-item;
+}
+
+.board-title {
+  display: none !important;
+}
+
+.article-info.article-info-section {
+  display: none !important;
+}
+
+.vcol.col-time,
+.vcol.col-view,
+.vcol.col-rate {
+  display: none !important;
+}
+
+.info-row.clearfix>.right {
+  display: none !important;
 }

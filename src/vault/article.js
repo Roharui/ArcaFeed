@@ -61,35 +61,67 @@ const VaultArticle = (superClass) =>
             excludeTitle.length == 0 ||
             excludeTitle.every((cur) => !titleText.includes(cur));
 
-          return isExcludeCategory && isExcludeTitle;
+          const result = isExcludeCategory && isExcludeTitle;
+
+          if (this.config.hide.hideTab && !result) {
+            $(ele).hide();
+          }
+
+          return result;
         })
         .map((ele) => $(ele).attr('href'));
     }
 
     getNextPageUrl() {
+      const nextPageUrl = $('.page-item.active').next().find('a').attr('href');
+
+      let tmp = false;
+
+      if (this.articleList.length === 0) {
+        return nextPageUrl;
+      }
+
       const nextUrl = this.articleList.find((url) => {
+        if (tmp) return true;
         if (this.lastArticleId === undefined) return true;
-        return parseInt(getArticleId(url)) < parseInt(this.lastArticleId);
+        if (parseInt(getArticleId(url)) == parseInt(this.lastArticleId))
+          tmp = true;
       });
 
-      if (this.articleList.length === 0 || nextUrl === undefined) {
-        return $('.page-item.active').next().find('a').attr('href');
+      if (nextUrl == undefined && tmp) {
+        return nextPageUrl;
+      }
+
+      if (nextUrl == undefined && !tmp) {
+        return this.articleList[0];
       }
 
       return nextUrl;
     }
 
     getPrevPageUrl() {
-      const prevUrl = this.articleList
-        .slice()
-        .reverse()
-        .find((url) => {
-          if (this.lastArticleId === undefined) return true;
-          return parseInt(getArticleId(url)) > parseInt(this.lastArticleId);
-        });
+      const prevPageUrl = $('.page-item.active').prev().find('a').attr('href');
+      const articleListReverse = this.articleList.slice().reverse();
 
-      if (this.articleList.length === 0 || prevUrl === undefined) {
-        return $('.page-item.active').prev().find('a').attr('href');
+      let tmp = false;
+
+      if (articleListReverse.length === 0) {
+        return prevPageUrl;
+      }
+
+      const prevUrl = articleListReverse.find((url) => {
+        if (tmp) return true;
+        if (this.lastArticleId === undefined) return true;
+        if (parseInt(getArticleId(url)) == parseInt(this.lastArticleId))
+          tmp = true;
+      });
+
+      if (prevUrl == undefined && tmp) {
+        return prevPageUrl;
+      }
+
+      if (prevUrl == undefined && !tmp) {
+        return articleListReverse[0];
       }
 
       return prevUrl;
@@ -111,6 +143,7 @@ const VaultArticle = (superClass) =>
 
     // main
     setPageUrl() {
+      // <link rel="preload" href="<your_image_source_here>" as="image">
       const articleList = $(`a.vrow.column`)
         .map(function () {
           return this;
@@ -126,16 +159,21 @@ const VaultArticle = (superClass) =>
       this.nextArticleUrl = nextUrl;
       this.prevArticleUrl = prevUrl;
 
-      Promise.all([
-        fetch(nextUrl)
-          .then((res) => res.text())
-          .then((res) => (this.nextArticleHtml = res)),
-        prevUrl !== undefined
-          ? fetch(prevUrl)
-              .then((res) => res.text())
-              .then((res) => (this.prevArticleHtml = res))
-          : undefined,
-      ])
+      const promiseList = [];
+
+      const nextUrlPromise = fetch(nextUrl)
+        .then((res) => res.text())
+        .then((res) => (this.nextArticleHtml = res));
+      const prevUrlPromise = fetch(prevUrl)
+        .then((res) => res.text())
+        .then((res) => (this.prevArticleHtml = res));
+
+      promiseList.push(nextUrlPromise);
+      if (prevUrl !== undefined) {
+        promiseList.push(prevUrlPromise);
+      }
+
+      Promise.all(promiseList)
         .then(() => this.reserveActionFn?.apply())
         .then(() => (this.reserveActionFn = undefined))
         .then(() => (this.htmlActive = true));

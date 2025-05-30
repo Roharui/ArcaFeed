@@ -5,7 +5,6 @@ import { fitScreen, toggleViewer } from 'src/event/viewer';
 import { toggleFullScreen } from './fullscreen';
 import { initConfigModal, nextPageConfigModal } from './modal';
 import { toNextPage, toPrevPage } from './toPage';
-import { webcamSnapToggle } from './webcam';
 
 const v = new Vault();
 
@@ -63,9 +62,7 @@ function helperBtn() {
     });
     toggleBtn();
   });
-  const mouthOpenBtm = createHelperBtn('ion-videocamera', () => {
-    webcamSnapToggle();
-  });
+  const mouthOpenBtm = createHelperBtn('ion-videocamera', () => {});
 
   const firstLine = [];
   const secondLine = [];

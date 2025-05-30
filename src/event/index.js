@@ -25,6 +25,8 @@ function event() {
   $(document).on('keydown', function (e) {
     const v = new Vault();
 
+    if (v.config.event.shortcut == false) return;
+
     const E = EVENT[v.getEventType()];
 
     const C = E[CONTROL];

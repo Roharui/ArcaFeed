@@ -33,7 +33,6 @@ const VaultGallery = (superClass) =>
 
       this.viewerConfig = {
         isFitScreen: this.config.viewer.fitScreen,
-        navbar: this.config.viewer.viewerNav,
       };
     }
 

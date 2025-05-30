@@ -4,7 +4,7 @@ import { hide, show } from 'src/utils/jutils';
 const v = new Vault();
 
 function hideImage() {
-  if (v.config.viewer.hideOriImg) _hideImage();
+  if (v.config.hide.hideOriImg) _hideImage();
 }
 
 function _hideImage() {

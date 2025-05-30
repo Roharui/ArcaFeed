@@ -1,17 +1,22 @@
 import deepmerge from 'deepmerge';
-import { toggleBtn } from 'src/feature/btn';
 
 const DEFAULT_CONFIG = {
   pageFilter: {},
   viewer: {
     fitScreen: false,
-    defaultStart: false,
-    viewerNav: false,
-    hideOriImg: false,
+    defaultStart: true,
+  },
+  hide: {
+    hideOriImg: true,
+    hideTab: true,
+    hideComment: false,
   },
   btn: {
     nextBtn: true,
     navExpand: true,
+  },
+  event: {
+    shortcut: false,
   },
 };
 
