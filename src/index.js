@@ -1,13 +1,15 @@
-import { init } from './init';
-import { event } from './event';
+import Helper from './core';
 
 import 'jquery-ui';
 import 'jquery-ui-css';
 
-import 'viewerjs-css';
 import 'arcalive-css';
+import 'swiper/css';
 
 (function () {
-  init();
-  event();
+  const helper = new Helper();
+  if (process.env.NODE_ENV === 'development') {
+    console.log(helper);
+    debugger;
+  }
 })();
