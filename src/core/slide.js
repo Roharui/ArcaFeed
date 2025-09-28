@@ -50,7 +50,12 @@ export class SlideManager {
       touchMoveStopPropagation: true,
       modules: [Manipulation],
       onAny: (e) => {
-        if (e === 'slideNextTransitionEnd') this.nextLinkPageRender();
+        if (e === 'slideNextTransitionEnd') {
+          this.nextLinkPageRender();
+        }
+        if (e === 'slidePrevTransitionEnd') {
+          this.prevLinkPageRender();
+        }
       },
     });
   }

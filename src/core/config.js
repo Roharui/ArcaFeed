@@ -1,6 +1,8 @@
 export class ConfigManager {
   articleFilterConfig = {};
   articleHistory = [];
+  articleTitleHistory = [];
+
   slideMode = 'RENDER'; // 'REFRESH', 'RENDER'
 
   slideOptions = {
@@ -25,6 +27,10 @@ export class ConfigManager {
     if (articleHistory) {
       this.articleHistory = JSON.parse(articleHistory) || [];
     }
+    const articleTitleHistory = localStorage.getItem('articleTitleHistory');
+    if (articleTitleHistory) {
+      this.articleTitleHistory = JSON.parse(articleTitleHistory) || [];
+    }
     const slideMode = localStorage.getItem('slideMode');
     if (slideMode) {
       this.slideMode = slideMode;
@@ -36,6 +42,10 @@ export class ConfigManager {
       JSON.stringify(this.articleFilterConfig),
     );
     localStorage.setItem('articleHistory', JSON.stringify(this.articleHistory));
+    localStorage.setItem(
+      'articleTitleHistory',
+      JSON.stringify(this.articleTitleHistory),
+    );
     localStorage.setItem('slideMode', this.slideMode);
   }
 }

@@ -3,7 +3,7 @@ export async function fetchLoopNext() {
   let $html = $(document);
   let count = 0;
 
-  while (url === null && count <= 3) {
+  while (url === null && count <= 10) {
     const nextArticlePageUrl = $html
       .find('.page-item.active')
       .next()
