@@ -1,15 +1,20 @@
-import {
-  fetchLoopNext,
-  fetchLoopPrev,
-  fetchWithPromise,
-} from 'src/utils/request';
+import { fetchLoopNext } from 'src/utils/request';
 
 export class LinkManager {
   initLink() {
     if (this.mode === 'CHANNEL' && this.channelId) {
       this.initArticleLinkChannel();
+      this.articleHistory = [];
+      this.saveConfig();
     }
     if (this.mode === 'ARTICLE' && this.articleId) {
+      if (!this.articleHistory.includes(window.location.href)) {
+        this.articleHistory.push(window.location.href);
+        if (this.articleHistory.length > 10) {
+          this.articleHistory.shift();
+        }
+        this.saveConfig();
+      }
       this.initArticleLinkActive();
     }
   }
@@ -23,6 +28,20 @@ export class LinkManager {
   }
 
   initArticleLinkActive() {
+    const currentArticleIndex = this.articleHistory.findIndex((ele) =>
+      ele.includes(this.articleId),
+    );
+    console.log('Current Article Index:', currentArticleIndex);
+    if (
+      this.articleHistory.length > 0 &&
+      currentArticleIndex > 0 &&
+      currentArticleIndex < this.articleHistory.length - 1
+    ) {
+      this.nextArticleUrl = this.articleHistory[currentArticleIndex + 1];
+      this.prevArticleUrl = this.articleHistory[currentArticleIndex - 1];
+      return;
+    }
+
     const totalLinks = $(
       'div.included-article-list > div.article-list > div.list-table.table > a.vrow.column',
     ).not('.notice');
@@ -33,7 +52,6 @@ export class LinkManager {
     );
 
     const nextArticleUrlList = filteredLinks.slice(index + 1);
-    const prevArticleUrlList = filteredLinks.slice(0, index);
 
     if (nextArticleUrlList.length > 0 && index >= 0) {
       this.nextArticleUrl = nextArticleUrlList[0];
@@ -41,10 +59,8 @@ export class LinkManager {
       this.promiseList.push([fetchLoopNext, this]);
     }
 
-    if (prevArticleUrlList.length > 0) {
-      this.prevArticleUrl = prevArticleUrlList[0];
-    } else {
-      this.promiseList.push([fetchLoopPrev, this]);
+    if (this.articleHistory.length > 1) {
+      this.prevArticleUrl = this.articleHistory[currentArticleIndex - 1];
     }
   }
 
@@ -75,7 +91,8 @@ export class LinkManager {
 
         return result;
       })
-      .map((ele) => $(ele).attr('href'));
+      .map((ele) => $(ele).attr('href').trim())
+      .filter((href) => !this.articleHistory.includes(href));
   }
 
   nextLink() {

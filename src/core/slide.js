@@ -11,16 +11,24 @@ export class SlideManager {
       '.swiper-wrapper',
     );
 
-    $('<div>', { class: 'swiper-slide swiper-empty' }).appendTo(
+    $('<div>', { class: 'swiper-slide slide-empty' }).appendTo(
       '.swiper-wrapper',
     );
 
     $('.root-container').appendTo('.main-slide');
 
-    new Swiper('.swiper', {
-      direction: 'vertical',
+    this.swiper = new Swiper('.swiper', {
       slidesPerView: 1,
       loop: true,
+      nested: true,
+      touchAngle: 25,
+      touchRatio: 0.5,
+      threshold: 10,
+      shortSwipes: false,
+      longSwipesMs: 100,
+      longSwipesRatio: 0.1,
+      spaceBetween: window.innerWidth * 0.1,
+      keyboard: { enabled: true, onlyInViewport: false },
       onAny: (e) => {
         if (e === 'slideNextTransitionEnd') {
           this.nextLink();
