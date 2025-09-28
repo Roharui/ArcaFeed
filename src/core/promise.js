@@ -1,13 +1,10 @@
 export class PromiseManager {
   initPromise() {
-    setTimeout(() => {
-      Promise.all(this.promiseList.map(([func, arg]) => func(arg)))
-        .then(() => {
-          if (process.env.NODE_ENV === 'development') console.log(this);
-        })
-        .catch((e) => {
-          console.error(e);
-        });
+    setTimeout(async () => {
+      while (this.promiseList.length > 0) {
+        const promiseFunc = this.promiseList.shift();
+        await promiseFunc.call();
+      }
     }, 10);
   }
 }

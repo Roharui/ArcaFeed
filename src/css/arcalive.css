@@ -29,6 +29,10 @@ body {
   .body .content-wrapper {
     max-width: 800px !important;
   }
+
+  .sidebar {
+    display: none !important;
+  }
 }
 
 .next-btn {
@@ -53,7 +57,7 @@ body {
   position: fixed;
   display: flex;
   flex-direction: column;
-  bottom: 1.5rem;
+  bottom: 3rem;
   z-index: 9999;
 }
 
@@ -85,6 +89,26 @@ body {
   width: 2.7rem;
   height: 2.7rem;
   display: inline-block;
+}
+
+#category > label > span,
+#category-all > label > span {
+  display: inline-block;
+  background-color: #ddd;
+  padding: 5px 8px 5px 8px;
+  margin: 3px;
+  border-radius: 10px;
+}
+
+#category > label > input,
+#category-all > label > input {
+  display: none;
+}
+
+#category > label > input:checked + span,
+#category-all > label > input:checked + span {
+  background-color: #666;
+  color: #fff;
 }
 
 .ui-dialog {
@@ -161,24 +185,58 @@ footer {
 
 .swiper {
   width: 100%;
-  height: fit-content;
+  height: 100%;
   background-color: #aaa;
 }
 
 .swiper-wrapper {
-  display: flex;
-  align-items: stretch;
+  height: 100%;
 }
 
 .swiper-slide {
-  height: auto !important;
-  min-height: 100vh;
-}
-
-.slide-empty {
+  height: 100%;
+  width: 100%;
+  min-height: 100%;
+  overflow-y: scroll;
   background-color: var(--color-bg-main);
 }
 
-.main-slide {
-  width: 100%;
+.slide-empty {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+}
+
+.custom-loader {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 8px solid;
+  border-color: #e4e4ed;
+  border-right-color: #766df4;
+  animation: s2 1s infinite linear;
+}
+
+@keyframes s2 {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+.custom-loader + div {
+  display: none;
+}
+
+div.root-container {
+  height: fit-content;
+}
+
+.root-container .content-wrapper {
+  display: flex !important;
+  height: fit-content !important;
+}
+
+.root-container .content-wrapper article {
+  width: 100% !important;
+  height: fit-content !important;
 }

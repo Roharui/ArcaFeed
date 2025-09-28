@@ -6,7 +6,5 @@ export class Vault {
   nextArticleUrl = '';
   prevArticleUrl = '';
 
-  currentShow = 'Article';
-
   promiseList = [];
 }

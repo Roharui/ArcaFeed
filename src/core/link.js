@@ -1,4 +1,4 @@
-import { fetchLoopNext } from 'src/utils/request';
+import { fetchLoopNext, fetchUrl } from 'src/utils/request';
 
 export class LinkManager {
   initLink() {
@@ -24,6 +24,11 @@ export class LinkManager {
       'div.article-list > div.list-table.table > a.vrow.column',
     ).not('.notice');
 
+    if (totalLinks.length === 0) {
+      this.promiseList.push(fetchLoopNext.bind(this));
+      return;
+    }
+
     this.nextArticleUrl = this.filterLink(totalLinks)[0];
   }
 
@@ -31,7 +36,6 @@ export class LinkManager {
     const currentArticleIndex = this.articleHistory.findIndex((ele) =>
       ele.includes(this.articleId),
     );
-    console.log('Current Article Index:', currentArticleIndex);
     if (
       this.articleHistory.length > 0 &&
       currentArticleIndex > 0 &&
@@ -42,9 +46,14 @@ export class LinkManager {
       return;
     }
 
-    const totalLinks = $(
-      'div.included-article-list > div.article-list > div.list-table.table > a.vrow.column',
-    ).not('.notice');
+    const $activeSlide = $('.swiper-slide-active');
+    const $html = $activeSlide.length ? $activeSlide : $('.root-container');
+
+    const totalLinks = $html
+      .find(
+        'div.included-article-list > div.article-list > div.list-table.table > a.vrow.column',
+      )
+      .not('.notice');
     const filteredLinks = this.filterLink(totalLinks);
 
     const index = filteredLinks.findIndex((ele) =>
@@ -56,7 +65,7 @@ export class LinkManager {
     if (nextArticleUrlList.length > 0 && index >= 0) {
       this.nextArticleUrl = nextArticleUrlList[0];
     } else {
-      this.promiseList.push([fetchLoopNext, this]);
+      this.promiseList.push(fetchLoopNext.bind(this));
     }
 
     if (this.articleHistory.length > 1) {
@@ -92,14 +101,54 @@ export class LinkManager {
         return result;
       })
       .map((ele) => $(ele).attr('href').trim())
-      .filter((href) => !this.articleHistory.includes(href));
+      .filter(
+        (href) =>
+          !this.articleHistory.includes(
+            href.match(this.channelAndArticleIdRegex)[0].split('/')[1],
+          ),
+      );
   }
 
   nextLink() {
-    if (this.nextArticleUrl) window.location.href = this.nextArticleUrl;
+    if (this.slideMode === 'REFRESH' || this.mode === 'CHANNEL') {
+      if (this.nextArticleUrl) window.location.href = this.nextArticleUrl;
+      this.promiseList.push(this.nextLink.bind(this));
+    }
+  }
+
+  async nextLinkPageRender() {
+    if (this.nextArticleUrl) {
+      const res = await fetchUrl(this.nextArticleUrl);
+      const content = res.responseText.match(
+        /(?<=\"top\"\>\<\/div\>).+(?=\<div id=\"bottom\")/s,
+      )[0];
+      const title = res.responseText
+        .match(/(?<=title\>).+-.+(?=\<\/title)/s)[0]
+        .trim();
+
+      const $article = $(content);
+
+      // $('.slide-empty').empty();
+      $('.slide-empty').append($article);
+
+      document.title = title;
+      window.history.pushState({}, title, this.nextArticleUrl);
+
+      $('.slide-empty .custom-loader').remove();
+      $('.slide-empty').removeClass('slide-empty');
+
+      this.initForSlideRender();
+
+      const slide = $('<div>', { class: 'swiper-slide slide-empty' });
+      $('<div>', { class: 'custom-loader' }).appendTo(slide);
+
+      this.swiper.appendSlide(slide.get());
+    }
   }
 
   prevLink() {
-    if (this.prevArticleUrl) window.location.href = this.prevArticleUrl;
+    if (this.slideMode === 'REFRESH') {
+      window.location.href = this.prevArticleUrl;
+    }
   }
 }

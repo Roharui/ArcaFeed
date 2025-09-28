@@ -10,6 +10,6 @@ import 'swiper/css';
   const helper = new Helper();
   if (process.env.NODE_ENV === 'development') {
     console.log(helper);
-    debugger;
+    // debugger;
   }
 })();

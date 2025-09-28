@@ -3,8 +3,8 @@ const NEXT_PAGE_MODAL_HTML = `
   <div id="category-all"></div>
   <hr>
   <div id="category"></div>
-  <hr>
-  <p>차단 제목 : <input type="text" id="exclude-title" style="float: right; width: 275px"></p>
+  <!-- <hr> -->
+  <p style="display: none;">차단 제목 : <input type="text" id="exclude-title" style="float: right; width: 275px"></p>
 </div>
 `;
 
@@ -22,7 +22,7 @@ export class ModalManager {
     const checkFn = () => {
       const channelId = this.channelId;
 
-      const tab = $('#dialog > #category > span > .category-check:checked')
+      const tab = $('#dialog > #category > label > .category-check:checked')
         .toArray()
         .map((ele) => $(ele).val());
 
@@ -48,7 +48,7 @@ export class ModalManager {
     $('#dialog').dialog({
       modal: true,
       resizeable: false,
-      width: '400px',
+      width: `${Math.min(400, $(window).width() * 0.9)}px`,
       buttons: {
         확인: checkFn,
         취소: cancelFn,
@@ -56,8 +56,15 @@ export class ModalManager {
       open: () => {
         const channelId = this.channelId;
 
+        const category = $('.board-category > span')
+          .get()
+          .map((ele) => $(ele).text().trim())
+          .filter((text) => text !== '전체');
+
+        category.splice(0, 0, '노탭');
+
         const { tab, title } = this.articleFilterConfig?.[channelId] || {
-          tab: [],
+          tab: category,
           title: [],
         };
 
@@ -70,9 +77,7 @@ export class ModalManager {
           checkBox.on('change', fn);
 
           const tabName = $('<span>', { text: text });
-          const span = $('<span>', {
-            style: `display: inline-block; background-color: #ddd; padding: 5px; margin: 3px; border-radius: 20px;`,
-          });
+          const span = $('<label>');
 
           checkBox.prop('checked', prop);
           span.append(checkBox).append(tabName);
@@ -80,26 +85,21 @@ export class ModalManager {
           return span;
         };
 
-        const category = $('.board-category > span')
-          .get()
-          .map((ele) => $(ele).text().trim())
-          .filter((text) => text !== '전체');
-
-        category.splice(0, 0, '노탭');
+        console.log(category, tab, title);
 
         category
           .map((text) =>
             spanFn(text, 'ele-category', tab.includes(text), function () {
               if (
-                $('#category > span > .category-check').length ===
-                $('#category > span > .category-check:checked').length
+                $('#category > label > .category-check').length ===
+                $('#category > label > .category-check:checked').length
               ) {
-                $('#category-all > span > .ele-category-all').prop(
+                $('#category-all > label > .ele-category-all').prop(
                   'checked',
                   true,
                 );
               } else {
-                $('#category-all > span > .ele-category-all').prop(
+                $('#category-all > label > .ele-category-all').prop(
                   'checked',
                   false,
                 );
@@ -111,9 +111,9 @@ export class ModalManager {
         const spanAll = spanFn(
           '전체',
           'ele-category-all',
-          tab.length === 0,
+          tab.length !== 0,
           function () {
-            $('#category > span > .category-check').prop(
+            $('#category > label > .category-check').prop(
               'checked',
               this.checked,
             );

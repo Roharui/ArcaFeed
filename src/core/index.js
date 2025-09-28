@@ -27,7 +27,7 @@ class Helper extends Classes(
     this.init();
   }
 
-  init() {
+  preinit() {
     // 현재 페이지 상태 정보 가져오기
     const [mode, channelId, articleId] = this.checkPageMode(location.href);
 
@@ -39,11 +39,20 @@ class Helper extends Classes(
     this.initLink();
 
     this.initHide();
+  }
+
+  init() {
+    this.preinit();
     this.initHelperBtn();
 
     this.initSlide();
 
     this.initEvent();
+    this.initPromise();
+  }
+
+  initForSlideRender() {
+    this.preinit();
     this.initPromise();
   }
 }
