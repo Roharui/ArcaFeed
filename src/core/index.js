@@ -9,6 +9,7 @@ import { PromiseManager } from './promise';
 import { SlideManager } from './slide';
 import { ConfigManager } from './config';
 import { ModalManager } from './modal';
+import { ConsoleManager } from './console';
 
 class Helper extends Classes(
   Vault,
@@ -21,6 +22,7 @@ class Helper extends Classes(
   SlideManager,
   ConfigManager,
   ModalManager,
+  ConsoleManager,
 ) {
   constructor() {
     super();
@@ -36,13 +38,13 @@ class Helper extends Classes(
 
     this.promiseList.push(this.loadConfig);
 
-    this.promiseList.push(this.initLink);
     this.promiseList.push(this.initSlide);
+    this.promiseList.push(this.initLink);
     this.promiseList.push(() => this.doHide('Article'));
 
     this.promiseList.push(this.initEvent);
     this.promiseList.push(this.saveConfig);
-    this.promiseList.push(() => console.log(this));
+    // this.promiseList.push(() => console.log(this));
 
     setTimeout(() => this.initPromise(), 100);
   }

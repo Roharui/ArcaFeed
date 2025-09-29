@@ -19,6 +19,12 @@ function btnWrapper(cls, content) {
 
 export class ButtonManager {
   initHelperBtn() {
+    const consoleInfo = createHelperBtn('ion-ios-info', () =>
+      this.showConsole(),
+    );
+    const slideModeToggle = createHelperBtn('ion-shuffle', () =>
+      this.toggleSlideMode(),
+    );
     const showCommentModal = createHelperBtn('ion-chatboxes', () =>
       this.doHide('Comment'),
     );
@@ -37,12 +43,17 @@ export class ButtonManager {
     if (this.mode === 'ARTICLE') {
       btns.push(showArticleList);
       btns.push(showCommentModal);
+      btns.push(filterPageBtn);
+      btns.push(slideModeToggle);
     }
     if (this.mode === 'CHANNEL') {
       btns.push(nextPageBtn);
+      btns.push(filterPageBtn);
     }
 
-    btns.push(filterPageBtn);
+    if (process.env.NODE_ENV === 'development') {
+      btns.push(consoleInfo);
+    }
 
     $('body').append(btnWrapper('btn-wrapper right', btns));
   }

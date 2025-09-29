@@ -58,7 +58,9 @@ export class ModalManager {
       open: () => {
         const channelId = this.channelId;
 
-        const category = $('.board-category > span')
+        const category = $('.root-container')
+          .first()
+          .find('.board-category > span')
           .get()
           .map((ele) => $(ele).text().trim())
           .filter((text) => text !== '전체');

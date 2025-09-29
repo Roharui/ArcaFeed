@@ -13,6 +13,15 @@ export class RegexManager {
     this.articleId = articleId;
   }
 
+  getArticleIdFromHref(href) {
+    if (this.articlePageRegex.test(href)) {
+      const articleId = href
+        .match(this.channelAndArticleIdRegex)[0]
+        .split('/')[1];
+      return articleId;
+    }
+  }
+
   checkPageMode(href) {
     if (this.articlePageRegex.test(href)) {
       const [channelId, articleId] = href

@@ -1,7 +1,7 @@
 export async function fetchLoopNext() {
   let filteredLinks = [];
   let url = null;
-  let $html = $(document);
+  let $html = $('.root-container').last();
   let count = 0;
 
   while (url === null && count <= 10) {
@@ -12,7 +12,9 @@ export async function fetchLoopNext() {
       .attr('href');
 
     const res = await fetchUrl(`https://arca.live${nextArticlePageUrl}`);
+
     $html = $(res.responseText);
+
     const totalLinks = $html
       .find('div.article-list > div.list-table.table > a.vrow.column')
       .not('.notice');
@@ -25,6 +27,43 @@ export async function fetchLoopNext() {
     if (url !== null) {
       this.articleList.push(...filteredLinks);
       this.nextArticleUrl = url;
+      return;
+    }
+    count += 1;
+  }
+}
+
+export async function fetchLoopPrev() {
+  let filteredLinks = [];
+  let url = null;
+  let $html = $('.root-container').frist();
+  let count = 0;
+
+  while (url === null && count <= 10) {
+    const prevArticleUrl = $html
+      .find('.page-item.active')
+      .prev()
+      .find('a')
+      .attr('href');
+
+    if (!prevArticleUrl) return;
+
+    const res = await fetchUrl(`https://arca.live${prevArticleUrl}`);
+
+    $html = $(res.responseText);
+
+    const totalLinks = $html
+      .find('div.article-list > div.list-table.table > a.vrow.column')
+      .not('.notice');
+
+    filteredLinks = this.filterLink(totalLinks);
+    if (filteredLinks.length > 0) {
+      url = filteredLinks[0];
+    }
+
+    if (url !== null) {
+      this.articleList.unshift(...filteredLinks);
+      this.prevArticleUrl = url;
       return;
     }
     count += 1;

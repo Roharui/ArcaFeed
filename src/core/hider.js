@@ -9,14 +9,17 @@ export class HideManager {
     let $html = $('.swiper-slide-active');
 
     if ($check.length === 0) {
-      $html = $('.root-container');
+      $html = $('.root-container').parent();
     } else if ($html.length === 0) {
       this.promiseList.unshift(() => this.doHide(mode));
       this.promiseList.unshift(sleep(100));
       return;
     }
 
-    const currentShow = mode || 'Article';
+    let currentShow = mode || 'Article';
+    const previousShow = $html.attr('data-show') || 'NONE';
+
+    if (previousShow === currentShow) currentShow = 'Article';
 
     if (currentShow === 'Article') {
       $html.find('#comment').hide();
@@ -26,6 +29,8 @@ export class HideManager {
       $html.find('.btns-board').hide();
 
       $html.find('.article-wrapper > div').not('#comment').show();
+
+      $html.attr('data-show', 'Article');
     } else if (currentShow === 'Comment') {
       $html.find('.article-wrapper > div').not('#comment').hide();
 
@@ -34,6 +39,8 @@ export class HideManager {
       $html.find('.btns-board').hide();
 
       $html.find('#comment').show();
+
+      $html.attr('data-show', 'Comment');
     } else if (currentShow === 'List') {
       $html.find('.article-wrapper > div').not('#comment').hide();
       $html.find('#comment').hide();
@@ -41,6 +48,8 @@ export class HideManager {
       $html.find('.btns-board').show();
       $html.find('.article-list').show();
       $html.find('.included-article-list').show();
+
+      $html.attr('data-show', 'List');
     }
   }
 }

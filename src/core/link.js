@@ -3,11 +3,10 @@ import { fetchLoopNext, fetchUrl } from 'src/utils/request';
 export class LinkManager {
   async initLink() {
     if (this.mode === 'CHANNEL') {
+      this.clearArticle();
       this.initArticleLinkChannel();
-      this.clearHistory();
     }
     if (this.mode === 'ARTICLE') {
-      this.articleTitleList.push(document.title);
       this.initArticleLinkActive();
     }
   }
@@ -29,32 +28,30 @@ export class LinkManager {
   }
 
   initArticleLinkActive() {
-    this.currentArticleIndex = this.articleList.findIndex((ele) =>
-      ele.includes(this.articleId),
-    );
+    let $html = $(this.swiper?.slides[this.swiper?.realIndex]);
 
-    if (this.articleList.length > 0 && this.currentArticleIndex >= 0) {
-      if (this.currentArticleIndex === this.articleList.length - 1) {
-        this.prevArticleUrl = this.articleList[this.currentArticleIndex - 1];
-      } else if (this.currentArticleIndex === 0) {
-        this.nextArticleUrl = this.articleList[this.currentArticleIndex + 1];
-        return;
-      } else {
-        this.nextArticleUrl = this.articleList[this.currentArticleIndex + 1];
-        this.prevArticleUrl = this.articleList[this.currentArticleIndex - 1];
-        return;
-      }
-    }
-
-    const $check = $('.swiper');
-
-    let $html = $('.swiper-slide-active');
-
-    if ($check.length === 0) {
-      $html = $('.root-container');
-    } else if ($html.length === 0) {
+    if ($html.length === 0) {
       this.promiseList.unshift(this.initArticleLinkActive);
       this.promiseList.unshift(sleep(100));
+      return;
+    }
+
+    const currentArticleId = $(this.swiper?.slides[this.swiper?.realIndex])
+      .attr('data-article-id')
+      .trim();
+
+    this.currentArticleIndex = this.articleList.findIndex((ele) =>
+      ele.includes(currentArticleId),
+    );
+
+    if (
+      this.articleList.length > 0 &&
+      this.currentArticleIndex >= 0 &&
+      this.currentArticleIndex !== this.articleList.length - 1 &&
+      this.currentArticleIndex !== 0
+    ) {
+      this.nextArticleUrl = this.articleList[this.currentArticleIndex + 1];
+      this.prevArticleUrl = this.articleList[this.currentArticleIndex - 1];
       return;
     }
 
@@ -66,17 +63,29 @@ export class LinkManager {
 
     const filteredLinks = this.filterLink(totalLinks);
 
-    const index = filteredLinks.findIndex((ele) =>
-      ele.includes(this.articleId),
+    const nextArticleUrlList = filteredLinks.slide(
+      this.currentArticleIndex + 1,
     );
+    const prevArticleUrlList = filteredLinks.slice(0, this.currentArticleIndex);
 
-    const nextArticleUrlList = filteredLinks.slice(index + 1);
+    if (this.currentArticleIndex === this.articleList.length - 1) {
+      this.prevArticleUrl = this.articleList[this.currentArticleIndex - 1];
+    } else if (this.currentArticleIndex === 0) {
+      this.nextArticleUrl = this.articleList[this.currentArticleIndex + 1];
+    }
 
     if (nextArticleUrlList.length > 0 && index >= 0) {
       this.articleList.push(...nextArticleUrlList);
       this.nextArticleUrl = nextArticleUrlList[0];
     } else {
       this.promiseList.unshift(fetchLoopNext);
+    }
+
+    if (prevArticleUrlList.length > 0 && index >= 0) {
+      this.articleList.unshift(...prevArticleUrlList);
+      this.prevArticleUrl = prevArticleUrlList[prevArticleUrlList.length - 1];
+    } else {
+      this.promiseList.unshift(fetchLoopPrev);
     }
   }
 
@@ -112,59 +121,56 @@ export class LinkManager {
         (href) =>
           this.articleList
             .join(',')
-            .indexOf(
-              href.match(this.channelAndArticleIdRegex)[0].split('/')[1],
-            ) === -1,
+            .indexOf(this.getArticleIdFromHref(href)) === -1,
       );
   }
 
   nextLink() {
-    window.location.href = this.nextArticleUrl;
+    if (this.slideMode === 'REFRESH')
+      window.location.href = this.nextArticleUrl;
+    else this.nextPageRender();
   }
 
   prevLink() {
-    window.location.href = this.prevArticleUrl;
+    if (this.slideMode === 'REFRESH')
+      window.location.href = this.prevArticleUrl;
+    else this.prevPageRender();
   }
 
   nextPageRender() {
-    if (this.swiper.slides.length - 1 === this.swiper.activeIndex) {
+    if (this.swiper.slides.length - 1 === this.swiper.realIndex) {
       this.promiseList.push(this.nextLinkPageRender);
-      this.promiseList.push(this.addNewEmptySlide);
+      this.promiseList.push(this.appendNewEmptySlide);
       this.promiseList.push(() => this.doHide('Article'));
     }
     this.promiseList.push(this.setCurrentArticle);
     this.promiseList.push(this.initArticleLinkActive);
-    this.promiseList.push(this.changeUrlAndTitle);
 
     setTimeout(() => this.initPromise(), 100);
   }
 
   prevPageRender() {
+    if (this.prevArticleUrl === undefined) return;
+
+    if (this.swiper.realIndex === 0) {
+      this.promiseList.push(this.prevLinkPageRender);
+      this.promiseList.push(this.prependNewEmptySlide);
+      this.promiseList.push(() => this.doHide('Article'));
+    }
     this.promiseList.push(this.setCurrentArticle);
     this.promiseList.push(this.initArticleLinkActive);
-    this.promiseList.push(this.changeUrlAndTitle);
 
     setTimeout(() => this.initPromise(), 100);
   }
 
   setCurrentArticle() {
-    this.currentArticleIndex = this.swiper.activeIndex;
+    const $slide = $(this.swiper.slides[this.swiper.realIndex]);
 
-    this.currentArticleTitle = this.articleTitleList[this.currentArticleIndex];
-    this.currentArticleUrl = this.articleList[this.currentArticleIndex];
+    const currentArticleUrl = $slide.attr('data-article-href');
+    const currentArticleTitle = $slide.attr('data-article-title');
 
-    console.log(this.currentArticleIndex);
-    console.log(this.currentArticleTitle);
-    console.log(this.currentArticleUrl);
-  }
-
-  changeUrlAndTitle() {
-    document.title = this.currentArticleTitle;
-    window.history.pushState(
-      {},
-      this.currentArticleTitle,
-      this.currentArticleUrl,
-    );
+    document.title = currentArticleTitle;
+    window.history.pushState({}, currentArticleTitle, currentArticleUrl);
   }
 
   // 로직 정리
@@ -175,6 +181,9 @@ export class LinkManager {
   async nextLinkPageRender() {
     const res = await fetchUrl(this.nextArticleUrl);
 
+    const currentArticleUrl = `https://arca.live${this.nextArticleUrl.replace('https://arca.live', '')}`;
+    const currentArticleId = this.getArticleIdFromHref(currentArticleUrl);
+
     const content = res.responseText.match(
       /(?<=\"top\"\>\<\/div\>).+(?=\<div id=\"bottom\")/s,
     )[0];
@@ -184,12 +193,45 @@ export class LinkManager {
 
     const $article = $(content);
 
-    $('.main-slide').removeClass('main-slide');
-    $('.slide-empty').append($article);
+    const $slide = $(this.swiper.slides[this.swiper.realIndex]);
 
-    this.articleTitleList.push(title);
+    $slide.append($article);
+    $slide.attr('data-article-id', currentArticleId);
+    $slide.attr('data-article-href', this.nextArticleUrl);
+    $slide.attr('data-article-title', title);
 
-    $('.slide-empty .custom-loader').remove();
-    $('.slide-empty').removeClass('slide-empty').addClass('main-slide');
+    $slide.find('.custom-loader').remove();
+    $slide.removeClass('slide-empty').removeClass('next');
+  }
+
+  // 로직 정리
+  // 1. 다음 슬라이드가 빈 슬라이드면 다음 글 불러오기
+  // 2. 다음 글을 불러온 후 빈 슬라이드에 추가 (display: none)
+  // 3. 블러온 글에 대한 hider 처리 진행
+  // 4. 슬라이드 갱신
+  async prevLinkPageRender() {
+    const res = await fetchUrl(this.prevArticleUrl);
+
+    const currentArticleUrl = `https://arca.live${this.prevArticleUrl.replace('https://arca.live', '')}`;
+    const currentArticleId = this.getArticleIdFromHref(currentArticleUrl);
+
+    const content = res.responseText.match(
+      /(?<=\"top\"\>\<\/div\>).+(?=\<div id=\"bottom\")/s,
+    )[0];
+    const title = res.responseText
+      .match(/(?<=title\>).+-.+(?=\<\/title)/s)[0]
+      .trim();
+
+    const $article = $(content);
+
+    const $slide = $(this.swiper.slides[this.swiper.realIndex]);
+
+    $slide.append($article);
+    $slide.attr('data-article-id', currentArticleId);
+    $slide.attr('data-article-href', this.prevArticleUrl);
+    $slide.attr('data-article-title', title);
+
+    $slide.find('.custom-loader').remove();
+    $slide.removeClass('slide-empty').removeClass('prev');
   }
 }
