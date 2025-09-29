@@ -36,7 +36,7 @@ export async function fetchLoopNext() {
 export async function fetchLoopPrev() {
   let filteredLinks = [];
   let url = null;
-  let $html = $('.root-container').frist();
+  let $html = $('.root-container').first();
   let count = 0;
 
   while (url === null && count <= 10) {

@@ -32,7 +32,7 @@ export class ButtonManager {
       this.doHide('List'),
     );
     const nextPageBtn = createHelperBtn('ion-ios-arrow-forward', () =>
-      this.nextLink(),
+      this.nextLinkForce(),
     );
     const filterPageBtn = createHelperBtn('ion-ios-gear', () =>
       this.openArticleFilterModal(),

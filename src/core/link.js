@@ -1,4 +1,4 @@
-import { fetchLoopNext, fetchUrl } from 'src/utils/request';
+import { fetchLoopNext, fetchLoopPrev, fetchUrl } from 'src/utils/request';
 
 export class LinkManager {
   async initLink() {
@@ -28,7 +28,9 @@ export class LinkManager {
   }
 
   initArticleLinkActive() {
-    let $html = $(this.swiper?.slides[this.swiper?.realIndex]);
+    let $html = this.swiper
+      ? $(this.swiper?.slides[this.swiper?.realIndex])
+      : [];
 
     if ($html.length === 0) {
       this.promiseList.unshift(this.initArticleLinkActive);
@@ -63,7 +65,7 @@ export class LinkManager {
 
     const filteredLinks = this.filterLink(totalLinks);
 
-    const nextArticleUrlList = filteredLinks.slide(
+    const nextArticleUrlList = filteredLinks.slice(
       this.currentArticleIndex + 1,
     );
     const prevArticleUrlList = filteredLinks.slice(0, this.currentArticleIndex);
@@ -74,14 +76,14 @@ export class LinkManager {
       this.nextArticleUrl = this.articleList[this.currentArticleIndex + 1];
     }
 
-    if (nextArticleUrlList.length > 0 && index >= 0) {
+    if (nextArticleUrlList.length > 0) {
       this.articleList.push(...nextArticleUrlList);
       this.nextArticleUrl = nextArticleUrlList[0];
     } else {
       this.promiseList.unshift(fetchLoopNext);
     }
 
-    if (prevArticleUrlList.length > 0 && index >= 0) {
+    if (prevArticleUrlList.length > 0) {
       this.articleList.unshift(...prevArticleUrlList);
       this.prevArticleUrl = prevArticleUrlList[prevArticleUrlList.length - 1];
     } else {
@@ -125,6 +127,10 @@ export class LinkManager {
       );
   }
 
+  nextLinkForce() {
+    window.location.href = this.nextArticleUrl;
+  }
+
   nextLink() {
     if (this.slideMode === 'REFRESH')
       window.location.href = this.nextArticleUrl;
@@ -138,7 +144,10 @@ export class LinkManager {
   }
 
   nextPageRender() {
-    if (this.swiper.slides.length - 1 === this.swiper.realIndex) {
+    if (
+      this.swiper.slides.length - 1 === this.swiper.realIndex &&
+      !this.isActive
+    ) {
       this.promiseList.push(this.nextLinkPageRender);
       this.promiseList.push(this.appendNewEmptySlide);
       this.promiseList.push(() => this.doHide('Article'));
@@ -152,7 +161,7 @@ export class LinkManager {
   prevPageRender() {
     if (this.prevArticleUrl === undefined) return;
 
-    if (this.swiper.realIndex === 0) {
+    if (this.swiper.realIndex === 0 && !this.isActive) {
       this.promiseList.push(this.prevLinkPageRender);
       this.promiseList.push(this.prependNewEmptySlide);
       this.promiseList.push(() => this.doHide('Article'));

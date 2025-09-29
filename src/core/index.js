@@ -29,9 +29,6 @@ class Helper extends Classes(
     this.init();
   }
 
-  // REFRESH MODE
-  // - 페이지 이동시 새로고침
-  // - 새로고침시 모든 내용 초기화 후 다시 시작
   init() {
     this.promiseList.push(() => this.initPageMode(window.location.href));
     this.promiseList.push(this.initHelperBtn);
@@ -39,12 +36,12 @@ class Helper extends Classes(
     this.promiseList.push(this.loadConfig);
 
     this.promiseList.push(this.initSlide);
+
     this.promiseList.push(this.initLink);
     this.promiseList.push(() => this.doHide('Article'));
 
     this.promiseList.push(this.initEvent);
     this.promiseList.push(this.saveConfig);
-    // this.promiseList.push(() => console.log(this));
 
     setTimeout(() => this.initPromise(), 100);
   }
