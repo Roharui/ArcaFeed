@@ -10,6 +10,8 @@ import { SlideManager } from './slide';
 import { ConfigManager } from './config';
 import { ModalManager } from './modal';
 import { ConsoleManager } from './console';
+import { PageManager } from './page';
+import { FetchManager } from './fetch';
 
 class Helper extends Classes(
   Vault,
@@ -23,6 +25,8 @@ class Helper extends Classes(
   ConfigManager,
   ModalManager,
   ConsoleManager,
+  PageManager,
+  FetchManager,
 ) {
   constructor() {
     super();

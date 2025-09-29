@@ -11,7 +11,10 @@ export class HideManager {
     if ($check.length === 0) {
       $html = $('.root-container').parent();
     } else if ($html.length === 0) {
-      this.addPromiseCurrent(sleep(100), () => this.doHide(mode));
+      this.addPromiseCurrent(
+        () => sleep(100),
+        () => this.doHide(mode),
+      );
       return;
     }
 

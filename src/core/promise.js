@@ -18,7 +18,8 @@ export class PromiseManager {
         try {
           await promiseFunc.call(this);
         } catch (e) {
-          await sleep(5000)();
+          console.log(e);
+          await sleep(1000);
           this.promiseListCurrent.unshift(promiseFunc);
         }
       }

@@ -1,4 +1,3 @@
-import { fetchLoopNext, fetchLoopPrev, fetchWithRace } from 'src/utils/request';
 import { sleep } from 'src/utils/sleep';
 
 export class LinkManager {
@@ -20,7 +19,7 @@ export class LinkManager {
     const filteredLinks = this.filterLink(totalLinks);
 
     if (filteredLinks.length === 0) {
-      this.addPromiseCurrent(fetchLoopNext);
+      this.addPromiseCurrent(this.fetchLoopNext);
       return;
     }
 
@@ -94,7 +93,7 @@ export class LinkManager {
         this.articleList.push(...nextArticleUrlList);
         this.nextArticleUrl = nextArticleUrlList[0];
       } else {
-        this.addPromiseCurrent(fetchLoopNext);
+        this.addPromiseCurrent(this.fetchLoopNext);
       }
     }
 
@@ -103,7 +102,7 @@ export class LinkManager {
         this.articleList.unshift(...prevArticleUrlList);
         this.prevArticleUrl = prevArticleUrlList[prevArticleUrlList.length - 1];
       } else {
-        this.addPromiseCurrent(fetchLoopPrev);
+        this.addPromiseCurrent(this.fetchLoopPrev);
       }
     }
   }
@@ -152,147 +151,5 @@ export class LinkManager {
         (href) =>
           articleListString.indexOf(this.getArticleIdFromHref(href)) === -1,
       );
-  }
-
-  nextLinkForce() {
-    window.location.href = this.nextArticleUrl;
-  }
-
-  nextLink() {
-    if (this.slideMode === 'REFRESH')
-      window.location.href = this.nextArticleUrl;
-    else this.nextPageRender();
-  }
-
-  prevLink() {
-    if (this.slideMode === 'REFRESH')
-      window.location.href = this.prevArticleUrl;
-    else this.prevPageRender();
-  }
-
-  nextPageRender() {
-    if (this.isActive) return;
-    if (this.nextArticleUrl == null) return;
-
-    const promiseList = [];
-    if (this.swiper.realIndex === this.swiper.slides.length - 1) {
-      promiseList.push(this.nextLinkPageRender);
-      promiseList.push(this.appendNewEmptySlide);
-      promiseList.push(() => this.doHide('Article'));
-    }
-    promiseList.push(this.setCurrentArticle);
-    promiseList.push(this.initArticleLinkActive);
-
-    this.addNextPromise(promiseList);
-  }
-
-  prevPageRender() {
-    if (this.isActive) return;
-    if (this.prevArticleUrl == null) return;
-
-    const promiseList = [];
-    if (this.swiper.realIndex === 0) {
-      promiseList.push(this.prevLinkPageRender);
-      promiseList.push(this.prependNewEmptySlide);
-      promiseList.push(() => this.doHide('Article'));
-    }
-    promiseList.push(this.setCurrentArticle);
-    promiseList.push(this.initArticleLinkActive);
-
-    this.addNextPromise(promiseList);
-  }
-
-  setCurrentArticle() {
-    const $slide = $(this.swiper.slides[this.swiper.realIndex]);
-
-    const currentArticleUrl = $slide.attr('data-article-href');
-    const currentArticleTitle = $slide.attr('data-article-title');
-
-    document.title = currentArticleTitle;
-    window.history.pushState({}, currentArticleTitle, currentArticleUrl);
-  }
-
-  // 로직 정리
-  // 1. 다음 슬라이드가 빈 슬라이드면 다음 글 불러오기
-  // 2. 다음 글을 불러온 후 빈 슬라이드에 추가 (display: none)
-  // 3. 블러온 글에 대한 hider 처리 진행
-  // 4. 슬라이드 갱신
-  async nextLinkPageRender() {
-    const $slide = $(this.swiper.slides[this.swiper.realIndex]);
-
-    $slide
-      .find('.loading-info')
-      .append($('<div>').text('다음 글 불러오는 중...'));
-
-    const currentArticleId = this.getArticleIdFromHref(this.nextArticleUrl);
-
-    let res;
-    try {
-      res = await fetchWithRace(this.nextArticleUrl);
-    } catch (error) {
-      $slide.find('.loading-info').append($('<div>').text('글 불러오기 실패'));
-      this.addPromiseCurrent(sleep(5000), this.nextLinkPageRender);
-      return;
-    }
-
-    const content = res.responseText.match(
-      /(?<=\"top\"\>\<\/div\>).+(?=\<div id=\"bottom\")/s,
-    )[0];
-    const title = res.responseText
-      .match(/(?<=title\>).+-.+(?=\<\/title)/s)[0]
-      .trim();
-
-    const $article = $(content);
-
-    $slide.append($article);
-    $slide.attr('data-article-id', currentArticleId);
-    $slide.attr('data-article-href', this.nextArticleUrl);
-    $slide.attr('data-article-title', title);
-
-    $slide.find('.loader-container').remove();
-    $slide.removeClass('slide-empty').removeClass('next');
-  }
-
-  // 로직 정리
-  // 1. 다음 슬라이드가 빈 슬라이드면 다음 글 불러오기
-  // 2. 다음 글을 불러온 후 빈 슬라이드에 추가 (display: none)
-  // 3. 블러온 글에 대한 hider 처리 진행
-  // 4. 슬라이드 갱신
-  async prevLinkPageRender() {
-    const $slide = $(this.swiper.slides[this.swiper.realIndex]);
-
-    $slide
-      .find('.loading-info')
-      .append($('<div>').text('이전 글 불러오는 중...'));
-
-    const currentArticleId = this.getArticleIdFromHref(this.prevArticleUrl);
-
-    let res;
-    try {
-      res = await fetchWithRace(this.prevArticleUrl);
-    } catch (error) {
-      $slide
-        .find('.loading-info')
-        .append($('<div>').text('글 불러오기 실패, 재시도중...'));
-      this.addPromiseCurrent(sleep(1000), this.prevLinkPageRender);
-      return;
-    }
-
-    const content = res.responseText.match(
-      /(?<=\"top\"\>\<\/div\>).+(?=\<div id=\"bottom\")/s,
-    )[0];
-    const title = res.responseText
-      .match(/(?<=title\>).+-.+(?=\<\/title)/s)[0]
-      .trim();
-
-    const $article = $(content);
-
-    $slide.append($article);
-    $slide.attr('data-article-id', currentArticleId);
-    $slide.attr('data-article-href', this.prevArticleUrl);
-    $slide.attr('data-article-title', title);
-
-    $slide.find('.loader-container').remove();
-    $slide.removeClass('slide-empty').removeClass('prev');
   }
 }
