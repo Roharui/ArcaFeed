@@ -30,20 +30,16 @@ class Helper extends Classes(
   }
 
   init() {
-    this.promiseList.push(() => this.initPageMode(window.location.href));
-    this.promiseList.push(this.initHelperBtn);
-
-    this.promiseList.push(this.loadConfig);
-
-    this.promiseList.push(this.initSlide);
-
-    this.promiseList.push(this.initLink);
-    this.promiseList.push(() => this.doHide('Article'));
-
-    this.promiseList.push(this.initEvent);
-    this.promiseList.push(this.saveConfig);
-
-    setTimeout(() => this.initPromise(), 100);
+    this.addNextPromise([
+      () => this.initPageMode(window.location.href),
+      this.loadConfig,
+      this.initHelperBtn,
+      this.initSlide,
+      this.initLink,
+      () => this.doHide('Article'),
+      this.initEvent,
+      this.saveConfig,
+    ]);
   }
 }
 

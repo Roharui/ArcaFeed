@@ -1,4 +1,7 @@
 export function sleep(ms) {
-  console.log(`Sleeping for ${ms} milliseconds...`);
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return () =>
+    new Promise((resolve) => {
+      console.log(`Sleeping for ${ms} ms`);
+      setTimeout(resolve, ms);
+    });
 }

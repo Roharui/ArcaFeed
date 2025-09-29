@@ -10,6 +10,4 @@ export class Vault {
 
   nextArticleUrl = '';
   prevArticleUrl = '';
-
-  promiseList = [];
 }

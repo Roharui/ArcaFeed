@@ -1,5 +1,8 @@
-function createHelperBtn(icon, callback) {
-  const btn = $('<div>', { class: 'helper-btn' });
+function createHelperBtn(icon, callback, display = 'block') {
+  const btn = $('<div>', {
+    class: 'helper-btn',
+    style: `display: ${display};`,
+  });
   btn.append($('<span>', { class: icon }));
 
   btn.on('click', callback);
@@ -19,11 +22,26 @@ function btnWrapper(cls, content) {
 
 export class ButtonManager {
   initHelperBtn() {
-    const consoleInfo = createHelperBtn('ion-ios-info', () =>
+    const consoleInfo = createHelperBtn('ion-information', () =>
       this.showConsole(),
     );
-    const slideModeToggle = createHelperBtn('ion-shuffle', () =>
-      this.toggleSlideMode(),
+    const slideModeToRender = createHelperBtn(
+      'ion-ios-refresh',
+      () => {
+        this.toggleSlideMode();
+        $('.helper-btn .ion-ios-refresh').parent().hide();
+        $('.helper-btn .ion-ios-play').parent().show();
+      },
+      this.slideMode === 'REFRESH' ? 'block' : 'none',
+    );
+    const slideModeToRefresh = createHelperBtn(
+      'ion-ios-play',
+      () => {
+        this.toggleSlideMode();
+        $('.helper-btn .ion-ios-refresh').parent().show();
+        $('.helper-btn .ion-ios-play').parent().hide();
+      },
+      this.slideMode === 'RENDER' ? 'block' : 'none',
     );
     const showCommentModal = createHelperBtn('ion-chatboxes', () =>
       this.doHide('Comment'),
@@ -43,8 +61,8 @@ export class ButtonManager {
     if (this.mode === 'ARTICLE') {
       btns.push(showArticleList);
       btns.push(showCommentModal);
-      btns.push(filterPageBtn);
-      btns.push(slideModeToggle);
+      btns.push(slideModeToRender);
+      btns.push(slideModeToRefresh);
     }
     if (this.mode === 'CHANNEL') {
       btns.push(nextPageBtn);

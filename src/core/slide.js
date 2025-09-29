@@ -8,7 +8,6 @@ export class SlideManager {
 
     this.swiper = new Swiper('.swiper', {
       ...this.slideOptions,
-      spaceBetween: window.innerWidth * 0.1,
       touchMoveStopPropagation: true,
       modules: [Manipulation],
       onAny: (e) => {

@@ -2,7 +2,7 @@ import { fetchLoopNext, fetchLoopPrev, fetchUrl } from 'src/utils/request';
 import { sleep } from 'src/utils/sleep';
 
 export class LinkManager {
-  async initLink() {
+  initLink() {
     if (this.mode === 'CHANNEL') {
       this.clearArticle();
       this.initArticleLinkChannel();
@@ -20,7 +20,7 @@ export class LinkManager {
     const filteredLinks = this.filterLink(totalLinks);
 
     if (filteredLinks.length === 0) {
-      this.promiseList.unshift(fetchLoopNext);
+      this.addPromiseCurrent(fetchLoopNext);
       return;
     }
 
@@ -34,8 +34,7 @@ export class LinkManager {
     $html = this.swiper ? $(this.swiper?.slides[this.swiper?.activeIndex]) : [];
 
     if ($html.length === 0) {
-      this.promiseList.unshift(this.initArticleLinkActive(slide));
-      this.promiseList.unshift(sleep(100));
+      this.addPromiseCurrent(sleep(100), this.initArticleLinkActive(slide));
       return;
     }
 
@@ -46,7 +45,6 @@ export class LinkManager {
     );
 
     console.log('Current Article Index:', this.currentArticleIndex);
-    console.log('Article List:', this.articleList);
 
     if (this.currentArticleIndex === -1) {
       this.articleList.push(
@@ -96,7 +94,7 @@ export class LinkManager {
         this.articleList.push(...nextArticleUrlList);
         this.nextArticleUrl = nextArticleUrlList[0];
       } else {
-        this.promiseList.unshift(fetchLoopNext);
+        this.addPromiseCurrent(fetchLoopNext);
       }
     }
 
@@ -105,7 +103,7 @@ export class LinkManager {
         this.articleList.unshift(...prevArticleUrlList);
         this.prevArticleUrl = prevArticleUrlList[prevArticleUrlList.length - 1];
       } else {
-        this.promiseList.unshift(fetchLoopPrev);
+        this.addPromiseCurrent(fetchLoopPrev);
       }
     }
   }
@@ -116,21 +114,10 @@ export class LinkManager {
     const articleFilterConfig = this.articleFilterConfig[channelId] || null;
     const articleListString = this.articleList.join(',');
 
-    if (!articleFilterConfig)
-      return rows
-        .toArray()
-        .map((ele) => $(ele).attr('href').trim())
-        .map((href) => {
-          return `https://arca.live${href.replace('https://arca.live', '')}`;
-        })
-        .filter(
-          (href) =>
-            articleListString.indexOf(this.getArticleIdFromHref(href)) === -1,
-        );
+    let resultRows = rows.toArray();
 
-    return rows
-      .toArray()
-      .filter((ele) => {
+    if (articleFilterConfig) {
+      resultRows = resultRows.filter((ele) => {
         const _tabTypeText = $(ele).find('.badge-success').text();
         const tabTypeText = _tabTypeText.length === 0 ? '노탭' : _tabTypeText;
 
@@ -144,13 +131,23 @@ export class LinkManager {
         const result = tabAllow && titleAllow;
 
         if (!result) $(ele).css('opacity', '0.5');
+        else $(ele).css('opacity', '1');
 
         return result;
-      })
+      });
+    }
+
+    return resultRows
       .map((ele) => $(ele).attr('href').trim())
       .map((href) => {
         return `https://arca.live${href.replace('https://arca.live', '')}`;
       })
+      .map((href) =>
+        href.replace(
+          /\?p=\d+$/,
+          `?before=${new Date().toISOString()}&tz=%2B0900`,
+        ),
+      )
       .filter(
         (href) =>
           articleListString.indexOf(this.getArticleIdFromHref(href)) === -1,
@@ -176,32 +173,39 @@ export class LinkManager {
   nextPageRender() {
     if (this.nextArticleUrl === undefined) return;
 
+    const promiseList = [];
     if (
       this.swiper.slides.length - 1 === this.swiper.realIndex &&
       !this.isActive
     ) {
-      this.promiseList.push(this.nextLinkPageRender);
-      this.promiseList.push(this.appendNewEmptySlide);
-      this.promiseList.push(() => this.doHide('Article'));
+      promiseList.push(this.nextLinkPageRender);
+      promiseList.push(this.appendNewEmptySlide);
+      promiseList.push(() => this.doHide('Article'));
     }
-    this.promiseList.push(this.setCurrentArticle);
-    this.promiseList.push(this.initArticleLinkActive);
+    promiseList.push(this.setCurrentArticle);
+    promiseList.push(this.initArticleLinkActive);
 
-    setTimeout(() => this.initPromise(), 100);
+    this.addNextPromise(promiseList);
   }
 
   prevPageRender() {
     if (this.prevArticleUrl === undefined) return;
 
-    if (this.swiper.realIndex === 0 && !this.isActive) {
-      this.promiseList.push(this.prevLinkPageRender);
-      this.promiseList.push(this.prependNewEmptySlide);
-      this.promiseList.push(() => this.doHide('Article'));
+    if (this.prevArticleUrl === 'No Prev Article') {
+      alert('더 이상 이전 글이 없습니다.');
+      return;
     }
-    this.promiseList.push(this.setCurrentArticle);
-    this.promiseList.push(this.initArticleLinkActive);
 
-    setTimeout(() => this.initPromise(), 100);
+    const promiseList = [];
+    if (this.swiper.realIndex === 0 && !this.isActive) {
+      promiseList.push(this.prevLinkPageRender);
+      promiseList.push(this.prependNewEmptySlide);
+      promiseList.push(() => this.doHide('Article'));
+    }
+    promiseList.push(this.setCurrentArticle);
+    promiseList.push(this.initArticleLinkActive);
+
+    this.addNextPromise(promiseList);
   }
 
   setCurrentArticle() {
@@ -228,7 +232,16 @@ export class LinkManager {
 
     const currentArticleId = this.getArticleIdFromHref(this.nextArticleUrl);
 
-    const res = await fetchUrl(this.nextArticleUrl);
+    let res;
+    try {
+      res = await fetchUrl(this.nextArticleUrl);
+    } catch (error) {
+      $slide
+        .find('.loading-info')
+        .append($('<div>').text('글 불러오기 실패, 재시도중...'));
+      this.addPromiseCurrent(sleep(1000), this.nextLinkPageRender);
+      return;
+    }
 
     const content = res.responseText.match(
       /(?<=\"top\"\>\<\/div\>).+(?=\<div id=\"bottom\")/s,
@@ -262,7 +275,16 @@ export class LinkManager {
 
     const currentArticleId = this.getArticleIdFromHref(this.prevArticleUrl);
 
-    const res = await fetchUrl(this.prevArticleUrl);
+    let res;
+    try {
+      res = await fetchUrl(this.prevArticleUrl);
+    } catch (error) {
+      $slide
+        .find('.loading-info')
+        .append($('<div>').text('글 불러오기 실패, 재시도중...'));
+      this.addPromiseCurrent(sleep(1000), this.prevLinkPageRender);
+      return;
+    }
 
     const content = res.responseText.match(
       /(?<=\"top\"\>\<\/div\>).+(?=\<div id=\"bottom\")/s,

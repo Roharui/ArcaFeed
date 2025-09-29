@@ -34,9 +34,8 @@ export class ModalManager {
       };
 
       this.articleFilterConfig[channelId] = pageFilter;
-      this.saveConfig();
 
-      this.initLink();
+      this.addNextPromise([this.initLink, this.saveConfig]);
 
       dialog.dialog('close');
     };

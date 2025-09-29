@@ -59,7 +59,7 @@ body {
   display: flex;
   flex-direction: column;
   bottom: 3rem;
-  z-index: 9999;
+  z-index: 9995;
 }
 
 .btn-wrapper.right {
@@ -198,7 +198,7 @@ footer {
   width: 100%;
   min-height: 100%;
   overflow-y: scroll;
-  background-color: var(--color-bg-body);
+  background-color: var(--color-bg-focus);
 }
 
 .slide-empty {
@@ -232,8 +232,12 @@ footer {
 
 .loading-info {
   margin-top: 10px;
+}
+
+.loading-info > div {
+  text-align: center;
   font-size: 14px;
-  color: #888;
+  color: var(--color-text);
 }
 
 .loader-container + div {
@@ -263,4 +267,8 @@ div.root-container {
   background: white;
   border: 2px solid black;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+#console > textarea {
+  color: var(--color-text);
 }
