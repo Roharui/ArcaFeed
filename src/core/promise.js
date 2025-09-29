@@ -7,6 +7,7 @@ export class PromiseManager {
 
   async initPromise() {
     if (this.isActive) return;
+    console.log('Promise Init Start');
 
     this.isActive = true;
     while (this.promiseList.length > 0) {
@@ -25,6 +26,7 @@ export class PromiseManager {
       }
       console.log('Promise End');
     }
+    console.log('Promise Init End');
 
     this.isActive = false;
   }

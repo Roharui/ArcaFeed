@@ -86,11 +86,17 @@ export class FetchManager {
   }
 
   fetchUrl(url, method = 'GET', ms = 5000) {
-    return GM.xmlHttpRequest({
-      method: method,
-      url: url,
-      headers: { Origin: 'arca.live' },
-      timeout: ms,
-    });
+    if (process.env.NODE_ENV === 'development') {
+      return GM.xmlHttpRequest({
+        method: method,
+        url: url,
+        headers: { Origin: 'arca.live' },
+        timeout: ms,
+      });
+    } else {
+      return fetch(url, { method: method, headers: { Origin: 'arca.live' } })
+        .then((response) => response.text())
+        .then((text) => ({ responseText: text }));
+    }
   }
 }
