@@ -27,33 +27,24 @@ class Helper extends Classes(
     this.init();
   }
 
-  preinit() {
-    // 현재 페이지 상태 정보 가져오기
-    const [mode, channelId, articleId] = this.checkPageMode(location.href);
-
-    this.mode = mode;
-    this.channelId = channelId;
-    this.articleId = articleId;
-
-    this.loadConfig();
-    this.initLink();
-
-    this.initHide();
-  }
-
+  // REFRESH MODE
+  // - 페이지 이동시 새로고침
+  // - 새로고침시 모든 내용 초기화 후 다시 시작
   init() {
-    this.preinit();
-    this.initHelperBtn();
+    this.promiseList.push(() => this.initPageMode(window.location.href));
+    this.promiseList.push(this.initHelperBtn);
 
-    this.initSlide();
+    this.promiseList.push(this.loadConfig);
 
-    this.initEvent();
-    this.initPromise();
-  }
+    this.promiseList.push(this.initLink);
+    this.promiseList.push(this.initSlide);
+    this.promiseList.push(() => this.doHide('Article'));
 
-  initForSlideRender() {
-    this.preinit();
-    this.initPromise();
+    this.promiseList.push(this.initEvent);
+    this.promiseList.push(this.saveConfig);
+    this.promiseList.push(() => console.log(this));
+
+    setTimeout(() => this.initPromise(), 100);
   }
 }
 

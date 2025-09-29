@@ -20,10 +20,10 @@ function btnWrapper(cls, content) {
 export class ButtonManager {
   initHelperBtn() {
     const showCommentModal = createHelperBtn('ion-chatboxes', () =>
-      this.toggleComment(),
+      this.doHide('Comment'),
     );
     const showArticleList = createHelperBtn('ion-link', () =>
-      this.toggleArticleList(),
+      this.doHide('List'),
     );
     const nextPageBtn = createHelperBtn('ion-ios-arrow-forward', () =>
       this.nextLink(),

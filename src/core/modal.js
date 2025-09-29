@@ -87,8 +87,6 @@ export class ModalManager {
           return span;
         };
 
-        console.log(category, tab, title);
-
         category
           .map((text) =>
             spanFn(text, 'ele-category', tab.includes(text), function () {
@@ -113,7 +111,7 @@ export class ModalManager {
         const spanAll = spanFn(
           '전체',
           'ele-category-all',
-          tab.length !== 0,
+          tab.length === category.length,
           function () {
             $('#category > label > .category-check').prop(
               'checked',

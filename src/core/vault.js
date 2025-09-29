@@ -3,6 +3,9 @@ export class Vault {
   channelId = '';
   articleId = '';
 
+  currentArticleTitle = null;
+  currentArticleUrl = null;
+
   nextArticleUrl = '';
   prevArticleUrl = '';
 

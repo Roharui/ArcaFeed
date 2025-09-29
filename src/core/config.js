@@ -1,9 +1,10 @@
 export class ConfigManager {
   articleFilterConfig = {};
+
   articleHistory = [];
   articleTitleHistory = [];
 
-  slideMode = 'RENDER'; // 'REFRESH', 'RENDER'
+  slideMode = 'REFRESH'; // 'REFRESH', 'RENDER'
 
   slideOptions = {
     slidesPerView: 1,
@@ -18,7 +19,12 @@ export class ConfigManager {
     touchMoveStopPropagation: true,
   };
 
-  loadConfig() {
+  clearHistory() {
+    this.articleHistory = [];
+    this.articleTitleHistory = [];
+  }
+
+  async loadConfig() {
     const articleFilterConfig = localStorage.getItem('articleFilterConfig');
     if (articleFilterConfig) {
       this.articleFilterConfig = JSON.parse(articleFilterConfig) || {};
@@ -35,8 +41,10 @@ export class ConfigManager {
     if (slideMode) {
       this.slideMode = slideMode;
     }
+    this.slideMode = 'RENDER';
   }
-  saveConfig() {
+
+  async saveConfig() {
     localStorage.setItem(
       'articleFilterConfig',
       JSON.stringify(this.articleFilterConfig),

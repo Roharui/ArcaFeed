@@ -6,6 +6,13 @@ export class RegexManager {
   channelAndArticleIdRegex = /(?<=\/b\/).+(?=\?)/;
   channelIdRegex = /(?<=\/b\/).([A-Za-z0-9])+((?=\?)|$)/;
 
+  initPageMode(href) {
+    const [mode, channelId, articleId] = this.checkPageMode(href);
+    this.mode = mode;
+    this.channelId = channelId;
+    this.articleId = articleId;
+  }
+
   checkPageMode(href) {
     if (this.articlePageRegex.test(href)) {
       const [channelId, articleId] = href

@@ -10,8 +10,6 @@ export async function fetchLoopNext() {
       .find('a')
       .attr('href');
 
-    console.log('NEXT', nextArticlePageUrl);
-
     const res = await fetchUrl(`https://arca.live${nextArticlePageUrl}`);
     $html = $(res.responseText);
     const totalLinks = $html
@@ -24,7 +22,6 @@ export async function fetchLoopNext() {
     }
 
     if (url !== null) {
-      console.log('NEXT URL', url);
       this.nextArticleUrl = url;
       return;
     }
@@ -36,5 +33,6 @@ export async function fetchUrl(url, method = 'GET') {
   return GM.xmlHttpRequest({
     method: method,
     url: url,
+    headers: { Origin: 'arca.live' },
   });
 }

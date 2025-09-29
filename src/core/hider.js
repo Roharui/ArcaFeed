@@ -1,13 +1,22 @@
+import { sleep } from 'src/utils/sleep';
+
 export class HideManager {
-  initHide() {
-    if (this.mode !== 'ARTICLE') return;
-    this.doHide();
-  }
-
-  doHide() {
+  doHide(mode) {
     if (this.mode !== 'ARTICLE') return;
 
-    const [$html, currentShow] = this.getCurrentHtml();
+    const $check = $('.swiper');
+
+    let $html = $('.swiper-slide-active');
+
+    if ($check.length === 0) {
+      $html = $('.root-container');
+    } else if ($html.length === 0) {
+      this.promiseList.unshift(() => this.doHide(mode));
+      this.promiseList.unshift(sleep(100));
+      return;
+    }
+
+    const currentShow = mode || 'Article';
 
     if (currentShow === 'Article') {
       $html.find('#comment').hide();
@@ -33,31 +42,5 @@ export class HideManager {
       $html.find('.article-list').show();
       $html.find('.included-article-list').show();
     }
-  }
-
-  toggleComment() {
-    const [$html, currentShow] = this.getCurrentHtml();
-
-    if (currentShow === 'Comment') $html.attr('current-show', 'Article');
-    else $html.attr('current-show', 'Comment');
-    this.doHide();
-  }
-
-  toggleArticleList() {
-    const [$html, currentShow] = this.getCurrentHtml();
-
-    if (currentShow === 'List') $html.attr('current-show', 'Article');
-    else $html.attr('current-show', 'List');
-
-    this.doHide();
-  }
-
-  getCurrentHtml() {
-    const $activeSlide = $('.swiper-slide-active');
-    const $html = $activeSlide.length
-      ? $activeSlide
-      : $('.root-container').parent();
-
-    return [$html, $html.attr('current-show') || 'Article'];
   }
 }
