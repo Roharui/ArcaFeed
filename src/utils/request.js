@@ -11,6 +11,10 @@ export async function fetchLoopNext() {
       .find('a')
       .attr('href');
 
+    const page = nextArticlePageUrl.match(/(?<=p=)\d+/)[0];
+
+    console.log(`Fetching next article page: ${page}`);
+
     const res = await fetchUrl(`https://arca.live${nextArticlePageUrl}`);
 
     $html = $(res.responseText);
@@ -30,6 +34,8 @@ export async function fetchLoopNext() {
       return;
     }
     count += 1;
+
+    console.log(`No articles found on page ${page}, trying next page...`);
   }
 }
 

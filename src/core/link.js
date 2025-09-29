@@ -1,4 +1,5 @@
 import { fetchLoopNext, fetchLoopPrev, fetchUrl } from 'src/utils/request';
+import { sleep } from 'src/utils/sleep';
 
 export class LinkManager {
   async initLink() {
@@ -28,23 +29,31 @@ export class LinkManager {
   }
 
   initArticleLinkActive() {
-    let $html = this.swiper
-      ? $(this.swiper?.slides[this.swiper?.realIndex])
-      : [];
+    let $html = null;
+
+    $html = this.swiper ? $(this.swiper?.slides[this.swiper?.activeIndex]) : [];
 
     if ($html.length === 0) {
-      this.promiseList.unshift(this.initArticleLinkActive);
+      this.promiseList.unshift(this.initArticleLinkActive(slide));
       this.promiseList.unshift(sleep(100));
       return;
     }
 
-    const currentArticleId = $(this.swiper?.slides[this.swiper?.realIndex])
-      .attr('data-article-id')
-      .trim();
+    const currentArticleId = $html.attr('data-article-id')?.trim();
 
     this.currentArticleIndex = this.articleList.findIndex((ele) =>
       ele.includes(currentArticleId),
     );
+
+    console.log('Current Article Index:', this.currentArticleIndex);
+    console.log('Article List:', this.articleList);
+
+    if (this.currentArticleIndex === -1) {
+      this.articleList.push(
+        `https://arca.live/b/${this.channelId}/${currentArticleId}`,
+      );
+      this.currentArticleIndex = this.articleList.length - 1;
+    }
 
     if (
       this.articleList.length > 0 &&
@@ -57,6 +66,14 @@ export class LinkManager {
       return;
     }
 
+    if (this.currentArticleIndex === this.articleList.length - 1) {
+      this.prevArticleUrl = this.articleList[this.currentArticleIndex - 1];
+      this.nextArticleUrl = null;
+    } else if (this.currentArticleIndex === 0) {
+      this.prevArticleUrl = null;
+      this.nextArticleUrl = this.articleList[this.currentArticleIndex + 1];
+    }
+
     const totalLinks = $html
       .find(
         'div.included-article-list > div.article-list > div.list-table.table > a.vrow.column',
@@ -65,29 +82,31 @@ export class LinkManager {
 
     const filteredLinks = this.filterLink(totalLinks);
 
-    const nextArticleUrlList = filteredLinks.slice(
-      this.currentArticleIndex + 1,
+    const index = filteredLinks.findIndex((ele) =>
+      ele.includes(currentArticleId),
     );
-    const prevArticleUrlList = filteredLinks.slice(0, this.currentArticleIndex);
 
-    if (this.currentArticleIndex === this.articleList.length - 1) {
-      this.prevArticleUrl = this.articleList[this.currentArticleIndex - 1];
-    } else if (this.currentArticleIndex === 0) {
-      this.nextArticleUrl = this.articleList[this.currentArticleIndex + 1];
+    const nextArticleUrlList =
+      index !== -1 ? filteredLinks.slice(index + 1) : [];
+    const prevArticleUrlList =
+      index !== -1 ? filteredLinks.slice(0, index - 1) : [];
+
+    if (this.nextArticleUrl === null) {
+      if (nextArticleUrlList.length > 0) {
+        this.articleList.push(...nextArticleUrlList);
+        this.nextArticleUrl = nextArticleUrlList[0];
+      } else {
+        this.promiseList.unshift(fetchLoopNext);
+      }
     }
 
-    if (nextArticleUrlList.length > 0) {
-      this.articleList.push(...nextArticleUrlList);
-      this.nextArticleUrl = nextArticleUrlList[0];
-    } else {
-      this.promiseList.unshift(fetchLoopNext);
-    }
-
-    if (prevArticleUrlList.length > 0) {
-      this.articleList.unshift(...prevArticleUrlList);
-      this.prevArticleUrl = prevArticleUrlList[prevArticleUrlList.length - 1];
-    } else {
-      this.promiseList.unshift(fetchLoopPrev);
+    if (this.prevArticleUrl === null) {
+      if (prevArticleUrlList.length > 0) {
+        this.articleList.unshift(...prevArticleUrlList);
+        this.prevArticleUrl = prevArticleUrlList[prevArticleUrlList.length - 1];
+      } else {
+        this.promiseList.unshift(fetchLoopPrev);
+      }
     }
   }
 
@@ -95,9 +114,19 @@ export class LinkManager {
     const channelId = this.channelId;
 
     const articleFilterConfig = this.articleFilterConfig[channelId] || null;
+    const articleListString = this.articleList.join(',');
 
     if (!articleFilterConfig)
-      return rows.toArray().map((ele) => $(ele).attr('href'));
+      return rows
+        .toArray()
+        .map((ele) => $(ele).attr('href').trim())
+        .map((href) => {
+          return `https://arca.live${href.replace('https://arca.live', '')}`;
+        })
+        .filter(
+          (href) =>
+            articleListString.indexOf(this.getArticleIdFromHref(href)) === -1,
+        );
 
     return rows
       .toArray()
@@ -119,11 +148,12 @@ export class LinkManager {
         return result;
       })
       .map((ele) => $(ele).attr('href').trim())
+      .map((href) => {
+        return `https://arca.live${href.replace('https://arca.live', '')}`;
+      })
       .filter(
         (href) =>
-          this.articleList
-            .join(',')
-            .indexOf(this.getArticleIdFromHref(href)) === -1,
+          articleListString.indexOf(this.getArticleIdFromHref(href)) === -1,
       );
   }
 
@@ -144,6 +174,8 @@ export class LinkManager {
   }
 
   nextPageRender() {
+    if (this.nextArticleUrl === undefined) return;
+
     if (
       this.swiper.slides.length - 1 === this.swiper.realIndex &&
       !this.isActive
@@ -188,10 +220,15 @@ export class LinkManager {
   // 3. 블러온 글에 대한 hider 처리 진행
   // 4. 슬라이드 갱신
   async nextLinkPageRender() {
-    const res = await fetchUrl(this.nextArticleUrl);
+    const $slide = $(this.swiper.slides[this.swiper.realIndex]);
 
-    const currentArticleUrl = `https://arca.live${this.nextArticleUrl.replace('https://arca.live', '')}`;
-    const currentArticleId = this.getArticleIdFromHref(currentArticleUrl);
+    $slide
+      .find('.loading-info')
+      .append($('<div>').text('다음 글 불러오는 중...'));
+
+    const currentArticleId = this.getArticleIdFromHref(this.nextArticleUrl);
+
+    const res = await fetchUrl(this.nextArticleUrl);
 
     const content = res.responseText.match(
       /(?<=\"top\"\>\<\/div\>).+(?=\<div id=\"bottom\")/s,
@@ -202,14 +239,12 @@ export class LinkManager {
 
     const $article = $(content);
 
-    const $slide = $(this.swiper.slides[this.swiper.realIndex]);
-
     $slide.append($article);
     $slide.attr('data-article-id', currentArticleId);
     $slide.attr('data-article-href', this.nextArticleUrl);
     $slide.attr('data-article-title', title);
 
-    $slide.find('.custom-loader').remove();
+    $slide.find('.loader-container').remove();
     $slide.removeClass('slide-empty').removeClass('next');
   }
 
@@ -219,10 +254,15 @@ export class LinkManager {
   // 3. 블러온 글에 대한 hider 처리 진행
   // 4. 슬라이드 갱신
   async prevLinkPageRender() {
-    const res = await fetchUrl(this.prevArticleUrl);
+    const $slide = $(this.swiper.slides[this.swiper.realIndex]);
 
-    const currentArticleUrl = `https://arca.live${this.prevArticleUrl.replace('https://arca.live', '')}`;
-    const currentArticleId = this.getArticleIdFromHref(currentArticleUrl);
+    $slide
+      .find('.loading-info')
+      .append($('<div>').text('이전 글 불러오는 중...'));
+
+    const currentArticleId = this.getArticleIdFromHref(this.prevArticleUrl);
+
+    const res = await fetchUrl(this.prevArticleUrl);
 
     const content = res.responseText.match(
       /(?<=\"top\"\>\<\/div\>).+(?=\<div id=\"bottom\")/s,
@@ -233,14 +273,12 @@ export class LinkManager {
 
     const $article = $(content);
 
-    const $slide = $(this.swiper.slides[this.swiper.realIndex]);
-
     $slide.append($article);
     $slide.attr('data-article-id', currentArticleId);
     $slide.attr('data-article-href', this.prevArticleUrl);
     $slide.attr('data-article-title', title);
 
-    $slide.find('.custom-loader').remove();
+    $slide.find('.loader-container').remove();
     $slide.removeClass('slide-empty').removeClass('prev');
   }
 }

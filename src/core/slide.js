@@ -35,14 +35,24 @@ export class SlideManager {
 
   prependNewEmptySlide() {
     const slide = $('<div>', { class: 'swiper-slide slide-empty prev' });
-    $('<div>', { class: 'custom-loader' }).appendTo(slide);
+
+    const loader = $('<div>', { class: 'loader-container' });
+    $('<div>', { class: 'custom-loader' }).appendTo(loader);
+    $('<div>', { class: 'loading-info' }).appendTo(loader);
+
+    loader.appendTo(slide);
 
     this.swiper.prependSlide(slide.get());
   }
 
   appendNewEmptySlide() {
     const slide = $('<div>', { class: 'swiper-slide slide-empty next' });
-    $('<div>', { class: 'custom-loader' }).appendTo(slide);
+
+    const loader = $('<div>', { class: 'loader-container' });
+    $('<div>', { class: 'custom-loader' }).appendTo(loader);
+    $('<div>', { class: 'loading-info' }).appendTo(loader);
+
+    loader.appendTo(slide);
 
     this.swiper.appendSlide(slide.get());
   }

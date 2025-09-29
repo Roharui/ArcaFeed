@@ -15,6 +15,7 @@ export class RegexManager {
 
   getArticleIdFromHref(href) {
     if (this.articlePageRegex.test(href)) {
+      console.log(href);
       const articleId = href
         .match(this.channelAndArticleIdRegex)[0]
         .split('/')[1];
