@@ -10,11 +10,9 @@ export class SlideManager {
       ...this.slideOptions,
       touchMoveStopPropagation: true,
       modules: [Manipulation],
-      onAny: (e) => {
-        if (e === 'slideNextTransitionEnd') this.nextLink();
-        if (e === 'slidePrevTransitionEnd') this.prevLink();
-      },
     });
+    this.swiper.on('slideNextTransitionEnd', () => this.nextLink());
+    this.swiper.on('slidePrevTransitionEnd', () => this.prevLink());
 
     this.appendNewEmptySlide();
     this.prependNewEmptySlide();
@@ -33,6 +31,10 @@ export class SlideManager {
   }
 
   prependNewEmptySlide() {
+    if (this.swiper.slides.length > 5) {
+      this.swiper.removeSlide(0);
+    }
+
     const slide = $('<div>', { class: 'swiper-slide slide-empty prev' });
 
     const loader = $('<div>', { class: 'loader-container' });
@@ -45,6 +47,10 @@ export class SlideManager {
   }
 
   appendNewEmptySlide() {
+    if (this.swiper.slides.length > 5) {
+      this.swiper.removeSlide(this.swiper.slides.length - 1);
+    }
+
     const slide = $('<div>', { class: 'swiper-slide slide-empty next' });
 
     const loader = $('<div>', { class: 'loader-container' });

@@ -1,4 +1,4 @@
-import { fetchLoopNext, fetchLoopPrev, fetchUrl } from 'src/utils/request';
+import { fetchLoopNext, fetchLoopPrev, fetchWithRace } from 'src/utils/request';
 import { sleep } from 'src/utils/sleep';
 
 export class LinkManager {
@@ -171,13 +171,11 @@ export class LinkManager {
   }
 
   nextPageRender() {
-    if (this.nextArticleUrl === undefined) return;
+    if (this.isActive) return;
+    if (this.nextArticleUrl == null) return;
 
     const promiseList = [];
-    if (
-      this.swiper.slides.length - 1 === this.swiper.realIndex &&
-      !this.isActive
-    ) {
+    if (this.swiper.realIndex === this.swiper.slides.length - 1) {
       promiseList.push(this.nextLinkPageRender);
       promiseList.push(this.appendNewEmptySlide);
       promiseList.push(() => this.doHide('Article'));
@@ -189,15 +187,11 @@ export class LinkManager {
   }
 
   prevPageRender() {
-    if (this.prevArticleUrl === undefined) return;
-
-    if (this.prevArticleUrl === 'No Prev Article') {
-      alert('더 이상 이전 글이 없습니다.');
-      return;
-    }
+    if (this.isActive) return;
+    if (this.prevArticleUrl == null) return;
 
     const promiseList = [];
-    if (this.swiper.realIndex === 0 && !this.isActive) {
+    if (this.swiper.realIndex === 0) {
       promiseList.push(this.prevLinkPageRender);
       promiseList.push(this.prependNewEmptySlide);
       promiseList.push(() => this.doHide('Article'));
@@ -234,12 +228,10 @@ export class LinkManager {
 
     let res;
     try {
-      res = await fetchUrl(this.nextArticleUrl);
+      res = await fetchWithRace(this.nextArticleUrl);
     } catch (error) {
-      $slide
-        .find('.loading-info')
-        .append($('<div>').text('글 불러오기 실패, 재시도중...'));
-      this.addPromiseCurrent(sleep(1000), this.nextLinkPageRender);
+      $slide.find('.loading-info').append($('<div>').text('글 불러오기 실패'));
+      this.addPromiseCurrent(sleep(5000), this.nextLinkPageRender);
       return;
     }
 
@@ -277,7 +269,7 @@ export class LinkManager {
 
     let res;
     try {
-      res = await fetchUrl(this.prevArticleUrl);
+      res = await fetchWithRace(this.prevArticleUrl);
     } catch (error) {
       $slide
         .find('.loading-info')

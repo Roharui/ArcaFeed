@@ -53,6 +53,8 @@ export async function fetchLoopPrev() {
       .find('a')
       .attr('href');
 
+    if (!prevArticleUrl) return;
+
     console.log(`Fetching prev article page: ${prevArticleUrl}`);
 
     const res = await fetchUrl(`https://arca.live${prevArticleUrl}`);
@@ -78,7 +80,16 @@ export async function fetchLoopPrev() {
   }
 }
 
-export async function fetchUrl(url, method = 'GET') {
+export function fetchWithRace(url, method = 'GET', ms = 5000) {
+  return Promise.race([
+    fetchUrl(url, method),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request timed out')), ms),
+    ),
+  ]);
+}
+
+export function fetchUrl(url, method = 'GET') {
   return GM.xmlHttpRequest({
     method: method,
     url: url,

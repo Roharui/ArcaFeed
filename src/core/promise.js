@@ -1,3 +1,5 @@
+import { sleep } from 'src/utils/sleep';
+
 export class PromiseManager {
   promiseListCurrent = [];
   promiseList = [];
@@ -10,21 +12,32 @@ export class PromiseManager {
     while (this.promiseList.length > 0) {
       console.log('Promise Start');
       this.promiseListCurrent = this.promiseList.shift();
+
       while (this.promiseListCurrent.length > 0) {
         const promiseFunc = this.promiseListCurrent.shift();
-        if (typeof promiseFunc === 'function') await promiseFunc.call(this);
-        else if (promiseFunc instanceof Promise) await promiseFunc;
+        try {
+          await promiseFunc.call(this);
+        } catch (e) {
+          await sleep(5000)();
+          this.promiseListCurrent.unshift(promiseFunc);
+        }
       }
-      this.isActive = false;
       console.log('Promise End');
     }
+
+    this.isActive = false;
+  }
+
+  rejectPromise() {
+    this.promiseListCurrent = [];
+    this.promiseList = [];
   }
 
   addPromiseCurrent(...promiseFuncList) {
     if (this.isActive) {
       this.promiseListCurrent.unshift(...promiseFuncList);
     } else {
-      console.log('Warning: No active promise to add to current list.');
+      console.error(new Error('Promise is not active'));
     }
   }
 

@@ -15,10 +15,6 @@ export class RegexManager {
 
   getArticleIdFromHref(href) {
     if (this.articlePageRegex.test(href)) {
-      if (!this.channelAndArticleIdRegex.test(href)) {
-        console.log(href, 'is not valid article link');
-        return null;
-      }
       const articleId = href
         .match(this.channelAndArticleIdRegex)[0]
         .split('/')[1];
