@@ -1,8 +1,8 @@
 export class ConfigManager {
   articleFilterConfig = {};
 
-  articleHistory = [];
-  articleTitleHistory = [];
+  articleList = [];
+  articleTitleList = [];
 
   slideMode = 'REFRESH'; // 'REFRESH', 'RENDER'
 
@@ -20,8 +20,8 @@ export class ConfigManager {
   };
 
   clearHistory() {
-    this.articleHistory = [];
-    this.articleTitleHistory = [];
+    this.articleList = [];
+    this.articleTitleList = [];
   }
 
   async loadConfig() {
@@ -29,13 +29,13 @@ export class ConfigManager {
     if (articleFilterConfig) {
       this.articleFilterConfig = JSON.parse(articleFilterConfig) || {};
     }
-    const articleHistory = localStorage.getItem('articleHistory');
-    if (articleHistory) {
-      this.articleHistory = JSON.parse(articleHistory) || [];
+    const articleList = localStorage.getItem('articleList');
+    if (articleList) {
+      this.articleList = JSON.parse(articleList) || [];
     }
-    const articleTitleHistory = localStorage.getItem('articleTitleHistory');
-    if (articleTitleHistory) {
-      this.articleTitleHistory = JSON.parse(articleTitleHistory) || [];
+    const articleTitleList = localStorage.getItem('articleTitleList');
+    if (articleTitleList) {
+      this.articleTitleList = JSON.parse(articleTitleList) || [];
     }
     const slideMode = localStorage.getItem('slideMode');
     if (slideMode) {
@@ -49,10 +49,10 @@ export class ConfigManager {
       'articleFilterConfig',
       JSON.stringify(this.articleFilterConfig),
     );
-    localStorage.setItem('articleHistory', JSON.stringify(this.articleHistory));
+    localStorage.setItem('articleList', JSON.stringify(this.articleList));
     localStorage.setItem(
-      'articleTitleHistory',
-      JSON.stringify(this.articleTitleHistory),
+      'articleTitleList',
+      JSON.stringify(this.articleTitleList),
     );
     localStorage.setItem('slideMode', this.slideMode);
   }

@@ -1,4 +1,5 @@
 export async function fetchLoopNext() {
+  let filteredLinks = [];
   let url = null;
   let $html = $(document);
   let count = 0;
@@ -16,12 +17,13 @@ export async function fetchLoopNext() {
       .find('div.article-list > div.list-table.table > a.vrow.column')
       .not('.notice');
 
-    const filteredLinks = this.filterLink(totalLinks);
+    filteredLinks = this.filterLink(totalLinks);
     if (filteredLinks.length > 0) {
       url = filteredLinks[0];
     }
 
     if (url !== null) {
+      this.articleList.push(...filteredLinks);
       this.nextArticleUrl = url;
       return;
     }

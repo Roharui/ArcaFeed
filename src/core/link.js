@@ -7,6 +7,7 @@ export class LinkManager {
       this.clearHistory();
     }
     if (this.mode === 'ARTICLE') {
+      this.articleTitleList.push(document.title);
       this.initArticleLinkActive();
     }
   }
@@ -23,37 +24,24 @@ export class LinkManager {
       return;
     }
 
+    this.articleList = filteredLinks;
     this.nextArticleUrl = filteredLinks[0];
   }
 
   initArticleLinkActive() {
-    this.currentArticleTitle = this.currentArticleTitle || document.title;
-    this.currentArticleUrl = this.currentArticleUrl || window.location.href;
-
-    if (!this.articleHistory.includes(this.currentArticleUrl)) {
-      this.articleHistory.push(this.currentArticleUrl);
-      this.articleTitleHistory.push(this.currentArticleTitle);
-      if (this.articleHistory.length > 10) {
-        this.articleHistory.shift();
-        this.articleTitleHistory.shift();
-      }
-    }
-
-    this.initPageMode(this.currentArticleUrl);
-
-    const currentArticleIndex = this.articleHistory.findIndex((ele) =>
+    this.currentArticleIndex = this.articleList.findIndex((ele) =>
       ele.includes(this.articleId),
     );
 
-    if (this.articleHistory.length > 0 && currentArticleIndex >= 0) {
-      if (currentArticleIndex === this.articleHistory.length - 1) {
-        this.prevArticleUrl = this.articleHistory[currentArticleIndex - 1];
-      } else if (currentArticleIndex === 0) {
-        this.nextArticleUrl = this.articleHistory[currentArticleIndex + 1];
+    if (this.articleList.length > 0 && this.currentArticleIndex >= 0) {
+      if (this.currentArticleIndex === this.articleList.length - 1) {
+        this.prevArticleUrl = this.articleList[this.currentArticleIndex - 1];
+      } else if (this.currentArticleIndex === 0) {
+        this.nextArticleUrl = this.articleList[this.currentArticleIndex + 1];
         return;
       } else {
-        this.nextArticleUrl = this.articleHistory[currentArticleIndex + 1];
-        this.prevArticleUrl = this.articleHistory[currentArticleIndex - 1];
+        this.nextArticleUrl = this.articleList[this.currentArticleIndex + 1];
+        this.prevArticleUrl = this.articleList[this.currentArticleIndex - 1];
         return;
       }
     }
@@ -76,9 +64,7 @@ export class LinkManager {
       )
       .not('.notice');
 
-    console.log(this.articleHistory);
     const filteredLinks = this.filterLink(totalLinks);
-    console.log(filteredLinks);
 
     const index = filteredLinks.findIndex((ele) =>
       ele.includes(this.articleId),
@@ -87,6 +73,7 @@ export class LinkManager {
     const nextArticleUrlList = filteredLinks.slice(index + 1);
 
     if (nextArticleUrlList.length > 0 && index >= 0) {
+      this.articleList.push(...nextArticleUrlList);
       this.nextArticleUrl = nextArticleUrlList[0];
     } else {
       this.promiseList.unshift(fetchLoopNext);
@@ -123,17 +110,12 @@ export class LinkManager {
       .map((ele) => $(ele).attr('href').trim())
       .filter(
         (href) =>
-          this.articleHistory
+          this.articleList
             .join(',')
             .indexOf(
               href.match(this.channelAndArticleIdRegex)[0].split('/')[1],
             ) === -1,
       );
-  }
-
-  historyPush(href, title = null) {
-    if (!this.articleHistory.includes(href)) {
-    }
   }
 
   nextLink() {
@@ -149,9 +131,8 @@ export class LinkManager {
       this.promiseList.push(this.nextLinkPageRender);
       this.promiseList.push(this.addNewEmptySlide);
       this.promiseList.push(() => this.doHide('Article'));
-    } else {
-      this.promiseList.push(this.setCurrentArticle);
     }
+    this.promiseList.push(this.setCurrentArticle);
     this.promiseList.push(this.initArticleLinkActive);
     this.promiseList.push(this.changeUrlAndTitle);
 
@@ -167,10 +148,14 @@ export class LinkManager {
   }
 
   setCurrentArticle() {
-    const sliderIndex = this.swiper.activeIndex;
+    this.currentArticleIndex = this.swiper.activeIndex;
 
-    this.currentArticleTitle = this.articleTitleHistory[sliderIndex];
-    this.currentArticleUrl = this.articleHistory[sliderIndex];
+    this.currentArticleTitle = this.articleTitleList[this.currentArticleIndex];
+    this.currentArticleUrl = this.articleList[this.currentArticleIndex];
+
+    console.log(this.currentArticleIndex);
+    console.log(this.currentArticleTitle);
+    console.log(this.currentArticleUrl);
   }
 
   changeUrlAndTitle() {
@@ -202,16 +187,7 @@ export class LinkManager {
     $('.main-slide').removeClass('main-slide');
     $('.slide-empty').append($article);
 
-    this.articleHistory.push(this.nextArticleUrl);
-    this.articleTitleHistory.push(title);
-
-    if (this.articleHistory.length > 10) {
-      this.articleHistory.shift();
-      this.articleTitleHistory.shift();
-    }
-
-    this.currentArticleTitle = title;
-    this.currentArticleUrl = `https://arca.live${this.nextArticleUrl.replace('https://arca.live', '')}`;
+    this.articleTitleList.push(title);
 
     $('.slide-empty .custom-loader').remove();
     $('.slide-empty').removeClass('slide-empty').addClass('main-slide');
