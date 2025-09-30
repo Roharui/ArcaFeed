@@ -32,7 +32,7 @@ export class SlideManager {
 
   prependNewEmptySlide() {
     if (this.swiper.slides.length > 5) {
-      this.swiper.removeSlide(this.swiper.slides.length - 1);
+      this.swiper.removeSlide(this.swiper.slides.length - 2);
     }
 
     const slide = $('<div>', { class: 'swiper-slide slide-empty prev' });
@@ -48,7 +48,9 @@ export class SlideManager {
 
   appendNewEmptySlide() {
     if (this.swiper.slides.length > 5) {
-      this.swiper.removeSlide(0);
+      console.log('Slide before remove', this.swiper.slides);
+      this.swiper.removeSlide(1);
+      console.log('Slide after remove', this.swiper.slides);
     }
 
     const slide = $('<div>', { class: 'swiper-slide slide-empty next' });

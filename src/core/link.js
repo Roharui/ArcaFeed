@@ -19,7 +19,7 @@ export class LinkManager {
     const filteredLinks = this.filterLink(totalLinks);
 
     if (filteredLinks.length === 0) {
-      this.addPromiseCurrent(this.fetchLoopNext);
+      this.addPromiseCurrent(this.fetchLoop.bind(this, 'next'));
       return;
     }
 
@@ -27,28 +27,24 @@ export class LinkManager {
     this.nextArticleUrl = filteredLinks[0];
   }
 
-  initArticleLinkActive() {
-    let $html = null;
-
-    $html = this.swiper ? $(this.swiper?.slides[this.swiper?.activeIndex]) : [];
+  initArticleLinkActive($slide) {
+    const $html = $slide ?? $(this.swiper?.slides[this.swiper?.activeIndex]);
 
     if ($html.length === 0) {
-      this.addPromiseCurrent(sleep(100), this.initArticleLinkActive(slide));
+      this.addPromiseCurrent(() => sleep(100), this.initArticleLinkActive());
       return;
     }
 
-    const currentArticleId = $html.attr('data-article-id')?.trim();
+    const currentArticleId =
+      $html.attr('data-article-id')?.trim() ||
+      this.getArticleIdFromHref(this.currentArticleUrl);
 
     this.currentArticleIndex = this.articleList.findIndex((ele) =>
       ele.includes(currentArticleId),
     );
 
-    console.log('Current Article Index:', this.currentArticleIndex);
-
     if (this.currentArticleIndex === -1) {
-      this.articleList.push(
-        `https://arca.live/b/${this.channelId}/${currentArticleId}`,
-      );
+      this.articleList.push(`/b/${this.channelId}/${currentArticleId}`);
       this.currentArticleIndex = this.articleList.length - 1;
     }
 
@@ -93,7 +89,7 @@ export class LinkManager {
         this.articleList.push(...nextArticleUrlList);
         this.nextArticleUrl = nextArticleUrlList[0];
       } else {
-        this.addPromiseCurrent(this.fetchLoopNext);
+        this.addPromiseCurrent(this.fetchLoop.bind(this, 'next'));
       }
     }
 
@@ -102,7 +98,7 @@ export class LinkManager {
         this.articleList.unshift(...prevArticleUrlList);
         this.prevArticleUrl = prevArticleUrlList[prevArticleUrlList.length - 1];
       } else {
-        this.addPromiseCurrent(this.fetchLoopPrev);
+        this.addPromiseCurrent(this.fetchLoop.bind(this, 'prev'));
       }
     }
   }
@@ -138,15 +134,9 @@ export class LinkManager {
 
     return resultRows
       .map((ele) => $(ele).attr('href').trim())
-      .map((href) => {
-        return `https://arca.live${href.replace('https://arca.live', '')}`;
-      })
-      .map((href) =>
-        href.replace(
-          /\?p=\d+$/,
-          `?before=${new Date().toISOString()}&tz=%2B0900`,
-        ),
-      )
+      .map((href) => href.replace('https://arca.live', ''))
+      .map((href) => href.replace(/\?.+$/, ''))
+      .filter((href) => !!href)
       .filter(
         (href) =>
           articleListString.indexOf(this.getArticleIdFromHref(href)) === -1,

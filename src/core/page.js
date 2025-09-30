@@ -43,7 +43,7 @@ export class PageManager {
       promiseList.push(() => this.doHide('Article'));
     }
     promiseList.push(() => this.setCurrentArticle($slide));
-    promiseList.push(this.initArticleLinkActive);
+    promiseList.push(() => this.initArticleLinkActive($slide));
 
     this.addNextPromise(promiseList);
   }
@@ -62,17 +62,21 @@ export class PageManager {
       promiseList.push(() => this.doHide('Article'));
     }
     promiseList.push(() => this.setCurrentArticle($slide));
-    promiseList.push(this.initArticleLinkActive);
+    promiseList.push(() => this.initArticleLinkActive($slide));
 
     this.addNextPromise(promiseList);
   }
 
   setCurrentArticle($slide) {
-    const currentArticleUrl = $slide.attr('data-article-href');
-    const currentArticleTitle = $slide.attr('data-article-title');
+    this.currentArticleUrl = $slide.attr('data-article-href');
+    this.currentArticleTitle = $slide.attr('data-article-title');
 
-    document.title = currentArticleTitle;
-    window.history.pushState({}, currentArticleTitle, currentArticleUrl);
+    document.title = this.currentArticleTitle;
+    window.history.pushState(
+      {},
+      this.currentArticleTitle,
+      this.currentArticleUrl,
+    );
   }
 
   // 로직 정리
@@ -123,6 +127,11 @@ export class PageManager {
   // 4. 슬라이드 갱신
   async prevLinkPageRender() {
     let res;
+
+    if (!this.prevLinkArticleUrl) {
+      alert('이전 글이 없습니다.');
+      return;
+    }
 
     while (!res) {
       res = await this.fetchUrl(this.prevLinkArticleUrl);

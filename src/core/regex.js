@@ -1,25 +1,27 @@
 export class RegexManager {
   homePageRegex = /arca\.live\/?$/;
-  articlePageRegex = /arca\.live\/b\/([A-Za-z0-9])+\/[0-9]+/;
-  channelPageRegex = /arca.live\/b\/(.+)/;
+  channelPageRegex = /b\/(.+)/;
+  articlePageRegex = /b\/([A-Za-z0-9])+\/[0-9]+/;
 
-  channelAndArticleIdRegex = /(?<=\/b\/).+(?=\?)/;
-  channelIdRegex = /(?<=\/b\/).([A-Za-z0-9])+((?=\?)|$)/;
+  channelAndArticleIdRegex = /(?<=\/b\/).([A-Za-z0-9])+\/.[0-9]+/;
+  channelIdRegex = /(?<=\/b\/).([A-Za-z0-9])+/;
 
   initPageMode(href) {
     const [mode, channelId, articleId] = this.checkPageMode(href);
+
     this.mode = mode;
     this.channelId = channelId;
     this.articleId = articleId;
   }
 
   getArticleIdFromHref(href) {
-    if (this.articlePageRegex.test(href)) {
-      const articleId = href
-        .match(this.channelAndArticleIdRegex)[0]
-        .split('/')[1];
-      return articleId;
-    }
+    const articleMatch = href.match(this.channelAndArticleIdRegex);
+
+    if (!articleMatch.length) return null;
+
+    const articleId = articleMatch[0].split('/')[1];
+
+    return articleId;
   }
 
   checkPageMode(href) {

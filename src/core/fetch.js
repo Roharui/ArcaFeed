@@ -1,22 +1,30 @@
-import { sleep } from 'src/utils/sleep';
-
 export class FetchManager {
-  async fetchLoopNext() {
+  async fetchLoop(mode = 'next') {
     let filteredLinks = [];
     let url = null;
-    let $html = $('.root-container').last();
     let count = 0;
 
+    const searchUrl = this.articleList[this.currentArticleIndex];
+
+    const _res = await this.fetchUrl(searchUrl);
+    let $html = $(_res.responseText);
+
     while (url === null && count <= 10) {
-      const nextArticlePageUrl = $html
-        .find('.page-item.active')
-        .next()
-        .find('a')
-        .attr('href');
+      const articlePage = $html.find('.page-item.active');
 
-      console.log(`Fetching next article page: ${nextArticlePageUrl}`);
+      const articlePageElement =
+        mode === 'next' ? articlePage.next() : articlePage.prev();
 
-      const res = await this.fetchUrl(`https://arca.live${nextArticlePageUrl}`);
+      const articlePageUrl = articlePageElement.find('a').attr('href');
+
+      console.log(articlePageElement);
+      console.log(articlePageUrl);
+
+      if (!articlePageUrl) return;
+
+      console.log(`Fetching ${mode} article page: ${articlePageUrl}`);
+
+      const res = await this.fetchUrl(`https://arca.live${articlePageUrl}`);
 
       $html = $(res.responseText);
 
@@ -26,62 +34,28 @@ export class FetchManager {
 
       filteredLinks = this.filterLink(totalLinks);
       if (filteredLinks.length > 0) {
-        url = filteredLinks[0];
+        url = mode === 'next' ? filteredLinks[0] : filteredLinks.slice(-1)[0];
       }
 
       if (url !== null) {
         console.log(
-          `Fetching Complete next article page: ${nextArticlePageUrl}`,
+          `Fetching Complete ${mode} article page: ${articlePageUrl}`,
         );
-        this.articleList.push(...filteredLinks);
-        this.nextArticleUrl = url;
+        if (mode === 'prev') {
+          this.articleList.unshift(...filteredLinks);
+          this.prevArticleUrl = url;
+        } else {
+          this.articleList.push(...filteredLinks);
+          this.nextArticleUrl = url;
+        }
+
         return;
       }
       count += 1;
 
       console.log(
-        `No articles found on page ${nextArticlePageUrl}, trying next page...`,
+        `No articles found on page ${articlePageUrl}, trying ${mode} page...`,
       );
-    }
-  }
-
-  async fetchLoopPrev() {
-    let filteredLinks = [];
-    let url = null;
-    let $html = $('.root-container').first();
-    let count = 0;
-
-    while (url === null && count <= 10) {
-      const prevArticleUrl = $html
-        .find('.page-item.active')
-        .prev()
-        .find('a')
-        .attr('href');
-
-      if (!prevArticleUrl) return;
-
-      console.log(`Fetching prev article page: ${prevArticleUrl}`);
-
-      const res = await this.fetchUrl(`https://arca.live${prevArticleUrl}`);
-
-      $html = $(res.responseText);
-
-      const totalLinks = $html
-        .find('div.article-list > div.list-table.table > a.vrow.column')
-        .not('.notice');
-
-      filteredLinks = this.filterLink(totalLinks);
-      if (filteredLinks.length > 0) {
-        url = filteredLinks[0];
-      }
-
-      if (url !== null) {
-        console.log(`Fetching Complete prev article page: ${prevArticleUrl}`);
-        this.articleList.unshift(...filteredLinks);
-        this.prevArticleUrl = url;
-        return;
-      }
-      count += 1;
     }
   }
 
