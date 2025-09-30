@@ -26,7 +26,7 @@ export class SlideManager {
     $('.root-container').appendTo('.swiper-slide');
 
     $('.swiper-slide').attr('data-article-id', this.articleId);
-    $('.swiper-slide').attr('data-article-href', window.location.href);
+    $('.swiper-slide').attr('data-article-href', window.location.pathname);
     $('.swiper-slide').attr('data-article-title', document.title);
   }
 

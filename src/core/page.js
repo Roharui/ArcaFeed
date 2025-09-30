@@ -50,7 +50,10 @@ export class PageManager {
 
   prevPageRender() {
     if (this.isActive) return;
-    if (this.prevArticleUrl == null) return;
+    if (this.prevArticleUrl == null) {
+      alert('이전 글이 없습니다.');
+      return;
+    }
 
     const $slide = $(this.swiper.slides[this.swiper.realIndex]);
 
@@ -58,7 +61,7 @@ export class PageManager {
     if (this.swiper.realIndex === 0) {
       promiseList.push(() => this.alertPrevPageIsFetching($slide));
       promiseList.push(() => this.prevLinkPageRender($slide));
-      promiseList.push(() => this.appendNewEmptySlide());
+      promiseList.push(() => this.prependNewEmptySlide());
       promiseList.push(() => this.doHide('Article'));
     }
     promiseList.push(() => this.setCurrentArticle($slide));
@@ -68,15 +71,13 @@ export class PageManager {
   }
 
   setCurrentArticle($slide) {
+    this.previousArticleUrl = this.currentArticleUrl;
     this.currentArticleUrl = $slide.attr('data-article-href');
-    this.currentArticleTitle = $slide.attr('data-article-title');
 
-    document.title = this.currentArticleTitle;
-    window.history.pushState(
-      {},
-      this.currentArticleTitle,
-      this.currentArticleUrl,
-    );
+    const currentArticleTitle = $slide.attr('data-article-title');
+
+    document.title = currentArticleTitle;
+    window.history.pushState({}, currentArticleTitle, this.currentArticleUrl);
   }
 
   // 로직 정리
@@ -91,6 +92,11 @@ export class PageManager {
       res = await this.fetchUrl(this.nextArticleUrl);
 
       if (!res) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Fetch failed, no loop for development mode');
+          return;
+        }
+
         $slide
           .find('.loading-info')
           .append($('<div>').text('글 불러오기 실패'));
@@ -125,18 +131,18 @@ export class PageManager {
   // 2. 다음 글을 불러온 후 빈 슬라이드에 추가 (display: none)
   // 3. 블러온 글에 대한 hider 처리 진행
   // 4. 슬라이드 갱신
-  async prevLinkPageRender() {
+  async prevLinkPageRender($slide) {
     let res;
 
-    if (!this.prevLinkArticleUrl) {
-      alert('이전 글이 없습니다.');
-      return;
-    }
-
     while (!res) {
-      res = await this.fetchUrl(this.prevLinkArticleUrl);
+      res = await this.fetchUrl(this.prevArticleUrl);
 
       if (!res) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Fetch failed, no loop for development mode');
+          return;
+        }
+
         $slide
           .find('.loading-info')
           .append($('<div>').text('글 불러오기 실패'));
@@ -155,11 +161,11 @@ export class PageManager {
 
     const $article = $(content);
 
-    const currentArticleId = this.getArticleIdFromHref(this.prevLinkArticleUrl);
+    const currentArticleId = this.getArticleIdFromHref(this.prevArticleUrl);
 
     $slide.append($article);
     $slide.attr('data-article-id', currentArticleId);
-    $slide.attr('data-article-href', this.prevLinkArticleUrl);
+    $slide.attr('data-article-href', this.prevArticleUrl);
     $slide.attr('data-article-title', title);
 
     $slide.find('.loader-container').remove();

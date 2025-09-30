@@ -9,10 +9,16 @@ export class ConsoleManager {
 
   log(...args) {
     this.consoleLog += args.map(this.parseLog).join(' ') + '\n';
+    if ($('#console').length) {
+      $('#console').find('textarea').text(this.consoleLog);
+    }
   }
 
   error(...args) {
     this.consoleLog += args.map((e) => e.toString()).join(' ') + '\n';
+    if ($('#console').length) {
+      $('#console').find('textarea').text(this.consoleLog);
+    }
   }
 
   parseLog(log) {

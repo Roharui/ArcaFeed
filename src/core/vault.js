@@ -5,8 +5,8 @@ export class Vault {
 
   currentArticleIndex = -1;
 
-  currentArticleTitle = null;
   currentArticleUrl = null;
+  previousArticleUrl = null;
 
   nextArticleUrl = '';
   prevArticleUrl = '';

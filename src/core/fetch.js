@@ -17,9 +17,6 @@ export class FetchManager {
 
       const articlePageUrl = articlePageElement.find('a').attr('href');
 
-      console.log(articlePageElement);
-      console.log(articlePageUrl);
-
       if (!articlePageUrl) return;
 
       console.log(`Fetching ${mode} article page: ${articlePageUrl}`);
@@ -41,6 +38,7 @@ export class FetchManager {
         console.log(
           `Fetching Complete ${mode} article page: ${articlePageUrl}`,
         );
+
         if (mode === 'prev') {
           this.articleList.unshift(...filteredLinks);
           this.prevArticleUrl = url;
@@ -56,6 +54,11 @@ export class FetchManager {
       console.log(
         `No articles found on page ${articlePageUrl}, trying ${mode} page...`,
       );
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log('No loop for development mode');
+        return;
+      }
     }
   }
 
@@ -63,7 +66,7 @@ export class FetchManager {
     if (process.env.NODE_ENV === 'development') {
       return GM.xmlHttpRequest({
         method: method,
-        url: url,
+        url: `https://arca.live${url}`,
         headers: { Origin: 'arca.live' },
         timeout: ms,
       });

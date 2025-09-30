@@ -3,6 +3,7 @@ import { sleep } from 'src/utils/sleep';
 export class PromiseManager {
   promiseListCurrent = [];
   promiseList = [];
+
   isActive = false;
 
   async initPromise() {
@@ -16,10 +17,18 @@ export class PromiseManager {
 
       while (this.promiseListCurrent.length > 0) {
         const promiseFunc = this.promiseListCurrent.shift();
+
         try {
           await promiseFunc.call(this);
         } catch (e) {
           console.log(e);
+
+          if (process.env.NODE_ENV === 'development') {
+            console.log('No Loop For Development Mode');
+            this.promiseListCurrent = [];
+            break;
+          }
+
           await sleep(1000);
           this.promiseListCurrent.unshift(promiseFunc);
         }
@@ -31,12 +40,13 @@ export class PromiseManager {
     this.isActive = false;
   }
 
-  rejectPromise() {
-    this.promiseListCurrent = [];
-    this.promiseList = [];
-  }
-
   addPromiseCurrent(...promiseFuncList) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('No Loop For Development Mode');
+      this.promiseListCurrent = [];
+      return;
+    }
+
     if (this.isActive) {
       this.promiseListCurrent.unshift(...promiseFuncList);
     } else {

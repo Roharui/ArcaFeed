@@ -5,8 +5,12 @@ export class LinkManager {
     if (this.mode === 'CHANNEL') {
       this.clearArticle();
       this.initArticleLinkChannel();
+      this.saveConfig();
     }
     if (this.mode === 'ARTICLE') {
+      this.currentArticleUrl = window.location.pathname;
+      this.previousArticleUrl = null;
+
       this.initArticleLinkActive();
     }
   }
@@ -35,13 +39,19 @@ export class LinkManager {
       return;
     }
 
-    const currentArticleId =
-      $html.attr('data-article-id')?.trim() ||
-      this.getArticleIdFromHref(this.currentArticleUrl);
+    const currentArticleId = $html.attr('data-article-id')?.trim();
+
+    if (!currentArticleId) {
+      return;
+    }
 
     this.currentArticleIndex = this.articleList.findIndex((ele) =>
       ele.includes(currentArticleId),
     );
+
+    console.log('Current Article Index:', this.currentArticleIndex);
+    console.log('Article List:', this.articleList);
+    console.log('Current Article ID:', currentArticleId);
 
     if (this.currentArticleIndex === -1) {
       this.articleList.push(`/b/${this.channelId}/${currentArticleId}`);
@@ -56,6 +66,10 @@ export class LinkManager {
     ) {
       this.nextArticleUrl = this.articleList[this.currentArticleIndex + 1];
       this.prevArticleUrl = this.articleList[this.currentArticleIndex - 1];
+
+      console.log('Next Article URL:', this.nextArticleUrl);
+      console.log('Prev Article URL:', this.prevArticleUrl);
+      console.log('No need to fetch more articles.');
       return;
     }
 
