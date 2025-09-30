@@ -1,15 +1,21 @@
 import { Vault } from './vault';
 
 export class FetchManager extends Vault {
-  async fetchLoop(mode = 'next') {
+  async fetchLoop(mode) {
     let filteredLinks = [];
     let url = null;
     let count = 0;
 
-    const searchUrl = this.articleList[this.currentArticleIndex];
+    let $html;
 
-    const _res = await this.fetchUrl(searchUrl);
-    let $html = $(_res.responseText);
+    if (this.currentSlide == null) {
+      $html = $('.root-container');
+    } else {
+      const searchUrl = this.currentSlide.attr('data-article-href');
+
+      const _res = await this.fetchUrl(searchUrl);
+      $html = $(_res.responseText);
+    }
 
     while (url === null && count <= 10) {
       const articlePage = $html.find('.page-item.active');
@@ -21,9 +27,11 @@ export class FetchManager extends Vault {
 
       if (!articlePageUrl) return;
 
-      console.log(`Fetching ${mode} article page: ${articlePageUrl}`);
+      const _url = articlePageUrl.replace('https://arca.live', '');
 
-      const res = await this.fetchUrl(`https://arca.live${articlePageUrl}`);
+      console.log(`Fetching ${mode} article page: ${_url}`);
+
+      const res = await this.fetchUrl(`${_url}`);
 
       $html = $(res.responseText);
 
@@ -56,11 +64,6 @@ export class FetchManager extends Vault {
       console.log(
         `No articles found on page ${articlePageUrl}, trying ${mode} page...`,
       );
-
-      if (process.env.NODE_ENV === 'development') {
-        console.log('No loop for development mode');
-        return;
-      }
     }
   }
 

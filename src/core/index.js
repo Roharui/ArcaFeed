@@ -11,6 +11,7 @@ import { ModalManager } from './modal';
 import { ConsoleManager } from './console';
 import { PageManager } from './page';
 import { FetchManager } from './fetch';
+import { sleep } from 'src/utils/sleep';
 
 class Helper extends Classes(
   ButtonManager,
@@ -38,7 +39,8 @@ class Helper extends Classes(
       this.initHelperBtn,
       this.initSlide,
       this.initLink,
-      () => this.doHide('Article'),
+      this.initHide,
+      this.showCurrentSlide,
       this.initEvent,
       this.saveConfig,
     ]);

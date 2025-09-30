@@ -3,6 +3,8 @@ import { Manipulation } from 'swiper/modules';
 import { Vault } from './vault';
 
 export class SlideManager extends Vault {
+  updateFn = null;
+
   initSlide() {
     if (this.mode !== 'ARTICLE') return;
     this.initArticleToSlide();
@@ -11,62 +13,81 @@ export class SlideManager extends Vault {
       ...this.slideOptions,
       touchMoveStopPropagation: true,
       modules: [Manipulation],
+      onAny: (eventName, ...args) => {
+        // console.log(`Swiper event: ${eventName}`, args);
+      },
     });
+
+    this.addNewEmptySlide('next');
+    this.addNewEmptySlide('prev');
+
     this.swiper.on('slideNextTransitionEnd', () => {
-      this.nextLink();
+      this.toLink('next');
     });
 
     this.swiper.on('slidePrevTransitionEnd', () => {
-      this.prevLink();
+      this.toLink('prev');
     });
 
-    this.appendNewEmptySlide();
-    this.prependNewEmptySlide();
+    this.swiper.on('update', () => this.updateFn());
+  }
+
+  hideRootContainer() {
+    if (this.mode !== 'ARTICLE') return;
+    $('.root-container').hide();
   }
 
   initArticleToSlide() {
     $('<div>', { class: 'swiper' }).appendTo('body');
     $('<div>', { class: 'swiper-wrapper' }).appendTo('.swiper');
 
-    $('<div>', { class: 'swiper-slide' }).appendTo('.swiper-wrapper');
-    $('.root-container').appendTo('.swiper-slide');
+    const slide = $('<div>', { class: 'swiper-slide slide-empty' });
 
-    $('.swiper-slide').attr('data-article-id', this.articleId);
-    $('.swiper-slide').attr('data-article-href', window.location.pathname);
-    $('.swiper-slide').attr('data-article-title', document.title);
+    slide.attr('data-article-id', this.articleId);
+    slide.attr('data-article-href', window.location.pathname);
+    slide.attr('data-article-title', document.title);
+
+    slide.appendTo('.swiper-wrapper');
+
+    $('.root-container').appendTo(slide);
   }
 
-  prependNewEmptySlide() {
-    if (this.swiper.slides.length > 5) {
-      this.swiper.removeSlide(this.swiper.slides.length - 2);
-    }
+  removeSlide(mode) {
+    if (this.swiper.slides.length > 10)
+      this.swiper.removeSlide(
+        mode === 'next' ? 1 : this.swiper.slides.length - 2,
+      );
+  }
 
-    const slide = $('<div>', { class: 'swiper-slide slide-empty prev' });
+  removeSlidePromise(mode) {
+    return this.swiper.slides.length > 10
+      ? new Promise((res) => {
+          this.updateFn = res;
+          this.removeSlide(mode);
+        })
+      : Promise.resolve();
+  }
 
+  addNewEmptySlide(mode) {
+    const slide = $('<div>', { class: 'swiper-slide slide-empty' });
     const loader = $('<div>', { class: 'loader-container' });
+
     $('<div>', { class: 'custom-loader' }).appendTo(loader);
     $('<div>', { class: 'loading-info' }).appendTo(loader);
 
     loader.appendTo(slide);
 
-    this.swiper.prependSlide(slide.get());
+    const fn =
+      mode === 'next' ? this.swiper.appendSlide : this.swiper.prependSlide;
+
+    fn.call(this.swiper, slide.get());
   }
 
-  appendNewEmptySlide() {
-    if (this.swiper.slides.length > 5) {
-      console.log('Slide before remove', this.swiper.slides);
-      this.swiper.removeSlide(1);
-      console.log('Slide after remove', this.swiper.slides);
-    }
+  addNewEmptySlidePromise(mode) {
+    return new Promise((res) => {
+      this.updateFn = res;
 
-    const slide = $('<div>', { class: 'swiper-slide slide-empty next' });
-
-    const loader = $('<div>', { class: 'loader-container' });
-    $('<div>', { class: 'custom-loader' }).appendTo(loader);
-    $('<div>', { class: 'loading-info' }).appendTo(loader);
-
-    loader.appendTo(slide);
-
-    this.swiper.appendSlide(slide.get());
+      this.addNewEmptySlide(mode);
+    });
   }
 }

@@ -1,4 +1,3 @@
-import { sleep } from 'src/utils/sleep';
 import { Vault } from './vault';
 
 export class LinkManager extends Vault {
@@ -8,9 +7,7 @@ export class LinkManager extends Vault {
       this.initArticleLinkChannel();
     }
     if (this.mode === 'ARTICLE') {
-      this.currentArticleUrl = window.location.pathname;
-      this.previousArticleUrl = null;
-
+      this.currentSlide = $(this.swiper?.slides[this.swiper?.activeIndex]);
       this.initArticleLinkActive();
     }
   }
@@ -31,13 +28,8 @@ export class LinkManager extends Vault {
     this.nextArticleUrl = filteredLinks[0];
   }
 
-  initArticleLinkActive($slide) {
-    const $html = $slide ?? $(this.swiper?.slides[this.swiper?.activeIndex]);
-
-    if ($html.length === 0) {
-      this.addPromiseCurrent(() => sleep(100), this.initArticleLinkActive());
-      return;
-    }
+  initArticleLinkActive() {
+    const $html = this.currentSlide;
 
     const currentArticleId = $html.attr('data-article-id')?.trim();
 
@@ -45,32 +37,32 @@ export class LinkManager extends Vault {
       return;
     }
 
-    this.currentArticleIndex = this.articleList.findIndex((ele) =>
+    let currentArticleIndex = this.articleList.findIndex((ele) =>
       ele.includes(currentArticleId),
     );
 
-    if (this.currentArticleIndex === -1) {
-      this.articleList.push(`/b/${this.channelId}/${currentArticleId}`);
-      this.currentArticleIndex = this.articleList.length - 1;
+    if (currentArticleIndex === -1) {
+      this.articleList.push(`/b/${this.channelId}/${this.articleId}`);
+      currentArticleIndex = this.articleList.length - 1;
     }
 
     if (
       this.articleList.length > 0 &&
-      this.currentArticleIndex >= 0 &&
-      this.currentArticleIndex !== this.articleList.length - 1 &&
-      this.currentArticleIndex !== 0
+      currentArticleIndex >= 0 &&
+      currentArticleIndex !== this.articleList.length - 1 &&
+      currentArticleIndex !== 0
     ) {
-      this.nextArticleUrl = this.articleList[this.currentArticleIndex + 1];
-      this.prevArticleUrl = this.articleList[this.currentArticleIndex - 1];
+      this.nextArticleUrl = this.articleList[currentArticleIndex + 1];
+      this.prevArticleUrl = this.articleList[currentArticleIndex - 1];
       return;
     }
 
-    if (this.currentArticleIndex === this.articleList.length - 1) {
-      this.prevArticleUrl = this.articleList[this.currentArticleIndex - 1];
+    if (currentArticleIndex === this.articleList.length - 1) {
+      this.prevArticleUrl = this.articleList[currentArticleIndex - 1];
       this.nextArticleUrl = null;
-    } else if (this.currentArticleIndex === 0) {
+    } else if (currentArticleIndex === 0) {
       this.prevArticleUrl = null;
-      this.nextArticleUrl = this.articleList[this.currentArticleIndex + 1];
+      this.nextArticleUrl = this.articleList[currentArticleIndex + 1];
     }
 
     const totalLinks = $html

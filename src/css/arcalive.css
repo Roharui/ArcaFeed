@@ -198,7 +198,7 @@ footer {
   width: 100%;
   min-height: 100%;
   overflow-y: scroll;
-  background-color: var(--color-bg-focus);
+  background-color: var(--color-bg-main);
 }
 
 .slide-empty {
@@ -248,24 +248,17 @@ div.root-container {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 100%;
 }
 
-.root-container .content-wrapper,
-.root-container .content-wrapper article,
-.root-container .content-wrapper article .article-view {
+.root-container .content-wrapper {
+  display: flex;
+  flex-direction: column;
   width: 100% !important;
-  height: 100% !important;
 }
 
 .content-wrapper::after {
   content: none !important;
-}
-
-.root-container .content-wrapper article .article-view .article-wrapper {
-  display: flex;
-  flex-direction: column;
-  height: fit-content;
-  min-height: 100% !important;
 }
 
 #console {
