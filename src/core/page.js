@@ -38,10 +38,12 @@ export class PageManager extends Vault {
 
     const promiseList = [];
     if (this.swiper.realIndex === this.swiper.slides.length - 1) {
+      promiseList.push(() => this.swiper.disable());
       promiseList.push(() => this.alertNextPageIsFetching($slide));
       promiseList.push(() => this.nextLinkPageRender($slide));
       promiseList.push(() => this.appendNewEmptySlide());
       promiseList.push(() => this.doHide('Article'));
+      promiseList.push(() => this.swiper.enable());
     }
     promiseList.push(() => this.setCurrentArticle($slide));
     promiseList.push(() => this.initArticleLinkActive($slide));
@@ -60,10 +62,12 @@ export class PageManager extends Vault {
 
     const promiseList = [];
     if (this.swiper.realIndex === 0) {
+      promiseList.push(() => this.swiper.disable());
       promiseList.push(() => this.alertPrevPageIsFetching($slide));
       promiseList.push(() => this.prevLinkPageRender($slide));
       promiseList.push(() => this.prependNewEmptySlide());
       promiseList.push(() => this.doHide('Article'));
+      promiseList.push(() => this.swiper.enable());
     }
     promiseList.push(() => this.setCurrentArticle($slide));
     promiseList.push(() => this.initArticleLinkActive($slide));

@@ -12,8 +12,13 @@ export class SlideManager extends Vault {
       touchMoveStopPropagation: true,
       modules: [Manipulation],
     });
-    this.swiper.on('slideNextTransitionEnd', () => this.nextLink());
-    this.swiper.on('slidePrevTransitionEnd', () => this.prevLink());
+    this.swiper.on('slideNextTransitionEnd', () => {
+      this.nextLink();
+    });
+
+    this.swiper.on('slidePrevTransitionEnd', () => {
+      this.prevLink();
+    });
 
     this.appendNewEmptySlide();
     this.prependNewEmptySlide();

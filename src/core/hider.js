@@ -25,32 +25,27 @@ export class HideManager extends Vault {
     if (previousShow === currentShow) currentShow = 'Article';
 
     if (currentShow === 'Article') {
-      $html.find('#comment').hide();
+      $html.find('.article-wrapper').show();
 
-      $html.find('.article-list').hide();
       $html.find('.included-article-list').hide();
-      $html.find('.btns-board').hide();
 
-      $html.find('.article-wrapper > div').not('#comment').show();
+      $html.find('.article-wrapper > div').show();
+      $html.find('#comment').hide();
 
       $html.attr('data-show', 'Article');
     } else if (currentShow === 'Comment') {
-      $html.find('.article-wrapper > div').not('#comment').hide();
+      $html.find('.article-wrapper').show();
+      $html.find('.article-wrapper > div').hide();
 
-      $html.find('.article-list').hide();
       $html.find('.included-article-list').hide();
-      $html.find('.btns-board').hide();
 
       $html.find('#comment').show();
 
       $html.attr('data-show', 'Comment');
     } else if (currentShow === 'List') {
-      $html.find('.article-wrapper > div').not('#comment').hide();
-      $html.find('#comment').hide();
+      $html.find('.article-wrapper').hide();
 
-      $html.find('.btns-board').show();
       $html.find('.article-list').show();
-      $html.find('.included-article-list').show();
 
       $html.attr('data-show', 'List');
     }

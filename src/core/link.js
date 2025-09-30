@@ -6,7 +6,6 @@ export class LinkManager extends Vault {
     if (this.mode === 'CHANNEL') {
       this.clearArticle();
       this.initArticleLinkChannel();
-      this.saveConfig();
     }
     if (this.mode === 'ARTICLE') {
       this.currentArticleUrl = window.location.pathname;
@@ -50,10 +49,6 @@ export class LinkManager extends Vault {
       ele.includes(currentArticleId),
     );
 
-    console.log('Current Article Index:', this.currentArticleIndex);
-    console.log('Article List:', this.articleList);
-    console.log('Current Article ID:', currentArticleId);
-
     if (this.currentArticleIndex === -1) {
       this.articleList.push(`/b/${this.channelId}/${currentArticleId}`);
       this.currentArticleIndex = this.articleList.length - 1;
@@ -67,10 +62,6 @@ export class LinkManager extends Vault {
     ) {
       this.nextArticleUrl = this.articleList[this.currentArticleIndex + 1];
       this.prevArticleUrl = this.articleList[this.currentArticleIndex - 1];
-
-      console.log('Next Article URL:', this.nextArticleUrl);
-      console.log('Prev Article URL:', this.prevArticleUrl);
-      console.log('No need to fetch more articles.');
       return;
     }
 
