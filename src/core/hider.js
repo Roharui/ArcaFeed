@@ -1,6 +1,7 @@
 import { sleep } from 'src/utils/sleep';
+import { Vault } from './vault';
 
-export class HideManager {
+export class HideManager extends Vault {
   doHide(mode) {
     if (this.mode !== 'ARTICLE') return;
 

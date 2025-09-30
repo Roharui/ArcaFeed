@@ -1,3 +1,5 @@
+import { Vault } from './vault';
+
 function createHelperBtn(icon, callback, display = 'block') {
   const btn = $('<div>', {
     class: 'helper-btn',
@@ -20,7 +22,7 @@ function btnWrapper(cls, content) {
   return btnWrapperDiv;
 }
 
-export class ButtonManager {
+export class ButtonManager extends Vault {
   initHelperBtn() {
     const consoleInfo = createHelperBtn('ion-information', () =>
       this.showConsole(),

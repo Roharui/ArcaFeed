@@ -1,6 +1,7 @@
 import { sleep } from 'src/utils/sleep';
+import { Vault } from './vault';
 
-export class PromiseManager {
+export class PromiseManager extends Vault {
   promiseListCurrent = [];
   promiseList = [];
 
@@ -41,12 +42,6 @@ export class PromiseManager {
   }
 
   addPromiseCurrent(...promiseFuncList) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('No Loop For Development Mode');
-      this.promiseListCurrent = [];
-      return;
-    }
-
     if (this.isActive) {
       this.promiseListCurrent.unshift(...promiseFuncList);
     } else {

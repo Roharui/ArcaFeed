@@ -1,7 +1,8 @@
 import Swiper from 'swiper';
 import { Manipulation } from 'swiper/modules';
+import { Vault } from './vault';
 
-export class SlideManager {
+export class SlideManager extends Vault {
   initSlide() {
     if (this.mode !== 'ARTICLE') return;
     this.initArticleToSlide();

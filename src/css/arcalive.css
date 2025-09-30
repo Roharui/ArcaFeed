@@ -245,17 +245,22 @@ footer {
 }
 
 div.root-container {
-  height: fit-content;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
-.root-container .content-wrapper {
-  display: flex !important;
-  height: fit-content !important;
-}
-
-.root-container .content-wrapper article {
+.root-container .content-wrapper,
+.root-container .content-wrapper article,
+.root-container .content-wrapper article .article-view {
   width: 100% !important;
-  height: fit-content !important;
+  height: 100% !important;
+}
+
+.root-container .content-wrapper article .article-view .article-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100% !important;
 }
 
 #console {

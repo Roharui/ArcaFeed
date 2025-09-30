@@ -1,4 +1,6 @@
-export class FetchManager {
+import { Vault } from './vault';
+
+export class FetchManager extends Vault {
   async fetchLoop(mode = 'next') {
     let filteredLinks = [];
     let url = null;

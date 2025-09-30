@@ -1,4 +1,6 @@
-export class EventManager {
+import { Vault } from './vault';
+
+export class EventManager extends Vault {
   initEvent() {
     $(document).on('keydown', (e) => {
       if (e.key === 'ArrowRight') this.swiper.slideNext();

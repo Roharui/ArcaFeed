@@ -1,4 +1,6 @@
-export class RegexManager {
+import { Vault } from './vault';
+
+export class RegexManager extends Vault {
   homePageRegex = /arca\.live\/?$/;
   channelPageRegex = /b\/(.+)/;
   articlePageRegex = /b\/([A-Za-z0-9])+\/[0-9]+/;

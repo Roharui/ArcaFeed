@@ -1,7 +1,6 @@
 import { Classes } from 'src/utils/classes';
 import { RegexManager } from './regex';
 import { LinkManager } from './link';
-import { Vault } from './vault';
 import { EventManager } from './event';
 import { HideManager } from './hider';
 import { ButtonManager } from './button';
@@ -14,7 +13,6 @@ import { PageManager } from './page';
 import { FetchManager } from './fetch';
 
 class Helper extends Classes(
-  Vault,
   ButtonManager,
   RegexManager,
   LinkManager,

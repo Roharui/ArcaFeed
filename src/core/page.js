@@ -1,6 +1,7 @@
 import { sleep } from 'src/utils/sleep';
+import { Vault } from './vault';
 
-export class PageManager {
+export class PageManager extends Vault {
   nextLinkForce() {
     window.location.href = this.nextArticleUrl;
   }

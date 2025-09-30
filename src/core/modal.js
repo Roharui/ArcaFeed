@@ -1,3 +1,5 @@
+import { Vault } from './vault';
+
 const NEXT_PAGE_MODAL_HTML = `
 <div id="dialog" title="게시글 이동 설정">
   <div id="category-all"></div>
@@ -8,7 +10,7 @@ const NEXT_PAGE_MODAL_HTML = `
 </div>
 `;
 
-export class ModalManager {
+export class ModalManager extends Vault {
   openArticleFilterModal() {
     if (!['ARTICLE', 'CHANNEL'].includes(this.mode)) return;
 

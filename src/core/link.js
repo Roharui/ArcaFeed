@@ -1,6 +1,7 @@
 import { sleep } from 'src/utils/sleep';
+import { Vault } from './vault';
 
-export class LinkManager {
+export class LinkManager extends Vault {
   initLink() {
     if (this.mode === 'CHANNEL') {
       this.clearArticle();
