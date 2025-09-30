@@ -12,7 +12,7 @@ export class Vault {
 
   articleList = [];
 
-  slideMode = 'REFRESH'; // 'REFRESH', 'RENDER'
+  slideMode = 'REFRESH';
 
   slideOptions = {
     slidesPerView: 1,

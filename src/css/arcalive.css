@@ -157,10 +157,6 @@ footer {
   display: list-item;
 }
 
-.article-info.article-info-section {
-  display: none !important;
-}
-
 .vcol.col-time,
 .vcol.col-view,
 .vcol.col-rate {
@@ -255,6 +251,11 @@ div.root-container {
   display: flex;
   flex-direction: column;
   width: 100% !important;
+}
+
+.root-container .content-wrapper article {
+  width: 100% !important;
+  height: fit-content !important;
 }
 
 .content-wrapper::after {

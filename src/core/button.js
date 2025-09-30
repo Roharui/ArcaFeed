@@ -48,9 +48,6 @@ export class ButtonManager extends Vault {
     const showCommentModal = createHelperBtn('ion-chatboxes', () =>
       this.doHide('Comment'),
     );
-    const showArticleList = createHelperBtn('ion-link', () =>
-      this.doHide('List'),
-    );
     const nextPageBtn = createHelperBtn('ion-ios-arrow-forward', () =>
       this.nextLinkForce(),
     );
@@ -61,7 +58,6 @@ export class ButtonManager extends Vault {
     const btns = [];
 
     if (this.mode === 'ARTICLE') {
-      btns.push(showArticleList);
       btns.push(showCommentModal);
       btns.push(slideModeToRender);
       btns.push(slideModeToRefresh);

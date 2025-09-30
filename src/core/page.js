@@ -98,9 +98,7 @@ export class PageManager extends Vault {
       }
     }
 
-    const content = res.responseText.match(
-      /(?<=\"top\"\>\<\/div\>).+(?=\<div id=\"bottom\")/s,
-    )[0];
+    const content = this.parseContent(res.responseText);
     const title = res.responseText
       .match(/(?<=title\>).+-.+(?=\<\/title)/s)[0]
       .trim();
@@ -119,5 +117,18 @@ export class PageManager extends Vault {
       mode === 'next' ? this.nextArticleUrl : this.prevArticleUrl,
     );
     this.currentSlide.attr('data-article-title', title);
+  }
+
+  parseContent(responseText) {
+    let content = responseText.match(
+      /(?<=\"top\"\>\<\/div\>).+(?=\<div id=\"bottom\")/s,
+    )[0];
+
+    content = content.replaceAll(
+      /\<div class=\"topbar-area.+\<\/a\>\<\/span\>.\s+\<\/div\>|<aside class="sidebar.+<\/aside>|<footer class="footer">.+<\/footer>|<ul class="nav-.+<\/ul>|<div id="toast-box.+<\/div>|<div id="boardBtns">.+clearfix">.+<\/div>|<form action="\/b\/.+(<\/option>.\s+<\/select>).(\s+<\/div>){2}|<div class="included-article-list.+<\/small>.+<\/p>.\s+<\/div>/gs,
+      '',
+    );
+
+    return $(content);
   }
 }

@@ -40,7 +40,6 @@ class Helper extends Classes(
       this.initSlide,
       this.initLink,
       this.initHide,
-      this.showCurrentSlide,
       this.initEvent,
       this.saveConfig,
     ]);

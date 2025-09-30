@@ -13,9 +13,6 @@ export class SlideManager extends Vault {
       ...this.slideOptions,
       touchMoveStopPropagation: true,
       modules: [Manipulation],
-      onAny: (eventName, ...args) => {
-        // console.log(`Swiper event: ${eventName}`, args);
-      },
     });
 
     this.addNewEmptySlide('next');
@@ -41,7 +38,7 @@ export class SlideManager extends Vault {
     $('<div>', { class: 'swiper' }).appendTo('body');
     $('<div>', { class: 'swiper-wrapper' }).appendTo('.swiper');
 
-    const slide = $('<div>', { class: 'swiper-slide slide-empty' });
+    const slide = $('<div>', { class: 'swiper-slide' });
 
     slide.attr('data-article-id', this.articleId);
     slide.attr('data-article-href', window.location.pathname);
@@ -49,7 +46,10 @@ export class SlideManager extends Vault {
 
     slide.appendTo('.swiper-wrapper');
 
-    $('.root-container').appendTo(slide);
+    const content = this.parseContent($('body').html());
+    $('.root-container').remove();
+
+    content.appendTo(slide);
   }
 
   removeSlide(mode) {
