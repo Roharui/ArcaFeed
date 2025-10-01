@@ -2,6 +2,9 @@ export class Vault {
   mode = '';
   channelId = '';
   articleId = '';
+  search = '';
+
+  searchQuery = '';
 
   currentSlide = null;
 

@@ -4,6 +4,7 @@ export class LinkManager extends Vault {
   initLink() {
     if (this.mode === 'CHANNEL') {
       this.clearArticle();
+      this.parseSearchQuery();
       this.initArticleLinkChannel();
     }
     if (this.mode === 'ARTICLE') {
@@ -20,7 +21,7 @@ export class LinkManager extends Vault {
     const filteredLinks = this.filterLink(totalLinks);
 
     if (filteredLinks.length === 0) {
-      this.addPromiseCurrent(this.fetchLoop.bind(this, 'next'));
+      this.addPromiseCurrent(this.parseFromArticleList.bind(this, 'next'));
       return;
     }
 
@@ -33,13 +34,19 @@ export class LinkManager extends Vault {
 
     const currentArticleId = $html.attr('data-article-id')?.trim();
 
+    console.log('Current Article ID:', currentArticleId);
+
     if (!currentArticleId) {
       return;
     }
 
+    console.log('Current Article ID:', currentArticleId);
+
     let currentArticleIndex = this.articleList.findIndex((ele) =>
       ele.includes(currentArticleId),
     );
+
+    console.log('Current Article Index:', currentArticleIndex);
 
     if (currentArticleIndex === -1) {
       this.articleList.push(`/b/${this.channelId}/${this.articleId}`);
@@ -54,50 +61,22 @@ export class LinkManager extends Vault {
     ) {
       this.nextArticleUrl = this.articleList[currentArticleIndex + 1];
       this.prevArticleUrl = this.articleList[currentArticleIndex - 1];
+
+      console.log('Next Article URL:', this.nextArticleUrl);
+      console.log('Prev Article URL:', this.prevArticleUrl);
       return;
     }
 
     if (currentArticleIndex === this.articleList.length - 1) {
-      this.prevArticleUrl = this.articleList[currentArticleIndex - 1];
       this.nextArticleUrl = null;
+      this.prevArticleUrl = this.articleList[currentArticleIndex - 1];
+
+      this.addPromiseCurrent(this.fetchFromCurrentSlide.bind(this, 'next'));
     } else if (currentArticleIndex === 0) {
       this.prevArticleUrl = null;
       this.nextArticleUrl = this.articleList[currentArticleIndex + 1];
-    }
 
-    const totalLinks = $html
-      .find(
-        'div.included-article-list > div.article-list > div.list-table.table > a.vrow.column',
-      )
-      .not('.notice');
-
-    const filteredLinks = this.filterLink(totalLinks);
-
-    const index = filteredLinks.findIndex((ele) =>
-      ele.includes(currentArticleId),
-    );
-
-    const nextArticleUrlList =
-      index !== -1 ? filteredLinks.slice(index + 1) : [];
-    const prevArticleUrlList =
-      index !== -1 ? filteredLinks.slice(0, index - 1) : [];
-
-    if (this.nextArticleUrl === null) {
-      if (nextArticleUrlList.length > 0) {
-        this.articleList.push(...nextArticleUrlList);
-        this.nextArticleUrl = nextArticleUrlList[0];
-      } else {
-        this.addPromiseCurrent(this.fetchLoop.bind(this, 'next'));
-      }
-    }
-
-    if (this.prevArticleUrl === null) {
-      if (prevArticleUrlList.length > 0) {
-        this.articleList.unshift(...prevArticleUrlList);
-        this.prevArticleUrl = prevArticleUrlList[prevArticleUrlList.length - 1];
-      } else {
-        this.addPromiseCurrent(this.fetchLoop.bind(this, 'prev'));
-      }
+      this.addPromiseCurrent(this.fetchFromCurrentSlide.bind(this, 'prev'));
     }
   }
 
@@ -134,10 +113,22 @@ export class LinkManager extends Vault {
       .map((ele) => $(ele).attr('href').trim())
       .map((href) => href.replace('https://arca.live', ''))
       .map((href) => href.replace(/\?.+$/, ''))
-      .filter((href) => !!href)
       .filter(
         (href) =>
           articleListString.indexOf(this.getArticleIdFromHref(href)) === -1,
       );
+  }
+
+  parseSearchQuery() {
+    const searchParams = new URLSearchParams(this.search);
+
+    searchParams.delete('p');
+    searchParams.delete('near');
+    searchParams.delete('after');
+    searchParams.delete('before');
+    searchParams.delete('tz');
+
+    this.searchQuery = searchParams.toString();
+    this.searchQuery = this.searchQuery ? `?${this.searchQuery}` : '';
   }
 }

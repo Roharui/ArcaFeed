@@ -54,12 +54,16 @@ export class ButtonManager extends Vault {
     const filterPageBtn = createHelperBtn('ion-ios-gear', () =>
       this.openArticleFilterModal(),
     );
+    const fullScreen = createHelperBtn('ion-ios-monitor', () =>
+      document.documentElement.requestFullscreen(),
+    );
 
     const btns = [];
 
     if (this.mode === 'ARTICLE') {
       btns.push(showCommentModal);
       btns.push(slideModeToRender);
+      btns.push(fullScreen);
       btns.push(slideModeToRefresh);
     }
     if (this.mode === 'CHANNEL') {
