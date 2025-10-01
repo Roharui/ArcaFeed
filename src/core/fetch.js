@@ -33,6 +33,14 @@ export class FetchManager extends Vault {
       return;
     }
 
+    const currentArticleId =
+      this.currentSlide.attr('data-article-id')?.trim() || this.articleId;
+
+    if (!currentArticleId) {
+      this.addPromiseCurrent(this.fetchLoop.bind(this, mode, $html));
+      return;
+    }
+
     const index = filteredLinks.findIndex((ele) =>
       ele.includes(currentArticleId),
     );
@@ -42,10 +50,14 @@ export class FetchManager extends Vault {
       return;
     }
 
-    const articeList =
-      mode === 'next'
-        ? filteredLinks.slice(index + 1)
-        : filteredLinks.slice(0, index - 1);
+    let articleList = [];
+
+    if (mode !== 'all') {
+      articleList =
+        mode === 'next'
+          ? filteredLinks.slice(index + 1)
+          : filteredLinks.slice(0, index - 1);
+    }
 
     if (articleList.length === 0) {
       this.addPromiseCurrent(this.fetchLoop.bind(this, mode, $html));
@@ -54,12 +66,16 @@ export class FetchManager extends Vault {
 
     console.log(`Fetching Complete ${mode} article page: ${searchUrl}`);
 
-    if (mode === 'next') {
-      this.articleList.push(...articeList);
-      this.nextArticleUrl = articeList[0];
+    if (mode === 'all') {
+      this.articleList = articleList;
+      this.nextArticleUrl = articleList[index + 1];
+      this.prevArticleUrl = articleList[index - 1];
+    } else if (mode === 'next') {
+      this.articleList.push(...articleList);
+      this.nextArticleUrl = articleList[0];
     } else {
-      this.articleList.unshift(...articeList);
-      this.prevArticleUrl = articeList.slice(-1)[0];
+      this.articleList.unshift(...articleList);
+      this.prevArticleUrl = articleList.slice(-1)[0];
     }
   }
 
