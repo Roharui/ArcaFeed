@@ -3,10 +3,6 @@
 import { Vault } from './vault';
 
 export class ConfigManager extends Vault {
-  clearArticle() {
-    this.articleList = [];
-  }
-
   toggleSlideMode() {
     if (this.slideMode === 'REFRESH') {
       this.slideMode = 'RENDER';
@@ -29,6 +25,10 @@ export class ConfigManager extends Vault {
     if (slideMode) {
       this.slideMode = slideMode;
     }
+    const searchQuery = localStorage.getItem('searchQuery');
+    if (searchQuery) {
+      this.searchQuery = searchQuery;
+    }
   }
 
   saveConfig() {
@@ -38,5 +38,6 @@ export class ConfigManager extends Vault {
     );
     localStorage.setItem('articleList', JSON.stringify(this.articleList));
     localStorage.setItem('slideMode', this.slideMode);
+    localStorage.setItem('searchQuery', this.searchQuery);
   }
 }

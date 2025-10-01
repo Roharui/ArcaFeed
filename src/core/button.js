@@ -1,3 +1,5 @@
+// Console, Slide, Page, Modal,
+
 import { Vault } from './vault';
 
 function createHelperBtn(icon, callback, display = 'block') {
@@ -33,6 +35,7 @@ export class ButtonManager extends Vault {
         this.toggleSlideMode();
         $('.helper-btn .ion-ios-refresh').parent().hide();
         $('.helper-btn .ion-ios-play').parent().show();
+        $('.helper-btn .ion-ios-monitor').parent().show();
       },
       this.slideMode === 'REFRESH' ? 'block' : 'none',
     );
@@ -42,6 +45,7 @@ export class ButtonManager extends Vault {
         this.toggleSlideMode();
         $('.helper-btn .ion-ios-refresh').parent().show();
         $('.helper-btn .ion-ios-play').parent().hide();
+        $('.helper-btn .ion-ios-monitor').parent().hide();
       },
       this.slideMode === 'RENDER' ? 'block' : 'none',
     );
@@ -54,8 +58,10 @@ export class ButtonManager extends Vault {
     const filterPageBtn = createHelperBtn('ion-ios-gear', () =>
       this.openArticleFilterModal(),
     );
-    const fullScreen = createHelperBtn('ion-ios-monitor', () =>
-      document.documentElement.requestFullscreen(),
+    const fullScreen = createHelperBtn(
+      'ion-ios-monitor',
+      () => document.documentElement.requestFullscreen(),
+      this.slideMode === 'RENDER' ? 'block' : 'none',
     );
 
     const btns = [];
@@ -63,8 +69,9 @@ export class ButtonManager extends Vault {
     if (this.mode === 'ARTICLE') {
       btns.push(showCommentModal);
       btns.push(slideModeToRender);
-      btns.push(fullScreen);
       btns.push(slideModeToRefresh);
+
+      btns.push(fullScreen);
     }
     if (this.mode === 'CHANNEL') {
       btns.push(nextPageBtn);

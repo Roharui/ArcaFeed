@@ -29,7 +29,7 @@ export class FetchManager extends Vault {
     const filteredLinks = this.filterLink(totalLinks);
 
     if (filteredLinks.length === 0) {
-      this.addPromiseCurrent(this.fetchLoop.bind(this, mode));
+      this.addPromiseCurrent(this.fetchLoop.bind(this, mode, $html));
       return;
     }
 
@@ -38,7 +38,7 @@ export class FetchManager extends Vault {
     );
 
     if (index === -1) {
-      this.addPromiseCurrent(this.fetchLoop.bind(this, mode));
+      this.addPromiseCurrent(this.fetchLoop.bind(this, mode, $html));
       return;
     }
 
@@ -48,7 +48,7 @@ export class FetchManager extends Vault {
         : filteredLinks.slice(0, index - 1);
 
     if (articeList.length === 0) {
-      this.addPromiseCurrent(this.fetchLoop.bind(this, mode));
+      this.addPromiseCurrent(this.fetchLoop.bind(this, mode, $html));
       return;
     }
 
@@ -63,12 +63,12 @@ export class FetchManager extends Vault {
     }
   }
 
-  async fetchLoop(mode) {
+  async fetchLoop(mode, $slide) {
     let filteredLinks = [];
     let url = null;
     let count = 0;
 
-    let $html = this.currentSlide || $('.root-container');
+    let $html = $slide || $('.root-container');
 
     while (url === null && count <= 10) {
       const articlePage = $html.find('.page-item.active');
