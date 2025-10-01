@@ -1,9 +1,11 @@
+// vault, fetch, regex
+
 import { Vault } from './vault';
 
 export class LinkManager extends Vault {
   initLink() {
     if (this.mode === 'CHANNEL') {
-      this.clearArticle();
+      this.articleList = [];
       this.parseSearchQuery();
       this.initArticleLinkChannel();
     }

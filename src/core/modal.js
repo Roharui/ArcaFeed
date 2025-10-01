@@ -1,3 +1,5 @@
+// value, promise
+
 import { Vault } from './vault';
 
 const NEXT_PAGE_MODAL_HTML = `

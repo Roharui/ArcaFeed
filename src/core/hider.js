@@ -1,3 +1,5 @@
+// vault
+
 import { Vault } from './vault';
 
 export class HideManager extends Vault {

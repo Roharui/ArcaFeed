@@ -1,3 +1,5 @@
+// Vault
+
 import { Vault } from './vault';
 
 export class ConfigManager extends Vault {

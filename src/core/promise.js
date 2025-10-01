@@ -1,7 +1,6 @@
 import { sleep } from 'src/utils/sleep';
-import { Vault } from './vault';
 
-export class PromiseManager extends Vault {
+export class PromiseManager {
   promiseListCurrent = [];
   promiseList = [];
 

@@ -1,3 +1,5 @@
+// hider, regex, slide, link, hider
+
 import { sleep } from 'src/utils/sleep';
 import { Vault } from './vault';
 

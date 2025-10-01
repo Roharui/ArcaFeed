@@ -1,5 +1,8 @@
+// vault, promise, page
+
 import Swiper from 'swiper';
 import { Manipulation } from 'swiper/modules';
+
 import { Vault } from './vault';
 
 export class SlideManager extends Vault {

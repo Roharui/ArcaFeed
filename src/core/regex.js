@@ -1,3 +1,5 @@
+// vault
+
 import { Vault } from './vault';
 
 export class RegexManager extends Vault {

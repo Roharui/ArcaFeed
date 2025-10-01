@@ -1,3 +1,5 @@
+// link
+
 import { Vault } from './vault';
 
 export class FetchManager extends Vault {

@@ -1,3 +1,5 @@
+// NONE
+
 const CONSOLE_INFO = `
 <div id="console">
 <textarea style="width: 100%; height: 100%" readonly>
