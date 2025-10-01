@@ -34,25 +34,25 @@ export class LinkManager extends Vault {
   initArticleLinkActive() {
     const $html = this.currentSlide;
 
-    const currentArticleId = $html.attr('data-article-id')?.trim();
-
-    console.log('Current Article ID:', currentArticleId);
-
-    if (!currentArticleId) {
+    if (this.articleList.length === 0) {
+      this.addPromiseCurrent(
+        this.fetchFromCurrentSlide.bind(this, 'all', $html),
+      );
       return;
     }
 
-    console.log('Current Article ID:', currentArticleId);
+    const currentArticleId =
+      $html.attr('data-article-id')?.trim() || this.articleId;
 
     let currentArticleIndex = this.articleList.findIndex((ele) =>
       ele.includes(currentArticleId),
     );
 
-    console.log('Current Article Index:', currentArticleIndex);
-
     if (currentArticleIndex === -1) {
-      this.articleList.push(`/b/${this.channelId}/${this.articleId}`);
-      currentArticleIndex = this.articleList.length - 1;
+      this.addPromiseCurrent(
+        this.fetchFromCurrentSlide.bind(this, 'all', $html),
+      );
+      return;
     }
 
     if (
@@ -63,9 +63,6 @@ export class LinkManager extends Vault {
     ) {
       this.nextArticleUrl = this.articleList[currentArticleIndex + 1];
       this.prevArticleUrl = this.articleList[currentArticleIndex - 1];
-
-      console.log('Next Article URL:', this.nextArticleUrl);
-      console.log('Prev Article URL:', this.prevArticleUrl);
       return;
     }
 

@@ -39,7 +39,7 @@ export class ModalManager extends Vault {
 
       this.articleFilterConfig[channelId] = pageFilter;
 
-      this.addNextPromise([this.initLink, this.saveConfig]);
+      this.addNextPromise([this.initLink]);
 
       dialog.dialog('close');
     };

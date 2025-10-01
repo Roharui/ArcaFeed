@@ -47,7 +47,7 @@ export class FetchManager extends Vault {
         ? filteredLinks.slice(index + 1)
         : filteredLinks.slice(0, index - 1);
 
-    if (articeList.length === 0) {
+    if (articleList.length === 0) {
       this.addPromiseCurrent(this.fetchLoop.bind(this, mode, $html));
       return;
     }

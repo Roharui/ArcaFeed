@@ -37,6 +37,8 @@ export class PromiseManager {
     }
     console.log('Promise Init End');
 
+    this.saveConfig();
+
     this.isActive = false;
   }
 

@@ -1,7 +1,6 @@
 import { Classes } from 'src/utils/classes';
 import { RegexManager } from './regex';
 import { LinkManager } from './link';
-import { EventManager } from './event';
 import { HideManager } from './hider';
 import { ButtonManager } from './button';
 import { PromiseManager } from './promise';
@@ -16,7 +15,6 @@ class Helper extends Classes(
   ButtonManager,
   RegexManager,
   LinkManager,
-  EventManager,
   HideManager,
   PromiseManager,
   SlideManager,
@@ -39,8 +37,17 @@ class Helper extends Classes(
       this.initLink,
       this.doHide,
       this.initEvent,
-      this.saveConfig,
     ]);
+  }
+
+  initEvent() {
+    $(document).on('keydown', (e) => {
+      if (e.key === 'ArrowRight')
+        this.mode === 'ARTICLE'
+          ? this.swiper.slideNext()
+          : this.nextLinkForce();
+      if (e.key === 'ArrowLeft') this.swiper.slidePrev();
+    });
   }
 }
 
