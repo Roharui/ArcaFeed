@@ -28,17 +28,16 @@ class Helper extends Classes(
 ) {
   constructor() {
     super();
-    this.init();
   }
 
   init() {
     this.addNextPromise([
-      () => this.initPageMode(window.location.href),
+      this.initPageMode,
       this.loadConfig,
       this.initHelperBtn,
       this.initSlide,
       this.initLink,
-      this.initHide,
+      this.doHide,
       this.initEvent,
       this.saveConfig,
     ]);

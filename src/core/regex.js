@@ -11,7 +11,9 @@ export class RegexManager extends Vault {
   articleIdRegex = /(?<=\/b\/([A-Za-z0-9])+\/).[0-9]+/;
 
   initPageMode(href) {
-    const [mode, channelId, articleId, search] = this.checkPageMode(href);
+    const [mode, channelId, articleId, search] = this.checkPageMode(
+      href || window.location.href,
+    );
 
     this.mode = mode;
     this.channelId = channelId;

@@ -8,6 +8,7 @@ import 'swiper/css';
 
 (function () {
   const helper = new Helper();
+  helper.init();
 
   if (process.env.NODE_ENV === 'development') {
     const originalConsoleLog = console.log;
