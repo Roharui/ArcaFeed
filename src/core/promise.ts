@@ -1,8 +1,8 @@
-import { sleep } from 'src/utils/sleep';
+import { sleep } from '@utils/sleep';
 
 export class PromiseManager {
-  promiseListCurrent = [];
-  promiseList = [];
+  promiseListCurrent: Function[] = [];
+  promiseList: Function[][] = [];
 
   isActive = false;
 
@@ -13,10 +13,12 @@ export class PromiseManager {
     this.isActive = true;
     while (this.promiseList.length > 0) {
       console.log('Promise Start');
-      this.promiseListCurrent = this.promiseList.shift();
+      this.promiseListCurrent = this.promiseList.shift() || [];
 
       while (this.promiseListCurrent.length > 0) {
         const promiseFunc = this.promiseListCurrent.shift();
+
+        if (!promiseFunc) continue;
 
         try {
           await promiseFunc.call(this);
@@ -37,12 +39,10 @@ export class PromiseManager {
     }
     console.log('Promise Init End');
 
-    this.saveConfig();
-
     this.isActive = false;
   }
 
-  addPromiseCurrent(...promiseFuncList) {
+  addPromiseCurrent(...promiseFuncList: Function[]) {
     if (this.isActive) {
       this.promiseListCurrent.unshift(...promiseFuncList);
     } else {
@@ -50,7 +50,7 @@ export class PromiseManager {
     }
   }
 
-  addNextPromise(promiseFuncList) {
+  addNextPromise(promiseFuncList: Function[]) {
     this.promiseList.push(promiseFuncList);
     setTimeout(() => this.initPromise(), 100);
   }
