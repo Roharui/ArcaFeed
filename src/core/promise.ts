@@ -1,21 +1,24 @@
+import type { PromiseFunc } from '@/types/func';
+
 import { sleep } from '@/utils/sleep';
 import { Vault } from '@/vault';
 
 export class PromiseManager {
-  promiseListCurrent: Function[] = [];
-  promiseList: Function[][] = [];
+  promiseListCurrent: PromiseFunc[] = [];
+  promiseList: PromiseFunc[][] = [];
 
   isActive = false;
 
-  async initPromise() {
-    if (this.isActive) return;
+  async initPromise(_vault?: Vault): Promise<Vault> {
     console.log('Promise Init Start');
 
-    let vault = new Vault();
+    let vault = _vault || (new Vault() as Vault);
 
     this.isActive = true;
+
     while (this.promiseList.length > 0) {
       console.log('Promise Start');
+
       this.promiseListCurrent = this.promiseList.shift() || [];
 
       while (this.promiseListCurrent.length > 0) {
@@ -30,6 +33,7 @@ export class PromiseManager {
 
           if (process.env.NODE_ENV === 'development') {
             console.log('No Loop For Development Mode');
+
             this.promiseListCurrent = [];
             break;
           }
@@ -45,9 +49,11 @@ export class PromiseManager {
     vault.saveConfig();
 
     this.isActive = false;
+
+    return vault;
   }
 
-  addPromiseCurrent(...promiseFuncList: Function[]) {
+  addPromiseCurrent(...promiseFuncList: PromiseFunc[]) {
     if (this.isActive) {
       this.promiseListCurrent.unshift(...promiseFuncList);
     } else {
@@ -55,8 +61,8 @@ export class PromiseManager {
     }
   }
 
-  addNextPromise(promiseFuncList: Function[]) {
+  addNextPromise(promiseFuncList: PromiseFunc[], vault?: Vault) {
     this.promiseList.push(promiseFuncList);
-    setTimeout(() => this.initPromise(), 100);
+    if (!this.isActive) setTimeout(() => this.initPromise(vault), 100);
   }
 }

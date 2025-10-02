@@ -3,12 +3,11 @@
 import $ from 'jquery';
 
 import type { Vault } from '@/vault';
-
-type ArticleShowMode = 'Article' | 'Comment';
+import type { ArticleShowMode } from '@/types';
 
 function doHide(mode?: ArticleShowMode): (v: Vault) => Vault {
   return (v: Vault) => {
-    if (v.href.mode !== 'ARTICLE') return v;
+    if (!v.isCurrentMode('ARTICLE')) return v;
 
     const $html = $('.root-container'); // this.vault.currentSlide
 

@@ -2,26 +2,30 @@ import type { ConfigImpl, HrefImpl } from '@/types';
 import type { Swiper, SwiperOptions } from '@swiper/types';
 
 class Vault {
-  href: HrefImpl = {
+  private _href: HrefImpl = {
     mode: 'OTHER',
     channelId: '',
     articleId: '',
     search: '',
   };
 
-  config: ConfigImpl = {
+  private _config: ConfigImpl = {
     articleList: [],
     articleFilterConfig: {},
     slideMode: 'REFRESH',
     searchQuery: '',
   };
 
-  swiper?: Swiper;
+  private _nextArticleUrl: string | null = null;
+  private _prevArticleUrl: string | null = null;
 
-  swiperOptions?: SwiperOptions;
+  private _currentSlide: JQuery<HTMLElement> | null = null;
+
+  private _swiper: Swiper | null = null;
+  private _swiperOptions: SwiperOptions;
 
   constructor() {
-    this.swiperOptions = {
+    this._swiperOptions = {
       slidesPerView: 1,
       loop: false,
       nested: true,
@@ -33,14 +37,65 @@ class Vault {
       longSwipesRatio: 0.1,
       touchMoveStopPropagation: true,
     };
+
     this.loadConfig();
+  }
+
+  get href(): HrefImpl {
+    return this.href;
+  }
+
+  set href(newHref: HrefImpl) {
+    this.href = newHref;
+  }
+
+  get config(): ConfigImpl {
+    return this._config;
+  }
+
+  set config(newConfig: ConfigImpl) {
+    this._config = newConfig;
+  }
+
+  get nextArticleUrl(): string | null {
+    return this._nextArticleUrl;
+  }
+
+  set nextArticleUrl(url: string | null) {
+    this._nextArticleUrl = url;
+  }
+
+  get prevArticleUrl(): string | null {
+    return this._prevArticleUrl;
+  }
+
+  set prevArticleUrl(url: string | null) {
+    this._prevArticleUrl = url;
+  }
+
+  get currentSlide(): JQuery<HTMLElement> | null {
+    return this._currentSlide;
+  }
+
+  set currentSlide(slide: JQuery<HTMLElement> | null) {
+    this._currentSlide = slide;
+  }
+
+  get swiper(): Swiper | null {
+    return this._swiper;
+  }
+
+  set swiper(swiperInstance: Swiper | null) {
+    this._swiper = swiperInstance;
+  }
+
+  isCurrentMode(mode: HrefImpl['mode']): boolean {
+    return this.href.mode === mode;
   }
 
   toggleSlideMode() {
     this.config.slideMode =
       this.config.slideMode === 'REFRESH' ? 'RENDER' : 'REFRESH';
-
-    this.saveConfig();
   }
 
   loadConfig() {

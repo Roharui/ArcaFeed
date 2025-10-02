@@ -1,3 +1,5 @@
+type ArticleShowMode = 'Article' | 'Comment';
+
 interface HrefImpl {
   mode: 'HOME' | 'CHANNEL' | 'ARTICLE' | 'OTHER';
   channelId: string;
@@ -6,17 +8,25 @@ interface HrefImpl {
 }
 
 interface ArticleFilterImpl {
-  [channelId: string]: {
-    tab: string[];
-    title: string[];
-  };
+  tab: string[];
+  title: string[];
+}
+
+interface ArticleFilterConfigImpl {
+  [channelId: string]: ArticleFilterImpl;
 }
 
 interface ConfigImpl {
   articleList: string[];
-  articleFilterConfig: ArticleFilterImpl;
+  articleFilterConfig: ArticleFilterConfigImpl;
   searchQuery: string;
   slideMode: 'REFRESH' | 'RENDER';
 }
 
-export type { HrefImpl, ArticleFilterImpl, ConfigImpl };
+export type {
+  ArticleShowMode,
+  HrefImpl,
+  ArticleFilterConfigImpl,
+  ArticleFilterImpl,
+  ConfigImpl,
+};
