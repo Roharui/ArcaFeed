@@ -22,31 +22,17 @@ class Vault {
   private _currentSlide: JQuery<HTMLElement> | null = null;
 
   private _swiper: Swiper | null = null;
-  private _swiperOptions: SwiperOptions;
 
   constructor() {
-    this._swiperOptions = {
-      slidesPerView: 1,
-      loop: false,
-      nested: true,
-      touchAngle: 20,
-      touchRatio: 0.75,
-      threshold: 10,
-      shortSwipes: false,
-      longSwipesMs: 100,
-      longSwipesRatio: 0.1,
-      touchMoveStopPropagation: true,
-    };
-
     this.loadConfig();
   }
 
   get href(): HrefImpl {
-    return this.href;
+    return this._href;
   }
 
   set href(newHref: HrefImpl) {
-    this.href = newHref;
+    this._href = newHref;
   }
 
   get config(): ConfigImpl {

@@ -4,9 +4,9 @@ import $ from 'jquery';
 
 import type { PromiseFunc } from '@/types/func';
 import type { Vault } from '@/vault';
-import type { ArticleFilterConfigImpl } from '@/types';
+import { ArticleBase } from './base';
 
-class LinkManager {
+class LinkManager extends ArticleBase {
   init(): PromiseFunc {
     return this.initLink.bind(this);
   }

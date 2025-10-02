@@ -20,7 +20,7 @@ export default function (env, args) {
       alias: {
         '@': path.resolve(__dirname, 'src'),
         '@css': path.resolve(__dirname, 'css'),
-        '@jqueryui': path.resolve(__dirname, 'node_modules', 'jquery-ui-dist'),
+        '@jquery-ui': path.resolve(__dirname, 'node_modules', 'jquery-ui-dist'),
         '@swiper': path.resolve(__dirname, 'node_modules', 'swiper'),
       },
     },
