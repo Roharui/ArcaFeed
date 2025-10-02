@@ -7,10 +7,18 @@
     "rootDir": "./src",
     "outDir": "./dist",
 
+    // alias
+    "paths": {
+      "@/*": ["src/*"],
+      "@css/*": ["css/*"],
+      "@jquery-ui/*": ["node_modules/jquery-ui-dist/*"],
+      "@swiper/*": ["node_modules/swiper/*"]
+    },
+
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
-    "module": "nodenext",
-    "target": "esnext",
+    "module": "es6",
+    "target": "es5",
     // For nodejs:
     "lib": ["dom"],
     "types": ["node"],
@@ -39,18 +47,7 @@
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
-    "moduleResolution": "nodenext",
-    "skipLibCheck": true,
-
-    // alias
-    "paths": {
-      "@/*": ["src/*.ts"],
-      "@core/*": ["src/core/*.ts"],
-      "@utils/*": ["src/utils/*.ts"],
-      "@css/*": ["css/*"],
-      "@jqueryui/*": ["node_modules/jquery-ui-dist/*"],
-      "@swiper/*": ["node_modules/swiper/*"],
-      "$": ["node_modules/jquery/dist/jquery.min.js"]
-    }
+    "moduleResolution": "bundler",
+    "skipLibCheck": true
   }
 }

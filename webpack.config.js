@@ -1,7 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import HookShellScriptPlugin from 'webpack-hook-plugin';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,8 +19,6 @@ export default function (env, args) {
       extensions: ['.ts', '.js'],
       alias: {
         '@': path.resolve(__dirname, 'src'),
-        '@core': path.resolve(__dirname, 'src', 'core'),
-        '@utils': path.resolve(__dirname, 'src', 'utils'),
         '@css': path.resolve(__dirname, 'css'),
         '@jqueryui': path.resolve(__dirname, 'node_modules', 'jquery-ui-dist'),
         '@swiper': path.resolve(__dirname, 'node_modules', 'swiper'),

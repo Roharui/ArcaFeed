@@ -2,7 +2,7 @@
 
 import $ from 'jquery';
 
-import type { Vault } from '@/core/vault';
+import type { Vault } from '@/vault';
 
 type ArticleShowMode = 'Article' | 'Comment';
 

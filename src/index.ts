@@ -1,6 +1,6 @@
-import { Helper } from '@core/index';
+import { Helper } from '@/core';
 
-//import '@jqueryui/jquery-ui.css';
+import '@jquery-ui/jquery-ui.css';
 import '@swiper/swiper.css';
 import '@css/arcalive.css';
 

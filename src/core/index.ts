@@ -1,5 +1,4 @@
-import { Vault } from '@core/vault';
-import { PromiseManager } from '@core/promise';
+import { PromiseManager } from '@/core/promise';
 
 class Helper {
   promise: PromiseManager;

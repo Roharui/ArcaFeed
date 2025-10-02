@@ -1,5 +1,5 @@
-import type { ConfigImpl, HrefImpl } from '@/types/types';
-import type { Swiper, SwiperOptions } from '@swiper/types/index.js';
+import type { ConfigImpl, HrefImpl } from '@/types';
+import type { Swiper, SwiperOptions } from '@swiper/types';
 
 class Vault {
   href: HrefImpl = {

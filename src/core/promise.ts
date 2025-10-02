@@ -1,4 +1,5 @@
-import { sleep } from '@utils/sleep';
+import { sleep } from '@/utils/sleep';
+import { Vault } from '@/vault';
 
 export class PromiseManager {
   promiseListCurrent: Function[] = [];
@@ -9,6 +10,8 @@ export class PromiseManager {
   async initPromise() {
     if (this.isActive) return;
     console.log('Promise Init Start');
+
+    let vault = new Vault();
 
     this.isActive = true;
     while (this.promiseList.length > 0) {
@@ -21,7 +24,7 @@ export class PromiseManager {
         if (!promiseFunc) continue;
 
         try {
-          await promiseFunc.call(this);
+          vault = await promiseFunc.call(this, vault);
         } catch (e) {
           console.log(e);
 
@@ -38,6 +41,8 @@ export class PromiseManager {
       console.log('Promise End');
     }
     console.log('Promise Init End');
+
+    vault.saveConfig();
 
     this.isActive = false;
   }

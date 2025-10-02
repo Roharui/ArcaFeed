@@ -1,4 +1,4 @@
-import type { HrefImpl } from '@/types/types';
+import type { HrefImpl } from '@/types/index.ts';
 
 const homePageRegex = /arca\.live\/?$/;
 const channelPageRegex = /b\/(.+)/;
