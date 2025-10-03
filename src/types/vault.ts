@@ -1,4 +1,5 @@
 type ArticleShowMode = 'Article' | 'Comment';
+type SlideMode = 'REFRESH' | 'RENDER'
 
 interface HrefImpl {
   mode: 'HOME' | 'CHANNEL' | 'ARTICLE' | 'OTHER';
@@ -20,11 +21,14 @@ interface ConfigImpl {
   articleList: string[];
   articleFilterConfig: ArticleFilterConfigImpl;
   searchQuery: string;
-  slideMode: 'REFRESH' | 'RENDER';
+  slideMode: SlideMode;
 }
 
 export type {
   ArticleShowMode,
   HrefImpl,
   ArticleFilterConfigImpl,
-  ArticleF
+  ArticleFilterImpl,
+  ConfigImpl,
+  SlideMode
+};

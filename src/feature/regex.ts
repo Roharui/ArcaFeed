@@ -1,4 +1,4 @@
-import type { PromiseFunc } from '@/types/func';
+import type { PromiseFunc } from '@/types';
 import type { Vault } from '@/vault';
 
 const homePageRegex = /arca\.live\/?$/;
@@ -8,9 +8,22 @@ const articlePageRegex = /b\/([A-Za-z0-9])+\/[0-9]+/;
 const channelAndArticleIdRegex =
   /(?<=\/b\/).([A-Za-z0-9]).+(?=\/)|(?<=\/b\/([A-Za-z0-9])+\/).[0-9]+|\?.+/g;
 const channelIdRegex = /(?<=\/b\/).([A-Za-z0-9])+|\?.+/g;
+const articelIdRegex = /(?<=\/b\/([A-Za-z0-9])+\/).[0-9]+|\?.+/g;
 
-function checkPageMode(href: string | null): PromiseFunc {
-  return (v: Vault) => {
+function getArticleId(href: string) {
+  const articleIdMatch = href.match(articelIdRegex)
+
+  if (!articleIdMatch || articleIdMatch.length === 0) {
+    return '';
+  }
+
+  return articleIdMatch[0]
+}
+
+function checkPageMode(href?: string): PromiseFunc {
+  return (v?: Vault) => {
+    if (v === undefined) return;
+
     const realHref = href || window.location.href;
     console.log('Checking page mode for href:', realHref);
 
@@ -39,12 +52,10 @@ function checkPageMode(href: string | null): PromiseFunc {
         (match) => match[0],
       );
 
-      if (matchArr.length !== 2) throw Error('Wrong URL From CHANNEL');
+      if (matchArr.length < 1) throw Error('Wrong URL From CHANNEL');
 
-      const channelId = matchArr[0];
-      const search = matchArr[1];
-
-      if (!channelId || !search) throw Error('Wrong URL From CHANNEL');
+      const channelId = matchArr[0] || '';
+      const search = matchArr[1] || '';
 
       v.href = { mode: 'CHANNEL', channelId, articleId: '', search };
     }
@@ -62,4 +73,4 @@ function checkPageMode(href: string | null): PromiseFunc {
   };
 }
 
-export { checkPageMode };
+export { checkPageMode, getArticleId };

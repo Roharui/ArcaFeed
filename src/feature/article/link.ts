@@ -1,161 +1,102 @@
-// vault, fetch, regex
 
 import $ from 'jquery';
 
 import type { PromiseFunc } from '@/types';
-import type { Vault } from '@/vault';
-import { ArticleBase } from '@/feature/article/base';
+import type { Vault, Config } from '@/vault';
 
-class LinkManager extends ArticleBase {
+import { FetchManager } from './fetch';
+
+class LinkManager extends FetchManager {
+  constructor(v: Vault, c: Config) {
+    super(v, c);
+  }
+
   init(): PromiseFunc {
     return this.initLink.bind(this);
   }
 
-  initLink(vault: Vault): Vault {
-    if (vault.isCurrentMode('CHANNEL')) {
-      vault.config.articleList = [];
+  initLink(v?: Vault): Vault {
+    this.v = v || this.v;
+
+    if (this.v.isCurrentMode('CHANNEL')) {
+      this.c.articleList = [];
       this.parseSearchQuery();
-      this.initArticleLinkChannel(vault);
+      this.initArticleLinkChannel();
     }
-    if (vault.isCurrentMode('ARTICLE')) {
+    if (this.v.isCurrentMode('ARTICLE')) {
       this.initArticleLinkActive();
     }
 
-    return vault;
+    return this.v;
   }
 
-  initArticleLinkChannel(vault: Vault): Vault {
+  initArticleLinkChannel() {
     const totalLinks = $(
       'div.article-list > div.list-table.table > a.vrow.column',
     ).not('.notice');
 
     const filteredLinks = this.filterLink(totalLinks);
 
-    /*
+
     if (filteredLinks.length === 0) {
-      this.addPromiseCurrent(this.parseFromArticleList.bind(this, 'next'));
       return;
     }
-    */
 
-    vault.config.articleList = filteredLinks;
-    vault.nextArticleUrl = filteredLinks[0];
-
-    return vault;
+    this.c.articleList = filteredLinks;
+    this.v.nextArticleUrl = filteredLinks[0] || '';
   }
 
-  initArticleLinkActive(vault: Vault): Vault {
-    let { href, config } = vault;
-    const { articleList } = config;
+  initArticleLinkActive() {
+    let { href } = this.v;
+    const { articleList } = this.c;
 
-    const $html = vault.currentSlide || $('.root-container');
+    const $html = this.v.currentSlide || $('.root-container');
 
-    /*
-    if (vault.config.articleList.length === 0) {
-      this.addPromiseCurrent(
-        this.fetchFromCurrentSlide.bind(this, 'all', $html),
-      );
+    if (this.c.articleList.length === 0) {
       return;
     }
-    */
 
     const currentArticleId =
       $html.attr('data-article-id')?.trim() || href.articleId;
 
-    let currentArticleIndex = config.articleList.findIndex((ele) =>
+    let currentArticleIndex = this.c.articleList.findIndex((ele: string) =>
       ele.includes(currentArticleId),
     );
 
-    /*
     if (currentArticleIndex === -1) {
-      this.addPromiseCurrent(
-        this.fetchFromCurrentSlide.bind(this, 'all', $html),
-      );
       return;
     }
-    */
 
     if (
-      config.articleList.length > 0 &&
+      this.c.articleList.length > 0 &&
       currentArticleIndex >= 0 &&
-      currentArticleIndex !== config.articleList.length - 1 &&
+      currentArticleIndex !== this.c.articleList.length - 1 &&
       currentArticleIndex !== 0
     ) {
-      vault.nextArticleUrl =
-        config.articleList[currentArticleIndex + 1] || null;
-      vault.prevArticleUrl =
-        config.articleList[currentArticleIndex - 1] || null;
+      this.v.nextArticleUrl =
+        this.c.articleList[currentArticleIndex + 1] || null;
+      this.v.prevArticleUrl =
+        this.c.articleList[currentArticleIndex - 1] || null;
 
-      return { ...vault, href, config } as Vault;
+      return { ...this.v, href } as Vault;
     }
 
-    if (currentArticleIndex === config.articleList.length - 1) {
-      vault.nextArticleUrl = null;
-      vault.prevArticleUrl = articleList[currentArticleIndex - 1] || null;
+    if (currentArticleIndex === this.c.articleList.length - 1) {
+      this.v.nextArticleUrl = null;
+      this.v.prevArticleUrl = articleList[currentArticleIndex - 1] || null;
 
       // this.addPromiseCurrent(this.fetchFromCurrentSlide.bind(this, 'next'));
     } else if (currentArticleIndex === 0) {
-      vault.prevArticleUrl = null;
-      vault.nextArticleUrl = articleList[currentArticleIndex + 1] || null;
+      this.v.prevArticleUrl = null;
+      this.v.nextArticleUrl = articleList[currentArticleIndex + 1] || null;
 
       // this.addPromiseCurrent(this.fetchFromCurrentSlide.bind(this, 'prev'));
     }
 
     href = { ...href, articleId: currentArticleId };
-    return { ...vault, href, config } as Vault;
+    return { ...this.v, href } as Vault;
   }
 
-  filterLink(vault: Vault, rows: JQuery<HTMLElement>): string[] {
-    const { articleList, articleFilterConfig } = vault.config;
-
-    const articleFilter = articleFilterConfig[vault.href.channelId];
-    const articleListString = articleList.join(',');
-
-    let resultRows = rows.toArray();
-
-    if (articleFilter) {
-      resultRows = resultRows.filter((ele) => {
-        const _tabTypeText = $(ele).find('.badge-success').text();
-        const tabTypeText = _tabTypeText.length === 0 ? '노탭' : _tabTypeText;
-
-        const titleText = $(ele).find('.title').text().trim();
-
-        const tabAllow = articleFilter.tab.includes(tabTypeText);
-        const titleAllow = articleFilter.title.every(
-          (keyword) => !titleText.includes(keyword),
-        );
-
-        const result = tabAllow && titleAllow;
-
-        if (!result) $(ele).css('opacity', '0.5');
-        else $(ele).css('opacity', '1');
-
-        return result;
-      });
-    }
-
-    return resultRows
-      .map((ele) => $(ele).attr('href') || '')
-      .map((href) => href.replace('https://arca.live', ''))
-      .map((href) => href.replace(/\?.+$/, ''))
-      .filter(
-        (href) =>
-          articleListString.indexOf(this.getArticleIdFromHref(href)) === -1,
-      );
-  }
-
-  parseSearchQuery() {
-    const searchParams = new URLSearchParams(this.search);
-
-    searchParams.delete('p');
-    searchParams.delete('near');
-    searchParams.delete('after');
-    searchParams.delete('before');
-    searchParams.delete('tz');
-
-    this.searchQuery = searchParams.toString();
-    this.searchQuery = this.searchQuery ? `?${this.searchQuery}` : '';
-  }
 }
 
 export { LinkManager };

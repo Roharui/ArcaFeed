@@ -1,8 +1,18 @@
-class FilterManager {
-  filterLink(rows: JQuery<HTMLElement>): string[] {
-    const { articleList, articleFilterConfig } = vault.config;
+import type { Config, Vault } from "@/vault";
+import { Base } from "@/feature/base";
+import { getArticleId } from "@/feature/regex";
 
-    const articleFilter = articleFilterConfig[vault.href.channelId];
+class FilterManager extends Base {
+
+  constructor(v: Vault, c: Config) {
+    super(v, c);
+  }
+
+  filterLink(rows: JQuery<HTMLElement>): string[] {
+    const { articleList, articleFilterConfig } = this.c;
+    const { href } = this.v
+
+    const articleFilter = articleFilterConfig[href.channelId];
     const articleListString = articleList.join(',');
 
     let resultRows = rows.toArray();
@@ -34,12 +44,14 @@ class FilterManager {
       .map((href) => href.replace(/\?.+$/, ''))
       .filter(
         (href) =>
-          articleListString.indexOf(this.getArticleIdFromHref(href)) === -1,
+          articleListString.indexOf(getArticleId(href)) === -1,
       );
   }
 
   parseSearchQuery() {
-    const searchParams = new URLSearchParams(this.search);
+    const { search } = this.v.href;
+
+    const searchParams = new URLSearchParams(search);
 
     searchParams.delete('p');
     searchParams.delete('near');
@@ -47,8 +59,8 @@ class FilterManager {
     searchParams.delete('before');
     searchParams.delete('tz');
 
-    this.searchQuery = searchParams.toString();
-    this.searchQuery = this.searchQuery ? `?${this.searchQuery}` : '';
+    this.c.searchQuery = searchParams.toString();
+    this.c.searchQuery = this.c.searchQuery ? `?${this.c.searchQuery}` : '';
   }
 }
 

@@ -11,7 +11,6 @@
     "paths": {
       "@/*": ["src/*"],
       "@css/*": ["css/*"],
-      "@jquery-ui/*": ["node_modules/jquery-ui-dist/*"],
       "@swiper/*": ["node_modules/swiper/*"]
     },
 

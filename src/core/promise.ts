@@ -27,7 +27,7 @@ export class PromiseManager {
         if (!promiseFunc) continue;
 
         try {
-          vault = await promiseFunc.call(this, vault);
+          vault = await promiseFunc.call(this, vault) || vault;
         } catch (e) {
           console.log(e);
 
@@ -46,8 +46,6 @@ export class PromiseManager {
     }
     console.log('Promise Init End');
 
-    vault.saveConfig();
-
     this.isActive = false;
 
     return vault;
@@ -61,8 +59,7 @@ export class PromiseManager {
     }
   }
 
-  addNextPromise(promiseFuncList: PromiseFunc[], vault?: Vault) {
+  addNextPromise(promiseFuncList: PromiseFunc[]) {
     this.promiseList.push(promiseFuncList);
-    if (!this.isActive) setTimeout(() => this.initPromise(vault), 100);
   }
 }

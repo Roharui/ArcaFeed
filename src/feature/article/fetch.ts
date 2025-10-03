@@ -1,11 +1,25 @@
 // link
 
-import { Vault } from './vault';
+import type { Config, Vault } from "@/vault";
+import { FilterManager } from "../filter";
 
-export class FetchManager extends Vault {
-  async fetchFromCurrentSlide(mode) {
+export class FetchManager extends FilterManager {
+
+  constructor(v: Vault, c: Config) {
+    super(v, c);
+  }
+
+  async fetchFromCurrentSlide(mode: string) {
+
+    const { currentSlide } = this.v;
+    const { searchQuery } = this.c;
+
+    if (currentSlide === null) {
+      return;
+    }
+
     const searchUrl =
-      this.currentSlide.attr('data-article-href') + this.searchQuery;
+      currentSlide.attr('data-article-href') + searchQuery;
 
     console.log(`Fetching ${mode} article From Current article: ${searchUrl}`);
 
@@ -15,7 +29,13 @@ export class FetchManager extends Vault {
     this.parseFromArticleList(mode, $html);
   }
 
-  parseFromArticleList(mode, $html) {
+  parseFromArticleList(mode: string, $html: JQuery<HTMLElement>) {
+    const { href, currentSlide } = this.v;
+
+    if (currentSlide === null) {
+      return;
+    }
+
     const $content = ($html || $('.root-container')).find(
       'div.included-article-list',
     );
@@ -29,28 +49,25 @@ export class FetchManager extends Vault {
     const filteredLinks = this.filterLink(totalLinks);
 
     if (filteredLinks.length === 0) {
-      this.addPromiseCurrent(this.fetchLoop.bind(this, mode, $html));
       return;
     }
 
     const currentArticleId =
-      this.currentSlide.attr('data-article-id')?.trim() || this.articleId;
+      currentSlide.attr('data-article-id')?.trim() || href.articleId;
 
     if (!currentArticleId) {
-      this.addPromiseCurrent(this.fetchLoop.bind(this, mode, $html));
       return;
     }
 
-    const index = filteredLinks.findIndex((ele) =>
+    const index = filteredLinks.findIndex((ele: string) =>
       ele.includes(currentArticleId),
     );
 
     if (index === -1) {
-      this.addPromiseCurrent(this.fetchLoop.bind(this, mode, $html));
       return;
     }
 
-    let articleList = [];
+    let articleList: string[] = [];
 
     if (mode !== 'all') {
       articleList =
@@ -60,29 +77,26 @@ export class FetchManager extends Vault {
     }
 
     if (articleList.length === 0) {
-      this.addPromiseCurrent(this.fetchLoop.bind(this, mode, $html));
       return;
     }
 
-    console.log(`Fetching Complete ${mode} article page: ${searchUrl}`);
-
     if (mode === 'all') {
-      this.articleList = articleList;
-      this.nextArticleUrl = articleList[index + 1];
-      this.prevArticleUrl = articleList[index - 1];
+      this.c.articleList = articleList;
+      this.v.nextArticleUrl = articleList[index + 1] || '';
+      this.v.prevArticleUrl = articleList[index - 1] || '';
     } else if (mode === 'next') {
-      this.articleList.push(...articleList);
-      this.nextArticleUrl = articleList[0];
+      this.c.articleList.push(...articleList);
+      this.v.nextArticleUrl = articleList[0] || '';
     } else {
-      this.articleList.unshift(...articleList);
-      this.prevArticleUrl = articleList.slice(-1)[0];
+      this.c.articleList.unshift(...articleList);
+      this.v.prevArticleUrl = articleList.slice(-1)[0] || '';
     }
   }
 
-  async fetchLoop(mode, $slide) {
-    let filteredLinks = [];
-    let url = null;
-    let count = 0;
+  async fetchLoop(mode: string, $slide: JQuery<HTMLElement>) {
+    let filteredLinks: string[] = [];
+    let url: string | undefined;
+    let count: number = 0;
 
     let $html = $slide || $('.root-container');
 
@@ -120,11 +134,11 @@ export class FetchManager extends Vault {
         );
 
         if (mode === 'prev') {
-          this.articleList.unshift(...filteredLinks);
-          this.prevArticleUrl = url;
+          this.c.articleList.unshift(...filteredLinks);
+          this.v.prevArticleUrl = url || '';
         } else {
-          this.articleList.push(...filteredLinks);
-          this.nextArticleUrl = url;
+          this.c.articleList.push(...filteredLinks);
+          this.v.nextArticleUrl = url || '';
         }
 
         return;
@@ -137,22 +151,13 @@ export class FetchManager extends Vault {
     }
   }
 
-  fetchUrl(url, method = 'GET', ms = 5000) {
-    if (process.env.NODE_ENV === 'development') {
-      return GM.xmlHttpRequest({
-        method: method,
-        url: `https://arca.live${url}`,
-        headers: { Origin: 'arca.live' },
-        timeout: ms,
-      });
-    } else {
-      return fetch(url, {
-        method: method,
-        headers: { Origin: 'arca.live' },
-        timeout: ms,
-      })
-        .then((response) => response.text())
-        .then((text) => ({ responseText: text }));
-    }
+  async fetchUrl(url: string, method = 'GET', ms = 5000): Promise<{ responseText: string }> {
+    return fetch(url, {
+      method: method,
+      headers: { Origin: 'arca.live' },
+      signal: AbortSignal.timeout(ms)
+    })
+      .then((response) => response.text())
+      .then((text) => ({ responseText: text }));
   }
 }

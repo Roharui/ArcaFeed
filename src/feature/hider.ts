@@ -3,11 +3,12 @@
 import $ from 'jquery';
 
 import type { Vault } from '@/vault';
-import type { ArticleShowMode } from '@/types';
+import type { ArticleShowMode, PromiseFunc } from '@/types';
 
-function doHide(mode?: ArticleShowMode): (v: Vault) => Vault {
-  return (v: Vault) => {
-    if (!v.isCurrentMode('ARTICLE')) return v;
+function doHide(mode?: ArticleShowMode): PromiseFunc {
+  return (v?: Vault) => {
+    if (!v) return;
+    if (!v.isCurrentMode('ARTICLE')) return;
 
     const $html = $('.root-container'); // this.vault.currentSlide
 
@@ -20,8 +21,6 @@ function doHide(mode?: ArticleShowMode): (v: Vault) => Vault {
     $html.find('#comment').toggle(currentShow === 'Comment');
 
     $html.attr('data-show', currentShow);
-
-    return v;
   };
 }
 
