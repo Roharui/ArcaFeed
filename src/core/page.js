@@ -45,6 +45,7 @@ export class PageManager extends Vault {
     }
     promiseList.push(() => this.setCurrentArticle());
     promiseList.push(() => this.initArticleLinkActive());
+    promiseList.push(() => this.currentSlide.focus());
 
     this.addNextPromise(promiseList);
   }

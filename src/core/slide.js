@@ -49,6 +49,8 @@ export class SlideManager extends Vault {
 
     slide.appendTo('.swiper-wrapper');
 
+    slide.focus();
+
     const content = this.parseContent($('body').html());
     $('.root-container').remove();
 
