@@ -1,4 +1,4 @@
-import type { PromiseFunc } from '@/types/func';
+import type { PromiseFunc } from '@/types';
 
 import { sleep } from '@/utils/sleep';
 import { Vault } from '@/vault';

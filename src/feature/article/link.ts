@@ -2,9 +2,9 @@
 
 import $ from 'jquery';
 
-import type { PromiseFunc } from '@/types/func';
+import type { PromiseFunc } from '@/types';
 import type { Vault } from '@/vault';
-import { ArticleBase } from './base';
+import { ArticleBase } from '@/feature/article/base';
 
 class LinkManager extends ArticleBase {
   init(): PromiseFunc {
