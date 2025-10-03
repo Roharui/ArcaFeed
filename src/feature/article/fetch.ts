@@ -3,6 +3,8 @@
 import type { Config, Vault } from "@/vault";
 import { FilterManager } from "../filter";
 
+import { fetchUrl } from "@/utils/fetch";
+
 export class FetchManager extends FilterManager {
 
   constructor(v: Vault, c: Config) {
@@ -23,7 +25,7 @@ export class FetchManager extends FilterManager {
 
     console.log(`Fetching ${mode} article From Current article: ${searchUrl}`);
 
-    const res = await this.fetchUrl(searchUrl);
+    const res = await fetchUrl(searchUrl);
     const $html = $(res.responseText);
 
     this.parseFromArticleList(mode, $html);
@@ -114,7 +116,7 @@ export class FetchManager extends FilterManager {
 
       console.log(`Fetching ${mode} article page: ${searchUrl}`);
 
-      const res = await this.fetchUrl(`${searchUrl}`);
+      const res = await fetchUrl(`${searchUrl}`);
 
       $html = $(res.responseText);
 
@@ -151,13 +153,5 @@ export class FetchManager extends FilterManager {
     }
   }
 
-  async fetchUrl(url: string, method = 'GET', ms = 5000): Promise<{ responseText: string }> {
-    return fetch(url, {
-      method: method,
-      headers: { Origin: 'arca.live' },
-      signal: AbortSignal.timeout(ms)
-    })
-      .then((response) => response.text())
-      .then((text) => ({ responseText: text }));
-  }
+
 }

@@ -4,7 +4,7 @@
   "main": "main.js",
   "scripts": {
     "build": "webpack --config webpack.config.prod.js",
-    "dev": "webpack --config webpack.config.dev.js --watch",
+    "dev": "webpack --config webpack.config.dev.js --mode development --watch",
     "lint": "eslint . --ext .ts"
   },
   "author": "",

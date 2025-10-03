@@ -9,6 +9,7 @@ import { FilterManager } from '@/feature/filter';
 import type { Vault, Config } from '@/vault';
 import type { SwiperOptions } from '@swiper/types';
 import type { PromiseFunc } from '@/types';
+import { parseContent } from '../regex';
 
 
 export class SlideManager extends FilterManager {
@@ -33,10 +34,6 @@ export class SlideManager extends FilterManager {
     };
   }
 
-  init(): PromiseFunc {
-    return this.initSlide.bind(this);
-  }
-
   initSlide(v?: Vault): Vault | void {
     this.v = v || this.v;
 
@@ -52,15 +49,6 @@ export class SlideManager extends FilterManager {
 
     this.addNewEmptySlide('next');
     this.addNewEmptySlide('prev');
-
-    this.v.swiper.on('slideNextTransitionEnd', () => {
-      // this.page.toLink('next');
-    });
-
-    this.v.swiper.on('slidePrevTransitionEnd', () => {
-      // this.page.toLink('prev');
-    });
-
     this.v.swiper.on('update', () => this.updateFn());
 
     return this.v;
@@ -78,11 +66,12 @@ export class SlideManager extends FilterManager {
     slide.attr('data-article-href', window.location.pathname);
     slide.attr('data-article-title', document.title);
 
-    // const content = $(".root-container") // this.parseContent($('body').html());
+    const html = $('body').html()
+    const content = $(parseContent(html));
 
-    // $('.root-container').remove();
+    $(".root-container").remove()
 
-    $(".root-container").appendTo(slide);
+    content.appendTo(slide);
 
     slide.appendTo($(".swiper-wrapper"))
   }

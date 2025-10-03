@@ -2,7 +2,7 @@ import { PromiseManager } from '@/core/promise';
 
 import { Config, Vault } from '@/vault';
 
-import { SlideManager } from '@/feature/swiper';
+import { PageManager } from '@/feature/swiper';
 import { LinkManager } from '@/feature/article';
 import { checkPageMode } from '@/feature/regex';
 import { doHide } from '@/feature/hider';
@@ -13,7 +13,7 @@ class Helper {
 
   promise: PromiseManager;
   link: LinkManager;
-  slide: SlideManager;
+  page: PageManager;
 
   constructor() {
     this.vault = new Vault();
@@ -21,13 +21,13 @@ class Helper {
 
     this.promise = new PromiseManager();
     this.link = new LinkManager(this.vault, this.config);
-    this.slide = new SlideManager(this.vault, this.config)
+    this.page = new PageManager(this.vault, this.config, this.link)
   }
 
   async init() {
     this.promise.addNextPromise([
       checkPageMode(),
-      this.slide.init(),
+      ...this.page.init(),
       doHide('Article'),
       this.link.init(),
       () => this.config.saveConfig()

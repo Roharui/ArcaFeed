@@ -12,6 +12,10 @@ class Config implements ConfigImpl {
     this.loadConfig()
   }
 
+  isSlideMode(mode: SlideMode): boolean {
+    return this.slideMode === mode;
+  }
+
   toggleSlideMode(): void {
     this.slideMode = this.slideMode === 'REFRESH' ? 'RENDER' : 'REFRESH';
   }

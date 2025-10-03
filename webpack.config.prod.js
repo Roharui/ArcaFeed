@@ -8,7 +8,6 @@ const __dirname = path.dirname(__filename);
 
 export default function(_env, _args) {
   return {
-    mode: 'production',
     entry: './src/index.ts',
 
     output: {

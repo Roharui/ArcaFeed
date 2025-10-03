@@ -1,12 +1,13 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import WebpackHookPlugin from 'webpack-hook-plugin';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default function(_env, _args) {
   return {
-    mode: 'developement',
     entry: './src/index.ts',
 
     output: {
@@ -44,6 +45,10 @@ export default function(_env, _args) {
       ],
     },
 
-    plugins: [],
+    plugins: [
+      new WebpackHookPlugin({
+        onBuildEnd: ["./upload.sh"]
+      })
+    ],
   };
 }
