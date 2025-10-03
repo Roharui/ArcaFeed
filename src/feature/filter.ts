@@ -1,4 +1,8 @@
+
+import $ from 'jquery'
+
 import type { Config, Vault } from "@/vault";
+
 import { Base } from "@/feature/base";
 import { getArticleId } from "@/feature/regex";
 

@@ -78,8 +78,6 @@ export class SlideManager extends FilterManager {
     slide.attr('data-article-href', window.location.pathname);
     slide.attr('data-article-title', document.title);
 
-    console.log($(".root-container"))
-
     // const content = $(".root-container") // this.parseContent($('body').html());
 
     // $('.root-container').remove();
