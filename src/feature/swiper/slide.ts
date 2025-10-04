@@ -49,6 +49,7 @@ export class SlideManager extends FilterManager {
 
     this.addNewEmptySlide('next');
     this.addNewEmptySlide('prev');
+
     this.v.swiper.on('update', () => this.updateFn());
 
     return this.v;

@@ -4,7 +4,6 @@ import $ from 'jquery'
 
 import { SlideManager } from '@/feature/swiper/slide';
 
-import { doHide } from "@/feature/hider";
 import { getArticleId, getCurrentHTMLTitle, parseContent } from '@/feature/regex';
 
 import type { PageMode, PromiseFunc } from "@/types";
@@ -14,13 +13,16 @@ import { isNotNull, isString } from "@/utils/type";
 import { fetchUrl } from '@/utils/fetch';
 import { sleep } from '@/utils/sleep';
 import type { LinkManager } from '../article';
+import type { PromiseManager } from '@/core/promise';
 
 class PageManager extends SlideManager {
   l: LinkManager;
+  p: PromiseManager;
 
-  constructor(v: Vault, c: Config, l: LinkManager) {
+  constructor(v: Vault, c: Config, l: LinkManager, p: PromiseManager) {
     super(v, c);
     this.l = l;
+    this.p = p;
   }
 
   init(): PromiseFunc[] {
@@ -28,6 +30,8 @@ class PageManager extends SlideManager {
   }
 
   initPage(v: Vault): Vault {
+    if (!v.isCurrentMode('ARTICLE')) return v;
+
     this.v = v || this.v;
 
     const { swiper: _swiper } = this.v;
@@ -41,7 +45,7 @@ class PageManager extends SlideManager {
       this.toLink('NEXT');
     });
 
-    return v;
+    return this.v;
   }
 
   nextLinkForce() {
@@ -70,7 +74,7 @@ class PageManager extends SlideManager {
     return isNotNull(slides[activeIndex])
   }
 
-  pageRender(mode: PageMode): PromiseFunc[] {
+  pageRender(mode: PageMode) {
     if (isString(mode === 'NEXT' ? this.v.nextArticleUrl : this.v.prevArticleUrl)) {
       return []
     }
@@ -92,7 +96,6 @@ class PageManager extends SlideManager {
       promiseList.push(() => (swiper.allowTouchMove = false));
       promiseList.push(() => this.alertPageIsFetching(mode));
       promiseList.push(() => this.linkPageRender(mode));
-      promiseList.push(() => doHide('Article'));
       promiseList.push(() => this.showCurrentSlide());
       promiseList.push(() => swiper.enable());
       promiseList.push(() => this.removeSlidePromise(mode));
@@ -104,7 +107,7 @@ class PageManager extends SlideManager {
 
     promiseList.push(() => currentSlide.focus());
 
-    return promiseList
+    this.p.addNextPromise(promiseList);
   }
 
   alertPageIsFetching(mode: PageMode) {

@@ -140,28 +140,6 @@ footer {
   display: none !important;
 }
 
-.body .board-article .pagination .page-item {
-  display: none;
-}
-
-.body .board-article .pagination .page-item.active {
-  display: list-item;
-}
-
-.body .board-article .pagination .page-item.active + .page-item {
-  display: list-item;
-}
-
-.body .board-article .pagination .page-item:has(+ .active) {
-  display: list-item;
-}
-
-.vcol.col-time,
-.vcol.col-view,
-.vcol.col-rate {
-  display: none !important;
-}
-
 .info-row.clearfix > .right {
   display: none !important;
 }
