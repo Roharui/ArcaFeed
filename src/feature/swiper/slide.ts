@@ -8,11 +8,11 @@ import { FilterManager } from '@/feature/filter';
 
 import type { Vault, Config } from '@/vault';
 import type { SwiperOptions } from '@swiper/types';
-import type { PromiseFunc } from '@/types';
 import { parseContent } from '../regex';
+import { getCurrentSlide } from '../current';
 
 
-export class SlideManager extends FilterManager {
+class SlideManager extends FilterManager {
   updateFn: (v?: unknown) => void = () => { };
 
   swiperOptions: SwiperOptions;
@@ -51,9 +51,15 @@ export class SlideManager extends FilterManager {
     this.addNewEmptySlide('prev');
 
     this.v.swiper.on('update', () => this.updateFn());
+    this.setCurrentSlide()
 
     return this.v;
   }
+
+  setCurrentSlide() {
+    this.v.currentSlide = getCurrentSlide(this.v)
+  }
+
 
   initArticleToSlide() {
     const { articleId } = this.v.href;
@@ -128,3 +134,5 @@ export class SlideManager extends FilterManager {
     });
   }
 }
+
+export { SlideManager }

@@ -1,21 +1,20 @@
 
 import $ from 'jquery';
 
-import type { PromiseFunc } from '@/types';
 import type { Vault, Config } from '@/vault';
 
 import { FetchManager } from './fetch';
+import { getCurrentSlide } from '../current';
+import type { PromiseManager } from '@/core/promise';
 
 class LinkManager extends FetchManager {
-  constructor(v: Vault, c: Config) {
+  p: PromiseManager;
+  constructor(v: Vault, c: Config, p: PromiseManager) {
     super(v, c);
+    this.p = p;
   }
 
-  init(): PromiseFunc {
-    return this.initLink.bind(this);
-  }
-
-  initLink(v?: Vault): Vault {
+  init(v?: Vault): Vault {
     this.v = v || this.v;
 
     if (this.v.isCurrentMode('CHANNEL')) {
@@ -50,7 +49,10 @@ class LinkManager extends FetchManager {
     let { href } = this.v;
     const { articleList } = this.c;
 
-    const $html = this.v.currentSlide || $('.root-container');
+    console.log(this.v)
+    console.log(this.v.currentSlide)
+
+    const $html = $(this.v.currentSlide || getCurrentSlide(this.v)) || $('.root-container');
 
     if (this.c.articleList.length === 0) {
       return;
@@ -85,12 +87,12 @@ class LinkManager extends FetchManager {
       this.v.nextArticleUrl = null;
       this.v.prevArticleUrl = articleList[currentArticleIndex - 1] || null;
 
-      // this.addPromiseCurrent(this.fetchFromCurrentSlide.bind(this, 'next'));
+      this.p.addPromiseCurrent(this.fetchFromCurrentSlide.bind(this, 'NEXT'));
     } else if (currentArticleIndex === 0) {
       this.v.prevArticleUrl = null;
       this.v.nextArticleUrl = articleList[currentArticleIndex + 1] || null;
 
-      // this.addPromiseCurrent(this.fetchFromCurrentSlide.bind(this, 'prev'));
+      this.p.addPromiseCurrent(this.fetchFromCurrentSlide.bind(this, 'PREV'));
     }
 
     href = { ...href, articleId: currentArticleId };

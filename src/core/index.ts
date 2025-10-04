@@ -20,15 +20,17 @@ class Helper {
     this.config = new Config();
 
     this.promise = new PromiseManager();
-    this.link = new LinkManager(this.vault, this.config);
+
+    this.link = new LinkManager(this.vault, this.config, this.promise);
     this.page = new PageManager(this.vault, this.config, this.link, this.promise)
-    this.event = new EventManager(this.vault, this.config);
+    this.event = new EventManager(this.vault, this.config, this.page);
   }
 
   async init() {
     this.promise.addNextPromise([
-      ...this.page.init(),
-      this.link.init(),
+      () => this.page.initSlide(),
+      () => this.page.initPage(),
+      () => this.link.init(),
       () => this.event.init(),
       () => this.config.saveConfig()
     ]);

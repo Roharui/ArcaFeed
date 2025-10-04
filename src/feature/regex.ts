@@ -1,15 +1,13 @@
 import type { HrefImpl, PromiseFunc } from '@/types';
 import { getRegexMatchByIndex, getRegexMatchByIndexTry } from '@/utils/type';
 import type { Vault } from '@/vault';
-import { match } from 'assert';
 
 const homePageRegex = /arca\.live\/?$/;
 const channelPageRegex = /b\/(.+)/;
 const articlePageRegex = /b\/([A-Za-z0-9])+\/[0-9]+/;
 
 const channelAndArticleIdRegex =
-  /(?<=\/b\/).([A-Za-z0-9]).+(?=\/)|(?<=\/b\/([A-Za-z0-9])+\/).[0-9]+|\?.+/g;
-const channelIdRegex = /(?<=\/b\/).([A-Za-z0-9])+|\?.+/g;
+  /(?<=\/b\/).([A-Za-z0-9])+|(?<=\/b\/([A-Za-z0-9])+\/).[0-9]+|\?.+/g;
 const articelIdRegex = /(?<=\/b\/([A-Za-z0-9])+\/).[0-9]+|\?.+/g;
 
 const rootContainerRegex =
@@ -52,16 +50,12 @@ function parseHref(href?: string) {
 
   let hrefObj: HrefImpl;
 
-  // ARTICLE: /b/{channelId}/{articleId}
   if (articlePageRegex.test(realHref)) {
     const matchArr = realHref.match(channelAndArticleIdRegex);
 
     const channelId = getRegexMatchByIndex(matchArr, 0);
     const articleId = getRegexMatchByIndex(matchArr, 1);
     const search = getRegexMatchByIndexTry(matchArr, 2, '');
-
-    if (!channelId || !articleId)
-      throw Error('Wrong URL From ARTICLE');
 
     hrefObj = { mode: 'ARTICLE', channelId, articleId, search };
   }

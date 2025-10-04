@@ -8,6 +8,10 @@ class Base {
     this.v = v;
     this.c = c;
   }
+
+  updateVault(v: Vault) {
+    this.v = v;
+  }
 }
 
 export { Base }

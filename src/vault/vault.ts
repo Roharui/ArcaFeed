@@ -15,6 +15,7 @@ class Vault {
   prevArticleUrl: string | null = null;
 
   swiper: Swiper | null = null;
+  currentSlide: HTMLElement | undefined;
 
   constructor(href?: string) {
     this.href = parseHref(href)

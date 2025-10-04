@@ -1,9 +1,12 @@
 // link
 
+import $ from 'jquery';
+
 import type { Config, Vault } from "@/vault";
 import { FilterManager } from "../filter";
 
 import { fetchUrl } from "@/utils/fetch";
+import { getCurrentSlide } from "../current";
 
 export class FetchManager extends FilterManager {
 
@@ -13,8 +16,8 @@ export class FetchManager extends FilterManager {
 
   async fetchFromCurrentSlide(mode: string) {
 
-    const { currentSlide } = this.v;
     const { searchQuery } = this.c;
+    const currentSlide = $(this.v.currentSlide || getCurrentSlide(this.v))
 
     if (currentSlide === null) {
       return;
@@ -32,7 +35,9 @@ export class FetchManager extends FilterManager {
   }
 
   parseFromArticleList(mode: string, $html: JQuery<HTMLElement>) {
-    const { href, currentSlide } = this.v;
+
+    const { href } = this.v;
+    const currentSlide = $(this.v.currentSlide || getCurrentSlide(this.v))
 
     if (currentSlide === null) {
       return;

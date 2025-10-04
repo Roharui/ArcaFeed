@@ -27,7 +27,7 @@ export class PromiseManager {
         if (!promiseFunc) continue;
 
         try {
-          vault = await promiseFunc.call(this, vault) || vault;
+          vault = await promiseFunc(vault) || vault;
         } catch (e) {
           console.log(e);
 
