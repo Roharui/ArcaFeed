@@ -6,11 +6,15 @@ import { getCurrentSlide } from '@/feature/current';
 import { getArticleId, getCurrentHTMLTitle, parseContent } from '@/utils/regex';
 
 import type { PageMode, PromiseFunc } from "@/types";
-import type { Param, Vault } from "@/vault";
+import type { Param } from "@/vault";
 
-import { checkNotNull, isNotNull, isString } from "@/utils/type";
+import { checkNotNull, isString } from "@/utils/type";
 import { fetchUrl } from '@/utils/fetch';
 import { sleep } from '@/utils/sleep';
+
+import { addNewEmptySlidePromise, removeSlidePromise } from './slide';
+import { initArticleLinkActive } from '../article';
+import { Helper } from '@/core';
 
 // Init
 function initPage({ v }: Param): void {
@@ -19,10 +23,8 @@ function initPage({ v }: Param): void {
   const { swiper: _swiper } = v;
   const swiper = checkNotNull(_swiper);
 
-  swiper.on('slideNextTransitionEnd', () => toLink('NEXT'));
-  swiper.on('slidePrevTransitionEnd', () => toLink('PREV'));
-
-  return;
+  swiper.on('slideNextTransitionEnd', () => Helper.runPromise(toLink('NEXT')));
+  swiper.on('slidePrevTransitionEnd', () => Helper.runPromise(toLink('PREV')));
 }
 
 // For Event
@@ -60,7 +62,7 @@ function pageRender(mode: PageMode): PromiseFunc {
     const { swiper } = v;
     const { slides, activeIndex } = swiper;
 
-    const promiseList = [];
+    const promiseList: PromiseFunc[] = [];
     const currentSlide = v.currentSlide || checkNotNull(slides[activeIndex])
 
     console.log(slides)
@@ -72,7 +74,7 @@ function pageRender(mode: PageMode): PromiseFunc {
       (mode === 'PREV' && activeIndex === slides.length - 1)
     ) {
       promiseList.push(() => swiper.disable());
-      promiseList.push(() => (swiper.allowTouchMove = false));
+      promiseList.push(() => { swiper.allowTouchMove = false; return; });
       promiseList.push(setCurrentArticle);
       promiseList.push(alertPageIsFetching(mode));
       promiseList.push(linkPageRender(mode));
@@ -80,10 +82,10 @@ function pageRender(mode: PageMode): PromiseFunc {
       promiseList.push(() => swiper.enable());
       promiseList.push(removeSlidePromise(mode));
       promiseList.push(addNewEmptySlidePromise(mode));
-      promiseList.push(() => (swiper.allowTouchMove = true));
+      promiseList.push(() => { swiper.allowTouchMove = true; return; });
     }
-    promiseList.push(() => setCurrentArticle());
-    promiseList.push(() => l.initArticleLinkActive());
+    promiseList.push(setCurrentArticle);
+    promiseList.push(initArticleLinkActive);
 
     promiseList.push(() => currentSlide.focus());
 
@@ -167,23 +169,4 @@ function linkPageRender(mode: PageMode): PromiseFunc {
   }
 }
 
-function parseSearchQuery({ v, c }: Param): Param {
-  const { search } = v.href;
-
-  const searchParams = new URLSearchParams(search);
-
-  searchParams.delete('p');
-  searchParams.delete('near');
-  searchParams.delete('after');
-  searchParams.delete('before');
-  searchParams.delete('tz');
-
-  c.searchQuery = searchParams.toString();
-  c.searchQuery = c.searchQuery ? `?${c.searchQuery}` : '';
-
-  return { v, c } as Param
-}
-
-
-
-export { initPage, nextLinkForce, toLink, parseSearchQuery }
+export { initPage, nextLinkForce, toLink }

@@ -12,6 +12,10 @@ class Config implements ConfigImpl {
     this.loadConfig()
   }
 
+  resetArticleList() {
+    this.articleList = []
+  }
+
   isSlideMode(mode: SlideMode): boolean {
     return this.slideMode === mode;
   }
@@ -40,7 +44,6 @@ class Config implements ConfigImpl {
     localStorage.setItem('slideMode', this.slideMode);
     localStorage.setItem('searchQuery', this.searchQuery);
   }
-
 }
 
 export { Config }

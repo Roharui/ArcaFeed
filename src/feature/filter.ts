@@ -1,11 +1,11 @@
 
 import $ from 'jquery'
 
-import type { Param } from "@/vault";
+import type { Config, Vault } from "@/vault";
 
 import { getArticleId } from "@/utils/regex";
 
-function filterLink(rows: JQuery<HTMLElement>): string[] {
+function filterLink(rows: JQuery<HTMLElement>, v: Vault, c: Config): string[] {
   const { articleList, articleFilterConfig } = c;
   const { href } = v
 
@@ -45,4 +45,4 @@ function filterLink(rows: JQuery<HTMLElement>): string[] {
     );
 }
 
-export { filterLink, parseSearchQuery };
+export { filterLink };

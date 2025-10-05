@@ -15,6 +15,8 @@ class Vault {
   swiper: Swiper | null = null;
   currentSlide: HTMLElement | undefined;
 
+  updateFn: () => void = () => { };
+
   isCurrentMode(mode: HrefImpl['mode']): boolean {
     return this.href.mode === mode;
   }

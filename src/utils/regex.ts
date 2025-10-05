@@ -17,6 +17,8 @@ const parseContentRegex =
   /\<div class=\"topbar-area.+\<\/a\>\<\/span\>.\s+\<\/div\>|<aside class="sidebar.+<\/aside>|<footer class="footer">.+<\/footer>|<ul class="nav-.+<\/ul>|<div id="toast-box.+<\/div>|<div id="boardBtns">.+clearfix">.+<\/div>|<form action="\/b\/.+(<\/option>.\s+<\/select>).(\s+<\/div>){2}|<div class="included-article-list.+<\/small>.+<\/p>.+<\/div>/gs;
 const titleContentRegex = /(?<=title\>).+-.+(?=\<\/title)/s;
 
+// == FUNCTION ==
+
 function getCurrentHTMLTitle(responseText: string): string {
   const content = responseText.match(titleContentRegex);
 
@@ -37,7 +39,6 @@ function parseContent(responseText: string): string {
 
   return html;
 }
-
 
 function getArticleId(href: string): string {
   const articleIdMatch = href.match(articelIdRegex)

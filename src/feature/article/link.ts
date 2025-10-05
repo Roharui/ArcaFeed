@@ -1,104 +1,99 @@
 
 import $ from 'jquery';
 
-import type { Vault, Config } from '@/vault';
+import type { Param } from '@/vault';
 
-import { FetchManager } from './fetch';
 import { getCurrentSlide } from '../current';
-import type { PromiseManager } from '@/core/promise';
+import type { PromiseFunc } from '@/types';
+import { filterLink } from '../filter';
+import { fetchFromCurrentSlide } from './fetch';
+import { parseSearchQuery } from '../search';
 
-class LinkManager extends FetchManager {
-  p: PromiseManager;
-  constructor(v: Vault, c: Config, p: PromiseManager) {
-    super(v, c);
-    this.p = p;
+
+function initLink({ v }: Param): PromiseFunc[] {
+  const promiseFuncList = []
+
+  if (v.isCurrentMode('CHANNEL')) {
+    promiseFuncList.push(({ c }: Param) => c.resetArticleList());
+    promiseFuncList.push(parseSearchQuery);
+    promiseFuncList.push(initArticleLinkChannel);
+  }
+  if (v.isCurrentMode('ARTICLE')) {
+    promiseFuncList.push(initArticleLinkActive);
   }
 
-  init(v?: Vault): Vault {
-    this.v = v || this.v;
-
-    if (this.v.isCurrentMode('CHANNEL')) {
-      this.c.articleList = [];
-      this.parseSearchQuery();
-      this.initArticleLinkChannel();
-    }
-    if (this.v.isCurrentMode('ARTICLE')) {
-      this.initArticleLinkActive();
-    }
-
-    return this.v;
-  }
-
-  initArticleLinkChannel() {
-    const totalLinks = $(
-      'div.article-list > div.list-table.table > a.vrow.column',
-    ).not('.notice');
-
-    const filteredLinks = this.filterLink(totalLinks);
-
-
-    if (filteredLinks.length === 0) {
-      return;
-    }
-
-    this.c.articleList = filteredLinks;
-    this.v.nextArticleUrl = filteredLinks[0] || '';
-  }
-
-  initArticleLinkActive() {
-    let { href } = this.v;
-    const { articleList } = this.c;
-
-    console.log(this.v)
-    console.log(this.v.currentSlide)
-
-    const $html = $(this.v.currentSlide || getCurrentSlide(this.v)) || $('.root-container');
-
-    if (this.c.articleList.length === 0) {
-      return;
-    }
-
-    const currentArticleId =
-      $html.attr('data-article-id')?.trim() || href.articleId;
-
-    let currentArticleIndex = this.c.articleList.findIndex((ele: string) =>
-      ele.includes(currentArticleId),
-    );
-
-    if (currentArticleIndex === -1) {
-      return;
-    }
-
-    if (
-      this.c.articleList.length > 0 &&
-      currentArticleIndex >= 0 &&
-      currentArticleIndex !== this.c.articleList.length - 1 &&
-      currentArticleIndex !== 0
-    ) {
-      this.v.nextArticleUrl =
-        this.c.articleList[currentArticleIndex + 1] || null;
-      this.v.prevArticleUrl =
-        this.c.articleList[currentArticleIndex - 1] || null;
-
-      return { ...this.v, href } as Vault;
-    }
-
-    if (currentArticleIndex === this.c.articleList.length - 1) {
-      this.v.nextArticleUrl = null;
-      this.v.prevArticleUrl = articleList[currentArticleIndex - 1] || null;
-
-      this.p.addPromiseCurrent(this.fetchFromCurrentSlide.bind(this, 'NEXT'));
-    } else if (currentArticleIndex === 0) {
-      this.v.prevArticleUrl = null;
-      this.v.nextArticleUrl = articleList[currentArticleIndex + 1] || null;
-
-      this.p.addPromiseCurrent(this.fetchFromCurrentSlide.bind(this, 'PREV'));
-    }
-
-    href = { ...href, articleId: currentArticleId };
-    return { ...this.v, href } as Vault;
-  }
-
+  return promiseFuncList;
 }
 
-export { LinkManager };
+function initArticleLinkChannel({ v, c }: Param): Param | void {
+  const totalLinks = $(
+    'div.article-list > div.list-table.table > a.vrow.column',
+  ).not('.notice');
+
+  const filteredLinks = filterLink(totalLinks, v, c);
+
+
+  if (filteredLinks.length === 0) {
+    return;
+  }
+
+  c.articleList = filteredLinks;
+  v.nextArticleUrl = filteredLinks[0] || '';
+
+  return { v, c }
+}
+
+function initArticleLinkActive({ v, c }: Param): PromiseFunc[] | void | Param {
+  let { href } = v;
+  const { articleList } = c;
+
+  const $html = $(v.currentSlide || getCurrentSlide(v)) || $('.root-container');
+
+  if (c.articleList.length === 0) {
+    return;
+  }
+
+  const currentArticleId =
+    $html.attr('data-article-id')?.trim() || href.articleId;
+
+  let currentArticleIndex = c.articleList.findIndex((ele: string) =>
+    ele.includes(currentArticleId),
+  );
+
+  if (currentArticleIndex === -1) {
+    return;
+  }
+
+  if (
+    c.articleList.length > 0 &&
+    currentArticleIndex >= 0 &&
+    currentArticleIndex !== c.articleList.length - 1 &&
+    currentArticleIndex !== 0
+  ) {
+    v.nextArticleUrl =
+      c.articleList[currentArticleIndex + 1] || null;
+    v.prevArticleUrl =
+      c.articleList[currentArticleIndex - 1] || null;
+
+    return { v, c };
+  }
+
+  href = { ...href, articleId: currentArticleId };
+  v.href = href;
+
+  if (currentArticleIndex === c.articleList.length - 1) {
+    v.nextArticleUrl = null;
+    v.prevArticleUrl = articleList[currentArticleIndex - 1] || null;
+
+    return [() => ({ v, c }), fetchFromCurrentSlide('NEXT')]
+  } else if (currentArticleIndex === 0) {
+    v.prevArticleUrl = null;
+    v.nextArticleUrl = articleList[currentArticleIndex + 1] || null;
+
+    return [() => ({ v, c }), fetchFromCurrentSlide('PREV')]
+  }
+
+  return { v, c };
+}
+
+export { initLink, initArticleLinkActive, initArticleLinkChannel };

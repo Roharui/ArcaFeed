@@ -10,7 +10,7 @@ import type { PageMode, PromiseFunc } from '@/types';
 import type { Param } from '@/vault';
 
 // 현재 슬라이드에서 게시글 링크를 검색
-function fetchFromCurrentSlide(mode: PageMode) {
+function fetchFromCurrentSlide(mode: PageMode): PromiseFunc {
   return async ({ v, c }: Param): Promise<void | PromiseFunc> => {
     const { searchQuery } = c;
     const currentSlide = $(v.currentSlide || getCurrentSlide(v))
@@ -31,7 +31,7 @@ function fetchFromCurrentSlide(mode: PageMode) {
   }
 }
 
-function parseFromArticleList(mode: PageMode, $html: JQuery<HTMLElement>) {
+function parseFromArticleList(mode: PageMode, $html: JQuery<HTMLElement>): PromiseFunc {
   return async ({ v, c }: Param): Promise<void | PromiseFunc> => {
 
     const { href } = v;
@@ -51,7 +51,7 @@ function parseFromArticleList(mode: PageMode, $html: JQuery<HTMLElement>) {
       )
       .not('.notice');
 
-    const filteredLinks = filterLink(totalLinks);
+    const filteredLinks = filterLink(totalLinks, v, c);
 
     if (filteredLinks.length === 0) {
       return fetchLoop(mode, $html);
@@ -92,14 +92,14 @@ function parseFromArticleList(mode: PageMode, $html: JQuery<HTMLElement>) {
     } else if (mode === 'NEXT') {
       c.articleList.push(...articleList);
       v.nextArticleUrl = articleList[0] || '';
-    } else {
+    } else if (mode === 'PREV') {
       c.articleList.unshift(...articleList);
       v.prevArticleUrl = articleList.slice(-1)[0] || '';
     }
   }
 }
 
-function fetchLoop(mode: PageMode, $slide?: JQuery<HTMLElement>) {
+function fetchLoop(mode: PageMode, $slide?: JQuery<HTMLElement>): PromiseFunc {
   return async ({ v, c }: Param): Promise<void> => {
 
     let filteredLinks: string[] = [];
@@ -130,7 +130,7 @@ function fetchLoop(mode: PageMode, $slide?: JQuery<HTMLElement>) {
         .find('div.article-list > div.list-table.table > a.vrow.column')
         .not('.notice');
 
-      filteredLinks = filterLink(totalLinks);
+      filteredLinks = filterLink(totalLinks, v, c);
 
       if (filteredLinks.length > 0) {
         url = mode === 'NEXT' ? filteredLinks[0] : filteredLinks.slice(-1)[0];

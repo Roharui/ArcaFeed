@@ -1,4 +1,4 @@
-import type { PromiseFunc, PromiseFuncResult } from "@/types";
+import type { PromiseFuncResult } from "@/types";
 
 function isString(str: string | null | undefined): str is string {
   return !!str;
@@ -48,17 +48,11 @@ function checkNotNull<T>(obj: T | null | undefined): T {
 }
 
 function isPromiseFuncResult(r: PromiseFuncResult): 'Function' | 'FunctionArray' | 'Param' | 'void' {
-  if (!isNotNull(r))
-    return 'void';
-
   if (typeof r === 'function')
     return 'Function'
 
-  if (typeof r === 'object')
-    return 'Param';
-
   if (Array.isArray(r)) {
-    if (r.length > 0) {
+    if (r.length === 0) {
       return 'void';
     }
 
@@ -66,6 +60,12 @@ function isPromiseFuncResult(r: PromiseFuncResult): 'Function' | 'FunctionArray'
       return 'FunctionArray'
     }
   }
+
+  if (r === undefined || r === null)
+    return 'void';
+
+  if (typeof r === 'object')
+    return 'Param';
 
   throw Error('PromiseFuncResult is Not Availe : ' + r)
 }

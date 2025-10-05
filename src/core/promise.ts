@@ -7,10 +7,10 @@ import { isPromiseFuncResult } from '@/utils/type';
 import type { Param } from '@/vault';
 
 export class PromiseManager extends Base {
-  promiseListCurrent: PromiseFunc[] = [];
-  promiseList: PromiseFunc[][] = [];
+  private promiseListCurrent: PromiseFunc[] = [];
+  private promiseList: PromiseFunc[][] = [];
 
-  isActive = false;
+  private isActive = false;
 
   constructor() {
     super();
@@ -33,7 +33,6 @@ export class PromiseManager extends Base {
 
         try {
           const result: PromiseFuncResult = await promiseFunc(this.p);
-
           switch (isPromiseFuncResult(result)) {
             case 'void':
               break;
@@ -44,9 +43,18 @@ export class PromiseManager extends Base {
               this.addPromiseCurrent(...result as PromiseFunc[]);
               break;
             case 'Param':
-              this.p = result as Param;
+              this.p = Object.assign(this.p, result as Param);
               break;
           }
+
+          console.log("PromiseFunc : ")
+          console.log(promiseFunc)
+          console.log("Result : ")
+          console.log(result)
+          console.log("Result Type : " + isPromiseFuncResult(result));
+          console.log("Current Param : ")
+          console.log(this.p)
+
         } catch (e) {
           console.log(e);
 
@@ -64,6 +72,9 @@ export class PromiseManager extends Base {
       console.log('Promise End');
     }
     console.log('Promise Init End');
+
+    console.log('Save Config Finish')
+    this.p.c.saveConfig();
 
     this.isActive = false;
   }

@@ -4,10 +4,10 @@ class Base {
   p: Param;
 
   constructor() {
-    this.p = {
-      v: new Vault(),
-      c: new Config(),
-    }
+    const v = new Vault();
+    const c = new Config();
+
+    this.p = { v, c }
   }
 }
 
