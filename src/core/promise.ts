@@ -1,18 +1,23 @@
-import type { PromiseFunc } from '@/types';
 
+import { Base } from './base';
 import { sleep } from '@/utils/sleep';
-import { Vault } from '@/vault';
 
-export class PromiseManager {
+import type { PromiseFunc, PromiseFuncResult } from '@/types';
+import { isPromiseFuncResult } from '@/utils/type';
+import type { Param } from '@/vault';
+
+export class PromiseManager extends Base {
   promiseListCurrent: PromiseFunc[] = [];
   promiseList: PromiseFunc[][] = [];
 
   isActive = false;
 
-  async initPromise(_vault?: Vault): Promise<Vault> {
-    console.log('Promise Init Start');
+  constructor() {
+    super();
+  }
 
-    let vault = _vault || (new Vault() as Vault);
+  async initPromise(): Promise<void> {
+    console.log('Promise Init Start');
 
     this.isActive = true;
 
@@ -27,7 +32,21 @@ export class PromiseManager {
         if (!promiseFunc) continue;
 
         try {
-          vault = await promiseFunc(vault) || vault;
+          const result: PromiseFuncResult = await promiseFunc(this.p);
+
+          switch (isPromiseFuncResult(result)) {
+            case 'void':
+              break;
+            case 'Function':
+              this.addPromiseCurrent(result as PromiseFunc);
+              break;
+            case 'FunctionArray':
+              this.addPromiseCurrent(...result as PromiseFunc[]);
+              break;
+            case 'Param':
+              this.p = result as Param;
+              break;
+          }
         } catch (e) {
           console.log(e);
 
@@ -47,8 +66,6 @@ export class PromiseManager {
     console.log('Promise Init End');
 
     this.isActive = false;
-
-    return vault;
   }
 
   addPromiseCurrent(...promiseFuncList: PromiseFunc[]) {

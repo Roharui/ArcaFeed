@@ -1,3 +1,4 @@
+import type { PromiseFunc, PromiseFuncResult } from "@/types";
 
 function isString(str: string | null | undefined): str is string {
   return !!str;
@@ -34,10 +35,39 @@ function getRegexMatchByIndexTry(match: RegExpMatchArray | null, index: number, 
   }
 }
 
-
-function isNotNull<T>(obj: T | null | undefined): T {
-  if (!obj) throw Error("this Object is Null");
-  return obj;
+function isNotNull<T>(obj: T | null | undefined): obj is T {
+  if (!obj) return false;
+  return true;
 }
 
-export { isString, getRegexMatchByIndex, getRegexMatchByIndexTry, isNotNull }
+function checkNotNull<T>(obj: T | null | undefined): T {
+  if (isNotNull(obj))
+    return obj;
+
+  throw Error("this Object is Null");
+}
+
+function isPromiseFuncResult(r: PromiseFuncResult): 'Function' | 'FunctionArray' | 'Param' | 'void' {
+  if (!isNotNull(r))
+    return 'void';
+
+  if (typeof r === 'function')
+    return 'Function'
+
+  if (typeof r === 'object')
+    return 'Param';
+
+  if (Array.isArray(r)) {
+    if (r.length > 0) {
+      return 'void';
+    }
+
+    if (typeof r?.[0] === 'function') {
+      return 'FunctionArray'
+    }
+  }
+
+  throw Error('PromiseFuncResult is Not Availe : ' + r)
+}
+
+export { isString, isNotNull, checkNotNull, isPromiseFuncResult, getRegexMatchByIndex, getRegexMatchByIndexTry }

@@ -1,26 +1,19 @@
 
 import $ from 'jquery'
 
-import { Base } from '@/feature/base'
-import type { Config, Vault } from '@/vault'
-import type { PageManager } from './swiper'
+import type { Param } from '@/vault';
 
-class EventManager extends Base {
-  p: PageManager;
+function initEvent({ v }: Param): void {
 
-  constructor(v: Vault, c: Config, p: PageManager) {
-    super(v, c)
-    this.p = p;
-  }
+  $(document).on('keydown', (e) => {
+    // TODO: add Next Link Force
 
-  init(): void {
-    $(document).on('keydown', (e) => {
-      if (e.key === 'ArrowRight' && this.v.isCurrentMode('CHANNEL')) this.p.nextLinkForce();
-      else if (e.key === 'ArrowRight' && this.v.isCurrentMode('ARTICLE')) this.v.swiper?.slideNext();
-      else if (e.key === 'ArrowLeft' && this.v.isCurrentMode('ARTICLE')) this.v.swiper?.slidePrev()
-    })
-  }
+    //if (e.key === 'ArrowRight' && v.isCurrentMode('CHANNEL')) nextLinkForce();
+    // else 
+    if (e.key === 'ArrowRight' && v.isCurrentMode('ARTICLE')) v.swiper?.slideNext();
+    else if (e.key === 'ArrowLeft' && v.isCurrentMode('ARTICLE')) v.swiper?.slidePrev()
+  })
 
 }
 
-export { EventManager }
+export { initEvent }

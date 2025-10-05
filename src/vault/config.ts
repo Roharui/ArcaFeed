@@ -16,10 +16,6 @@ class Config implements ConfigImpl {
     return this.slideMode === mode;
   }
 
-  toggleSlideMode(): void {
-    this.slideMode = this.slideMode === 'REFRESH' ? 'RENDER' : 'REFRESH';
-  }
-
   loadConfig(): void {
     const articleFilterConfigStr = localStorage.getItem('articleFilterConfig');
     this.articleFilterConfig = articleFilterConfigStr

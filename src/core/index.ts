@@ -1,41 +1,19 @@
 import { PromiseManager } from '@/core/promise';
+import { initEvent } from '@/feature/event';
+import { checkPageMode } from '@/utils/regex';
 
-import { Config, Vault } from '@/vault';
-
-import { PageManager } from '@/feature/swiper';
-import { LinkManager } from '@/feature/article';
-import { EventManager } from '@/feature/event';
-
-class Helper {
-  vault: Vault;
-  config: Config;
-
-  promise: PromiseManager;
-  link: LinkManager;
-  page: PageManager;
-  event: EventManager;
-
+class Helper extends PromiseManager {
   constructor() {
-    this.vault = new Vault();
-    this.config = new Config();
-
-    this.promise = new PromiseManager();
-
-    this.link = new LinkManager(this.vault, this.config, this.promise);
-    this.page = new PageManager(this.vault, this.config, this.link, this.promise)
-    this.event = new EventManager(this.vault, this.config, this.page);
+    super();
   }
 
   async init() {
-    this.promise.addNextPromise([
-      () => this.page.initSlide(),
-      () => this.page.initPage(),
-      () => this.link.init(),
-      () => this.event.init(),
-      () => this.config.saveConfig()
+    this.addNextPromise([
+      checkPageMode,
+      initEvent
     ]);
 
-    this.vault = await this.promise.initPromise(this.vault);
+    await this.initPromise();
   }
 }
 

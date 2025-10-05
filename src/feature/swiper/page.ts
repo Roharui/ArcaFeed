@@ -2,77 +2,66 @@
 
 import $ from 'jquery'
 
-import { SlideManager } from '@/feature/swiper/slide';
-
-import type { LinkManager } from '@/feature/article';
-import type { PromiseManager } from '@/core/promise';
-
 import { getCurrentSlide } from '@/feature/current';
-import { getArticleId, getCurrentHTMLTitle, parseContent } from '@/feature/regex';
+import { getArticleId, getCurrentHTMLTitle, parseContent } from '@/utils/regex';
 
-import type { PageMode } from "@/types";
-import type { Config, Vault } from "@/vault";
+import type { PageMode, PromiseFunc } from "@/types";
+import type { Param, Vault } from "@/vault";
 
-import { isNotNull, isString } from "@/utils/type";
+import { checkNotNull, isNotNull, isString } from "@/utils/type";
 import { fetchUrl } from '@/utils/fetch';
 import { sleep } from '@/utils/sleep';
 
-class PageManager extends SlideManager {
-  l: LinkManager;
-  p: PromiseManager;
+// Init
+function initPage({ v }: Param): void {
+  if (!v.isCurrentMode('ARTICLE')) return;
 
-  constructor(v: Vault, c: Config, l: LinkManager, p: PromiseManager) {
-    super(v, c);
-    this.l = l;
-    this.p = p;
+  const { swiper: _swiper } = v;
+  const swiper = checkNotNull(_swiper);
+
+  swiper.on('slideNextTransitionEnd', () => toLink('NEXT'));
+  swiper.on('slidePrevTransitionEnd', () => toLink('PREV'));
+
+  return;
+}
+
+// For Event
+function nextLinkForce({ v }: Param) {
+  if (!isString(v.nextArticleUrl)) {
+    throw Error("No Next Article Url")
   }
+  window.location.href = v.nextArticleUrl;
+}
 
-  initPage(v?: Vault): Vault {
-    this.v = v || this.v;
-
-    if (!this.v.isCurrentMode('ARTICLE')) return this.v;
-
-    const { swiper: _swiper } = this.v;
-    const swiper = isNotNull(_swiper);
-
-    swiper.on('slideNextTransitionEnd', () => this.toLink('NEXT'));
-    swiper.on('slidePrevTransitionEnd', () => this.toLink('PREV'));
-
-    return this.v;
-  }
-
-  nextLinkForce() {
-    if (!isString(this.v.nextArticleUrl)) {
-      throw Error("No Next Article Url")
-    }
-    window.location.href = this.v.nextArticleUrl;
-  }
-
-  toLink(mode: PageMode) {
-    const { nextArticleUrl, prevArticleUrl } = this.v;
+// For Event
+function toLink(mode: PageMode): PromiseFunc {
+  return ({ v, c }: Param) => {
+    const { nextArticleUrl, prevArticleUrl } = v;
     const url = mode === 'NEXT' ? nextArticleUrl : prevArticleUrl;
 
     if (!isString(url))
       return;
 
-    if (this.c.isSlideMode('REFRESH'))
+    if (c.isSlideMode('REFRESH'))
       window.location.replace(url);
-    else this.pageRender(mode);
+    else pageRender(mode);
   }
+}
 
-  pageRender(mode: PageMode) {
-    if (!isString(mode === 'NEXT' ? this.v.nextArticleUrl : this.v.prevArticleUrl)) {
-      return []
+function pageRender(mode: PageMode): PromiseFunc {
+  return ({ v }: Param): PromiseFunc[] => {
+    if (!isString(mode === 'NEXT' ? v.nextArticleUrl : v.prevArticleUrl)) {
+      return [];
     }
-    if (!this.v.swiper) {
+    if (!v.swiper) {
       return [];
     }
 
-    const { swiper } = this.v;
+    const { swiper } = v;
     const { slides, activeIndex } = swiper;
 
     const promiseList = [];
-    const currentSlide = this.v.currentSlide || isNotNull(slides[activeIndex])
+    const currentSlide = v.currentSlide || checkNotNull(slides[activeIndex])
 
     console.log(slides)
     console.log(slides.length)
@@ -84,25 +73,27 @@ class PageManager extends SlideManager {
     ) {
       promiseList.push(() => swiper.disable());
       promiseList.push(() => (swiper.allowTouchMove = false));
-      promiseList.push(() => this.setCurrentSlide());
-      promiseList.push(() => this.alertPageIsFetching(mode));
-      promiseList.push(() => this.linkPageRender(mode));
-      promiseList.push(() => this.showCurrentSlide());
+      promiseList.push(setCurrentArticle);
+      promiseList.push(alertPageIsFetching(mode));
+      promiseList.push(linkPageRender(mode));
+      promiseList.push(showCurrentSlide);
       promiseList.push(() => swiper.enable());
-      promiseList.push(() => this.removeSlidePromise(mode));
-      promiseList.push(() => this.addNewEmptySlidePromise(mode));
+      promiseList.push(removeSlidePromise(mode));
+      promiseList.push(addNewEmptySlidePromise(mode));
       promiseList.push(() => (swiper.allowTouchMove = true));
     }
-    promiseList.push(() => this.setCurrentArticle());
-    promiseList.push(() => this.l.initArticleLinkActive());
+    promiseList.push(() => setCurrentArticle());
+    promiseList.push(() => l.initArticleLinkActive());
 
     promiseList.push(() => currentSlide.focus());
 
-    this.p.addNextPromise(promiseList);
-    this.p.initPromise(this.v)
+    return promiseList;
   }
-  alertPageIsFetching(mode: PageMode) {
-    $(this.v.currentSlide || getCurrentSlide(this.v))
+}
+
+function alertPageIsFetching(mode: PageMode) {
+  return ({ v }: Param) => {
+    $(v.currentSlide || getCurrentSlide(v))
       .find('.loading-info')
       .append(
         $('<div>').text(
@@ -110,34 +101,36 @@ class PageManager extends SlideManager {
         ),
       );
   }
+}
 
-  setCurrentArticle() {
-    const currentSlide = $(this.v.currentSlide || getCurrentSlide(this.v))
+function setCurrentArticle({ v }: Param) {
+  const currentSlide = $(v.currentSlide || getCurrentSlide(v))
 
-    const currentArticleUrl = currentSlide.attr('data-article-href');
-    const currentArticleTitle = isNotNull(currentSlide.attr('data-article-title'));
+  const currentArticleUrl = currentSlide.attr('data-article-href');
+  const currentArticleTitle = checkNotNull(currentSlide.attr('data-article-title'));
 
-    document.title = currentArticleTitle;
-    window.history.pushState({}, currentArticleTitle, currentArticleUrl);
-  }
+  document.title = currentArticleTitle;
+  window.history.pushState({}, currentArticleTitle, currentArticleUrl);
+}
 
-  showCurrentSlide() {
-    const currentSlide = $(this.v.currentSlide || getCurrentSlide(this.v))
-    currentSlide.find('.loader-container').remove();
-    currentSlide.removeClass('slide-empty');
-  }
+function showCurrentSlide({ v }: Param) {
+  const currentSlide = $(v.currentSlide || getCurrentSlide(v))
+  currentSlide.find('.loader-container').remove();
+  currentSlide.removeClass('slide-empty');
+}
 
-  // 로직 정리
-  // 1. 다음 슬라이드가 빈 슬라이드면 다음 글 불러오기
-  // 2. 다음 글을 불러온 후 빈 슬라이드에 추가 (display: none)
-  // 3. 블러온 글에 대한 hider 처리 진행
-  // 4. 슬라이드 갱신
-  async linkPageRender(mode: PageMode) {
+// 로직 정리
+// 1. 다음 슬라이드가 빈 슬라이드면 다음 글 불러오기
+// 2. 다음 글을 불러온 후 빈 슬라이드에 추가 (display: none)
+// 3. 블러온 글에 대한 hider 처리 진행
+// 4. 슬라이드 갱신
+function linkPageRender(mode: PageMode): PromiseFunc {
+  return async ({ v }: Param) => {
     let res;
 
-    const { nextArticleUrl, prevArticleUrl } = this.v;
+    const { nextArticleUrl, prevArticleUrl } = v;
 
-    const url = isNotNull(mode === 'NEXT' ? nextArticleUrl : prevArticleUrl)
+    const url = checkNotNull(mode === 'NEXT' ? nextArticleUrl : prevArticleUrl)
 
     while (!res) {
       res = await fetchUrl(url);
@@ -148,7 +141,7 @@ class PageManager extends SlideManager {
           return;
         }
 
-        $(getCurrentSlide(this.v))
+        $(getCurrentSlide(v))
           .find('.loading-info')
           .append($('<div>').text('글 불러오기 실패'));
 
@@ -164,7 +157,7 @@ class PageManager extends SlideManager {
 
     const currentArticleId = getArticleId(url);
 
-    const currentSlide = $(this.v.currentSlide || getCurrentSlide(this.v))
+    const currentSlide = $(v.currentSlide || getCurrentSlide(v))
 
     currentSlide.append($article);
 
@@ -174,4 +167,23 @@ class PageManager extends SlideManager {
   }
 }
 
-export { PageManager }
+function parseSearchQuery({ v, c }: Param): Param {
+  const { search } = v.href;
+
+  const searchParams = new URLSearchParams(search);
+
+  searchParams.delete('p');
+  searchParams.delete('near');
+  searchParams.delete('after');
+  searchParams.delete('before');
+  searchParams.delete('tz');
+
+  c.searchQuery = searchParams.toString();
+  c.searchQuery = c.searchQuery ? `?${c.searchQuery}` : '';
+
+  return { v, c } as Param
+}
+
+
+
+export { initPage, nextLinkForce, toLink, parseSearchQuery }

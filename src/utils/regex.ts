@@ -1,6 +1,7 @@
-import type { HrefImpl, PromiseFunc } from '@/types';
+import type { HrefImpl } from '@/types';
+import type { Param } from '@/vault';
+
 import { getRegexMatchByIndex, getRegexMatchByIndexTry } from '@/utils/type';
-import type { Vault } from '@/vault';
 
 const homePageRegex = /arca\.live\/?$/;
 const channelPageRegex = /b\/(.+)/;
@@ -81,14 +82,10 @@ function parseHref(href?: string) {
   return hrefObj;
 }
 
-function checkPageMode(href?: string): PromiseFunc {
-  return (v?: Vault) => {
-    if (v === undefined) return;
+function checkPageMode({ v }: Param): Param {
+  v.href = parseHref(window.location.href);
 
-    v.href = parseHref(href);
-
-    return v;
-  };
+  return { v } as Param;
 }
 
 export { checkPageMode, getArticleId, parseContent, parseHref, getCurrentHTMLTitle };

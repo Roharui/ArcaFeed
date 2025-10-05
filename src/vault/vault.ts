@@ -1,8 +1,6 @@
 import type { HrefImpl } from '@/types';
 import type { Swiper } from '@swiper/types';
 
-import { parseHref } from '@/feature/regex';
-
 class Vault {
   href: HrefImpl = {
     mode: 'OTHER',
@@ -16,10 +14,6 @@ class Vault {
 
   swiper: Swiper | null = null;
   currentSlide: HTMLElement | undefined;
-
-  constructor(href?: string) {
-    this.href = parseHref(href)
-  }
 
   isCurrentMode(mode: HrefImpl['mode']): boolean {
     return this.href.mode === mode;

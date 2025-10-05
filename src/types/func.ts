@@ -1,5 +1,6 @@
-import type { Vault } from '@/vault';
+import type { Param } from '@/vault';
 
-type PromiseFunc = (v?: Vault) => Promise<Vault | void> | Vault | void;
+type PromiseFuncResult = Param | void | PromiseFunc | PromiseFunc[]
+type PromiseFunc = (p: Param) => Promise<PromiseFuncResult> | PromiseFuncResult;
 
-export type { PromiseFunc };
+export type { PromiseFunc, PromiseFuncResult };

@@ -2,25 +2,21 @@
 
 import $ from 'jquery';
 
-import type { Config, Vault } from "@/vault";
-import { FilterManager } from "../filter";
-
 import { fetchUrl } from "@/utils/fetch";
 import { getCurrentSlide } from "../current";
+import { filterLink } from '../filter';
 
-export class FetchManager extends FilterManager {
+import type { PageMode, PromiseFunc } from '@/types';
+import type { Param } from '@/vault';
 
-  constructor(v: Vault, c: Config) {
-    super(v, c);
-  }
-
-  async fetchFromCurrentSlide(mode: string) {
-
-    const { searchQuery } = this.c;
-    const currentSlide = $(this.v.currentSlide || getCurrentSlide(this.v))
+// 현재 슬라이드에서 게시글 링크를 검색
+function fetchFromCurrentSlide(mode: PageMode) {
+  return async ({ v, c }: Param): Promise<void | PromiseFunc> => {
+    const { searchQuery } = c;
+    const currentSlide = $(v.currentSlide || getCurrentSlide(v))
 
     if (currentSlide === null) {
-      return;
+      return fetchLoop(mode);
     }
 
     const searchUrl =
@@ -31,16 +27,18 @@ export class FetchManager extends FilterManager {
     const res = await fetchUrl(searchUrl);
     const $html = $(res.responseText);
 
-    this.parseFromArticleList(mode, $html);
+    return parseFromArticleList(mode, $html);
   }
+}
 
-  parseFromArticleList(mode: string, $html: JQuery<HTMLElement>) {
+function parseFromArticleList(mode: PageMode, $html: JQuery<HTMLElement>) {
+  return async ({ v, c }: Param): Promise<void | PromiseFunc> => {
 
-    const { href } = this.v;
-    const currentSlide = $(this.v.currentSlide || getCurrentSlide(this.v))
+    const { href } = v;
+    const currentSlide = $(v.currentSlide || getCurrentSlide(v))
 
     if (currentSlide === null) {
-      return;
+      return fetchLoop(mode);
     }
 
     const $content = ($html || $('.root-container')).find(
@@ -53,17 +51,17 @@ export class FetchManager extends FilterManager {
       )
       .not('.notice');
 
-    const filteredLinks = this.filterLink(totalLinks);
+    const filteredLinks = filterLink(totalLinks);
 
     if (filteredLinks.length === 0) {
-      return;
+      return fetchLoop(mode, $html);
     }
 
     const currentArticleId =
       currentSlide.attr('data-article-id')?.trim() || href.articleId;
 
     if (!currentArticleId) {
-      return;
+      return fetchLoop(mode, $html);
     }
 
     const index = filteredLinks.findIndex((ele: string) =>
@@ -71,36 +69,39 @@ export class FetchManager extends FilterManager {
     );
 
     if (index === -1) {
-      return;
+      return fetchLoop(mode, $html);
     }
 
     let articleList: string[] = [];
 
-    if (mode !== 'all') {
+    if (mode !== 'ALL') {
       articleList =
-        mode === 'next'
+        mode === 'NEXT'
           ? filteredLinks.slice(index + 1)
           : filteredLinks.slice(0, index - 1);
     }
 
     if (articleList.length === 0) {
-      return;
+      return fetchLoop(mode, $html);
     }
 
-    if (mode === 'all') {
-      this.c.articleList = articleList;
-      this.v.nextArticleUrl = articleList[index + 1] || '';
-      this.v.prevArticleUrl = articleList[index - 1] || '';
-    } else if (mode === 'next') {
-      this.c.articleList.push(...articleList);
-      this.v.nextArticleUrl = articleList[0] || '';
+    if (mode === 'ALL') {
+      c.articleList = articleList;
+      v.nextArticleUrl = articleList[index + 1] || '';
+      v.prevArticleUrl = articleList[index - 1] || '';
+    } else if (mode === 'NEXT') {
+      c.articleList.push(...articleList);
+      v.nextArticleUrl = articleList[0] || '';
     } else {
-      this.c.articleList.unshift(...articleList);
-      this.v.prevArticleUrl = articleList.slice(-1)[0] || '';
+      c.articleList.unshift(...articleList);
+      v.prevArticleUrl = articleList.slice(-1)[0] || '';
     }
   }
+}
 
-  async fetchLoop(mode: string, $slide: JQuery<HTMLElement>) {
+function fetchLoop(mode: PageMode, $slide?: JQuery<HTMLElement>) {
+  return async ({ v, c }: Param): Promise<void> => {
+
     let filteredLinks: string[] = [];
     let url: string | undefined;
     let count: number = 0;
@@ -111,7 +112,7 @@ export class FetchManager extends FilterManager {
       const articlePage = $html.find('.page-item.active');
 
       const articlePageElement =
-        mode === 'next' ? articlePage.next() : articlePage.prev();
+        mode === 'NEXT' ? articlePage.next() : articlePage.prev();
 
       const articlePageUrl = articlePageElement.find('a').attr('href');
 
@@ -129,10 +130,10 @@ export class FetchManager extends FilterManager {
         .find('div.article-list > div.list-table.table > a.vrow.column')
         .not('.notice');
 
-      filteredLinks = this.filterLink(totalLinks);
+      filteredLinks = filterLink(totalLinks);
 
       if (filteredLinks.length > 0) {
-        url = mode === 'next' ? filteredLinks[0] : filteredLinks.slice(-1)[0];
+        url = mode === 'NEXT' ? filteredLinks[0] : filteredLinks.slice(-1)[0];
       }
 
       if (url !== null) {
@@ -140,12 +141,12 @@ export class FetchManager extends FilterManager {
           `Fetching Complete ${mode} article page: ${articlePageUrl}`,
         );
 
-        if (mode === 'prev') {
-          this.c.articleList.unshift(...filteredLinks);
-          this.v.prevArticleUrl = url || '';
+        if (mode === 'PREV') {
+          c.articleList.unshift(...filteredLinks);
+          v.prevArticleUrl = url || '';
         } else {
-          this.c.articleList.push(...filteredLinks);
-          this.v.nextArticleUrl = url || '';
+          c.articleList.push(...filteredLinks);
+          v.nextArticleUrl = url || '';
         }
 
         return;
@@ -157,6 +158,6 @@ export class FetchManager extends FilterManager {
       );
     }
   }
-
-
 }
+
+export { fetchFromCurrentSlide }

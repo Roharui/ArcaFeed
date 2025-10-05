@@ -8,7 +8,7 @@ import { FilterManager } from '@/feature/filter';
 
 import type { Vault, Config } from '@/vault';
 import type { SwiperOptions } from '@swiper/types';
-import { parseContent } from '../regex';
+import { parseContent } from '../../utils/regex';
 import { getCurrentSlide } from '../current';
 
 
