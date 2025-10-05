@@ -1,10 +1,10 @@
 
-import { Base } from './base';
-import { sleep } from '@/utils/sleep';
+import { Base } from '@/core/base';
 
 import type { PromiseFunc, PromiseFuncResult } from '@/types';
-import { isPromiseFuncResult } from '@/utils/type';
 import type { Param } from '@/vault';
+
+import { sleep, isPromiseFuncResult } from '@/utils';
 
 export class PromiseManager extends Base {
   private promiseListCurrent: PromiseFunc[] = [];

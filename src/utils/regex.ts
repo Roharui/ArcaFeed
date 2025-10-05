@@ -1,7 +1,7 @@
 import type { HrefImpl } from '@/types';
 import type { Param } from '@/vault';
 
-import { getRegexMatchByIndex, getRegexMatchByIndexTry } from '@/utils/type';
+import { getRegexMatchByIndex, getRegexMatchByIndexTry } from '@/utils';
 
 const homePageRegex = /arca\.live\/?$/;
 const channelPageRegex = /b\/(.+)/;

@@ -5,11 +5,13 @@ import $ from 'jquery'
 import Swiper from 'swiper';
 import { Manipulation } from 'swiper/modules';
 
-import type { Param } from '@/vault';
 import type { SwiperOptions } from '@swiper/types';
 
-import { parseContent } from '@/utils/regex';
-import { addNewEmptySlide, setCurrentSlide } from '@/feature/swiper/slide';
+import type { Param } from '@/vault';
+
+import { addNewEmptySlide, setCurrentSlide } from '@/feature/swiper';
+
+import { parseContent } from '@/utils';
 
 
 const swiperOptions: SwiperOptions = {
@@ -26,54 +28,48 @@ const swiperOptions: SwiperOptions = {
   modules: [Manipulation],
 };
 
-function initSwiper() {
-  return ({ v }: Param) => {
-    if (!v.isCurrentMode('ARTICLE')) return;
+function initSwiper({ v }: Param) {
+  if (!v.isCurrentMode('ARTICLE')) return;
 
-    return [
-      initArticleToSlide,
-      initSwiperObject,
-      ({ v }: Param) => addNewEmptySlide('NEXT', v),
-      ({ v }: Param) => addNewEmptySlide('PREV', v),
-      setCurrentSlide,
-    ]
-  }
+  return [
+    initArticleToSlide,
+    initSwiperObject,
+    ({ v }: Param) => addNewEmptySlide('NEXT', v),
+    ({ v }: Param) => addNewEmptySlide('PREV', v),
+    setCurrentSlide,
+  ]
 }
 
-function initSwiperObject() {
-  return ({ v }: Param) => {
-    v.swiper = new Swiper('.swiper', swiperOptions);
+function initSwiperObject({ v }: Param) {
+  v.swiper = new Swiper('.swiper', swiperOptions);
 
-    v.swiper.on('update', () => v.updateFn());
+  v.swiper.on('update', () => v.updateFn());
 
-    return {
-      v
-    } as Param;
-  }
+  return {
+    v
+  } as Param;
 }
 
-function initArticleToSlide() {
-  return ({ v }: Param) => {
-    const { articleId } = v.href;
+function initArticleToSlide({ v }: Param) {
+  const { articleId } = v.href;
 
-    $('<div>', { class: 'swiper' }).appendTo('body');
-    $('<div>', { class: 'swiper-wrapper' }).appendTo('.swiper');
+  $('<div>', { class: 'swiper' }).appendTo('body');
+  $('<div>', { class: 'swiper-wrapper' }).appendTo('.swiper');
 
-    const slide = $('<div>', { class: 'swiper-slide' });
+  const slide = $('<div>', { class: 'swiper-slide' });
 
-    slide.attr('data-article-id', articleId);
-    slide.attr('data-article-href', window.location.pathname);
-    slide.attr('data-article-title', document.title);
+  slide.attr('data-article-id', articleId);
+  slide.attr('data-article-href', window.location.pathname);
+  slide.attr('data-article-title', document.title);
 
-    const html = $('body').html()
-    const content = $(parseContent(html));
+  const html = $('body').html()
+  const content = $(parseContent(html));
 
-    $(".root-container").remove()
+  $(".root-container").remove()
 
-    content.appendTo(slide);
+  content.appendTo(slide);
 
-    slide.appendTo($(".swiper-wrapper"))
-  }
+  slide.appendTo($(".swiper-wrapper"))
 }
 
 export { initSwiper, initSwiperObject, initArticleToSlide }

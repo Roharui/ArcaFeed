@@ -3,8 +3,7 @@
 import $ from 'jquery';
 
 import { fetchUrl } from "@/utils/fetch";
-import { getCurrentSlide } from "../current";
-import { filterLink } from '../filter';
+import { getCurrentSlide, filterLink } from "@/feature";
 
 import type { PageMode, PromiseFunc } from '@/types';
 import type { Param } from '@/vault';

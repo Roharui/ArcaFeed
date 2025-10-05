@@ -2,13 +2,10 @@
 import $ from 'jquery';
 
 import type { Param } from '@/vault';
-
-import { getCurrentSlide } from '../current';
 import type { PromiseFunc } from '@/types';
-import { filterLink } from '../filter';
-import { fetchFromCurrentSlide } from './fetch';
-import { parseSearchQuery } from '../search';
 
+import { getCurrentSlide, filterLink, parseSearchQuery } from '@/feature';
+import { fetchFromCurrentSlide } from '@/feature/article';
 
 function initLink({ v }: Param): PromiseFunc[] {
   const promiseFuncList = []

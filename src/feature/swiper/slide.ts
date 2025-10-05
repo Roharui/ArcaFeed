@@ -4,13 +4,11 @@ import $ from 'jquery'
 import type { PageMode } from "@/types";
 import type { Param, Vault } from "@/vault";
 
-import { getCurrentSlide } from "../current";
+import { getCurrentSlide } from "@/feature";
 
-function setCurrentSlide() {
-  return ({ v }: Param): Param => {
-    v.currentSlide = getCurrentSlide(v)
-    return { v } as Param;
-  }
+function setCurrentSlide({ v }: Param): Param {
+  v.currentSlide = getCurrentSlide(v)
+  return { v } as Param;
 }
 
 function removeSlide(mode: PageMode, v: Vault) {

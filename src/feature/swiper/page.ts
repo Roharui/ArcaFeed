@@ -2,19 +2,16 @@
 
 import $ from 'jquery'
 
-import { getCurrentSlide } from '@/feature/current';
-import { getArticleId, getCurrentHTMLTitle, parseContent } from '@/utils/regex';
+import { Helper } from '@/core';
+
+import { getCurrentSlide } from '@/feature';
+import { addNewEmptySlidePromise, removeSlidePromise } from '@/feature/swiper';
+import { initArticleLinkActive } from '@/feature/article';
 
 import type { PageMode, PromiseFunc } from "@/types";
 import type { Param } from "@/vault";
 
-import { checkNotNull, isString } from "@/utils/type";
-import { fetchUrl } from '@/utils/fetch';
-import { sleep } from '@/utils/sleep';
-
-import { addNewEmptySlidePromise, removeSlidePromise } from './slide';
-import { initArticleLinkActive } from '../article';
-import { Helper } from '@/core';
+import { checkNotNull, isString, fetchUrl, sleep, getArticleId, getCurrentHTMLTitle, parseContent } from "@/utils";
 
 // Init
 function initPage({ v }: Param): void {

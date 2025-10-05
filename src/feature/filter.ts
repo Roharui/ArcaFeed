@@ -3,7 +3,7 @@ import $ from 'jquery'
 
 import type { Config, Vault } from "@/vault";
 
-import { getArticleId } from "@/utils/regex";
+import { getArticleId } from "@/utils";
 
 function filterLink(rows: JQuery<HTMLElement>, v: Vault, c: Config): string[] {
   const { articleList, articleFilterConfig } = c;

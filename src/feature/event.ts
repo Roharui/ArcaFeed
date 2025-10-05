@@ -3,7 +3,7 @@ import $ from 'jquery'
 
 import type { Param } from '@/vault';
 
-import { nextLinkForce } from './swiper';
+import { nextLinkForce } from '@/feature/swiper';
 
 function initEvent({ v }: Param): void {
   $(document).on('keydown', (e) => {

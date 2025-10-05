@@ -1,12 +1,12 @@
 import { PromiseManager } from '@/core/promise';
 
-import { checkPageMode } from '@/utils/regex';
-import { initSwiper } from '@/feature/swiper/swiper';
+import { initEvent } from '@/feature';
 import { initLink } from '@/feature/article';
-import { initPage } from '@/feature/swiper';
-import { initEvent } from '@/feature/event';
+import { initSwiper, initPage } from '@/feature/swiper';
 
 import type { PromiseFunc } from '@/types';
+
+import { checkPageMode } from '@/utils';
 
 class Helper extends PromiseManager {
   private static instance: Helper;

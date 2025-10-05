@@ -1,5 +1,5 @@
-import type { Config } from "./config"
-import type { Vault } from "./vault"
+import type { Config } from "@/vault"
+import type { Vault } from "@/vault"
 
 type Param = {
   v: Vault,

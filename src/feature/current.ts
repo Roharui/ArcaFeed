@@ -1,4 +1,4 @@
-import { checkNotNull } from "@/utils/type";
+import { checkNotNull } from "@/utils";
 
 import type { Vault } from "@/vault";
 
