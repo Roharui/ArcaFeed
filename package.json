@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "main": "main.js",
   "scripts": {
-    "build": "webpack --config webpack.config.prod.js",
+    "build": "webpack --config webpack.config.prod.js --mode production",
     "dev": "webpack --config webpack.config.dev.js --mode development --watch",
     "lint": "eslint . --ext .ts"
   },

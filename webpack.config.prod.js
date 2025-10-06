@@ -47,7 +47,7 @@ export default function(_env, _args) {
 
     plugins: [
       new MiniCssExtractPlugin({
-        output: "dist.min.css"
+        filename: "dist.min.css"
       })
     ],
   };
