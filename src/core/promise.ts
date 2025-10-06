@@ -33,6 +33,7 @@ export class PromiseManager extends Base {
 
         try {
           const result: PromiseFuncResult = await promiseFunc(this.p);
+
           switch (isPromiseFuncResult(result)) {
             case 'void':
               break;
@@ -54,6 +55,7 @@ export class PromiseManager extends Base {
           console.log("Result Type : " + isPromiseFuncResult(result));
           console.log("Current Param : ")
           console.log(this.p)
+          console.log("============================")
 
         } catch (e) {
           console.log(e);

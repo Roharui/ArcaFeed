@@ -36,13 +36,17 @@ function filterLink(rows: JQuery<HTMLElement>, v: Vault, c: Config): string[] {
   }
 
   return resultRows
-    .map((ele) => $(ele).attr('href') || '')
-    .map((href) => href.replace('https://arca.live', ''))
-    .map((href) => href.replace(/\?.+$/, ''))
-    .filter(
-      (href) =>
-        articleListString.indexOf(getArticleId(href)) === -1,
-    );
+    .reduce((prev: string[], ele: HTMLElement) => {
+      const r = $(ele).attr('href') as string;
+      if (!r) return prev;
+
+      const href = r.replace("https://arca.live", '').replace(/\?.+$/, '');
+
+      if (articleListString.indexOf(getArticleId(href)) > 0)
+        return prev;
+
+      return [...prev, href];
+    }, [])
 }
 
 export { filterLink };

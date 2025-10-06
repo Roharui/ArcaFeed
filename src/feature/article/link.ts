@@ -5,7 +5,7 @@ import type { Param } from '@/vault';
 import type { PromiseFunc } from '@/types';
 
 import { getCurrentSlide, filterLink, parseSearchQuery } from '@/feature';
-import { fetchFromCurrentSlide } from '@/feature/article';
+import { fetchArticle } from '@/feature/article';
 
 function initLink({ v }: Param): PromiseFunc[] {
   const promiseFuncList = []
@@ -22,16 +22,15 @@ function initLink({ v }: Param): PromiseFunc[] {
   return promiseFuncList;
 }
 
-function initArticleLinkChannel({ v, c }: Param): Param | void {
+function initArticleLinkChannel({ v, c }: Param): Param | PromiseFunc {
   const totalLinks = $(
     'div.article-list > div.list-table.table > a.vrow.column',
   ).not('.notice');
 
   const filteredLinks = filterLink(totalLinks, v, c);
 
-
   if (filteredLinks.length === 0) {
-    return;
+    return fetchArticle('NEXT');
   }
 
   c.articleList = filteredLinks;
@@ -40,14 +39,14 @@ function initArticleLinkChannel({ v, c }: Param): Param | void {
   return { v, c }
 }
 
-function initArticleLinkActive({ v, c }: Param): PromiseFunc[] | void | Param {
+function initArticleLinkActive({ v, c }: Param): Param | PromiseFunc | PromiseFunc[] {
   let { href } = v;
   const { articleList } = c;
 
   const $html = $(v.currentSlide || getCurrentSlide(v)) || $('.root-container');
 
   if (c.articleList.length === 0) {
-    return;
+    return fetchArticle('NEXT');
   }
 
   const currentArticleId =
@@ -58,7 +57,8 @@ function initArticleLinkActive({ v, c }: Param): PromiseFunc[] | void | Param {
   );
 
   if (currentArticleIndex === -1) {
-    return;
+    c.articleList.push(window.location.href);
+    return [() => ({ v, c }), fetchArticle('NEXT')]
   }
 
   if (
@@ -78,19 +78,22 @@ function initArticleLinkActive({ v, c }: Param): PromiseFunc[] | void | Param {
   href = { ...href, articleId: currentArticleId };
   v.href = href;
 
+  const promiseFuncList = [];
+
   if (currentArticleIndex === c.articleList.length - 1) {
-    v.nextArticleUrl = null;
     v.prevArticleUrl = articleList[currentArticleIndex - 1] || null;
 
-    return [() => ({ v, c }), fetchFromCurrentSlide('NEXT')]
-  } else if (currentArticleIndex === 0) {
-    v.prevArticleUrl = null;
+    promiseFuncList.push(fetchArticle('NEXT'));
+  }
+  if (currentArticleIndex === 0) {
     v.nextArticleUrl = articleList[currentArticleIndex + 1] || null;
 
-    return [() => ({ v, c }), fetchFromCurrentSlide('PREV')]
+    promiseFuncList.push(fetchArticle('PREV'));
   }
 
-  return { v, c };
+  promiseFuncList.unshift(() => ({ v, c }))
+
+  return promiseFuncList;
 }
 
 export { initLink, initArticleLinkActive, initArticleLinkChannel };

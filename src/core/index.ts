@@ -1,8 +1,8 @@
 import { PromiseManager } from '@/core/promise';
 
-import { initEvent } from '@/feature';
 import { initLink } from '@/feature/article';
 import { initSwiper, initPage } from '@/feature/swiper';
+import { initEvent, initModal, initButton } from '@/feature';
 
 import type { PromiseFunc } from '@/types';
 
@@ -22,14 +22,16 @@ class Helper extends PromiseManager {
       initSwiper,
       initLink,
       initPage,
-      initEvent
+      initEvent,
+      initButton,
+      initModal
     ]);
 
     await this.initPromise();
   }
 
-  static async runPromise(func: PromiseFunc) {
-    Helper.instance.addNextPromise([func]);
+  static async runPromise(...func: PromiseFunc[]) {
+    Helper.instance.addNextPromise(func);
     await Helper.instance.initPromise();
   }
 }

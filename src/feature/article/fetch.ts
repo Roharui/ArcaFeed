@@ -8,15 +8,19 @@ import { getCurrentSlide, filterLink } from "@/feature";
 import type { PageMode, PromiseFunc } from '@/types';
 import type { Param } from '@/vault';
 
+
+function fetchArticle(mode: PageMode): PromiseFunc {
+  return ({ v }: Param) => {
+    if (!v.swiper) return fetchLoop(mode, $(".root-container"));
+    return fetchFromCurrentSlide(mode);
+  }
+}
+
 // 현재 슬라이드에서 게시글 링크를 검색
 function fetchFromCurrentSlide(mode: PageMode): PromiseFunc {
-  return async ({ v, c }: Param): Promise<void | PromiseFunc> => {
+  return async ({ v, c }: Param): Promise<PromiseFunc> => {
     const { searchQuery } = c;
     const currentSlide = $(v.currentSlide || getCurrentSlide(v))
-
-    if (currentSlide === null) {
-      return fetchLoop(mode);
-    }
 
     const searchUrl =
       currentSlide.attr('data-article-href') + searchQuery;
@@ -26,23 +30,16 @@ function fetchFromCurrentSlide(mode: PageMode): PromiseFunc {
     const res = await fetchUrl(searchUrl);
     const $html = $(res.responseText);
 
-    return parseFromArticleList(mode, $html);
+    return fetchLoop(mode, $html);
   }
 }
 
 function parseFromArticleList(mode: PageMode, $html: JQuery<HTMLElement>): PromiseFunc {
-  return async ({ v, c }: Param): Promise<void | PromiseFunc> => {
-
+  return async ({ v, c }: Param): Promise<Param | PromiseFunc> => {
     const { href } = v;
     const currentSlide = $(v.currentSlide || getCurrentSlide(v))
 
-    if (currentSlide === null) {
-      return fetchLoop(mode);
-    }
-
-    const $content = ($html || $('.root-container')).find(
-      'div.included-article-list',
-    );
+    const $content = $html.find('div.included-article-list');
 
     const totalLinks = $content
       .find(
@@ -71,43 +68,33 @@ function parseFromArticleList(mode: PageMode, $html: JQuery<HTMLElement>): Promi
       return fetchLoop(mode, $html);
     }
 
-    let articleList: string[] = [];
-
-    if (mode !== 'ALL') {
-      articleList =
-        mode === 'NEXT'
-          ? filteredLinks.slice(index + 1)
-          : filteredLinks.slice(0, index - 1);
-    }
+    let articleList: string[] = mode === 'NEXT'
+      ? filteredLinks.slice(index + 1)
+      : filteredLinks.slice(0, index - 1);
 
     if (articleList.length === 0) {
       return fetchLoop(mode, $html);
     }
 
-    if (mode === 'ALL') {
-      c.articleList = articleList;
-      v.nextArticleUrl = articleList[index + 1] || '';
-      v.prevArticleUrl = articleList[index - 1] || '';
-    } else if (mode === 'NEXT') {
+    if (mode === 'NEXT') {
       c.articleList.push(...articleList);
       v.nextArticleUrl = articleList[0] || '';
     } else if (mode === 'PREV') {
       c.articleList.unshift(...articleList);
       v.prevArticleUrl = articleList.slice(-1)[0] || '';
     }
+
+    return { v, c } as Param;
   }
 }
 
-function fetchLoop(mode: PageMode, $slide?: JQuery<HTMLElement>): PromiseFunc {
-  return async ({ v, c }: Param): Promise<void> => {
-
+function fetchLoop(mode: PageMode, $html: JQuery<HTMLElement>): PromiseFunc {
+  return async ({ v, c }: Param): Promise<void | Param> => {
     let filteredLinks: string[] = [];
     let url: string | undefined;
     let count: number = 0;
 
-    let $html = $slide || $('.root-container');
-
-    while (url === null && count <= 10) {
+    while (!url && count <= 10) {
       const articlePage = $html.find('.page-item.active');
 
       const articlePageElement =
@@ -115,7 +102,10 @@ function fetchLoop(mode: PageMode, $slide?: JQuery<HTMLElement>): PromiseFunc {
 
       const articlePageUrl = articlePageElement.find('a').attr('href');
 
-      if (!articlePageUrl) return;
+      if (!articlePageUrl) {
+        console.log("NO ARTICLE PAGE LINK FOUND")
+        return;
+      }
 
       const searchUrl = articlePageUrl.replace('https://arca.live', '');
 
@@ -143,12 +133,12 @@ function fetchLoop(mode: PageMode, $slide?: JQuery<HTMLElement>): PromiseFunc {
         if (mode === 'PREV') {
           c.articleList.unshift(...filteredLinks);
           v.prevArticleUrl = url || '';
-        } else {
+        } else if (mode === 'NEXT') {
           c.articleList.push(...filteredLinks);
           v.nextArticleUrl = url || '';
         }
 
-        return;
+        return { v, c } as Param;
       }
       count += 1;
 
@@ -159,4 +149,4 @@ function fetchLoop(mode: PageMode, $slide?: JQuery<HTMLElement>): PromiseFunc {
   }
 }
 
-export { fetchFromCurrentSlide }
+export { fetchArticle }

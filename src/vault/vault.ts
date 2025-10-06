@@ -17,8 +17,8 @@ class Vault {
 
   updateFn: () => void = () => { };
 
-  isCurrentMode(mode: HrefImpl['mode']): boolean {
-    return this.href.mode === mode;
+  isCurrentMode(...mode: HrefImpl['mode'][]): boolean {
+    return mode.includes(this.href.mode);
   }
 }
 

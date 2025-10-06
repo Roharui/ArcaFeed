@@ -5,7 +5,7 @@ import $ from 'jquery'
 import { Helper } from '@/core';
 
 import { getCurrentSlide } from '@/feature';
-import { addNewEmptySlidePromise, removeSlidePromise } from '@/feature/swiper';
+import { addNewEmptySlidePromise, removeSlidePromise, setCurrentSlide } from '@/feature/swiper';
 import { initArticleLinkActive } from '@/feature/article';
 
 import type { PageMode, PromiseFunc } from "@/types";
@@ -34,25 +34,25 @@ function nextLinkForce({ v }: Param) {
 
 // For Event
 function toLink(mode: PageMode): PromiseFunc {
-  return ({ v, c }: Param) => {
+  return ({ v, c }: Param): void | PromiseFunc => {
     const { nextArticleUrl, prevArticleUrl } = v;
     const url = mode === 'NEXT' ? nextArticleUrl : prevArticleUrl;
 
-    if (!isString(url))
+    if (!isString(url)) {
+      console.log("No url at toLink")
       return;
+    }
 
     if (c.isSlideMode('REFRESH'))
       window.location.replace(url);
-    else pageRender(mode);
+    else return pageRender(mode);
   }
 }
 
 function pageRender(mode: PageMode): PromiseFunc {
   return ({ v }: Param): PromiseFunc[] => {
-    if (!isString(mode === 'NEXT' ? v.nextArticleUrl : v.prevArticleUrl)) {
-      return [];
-    }
     if (!v.swiper) {
+      console.log("No Swiper Init")
       return [];
     }
 
@@ -60,19 +60,15 @@ function pageRender(mode: PageMode): PromiseFunc {
     const { slides, activeIndex } = swiper;
 
     const promiseList: PromiseFunc[] = [];
-    const currentSlide = v.currentSlide || checkNotNull(slides[activeIndex])
 
-    console.log(slides)
-    console.log(slides.length)
-    console.log(activeIndex)
+    promiseList.push(setCurrentSlide);
 
     if (
-      (mode === 'NEXT' && activeIndex === 0) ||
-      (mode === 'PREV' && activeIndex === slides.length - 1)
+      (mode === 'PREV' && activeIndex === 0) ||
+      (mode === 'NEXT' && activeIndex === slides.length - 1)
     ) {
       promiseList.push(() => swiper.disable());
       promiseList.push(() => { swiper.allowTouchMove = false; return; });
-      promiseList.push(setCurrentArticle);
       promiseList.push(alertPageIsFetching(mode));
       promiseList.push(linkPageRender(mode));
       promiseList.push(showCurrentSlide);
@@ -84,7 +80,7 @@ function pageRender(mode: PageMode): PromiseFunc {
     promiseList.push(setCurrentArticle);
     promiseList.push(initArticleLinkActive);
 
-    promiseList.push(() => currentSlide.focus());
+    promiseList.push(({ v }: Param) => v.currentSlide?.focus());
 
     return promiseList;
   }
