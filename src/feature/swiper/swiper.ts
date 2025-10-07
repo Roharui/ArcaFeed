@@ -9,7 +9,7 @@ import type { SwiperOptions } from '@swiper/types';
 
 import type { Param } from '@/vault';
 
-import { addNewEmptySlide, setCurrentSlide } from '@/feature/swiper';
+import { addNewEmptySlide, focusCurrentSlide, setCurrentSlide } from '@/feature/swiper';
 
 import { parseContent } from '@/utils';
 
@@ -37,6 +37,7 @@ function initSwiper({ v }: Param) {
     ({ v }: Param) => addNewEmptySlide('NEXT', v),
     ({ v }: Param) => addNewEmptySlide('PREV', v),
     setCurrentSlide,
+    focusCurrentSlide
   ]
 }
 

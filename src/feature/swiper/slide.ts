@@ -11,6 +11,10 @@ function setCurrentSlide({ v }: Param): Param {
   return { v } as Param;
 }
 
+function focusCurrentSlide({ v }: Param) {
+  v.currentSlide?.focus();
+}
+
 function removeSlide(mode: PageMode, v: Vault) {
   const { swiper } = v;
 
@@ -64,4 +68,4 @@ function addNewEmptySlidePromise(mode: PageMode) {
   });
 }
 
-export { setCurrentSlide, removeSlide, removeSlidePromise, addNewEmptySlide, addNewEmptySlidePromise }
+export { setCurrentSlide, focusCurrentSlide, removeSlide, removeSlidePromise, addNewEmptySlide, addNewEmptySlidePromise }

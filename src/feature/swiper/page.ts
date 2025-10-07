@@ -5,7 +5,7 @@ import $ from 'jquery'
 import { Helper } from '@/core';
 
 import { getCurrentSlide } from '@/feature';
-import { addNewEmptySlidePromise, removeSlidePromise, setCurrentSlide } from '@/feature/swiper';
+import { addNewEmptySlidePromise, focusCurrentSlide, removeSlidePromise, setCurrentSlide } from '@/feature/swiper';
 import { initArticleLinkActive } from '@/feature/article';
 
 import type { PageMode, PromiseFunc } from "@/types";
@@ -78,9 +78,9 @@ function pageRender(mode: PageMode): PromiseFunc {
       promiseList.push(() => { swiper.allowTouchMove = true; return; });
     }
     promiseList.push(setCurrentArticle);
-    promiseList.push(initArticleLinkActive);
+    promiseList.push(focusCurrentSlide);
 
-    promiseList.push(({ v }: Param) => v.currentSlide?.focus());
+    promiseList.push(initArticleLinkActive);
 
     return promiseList;
   }
