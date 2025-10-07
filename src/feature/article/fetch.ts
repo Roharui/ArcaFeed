@@ -34,60 +34,6 @@ function fetchFromCurrentSlide(mode: PageMode): PromiseFunc {
   }
 }
 
-function parseFromArticleList(mode: PageMode, $html: JQuery<HTMLElement>): PromiseFunc {
-  return async ({ v, c }: Param): Promise<Param | PromiseFunc> => {
-    const { href } = v;
-    const currentSlide = $(v.currentSlide || getCurrentSlide(v))
-
-    const $content = $html.find('div.included-article-list');
-
-    const totalLinks = $content
-      .find(
-        'div.included-article-list > div.article-list > div.list-table.table > a.vrow.column',
-      )
-      .not('.notice');
-
-    const filteredLinks = filterLink(totalLinks, v, c);
-
-    if (filteredLinks.length === 0) {
-      return fetchLoop(mode, $html);
-    }
-
-    const currentArticleId =
-      currentSlide.attr('data-article-id')?.trim() || href.articleId;
-
-    if (!currentArticleId) {
-      return fetchLoop(mode, $html);
-    }
-
-    const index = filteredLinks.findIndex((ele: string) =>
-      ele.includes(currentArticleId),
-    );
-
-    if (index === -1) {
-      return fetchLoop(mode, $html);
-    }
-
-    let articleList: string[] = mode === 'NEXT'
-      ? filteredLinks.slice(index + 1)
-      : filteredLinks.slice(0, index - 1);
-
-    if (articleList.length === 0) {
-      return fetchLoop(mode, $html);
-    }
-
-    if (mode === 'NEXT') {
-      c.articleList.push(...articleList);
-      v.nextArticleUrl = articleList[0] || '';
-    } else if (mode === 'PREV') {
-      c.articleList.unshift(...articleList);
-      v.prevArticleUrl = articleList.slice(-1)[0] || '';
-    }
-
-    return { v, c } as Param;
-  }
-}
-
 function fetchLoop(mode: PageMode, $html: JQuery<HTMLElement>): PromiseFunc {
   return async ({ v, c }: Param): Promise<void | Param> => {
     let filteredLinks: string[] = [];
@@ -125,7 +71,7 @@ function fetchLoop(mode: PageMode, $html: JQuery<HTMLElement>): PromiseFunc {
         url = mode === 'NEXT' ? filteredLinks[0] : filteredLinks.slice(-1)[0];
       }
 
-      if (url !== null) {
+      if (!!url) {
         console.log(
           `Fetching Complete ${mode} article page: ${articlePageUrl}`,
         );
