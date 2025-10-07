@@ -4,6 +4,7 @@ import type { ArticleFilterConfigImpl, ConfigImpl, SlideMode } from '@/types'
 class Config implements ConfigImpl {
   articleList: string[] = [];
   articleFilterConfig: ArticleFilterConfigImpl = {};
+  seriesName: string = '';
   searchQuery: string = '';
   slideMode: SlideMode;
 
@@ -13,6 +14,7 @@ class Config implements ConfigImpl {
   }
 
   resetArticleList() {
+    this.seriesName = ""
     this.articleList = []
   }
 
@@ -22,14 +24,16 @@ class Config implements ConfigImpl {
 
   loadConfig(): void {
     const articleFilterConfigStr = localStorage.getItem('articleFilterConfig');
+    const articleListStr = localStorage.getItem('articleList');
+
     this.articleFilterConfig = articleFilterConfigStr
       ? JSON.parse(articleFilterConfigStr)
       : {};
-    const articleListStr = localStorage.getItem('articleList');
     this.articleList = articleListStr ? JSON.parse(articleListStr) : [];
     this.slideMode =
       (localStorage.getItem('slideMode') as 'REFRESH' | 'RENDER') || 'REFRESH';
     this.searchQuery = localStorage.getItem('searchQuery') || '';
+    this.seriesName = localStorage.getItem('seriesName') || '';
   }
 
   saveConfig(): void {
@@ -41,8 +45,10 @@ class Config implements ConfigImpl {
       'articleList',
       JSON.stringify(this.articleList),
     );
+
     localStorage.setItem('slideMode', this.slideMode);
     localStorage.setItem('searchQuery', this.searchQuery);
+    localStorage.setItem('seriesName', this.seriesName);
   }
 }
 

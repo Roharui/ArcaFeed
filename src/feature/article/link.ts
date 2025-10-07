@@ -58,6 +58,7 @@ function initArticleLinkActive({ v, c }: Param): Param | PromiseFunc | PromiseFu
 
   if (currentArticleIndex === -1) {
     c.articleList.push(window.location.href);
+    c.articleList = c.articleList.sort().reverse();
     return [() => ({ v, c }), fetchArticle('NEXT')]
   }
 
@@ -74,6 +75,9 @@ function initArticleLinkActive({ v, c }: Param): Param | PromiseFunc | PromiseFu
 
     return { v, c };
   }
+
+  // TODO: 시리즈 활성화 상태일 경우 fetch를 통해 게시글 목록 가져오지 않도록 만들기
+  // nextArticleUrl, prevArticleUrl을 가져오는 부분 추가 함수로 분할하기
 
   href = { ...href, articleId: currentArticleId };
   v.href = href;

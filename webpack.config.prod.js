@@ -12,7 +12,7 @@ export default function(_env, _args) {
 
     output: {
       path: path.resolve(__dirname, 'dist'),
-      filename: 'dist.js',
+      filename: 'dist.min.js',
     },
 
     resolve: {

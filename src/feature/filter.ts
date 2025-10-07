@@ -42,7 +42,7 @@ function filterLink(rows: JQuery<HTMLElement>, v: Vault, c: Config): string[] {
 
       const href = r.replace("https://arca.live", '').replace(/\?.+$/, '');
 
-      if (articleListString.indexOf(getArticleId(href)) > 0)
+      if (articleListString.indexOf(getArticleId(href)) >= 0)
         return prev;
 
       return [...prev, href];
