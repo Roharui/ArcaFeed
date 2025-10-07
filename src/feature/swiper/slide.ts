@@ -5,6 +5,17 @@ import type { PageMode } from "@/types";
 import type { Param, Vault } from "@/vault";
 
 import { getCurrentSlide } from "@/feature";
+import { isNotNull } from '@/utils';
+
+function initSlide({ v }: Param) {
+  if (!v.isCurrentMode('ARTICLE')) return;
+
+  return [
+    ({ v }: Param) => addNewEmptySlide('NEXT', v),
+    ({ v }: Param) => addNewEmptySlide('PREV', v),
+    focusCurrentSlide
+  ]
+}
 
 function setCurrentSlide({ v }: Param): Param {
   v.currentSlide = getCurrentSlide(v)
@@ -44,6 +55,13 @@ function removeSlidePromise(mode: PageMode) {
 
 function addNewEmptySlide(mode: PageMode, v: Vault) {
   const { swiper } = v
+  const { nextArticleUrl, prevArticleUrl } = v;
+
+  const url = mode === 'NEXT' ? nextArticleUrl : prevArticleUrl;
+
+  if (!isNotNull(url)) {
+    return
+  }
 
   if (swiper === null) return;
 
@@ -68,4 +86,4 @@ function addNewEmptySlidePromise(mode: PageMode) {
   });
 }
 
-export { setCurrentSlide, focusCurrentSlide, removeSlide, removeSlidePromise, addNewEmptySlide, addNewEmptySlidePromise }
+export { initSlide, setCurrentSlide, focusCurrentSlide, removeSlide, removeSlidePromise, addNewEmptySlide, addNewEmptySlidePromise }

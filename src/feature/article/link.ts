@@ -10,11 +10,15 @@ import { fetchArticle } from '@/feature/article';
 function initLink({ v }: Param): PromiseFunc[] {
   const promiseFuncList = []
 
-  if (v.isCurrentMode('CHANNEL')) {
+  if (!v.isCurrentMode('ARTICLE')) {
     promiseFuncList.push(({ c }: Param) => c.resetArticleList());
+  }
+
+  if (v.isCurrentMode('CHANNEL')) {
     promiseFuncList.push(parseSearchQuery);
     promiseFuncList.push(initArticleLinkChannel);
   }
+
   if (v.isCurrentMode('ARTICLE')) {
     promiseFuncList.push(initArticleLinkActive);
   }

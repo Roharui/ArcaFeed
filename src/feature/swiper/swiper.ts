@@ -6,13 +6,10 @@ import Swiper from 'swiper';
 import { Manipulation } from 'swiper/modules';
 
 import type { SwiperOptions } from '@swiper/types';
-
 import type { Param } from '@/vault';
 
-import { addNewEmptySlide, focusCurrentSlide, setCurrentSlide } from '@/feature/swiper';
-
 import { parseContent } from '@/utils';
-
+import { setCurrentSlide } from './slide';
 
 const swiperOptions: SwiperOptions = {
   slidesPerView: 1,
@@ -34,10 +31,7 @@ function initSwiper({ v }: Param) {
   return [
     initArticleToSlide,
     initSwiperObject,
-    ({ v }: Param) => addNewEmptySlide('NEXT', v),
-    ({ v }: Param) => addNewEmptySlide('PREV', v),
     setCurrentSlide,
-    focusCurrentSlide
   ]
 }
 

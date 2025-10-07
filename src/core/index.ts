@@ -1,7 +1,7 @@
 import { PromiseManager } from '@/core/promise';
 
 import { initLink } from '@/feature/article';
-import { initSwiper, initPage } from '@/feature/swiper';
+import { initSwiper, initPage, initSlide } from '@/feature/swiper';
 import { initEvent, initModal, initButton, initSeries } from '@/feature';
 
 import type { PromiseFunc } from '@/types';
@@ -22,6 +22,7 @@ class Helper extends PromiseManager {
       initSwiper,
       initSeries,
       initLink,
+      initSlide,
       initPage,
       initEvent,
       initButton,

@@ -2,7 +2,6 @@
 import $ from 'jquery'
 
 import { checkNotNull } from '@/utils';
-import { getCurrentSlide } from '@/feature';
 
 import type { Param } from '@/vault';
 import type { PromiseFunc } from '@/types';
@@ -41,7 +40,7 @@ function modifySeriesLinks({ v, c }: Param): void | Param {
 
   const seriesName = $html.find('.article-series').prev().text()
 
-  if (c.seriesName.length) {
+  if (!c.seriesName.length) {
     ok = confirm("시리즈를 피드에 등록하시겠습니까?");
   }
 
