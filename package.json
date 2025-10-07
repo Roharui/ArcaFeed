@@ -3,8 +3,9 @@
   "version": "2.0.0",
   "main": "main.js",
   "scripts": {
-    "build": "webpack --config webpack.config.prod.js",
-    "build:dev": "webpack --config webpack.config.dev.js --watch"
+    "build": "webpack --config webpack.config.prod.js --mode production",
+    "dev": "webpack --config webpack.config.dev.js --mode development --watch",
+    "lint": "eslint . --ext .ts"
   },
   "author": "",
   "license": "ISC",
@@ -17,15 +18,21 @@
   "devDependencies": {
     "@types/jquery": "^3.5.30",
     "@types/jqueryui": "^1.12.23",
-    "@types/node": "^22.7.4",
+    "@types/node": "^22.18.8",
+    "@types/swiper": "^5.4.3",
     "css-loader": "^7.1.2",
     "eslint": "^9.36.0",
     "eslint-config-prettier": "^6.15.0",
     "eslint-plugin-prettier": "^3.4.1",
-    "hook-shell-script-webpack-plugin": "^0.4.0",
+    "mini-css-extract-plugin": "^2.9.4",
     "prettier": "^3.3.3",
     "style-loader": "^4.0.0",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.3",
+    "typescript-plugin-css-modules": "^5.2.0",
     "webpack": "^5.93.0",
-    "webpack-cli": "^5.1.4"
-  }
+    "webpack-cli": "^5.1.4",
+    "webpack-hook-plugin": "^1.0.7"
+  },
+  "type": "module"
 }

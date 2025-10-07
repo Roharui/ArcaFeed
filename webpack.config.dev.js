@@ -1,59 +1,54 @@
-const path = require('path');
-const webpack = require('webpack');
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-module.exports = {
-  mode: 'development',
-  entry: './src/index.js',
+import WebpackHookPlugin from 'webpack-hook-plugin';
 
-  output: {
-    path: path.resolve(__dirname, 'dist'),
-    filename: 'dist.js',
-  },
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-  resolve: {
-    extensions: ['.js'],
-    alias: {
-      'jquery-ui': 'jquery-ui-dist/jquery-ui.js',
-      'jquery-ui-css': 'jquery-ui-dist/jquery-ui.css',
-      'arcalive-css': path.resolve(__dirname, 'src/css/arcalive.css'),
-      src: path.resolve(__dirname, 'src'),
+export default function(_env, _args) {
+  return {
+    entry: './src/index.ts',
+
+    output: {
+      path: path.resolve(__dirname, 'dist'),
+      filename: 'dist.js',
     },
-  },
 
-  module: {
-    rules: [
-      {
-        test: /\.css$/,
-        use: [
-          {
-            loader: 'style-loader',
-          },
-          {
-            loader: 'css-loader',
-          },
-        ],
+    resolve: {
+      extensions: ['.ts', '.js'],
+      alias: {
+        '@': path.resolve(__dirname, 'src'),
+        '@css': path.resolve(__dirname, 'css'),
+        '@swiper': path.resolve(__dirname, 'node_modules', 'swiper'),
       },
-      {
-        test: /jquery-ui\.css$/,
-        type: 'asset/inline',
-        use: [
-          {
-            loader: 'style-loader',
-          },
-          {
-            loader: 'css-loader',
-          },
-        ],
-      },
+    },
+
+    module: {
+      rules: [
+        {
+          test: /\.css$/,
+          use: [
+            {
+              loader: 'style-loader',
+            },
+            {
+              loader: 'css-loader',
+            },
+          ],
+        },
+        {
+          test: /\.ts$/,
+          use: 'ts-loader',
+          exclude: /node_modules/,
+        },
+      ],
+    },
+
+    plugins: [
+      new WebpackHookPlugin({
+        onBuildEnd: ["./upload.sh"]
+      })
     ],
-  },
-
-  plugins: [
-    new webpack.ProvidePlugin({
-      $: 'jquery',
-      jQuery: 'jquery',
-      'window.jQuery': "jquery'",
-      'window.$': 'jquery',
-    }),
-  ],
-};
+  };
+}
