@@ -3,8 +3,8 @@
   "version": "2.0.0",
   "main": "main.js",
   "scripts": {
-    "build": "webpack --config webpack.config.prod.js --mode production",
-    "dev": "webpack --config webpack.config.dev.js --mode development --watch",
+    "build": "webpack --config webpack.config.prod.js --mode production && ./upload_prod.sh",
+    "dev": "webpack --config webpack.config.dev.js --mode development && ./upload.sh",
     "lint": "eslint . --ext .ts"
   },
   "author": "",
