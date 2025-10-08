@@ -4,15 +4,14 @@ import type { Param } from '@/vault';
 import { getRegexMatchByIndex, getRegexMatchByIndexTry } from '@/utils';
 
 const homePageRegex = /arca\.live\/?$/;
-const channelPageRegex = /b\/(.+)/;
+const channelPageRegex = /b\/[a-zA-Z0-9]+/;
 const articlePageRegex = /b\/([A-Za-z0-9])+\/[0-9]+/;
 
 const channelAndArticleIdRegex =
   /(?<=\/b\/).([A-Za-z0-9])+|(?<=\/b\/([A-Za-z0-9])+\/).[0-9]+|\?.+/g;
 const articelIdRegex = /(?<=\/b\/([A-Za-z0-9])+\/).[0-9]+|\?.+/g;
 
-const rootContainerRegex =
-  /(?<=\"top\"\>\<\/div\>).+(?=\<div id=\"bottom\")/gs;
+const rootContainerRegex = /(?<=\"top\"\>\<\/div\>).+(?=\<div id=\"bottom\")/gs;
 const parseContentRegex =
   /\<div class=\"topbar-area.+\<\/a\>\<\/span\>.\s+\<\/div\>|<aside class="sidebar.+<\/aside>|<footer class="footer">.+<\/footer>|<ul class="nav-.+<\/ul>|<div id="toast-box.+<\/div>|<div id="boardBtns">.+clearfix">.+<\/div>|<form action="\/b\/.+(<\/option>.\s+<\/select>).(\s+<\/div>){2}|<div class="included-article-list.+<\/small>.+<\/p>.+<\/div>/gs;
 const titleContentRegex = /(?<=title\>).+-.+(?=\<\/title)/s;
@@ -26,24 +25,19 @@ function getCurrentHTMLTitle(responseText: string): string {
 }
 
 function parseContent(responseText: string): string {
-  const content = responseText.match(
-    rootContainerRegex,
-  );
+  const content = responseText.match(rootContainerRegex);
 
   const rootContainer = getRegexMatchByIndex(content, 0);
 
-  const html = rootContainer.replace(
-    parseContentRegex,
-    '',
-  );
+  const html = rootContainer.replace(parseContentRegex, '');
 
   return html;
 }
 
 function getArticleId(href: string): string {
-  const articleIdMatch = href.match(articelIdRegex)
+  const articleIdMatch = href.match(articelIdRegex);
 
-  return getRegexMatchByIndex(articleIdMatch, 0)
+  return getRegexMatchByIndex(articleIdMatch, 0);
 }
 
 function parseHref(href?: string) {
@@ -52,6 +46,7 @@ function parseHref(href?: string) {
 
   let hrefObj: HrefImpl;
 
+  // ARTICLE : /b/{channelId}/{articleId}
   if (articlePageRegex.test(realHref)) {
     const matchArr = realHref.match(channelAndArticleIdRegex);
 
@@ -65,8 +60,8 @@ function parseHref(href?: string) {
   else if (channelPageRegex.test(realHref)) {
     const matchArr = realHref.match(channelAndArticleIdRegex);
 
-    const channelId = getRegexMatchByIndex(matchArr, 0)
-    const search = getRegexMatchByIndexTry(matchArr, 1, '')
+    const channelId = getRegexMatchByIndex(matchArr, 0);
+    const search = getRegexMatchByIndexTry(matchArr, 1, '');
 
     hrefObj = { mode: 'CHANNEL', channelId, articleId: '', search };
   }
@@ -89,4 +84,10 @@ function checkPageMode({ v }: Param): Param {
   return { v } as Param;
 }
 
-export { checkPageMode, getArticleId, parseContent, parseHref, getCurrentHTMLTitle };
+export {
+  checkPageMode,
+  getArticleId,
+  parseContent,
+  parseHref,
+  getCurrentHTMLTitle,
+};

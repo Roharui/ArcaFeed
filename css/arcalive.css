@@ -10,7 +10,8 @@ html {
   /* 파이어폭스 */
 }
 
-html, body {
+html,
+body {
   position: relative;
   height: 100%;
 }
@@ -29,10 +30,6 @@ body {
 @media screen and (min-width: 1024px) {
   .body .content-wrapper {
     max-width: 800px !important;
-  }
-
-  .sidebar {
-    display: none !important;
   }
 }
 
@@ -90,24 +87,12 @@ body {
   filter: none !important;
 }
 
-.vrow.column.notice {
-  display: none !important;
-}
-
-footer {
-  display: none !important;
-}
-
 .body .board-article {
   min-height: 0px !important;
   padding-bottom: 10px;
 }
 
 .board-relay {
-  display: none !important;
-}
-
-.info-row.clearfix > .right {
   display: none !important;
 }
 
@@ -215,14 +200,14 @@ div.root-container {
 
   justify-content: center;
   align-items: center;
-  
+
   top: 0;
   left: 0;
 
   width: 100%;
   height: 100%;
 
-  background-color: rgba(0,0,0,0.4);
+  background-color: rgba(0, 0, 0, 0.4);
   z-index: 9999999;
 }
 
@@ -232,8 +217,8 @@ div.root-container {
 
   padding: 20px;
 
-  background-color: var(--color-bg-main); 
-  border-radius: 10px; 
+  background-color: var(--color-bg-main);
+  border-radius: 10px;
 }
 
 .helper-modal-body > div {
@@ -249,17 +234,17 @@ div.root-container {
   border: none;
   width: 50px;
   padding: 5px 8px 5px 8px;
-  
+
   cursor: pointer;
   border-radius: 5px;
 
   background-color: var(--color-bd-btn);
-  color: var(--color-text-opposite)
+  color: var(--color-text-opposite);
 }
 
 .helper-modal-btns .button:hover {
   background-color: var(--color-bd-btn-hover);
-  color: var(--color-text)
+  color: var(--color-text);
 }
 
 /* category-input */
