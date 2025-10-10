@@ -20,14 +20,9 @@
 > TamperMonkey/크롬을 기준으로 작성되었습니다.
 
 1. [TamperMonkey](https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo?hl=ko) 설치
-2. 주소창 우측 확장프로그램 버튼(퍼즐) 클릭
-3. DashBoard 클릭
-4. 우측 상단에 보이는 Utility 탭
-5. Import From URL에 다음 링크 입력
-    - `https://github.com/Roharui/ArcaFeed/releases/download/v1.0-quickfix/ArcaFeed.js`
-6. Install 버튼 클릭 -> Install 버튼 클릭
-7. 아카라이브 접속
-8. 설치 끝
+2. [설치 링크](https://www.tampermonkey.net/script_installation.php#url=https://github.com/Roharui/ArcaFeed/releases/latest/download/ArcaFeed.user.js) 클릭
+3. Install 버튼 클릭
+4. 설치 완료
 
 # 버그 제보
 
