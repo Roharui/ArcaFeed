@@ -227,7 +227,7 @@ div.root-container {
   margin: 5px 1px;
 }
 
-.helper-modal-btns {
+.f-right {
   text-align: right;
 }
 
@@ -285,3 +285,14 @@ div.root-container {
 #console > textarea {
   color: var(--color-text);
 }
+
+/* modal input */
+.exclude-title-input-wrapper {
+  display: inline;
+}
+
+#exclude-title {
+  width: 84%;
+  outline: none;
+}
+

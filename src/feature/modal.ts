@@ -5,6 +5,7 @@ import { Helper } from "@/core";
 
 import type { Param } from "@/vault";
 import type { ArticleFilterImpl, PromiseFunc } from "@/types";
+
 import { initLink } from './article';
 import { checkNotNull } from '@/utils';
 
@@ -13,13 +14,17 @@ const NEXT_PAGE_MODAL_HTML = `
   <div class="helper-modal-body">
     <div id="category-all"></div>
     <div id="category"></div>
-    <div style="display: none;">
-      <p>차단 제목</p>
-      <input type="text" id="exclude-title"/>
+    <div class="exclude-title-wrapper">
+      <div class="exclude-tag-wrapper">
+      </div>
+      <span class="helper-modal-btns exclude-title-input-wrapper">
+        <input type="text" id="exclude-title" placeholder="차단 제목 입력..."/>
+        <input type="button" id="exclude-btn" class="helper-button button" value="입력"/>
+      </span>
     </div>
-    <div id="modal-buttons" class="helper-modal-btns" style="border-bottom: 0px none;">
-      <input id="check-btn" class="button" type="button" value="확인"/>
-      <input id="cancel-btn" class="button" type="button" value="취소"/>
+    <div id="modal-buttons" class="helper-modal-btns f-right" style="border-bottom: 0px none;">
+      <input id="check-btn" class="helper-button button" type="button" value="확인"/>
+      <input id="cancel-btn" class="helper-button button" type="button" value="취소"/>
     </div>
   </div>
 </div>
