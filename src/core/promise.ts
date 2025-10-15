@@ -1,4 +1,3 @@
-
 import { Base } from '@/core/base';
 
 import type { PromiseFunc, PromiseFuncResult } from '@/types';
@@ -41,22 +40,21 @@ export class PromiseManager extends Base {
               this.addPromiseCurrent(result as PromiseFunc);
               break;
             case 'FunctionArray':
-              this.addPromiseCurrent(...result as PromiseFunc[]);
+              this.addPromiseCurrent(...(result as PromiseFunc[]));
               break;
             case 'Param':
               this.p = Object.assign(this.p, result as Param);
               break;
           }
 
-          console.log("PromiseFunc : ")
-          console.log(promiseFunc)
-          console.log("Result : ")
-          console.log(result)
-          console.log("Result Type : " + isPromiseFuncResult(result));
-          console.log("Current Param : ")
-          console.log(this.p)
-          console.log("============================")
-
+          console.log('PromiseFunc : ');
+          console.log(promiseFunc);
+          console.log('Result : ');
+          console.log(result);
+          console.log('Result Type : ' + isPromiseFuncResult(result));
+          console.log('Current Param : ');
+          console.log(this.p);
+          console.log('============================');
         } catch (e) {
           console.log(e);
 
@@ -75,7 +73,7 @@ export class PromiseManager extends Base {
     }
     console.log('Promise Init End');
 
-    console.log('Save Config Finish')
+    console.log('Save Config Finish');
     this.p.c.saveConfig();
 
     this.isActive = false;

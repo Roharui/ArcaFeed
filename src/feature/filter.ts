@@ -1,13 +1,12 @@
+import $ from 'jquery';
 
-import $ from 'jquery'
+import type { Config, Vault } from '@/vault';
 
-import type { Config, Vault } from "@/vault";
-
-import { getArticleId } from "@/utils";
+import { getArticleId } from '@/utils';
 
 function filterLink(rows: JQuery<HTMLElement>, v: Vault, c: Config): string[] {
   const { articleList, articleFilterConfig } = c;
-  const { href } = v
+  const { href } = v;
 
   const articleFilter = articleFilterConfig[href.channelId];
   const articleListString = articleList.join(',');
@@ -35,18 +34,16 @@ function filterLink(rows: JQuery<HTMLElement>, v: Vault, c: Config): string[] {
     });
   }
 
-  return resultRows
-    .reduce((prev: string[], ele: HTMLElement) => {
-      const r = $(ele).attr('href') as string;
-      if (!r) return prev;
+  return resultRows.reduce((prev: string[], ele: HTMLElement) => {
+    const r = $(ele).attr('href') as string;
+    if (!r) return prev;
 
-      const href = r.replace("https://arca.live", '').replace(/\?.+$/, '');
+    const href = r.replace('https://arca.live', '').replace(/\?.+$/, '');
 
-      if (articleListString.indexOf(getArticleId(href)) >= 0)
-        return prev;
+    if (articleListString.indexOf(getArticleId(href)) >= 0) return prev;
 
-      return [...prev, href];
-    }, [])
+    return [...prev, href];
+  }, []);
 }
 
 export { filterLink };

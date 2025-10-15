@@ -1,4 +1,4 @@
-import { Config, Vault, type Param } from "@/vault";
+import { Config, Vault, type Param } from '@/vault';
 
 class Base {
   p: Param;
@@ -7,8 +7,8 @@ class Base {
     const v = new Vault();
     const c = new Config();
 
-    this.p = { v, c }
+    this.p = { v, c };
   }
 }
 
-export { Base }
+export { Base };

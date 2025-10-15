@@ -26,7 +26,7 @@ class Helper extends PromiseManager {
       initPage,
       initEvent,
       initButton,
-      initModal
+      initModal,
     ]);
 
     await this.initPromise();

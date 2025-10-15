@@ -1,4 +1,4 @@
-import type { Param } from "@/vault";
+import type { Param } from '@/vault';
 
 function parseSearchQuery({ v, c }: Param): Param {
   const { search } = v.href;
@@ -14,7 +14,7 @@ function parseSearchQuery({ v, c }: Param): Param {
   c.searchQuery = searchParams.toString();
   c.searchQuery = c.searchQuery ? `?${c.searchQuery}` : '';
 
-  return { v, c } as Param
+  return { v, c } as Param;
 }
 
-export { parseSearchQuery }
+export { parseSearchQuery };

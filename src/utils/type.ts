@@ -1,12 +1,15 @@
-import type { PromiseFuncResult } from "@/types";
+import type { PromiseFuncResult } from '@/types';
 
 function isString(str: string | null | undefined): str is string {
   return !!str;
 }
 
-function getRegexMatchByIndex(match: RegExpMatchArray | null, index: number): string {
-  if (!match) throw Error("Regex Match is null")
-  if (match.length < index) throw Error("Regex Match index is Over");
+function getRegexMatchByIndex(
+  match: RegExpMatchArray | null,
+  index: number,
+): string {
+  if (!match) throw Error('Regex Match is null');
+  if (match.length < index) throw Error('Regex Match index is Over');
 
   const result = match[index];
 
@@ -14,14 +17,17 @@ function getRegexMatchByIndex(match: RegExpMatchArray | null, index: number): st
     return result;
   }
 
-  throw Error("Regex Metch is Not String")
+  throw Error('Regex Metch is Not String');
 }
 
-
-function getRegexMatchByIndexTry(match: RegExpMatchArray | null, index: number, instade: string): string {
+function getRegexMatchByIndexTry(
+  match: RegExpMatchArray | null,
+  index: number,
+  instade: string,
+): string {
   try {
-    if (!match) throw Error("Regex Match is null")
-    if (match.length < index) throw Error("Regex Match index is Over");
+    if (!match) throw Error('Regex Match is null');
+    if (match.length < index) throw Error('Regex Match index is Over');
 
     const result = match[index];
 
@@ -29,7 +35,7 @@ function getRegexMatchByIndexTry(match: RegExpMatchArray | null, index: number, 
       return result;
     }
 
-    throw Error("Regex Metch is Not String")
+    throw Error('Regex Metch is Not String');
   } catch (e) {
     return instade;
   }
@@ -41,15 +47,15 @@ function isNotNull<T>(obj: T | null | undefined): obj is T {
 }
 
 function checkNotNull<T>(obj: T | null | undefined): T {
-  if (isNotNull(obj))
-    return obj;
+  if (isNotNull(obj)) return obj;
 
-  throw Error("this Object is Null");
+  throw Error('this Object is Null');
 }
 
-function isPromiseFuncResult(r: PromiseFuncResult): 'Function' | 'FunctionArray' | 'Param' | 'void' {
-  if (typeof r === 'function')
-    return 'Function'
+function isPromiseFuncResult(
+  r: PromiseFuncResult,
+): 'Function' | 'FunctionArray' | 'Param' | 'void' {
+  if (typeof r === 'function') return 'Function';
 
   if (Array.isArray(r)) {
     if (r.length === 0) {
@@ -57,17 +63,22 @@ function isPromiseFuncResult(r: PromiseFuncResult): 'Function' | 'FunctionArray'
     }
 
     if (typeof r?.[0] === 'function') {
-      return 'FunctionArray'
+      return 'FunctionArray';
     }
   }
 
-  if (r === undefined || r === null)
-    return 'void';
+  if (r === undefined || r === null) return 'void';
 
-  if (typeof r === 'object')
-    return 'Param';
+  if (typeof r === 'object') return 'Param';
 
-  throw Error('PromiseFuncResult is Not Availe : ' + r)
+  throw Error('PromiseFuncResult is Not Availe : ' + r);
 }
 
-export { isString, isNotNull, checkNotNull, isPromiseFuncResult, getRegexMatchByIndex, getRegexMatchByIndexTry }
+export {
+  isString,
+  isNotNull,
+  checkNotNull,
+  isPromiseFuncResult,
+  getRegexMatchByIndex,
+  getRegexMatchByIndexTry,
+};

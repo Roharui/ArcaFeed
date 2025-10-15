@@ -1,7 +1,6 @@
-
 type ArticleShowMode = 'Article' | 'Comment';
-type SlideMode = 'REFRESH' | 'RENDER'
-type PageMode = 'NEXT' | 'PREV' | 'ALL'
+type SlideMode = 'REFRESH' | 'RENDER';
+type PageMode = 'NEXT' | 'PREV' | 'ALL';
 
 interface HrefImpl {
   mode: 'HOME' | 'CHANNEL' | 'ARTICLE' | 'OTHER';
@@ -33,5 +32,5 @@ export type {
   ArticleFilterImpl,
   ConfigImpl,
   SlideMode,
-  PageMode
+  PageMode,
 };

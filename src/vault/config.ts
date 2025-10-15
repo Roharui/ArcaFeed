@@ -1,5 +1,4 @@
-
-import type { ArticleFilterConfigImpl, ConfigImpl, SlideMode } from '@/types'
+import type { ArticleFilterConfigImpl, ConfigImpl, SlideMode } from '@/types';
 
 class Config implements ConfigImpl {
   articleList: string[] = [];
@@ -10,12 +9,12 @@ class Config implements ConfigImpl {
 
   constructor() {
     this.slideMode = 'REFRESH';
-    this.loadConfig()
+    this.loadConfig();
   }
 
   resetArticleList() {
-    this.seriesName = ""
-    this.articleList = []
+    this.seriesName = '';
+    this.articleList = [];
   }
 
   isSlideMode(mode: SlideMode): boolean {
@@ -41,10 +40,7 @@ class Config implements ConfigImpl {
       'articleFilterConfig',
       JSON.stringify(this.articleFilterConfig),
     );
-    localStorage.setItem(
-      'articleList',
-      JSON.stringify(this.articleList),
-    );
+    localStorage.setItem('articleList', JSON.stringify(this.articleList));
 
     localStorage.setItem('slideMode', this.slideMode);
     localStorage.setItem('searchQuery', this.searchQuery);
@@ -52,4 +48,4 @@ class Config implements ConfigImpl {
   }
 }
 
-export { Config }
+export { Config };

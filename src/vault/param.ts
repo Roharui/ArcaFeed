@@ -1,9 +1,9 @@
-import type { Config } from "@/vault"
-import type { Vault } from "@/vault"
+import type { Config } from '@/vault';
+import type { Vault } from '@/vault';
 
 type Param = {
-  v: Vault,
-  c: Config
-}
+  v: Vault;
+  c: Config;
+};
 
-export type { Param }
+export type { Param };

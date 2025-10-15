@@ -1,2 +1,2 @@
-export * from './func'
-export * from './vault'
+export * from './func';
+export * from './vault';

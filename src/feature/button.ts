@@ -1,11 +1,9 @@
+import $ from 'jquery';
 
-import $ from "jquery"
-
-import type { Param } from "@/vault";
-import { Helper } from "@/core";
-import { nextLinkForce } from "./swiper";
-import { toggleArticleFilterModal } from "./modal";
-
+import type { Param } from '@/vault';
+import { Helper } from '@/core';
+import { nextLinkForce } from './swiper';
+import { toggleArticleFilterModal } from './modal';
 
 function createHelperBtn(icon: string, callback: Function, display = 'block') {
   const btn = $('<div>', {
@@ -29,8 +27,6 @@ function btnWrapper(cls: string, content: JQuery<HTMLElement>[]) {
   return btnWrapperDiv;
 }
 
-
-
 function initButton({ v, c }: Param) {
   // const consoleInfo = createHelperBtn('ion-information', () =>
   //   showConsole(),
@@ -46,7 +42,7 @@ function initButton({ v, c }: Param) {
         $('.helper-btn .ion-ios-monitor').parent().show();
 
         return { c } as Param;
-      })
+      });
     },
     c.slideMode === 'REFRESH' ? 'block' : 'none',
   );
@@ -61,34 +57,36 @@ function initButton({ v, c }: Param) {
         $('.helper-btn .ion-ios-monitor').parent().hide();
 
         return { c } as Param;
-      })
+      });
     },
     c.slideMode === 'RENDER' ? 'block' : 'none',
   );
   const nextPageBtn = createHelperBtn('ion-ios-arrow-forward', () =>
     Helper.runPromise(nextLinkForce),
   );
-  const filterPageBtn = createHelperBtn('ion-ios-gear', toggleArticleFilterModal);
+  const filterPageBtn = createHelperBtn(
+    'ion-ios-gear',
+    toggleArticleFilterModal,
+  );
   const fullScreen = createHelperBtn(
     'ion-ios-monitor',
     () => document.documentElement.requestFullscreen(),
     c.slideMode === 'RENDER' ? 'block' : 'none',
   );
 
-  const btns: JQuery<HTMLElement>[] = []
+  const btns: JQuery<HTMLElement>[] = [];
 
   if (v.isCurrentMode('CHANNEL')) {
-    btns.push(nextPageBtn, filterPageBtn)
+    btns.push(nextPageBtn, filterPageBtn);
   }
   if (v.isCurrentMode('ARTICLE')) {
-    btns.push(slideModeToRender, slideModeToRefresh, fullScreen)
+    btns.push(slideModeToRender, slideModeToRefresh, fullScreen);
   }
 
   $('body').append(btnWrapper('btn-wrapper right', btns));
 }
 
-export { initButton }
-
+export { initButton };
 
 /*
 import { Vault } from './vault';

@@ -1,5 +1,4 @@
-
-import $ from 'jquery'
+import $ from 'jquery';
 
 import { checkNotNull } from '@/utils';
 
@@ -9,14 +8,14 @@ import { Helper } from '@/core';
 
 function initSeries({ v }: Param): void | PromiseFunc[] {
   if (!v.isCurrentMode('ARTICLE')) return;
-  return [modifySeriesLinks, checkIsThisSeriseLinked]
+  return [modifySeriesLinks, checkIsThisSeriseLinked];
 }
 
 type SeriesLink = {
-  idx: number,
-  url: string,
-  element: HTMLElement
-}
+  idx: number;
+  url: string;
+  element: HTMLElement;
+};
 
 // 페이지가 로드된 후 실행
 function modifySeriesLinks({ v }: Param): void | Param {
@@ -37,10 +36,12 @@ function modifySeriesLinks({ v }: Param): void | Param {
 
   // 현재 페이지 URL
   const currentPageUrl = window.location.pathname;
-  const links = $html.find(".article-series").find(".series-link");
+  const links = $html.find('.article-series').find('.series-link');
 
-  const allSeriesLinks = getCurrentSeriesLink(links)
-  const currentIndex = allSeriesLinks.findIndex(({ url }) => url.includes(currentPageUrl))
+  const allSeriesLinks = getCurrentSeriesLink(links);
+  const currentIndex = allSeriesLinks.findIndex(({ url }) =>
+    url.includes(currentPageUrl),
+  );
 
   // 시리즈 바로가기 링크 저장 변수
   const shortCutLink: SeriesLink[] = [];
@@ -62,13 +63,13 @@ function modifySeriesLinks({ v }: Param): void | Param {
   let swap = -1;
 
   for (let i = 0; i < shortCutLinkCount; i++) {
-    idx += ((swap < 0) ? i : 1) * direction; // 현재 인덱스에 방향과 스왑 적용
+    idx += (swap < 0 ? i : 1) * direction; // 현재 인덱스에 방향과 스왑 적용
 
     // 인덱스가 범위를 벗어나면 종료
     if (idx < 0 || idx >= allSeriesLinks.length) {
       direction *= -1; // 방향 전환
       swap = 1;
-      idx += ((i + 1) * direction); // 방향 전환 후 인덱스 조정
+      idx += (i + 1) * direction; // 방향 전환 후 인덱스 조정
     }
 
     shortCutLink.push(checkNotNull(allSeriesLinks[idx]));
@@ -83,12 +84,11 @@ function modifySeriesLinks({ v }: Param): void | Param {
 }
 
 function getCurrentSeriesLink(links: JQuery<HTMLElement>): SeriesLink[] {
-
   return links
     .toArray()
     .map((seriesDiv: HTMLElement, index: number) => {
-      const link = $(seriesDiv).find("a");
-      const href: string = link.attr("href") || ''
+      const link = $(seriesDiv).find('a');
+      const href: string = link.attr('href') || '';
 
       if (link) {
         // target="_blank" 속성 제거
@@ -100,7 +100,7 @@ function getCurrentSeriesLink(links: JQuery<HTMLElement>): SeriesLink[] {
         return {
           idx: index,
           url: href,
-          element: seriesDiv
+          element: seriesDiv,
         };
       }
 
@@ -110,7 +110,10 @@ function getCurrentSeriesLink(links: JQuery<HTMLElement>): SeriesLink[] {
 }
 
 // shortCutLink를 이용해 새로운 article-series div 생성 및 추가
-function createShortcutSeriesDiv(shortCutLinks: SeriesLink[], $html: JQuery<HTMLElement>) {
+function createShortcutSeriesDiv(
+  shortCutLinks: SeriesLink[],
+  $html: JQuery<HTMLElement>,
+) {
   // article-body 요소 찾기
   const articleBody = $html.find('.article-body');
 
@@ -127,7 +130,7 @@ function createShortcutSeriesDiv(shortCutLinks: SeriesLink[], $html: JQuery<HTML
 
   // shortCutLink의 각 링크를 series-link div로 생성
   shortCutLinks.forEach((linkData) => {
-    shortcutDiv.append($(linkData.element));
+    shortcutDiv.append($(linkData.element).clone());
   });
 
   // article-body에 추가 (맨 앞에 추가)
@@ -136,15 +139,15 @@ function createShortcutSeriesDiv(shortCutLinks: SeriesLink[], $html: JQuery<HTML
 
 function checkIsThisSeriseLinked({ c }: Param) {
   const seriesNameEle = $('.article-series').prev();
-  const seriesName = seriesNameEle.text()
+  const seriesName = seriesNameEle.text();
 
   if (seriesName === c.seriesName) {
-    seriesNameEle.css("color", "green")
+    seriesNameEle.css('color', 'green');
   } else {
-    seriesNameEle.css("color", "blue");
+    seriesNameEle.css('color', 'blue');
   }
 
-  seriesNameEle.on("click", () => Helper.runPromise(linkThisSereis))
+  seriesNameEle.on('click', () => Helper.runPromise(linkThisSereis));
 }
 
 function linkThisSereis({ v, c }: Param) {
@@ -153,19 +156,20 @@ function linkThisSereis({ v, c }: Param) {
   const $html = $(checkNotNull(currentSlide));
 
   const seriesNameEle = $html.find('.article-series').prev();
-  const seriesName = seriesNameEle.text()
+  const seriesName = seriesNameEle.text();
 
   // article-series 요소들이 2개 이상이면 첫 번째를 제외한 나머지 삭제
   const articleSeriesElement = $html.find('.article-series').first();
-  const articleSeriesElementLinks = articleSeriesElement.find(".series-link")
+  const articleSeriesElementLinks = articleSeriesElement.find('.series-link');
 
-  const allSeriesLinks: string[] = getCurrentSeriesLink(articleSeriesElementLinks)
-    .map(({ url }) => url);
+  const allSeriesLinks: string[] = getCurrentSeriesLink(
+    articleSeriesElementLinks,
+  ).map(({ url }) => url);
 
   c.articleList = allSeriesLinks;
   c.seriesName = seriesName;
 
-  window.location.replace(allSeriesLinks[0] as string)
+  window.location.reload();
 }
 
-export { initSeries }
+export { initSeries };

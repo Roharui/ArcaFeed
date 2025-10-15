@@ -1,12 +1,12 @@
-import { checkNotNull } from "@/utils";
+import { checkNotNull } from '@/utils';
 
-import type { Vault } from "@/vault";
+import type { Vault } from '@/vault';
 
 function getCurrentSlide(v: Vault): HTMLElement {
   const { swiper } = v;
   const { slides, activeIndex } = checkNotNull(swiper);
 
-  return checkNotNull(slides[activeIndex])
+  return checkNotNull(slides[activeIndex]);
 }
 
-export { getCurrentSlide }
+export { getCurrentSlide };
