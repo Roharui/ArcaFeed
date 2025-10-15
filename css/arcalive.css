@@ -224,10 +224,11 @@ div.root-container {
 
 .helper-modal-body > div {
   border-bottom: 1px solid #ddd;
-  margin: 5px 1px;
+  margin: 5px 1px 0px 1px;
+  padding-bottom: 5px;
 }
 
-.helper-modal-btns {
+.f-right {
   text-align: right;
 }
 
@@ -249,6 +250,10 @@ div.root-container {
 }
 
 /* category-input */
+
+#category {
+  padding-bottom: 0px;
+}
 
 .category-span {
   display: inline-block;
@@ -285,3 +290,14 @@ div.root-container {
 #console > textarea {
   color: var(--color-text);
 }
+
+/* modal input */
+.exclude-title-input-wrapper {
+  display: inline;
+}
+
+#exclude-title {
+  width: 84%;
+  outline: none;
+}
+

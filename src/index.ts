@@ -3,7 +3,7 @@ import { Helper } from '@/core';
 import '@swiper/swiper.css';
 import '@css/arcalive.css';
 
-(function() {
+(function () {
   if (process.env.NODE_ENV === 'production') {
     console.log = () => { }
   }

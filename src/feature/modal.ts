@@ -1,10 +1,10 @@
+import $ from 'jquery';
 
-import $ from 'jquery'
+import { Helper } from '@/core';
 
-import { Helper } from "@/core";
+import type { Param } from '@/vault';
+import type { ArticleFilterImpl, PromiseFunc } from '@/types';
 
-import type { Param } from "@/vault";
-import type { ArticleFilterImpl, PromiseFunc } from "@/types";
 import { initLink } from './article';
 import { checkNotNull } from '@/utils';
 
@@ -13,28 +13,35 @@ const NEXT_PAGE_MODAL_HTML = `
   <div class="helper-modal-body">
     <div id="category-all"></div>
     <div id="category"></div>
-    <div style="display: none;">
-      <p>차단 제목</p>
-      <input type="text" id="exclude-title"/>
+    <div class="exclude-title-wrapper">
+      <div class="exclude-tag-wrapper">
+      </div>
+      <span class="helper-modal-btns exclude-title-input-wrapper">
+        <input type="text" id="exclude-title" placeholder="차단 제목 입력..."/>
+        <input type="button" id="exclude-btn" class="helper-button button" value="입력"/>
+      </span>
     </div>
-    <div id="modal-buttons" class="helper-modal-btns" style="border-bottom: 0px none;">
-      <input id="check-btn" class="button" type="button" value="확인"/>
-      <input id="cancel-btn" class="button" type="button" value="취소"/>
+    <div id="modal-buttons" class="helper-modal-btns f-right" style="border-bottom: 0px none;">
+      <input id="check-btn" class="helper-button button" type="button" value="확인"/>
+      <input id="cancel-btn" class="helper-button button" type="button" value="취소"/>
     </div>
   </div>
 </div>
 `;
 
 function appendModal({ v }: Param) {
-  if (!v.isCurrentMode("ARTICLE", "CHANNEL")) return;
-  const dialog = $(NEXT_PAGE_MODAL_HTML)
-  $("body").append(dialog);
+  if (!v.isCurrentMode('ARTICLE', 'CHANNEL')) return;
+  const dialog = $(NEXT_PAGE_MODAL_HTML);
+  $('body').append(dialog);
 }
 
 function createModal({ v, c }: Param) {
   const { href } = v;
   const { articleFilterConfig } = c;
-  const { tab, title } = articleFilterConfig[href.channelId] || { tab: [], title: [] };
+  const { tab, title } = articleFilterConfig[href.channelId] || {
+    tab: [],
+    title: [],
+  };
 
   const category = $('.root-container')
     .first()
@@ -48,26 +55,76 @@ function createModal({ v, c }: Param) {
   category
     .map((text) =>
       createCategorySpan(text, 'ele-category', tab.includes(text), () =>
-        $('.ele-category-all').prop('checked', $('.ele-category').length === $('.ele-category:checked').length)
+        $('.ele-category-all').prop(
+          'checked',
+          $('.ele-category').length === $('.ele-category:checked').length,
+        ),
       ),
     )
     .forEach((ele) => $('#dialog #category').append(ele));
 
   const spanAll = createCategorySpan(
-    '전체', 'ele-category-all', tab.length === category.length,
-    () => $('.ele-category').prop('checked', $(".ele-category-all").prop('checked')),
+    '전체',
+    'ele-category-all',
+    tab.length === category.length,
+    () =>
+      $('.ele-category').prop(
+        'checked',
+        $('.ele-category-all').prop('checked'),
+      ),
   );
 
   $('#category-all').append(spanAll);
-  $('#exclude-title').val(title.join(','));
 
-  $("#check-btn").on("click", () =>
-    Helper.runPromise(checkFn, initLink, () => toggleArticleFilterModal)
-  )
-  $("#cancel-btn").on("click", () => toggleArticleFilterModal())
+  title.forEach((tag) => createExcludeSpan(tag));
+
+  $('#check-btn').on('click', () =>
+    Helper.runPromise(checkFn, initLink, () => toggleArticleFilterModal),
+  );
+  $('#cancel-btn').on('click', () => toggleArticleFilterModal());
+  $('#exclude-btn').on('click', () => {
+    const excludeTagsStr = $('#exclude-title').val() || '';
+
+    if (typeof excludeTagsStr !== 'string') {
+      return;
+    }
+
+    const excludeTags = excludeTagsStr.split(',') || [];
+
+    excludeTags.forEach((tag) => createExcludeSpan(tag));
+
+    $('#exclude-title').val('');
+  });
 }
 
-function createCategorySpan(text: string, clsName: string, prop: boolean, fn: () => void) {
+function createExcludeSpan(text: string) {
+  const label = $('<label>', { class: 'exclude-label' });
+  const input = $('<input>', {
+    class: 'exclude-tag-input',
+    type: 'hidden',
+    value: text,
+  });
+  const tagSpan = $('<span>', { class: 'exclude-tag-span' });
+  const tagDelete = $('<span>', { class: 'exclude-span-delete' });
+
+  tagSpan.text(text);
+  tagDelete.on('click', function () {
+    $(this).parent().remove();
+  });
+
+  input.appendTo(label);
+  tagSpan.appendTo(label);
+  tagDelete.appendTo(label);
+
+  label.appendTo('#exclude-tag-wrapper');
+}
+
+function createCategorySpan(
+  text: string,
+  clsName: string,
+  prop: boolean,
+  fn: () => void,
+) {
   const checkBox = $('<input>', {
     type: 'checkbox',
     class: `category-check ${clsName}`,
@@ -75,14 +132,14 @@ function createCategorySpan(text: string, clsName: string, prop: boolean, fn: ()
   });
   checkBox.on('change', fn);
 
-  const tabName = $('<span>', { class: "category-span", text: text });
+  const tabName = $('<span>', { class: 'category-span', text: text });
   const span = $('<label>');
 
   checkBox.prop('checked', prop);
   span.append(checkBox).append(tabName);
 
   return span;
-};
+}
 
 function checkFn({ v, c }: Param) {
   const { href } = v;
@@ -92,30 +149,29 @@ function checkFn({ v, c }: Param) {
     .toArray()
     .reduce((prev: string[], cur: HTMLElement): string[] => {
       const r = checkNotNull($(cur).val()) as string;
-      return [...prev, r]
-    }, [])
+      return [...prev, r];
+    }, []);
 
-  const title = $('#exclude-title').val() as string || "";
+  const title = $('.exclude-tag-input')
+    .toArray()
+    .map((ele): string => $(ele).val() as string);
 
   const pageFilter: ArticleFilterImpl = {
     tab,
-    title: title.trim().length > 0 ? title.split(',') : [],
+    title: title.length > 0 ? title : [],
   };
 
   c.articleFilterConfig[channelId] = pageFilter;
 
   return { v, c } as Param;
-};
+}
 
 function toggleArticleFilterModal() {
-  $("#dialog").toggle()
+  $('#dialog').toggle();
 }
 
 function initModal(): PromiseFunc[] {
-  return [
-    appendModal,
-    createModal,
-  ]
+  return [appendModal, createModal];
 }
 
-export { initModal, toggleArticleFilterModal }
+export { initModal, toggleArticleFilterModal };
