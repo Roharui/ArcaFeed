@@ -39,7 +39,9 @@ function toLink(mode: PageMode): PromiseFunc {
     const url = mode === 'NEXT' ? nextArticleUrl : prevArticleUrl;
 
     if (!isString(url)) {
-      console.log("No url at toLink")
+      if (process.env.NODE_ENV === 'development') {
+        console.log("No url at toLink");
+      }
       return;
     }
 
@@ -52,7 +54,9 @@ function toLink(mode: PageMode): PromiseFunc {
 function pageRender(mode: PageMode): PromiseFunc {
   return ({ v }: Param): PromiseFunc[] => {
     if (!v.swiper) {
-      console.log("No Swiper Init")
+      if (process.env.NODE_ENV === 'development') {
+        console.log("No Swiper Init");
+      }
       return [];
     }
 

@@ -42,7 +42,10 @@ function getArticleId(href: string): string {
 
 function parseHref(href?: string) {
   const realHref = href || window.location.href;
-  console.log('Checking page mode for href:', realHref);
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Checking page mode for href:', realHref);
+  }
 
   let hrefObj: HrefImpl;
 

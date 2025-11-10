@@ -25,7 +25,9 @@ function fetchFromCurrentSlide(mode: PageMode): PromiseFunc {
     const searchUrl =
       currentSlide.attr('data-article-href') + searchQuery;
 
-    console.log(`Fetching ${mode} article From Current article: ${searchUrl}`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Fetching ${mode} article From Current article: ${searchUrl}`);
+    }
 
     const res = await fetchUrl(searchUrl);
     const $html = $(res.responseText);
@@ -49,13 +51,17 @@ function fetchLoop(mode: PageMode, $html: JQuery<HTMLElement>): PromiseFunc {
       const articlePageUrl = articlePageElement.find('a').attr('href');
 
       if (!articlePageUrl) {
-        console.log("NO ARTICLE PAGE LINK FOUND")
+        if (process.env.NODE_ENV === 'development') {
+          console.log("NO ARTICLE PAGE LINK FOUND");
+        }
         return;
       }
 
       const searchUrl = articlePageUrl.replace('https://arca.live', '');
 
-      console.log(`Fetching ${mode} article page: ${searchUrl}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Fetching ${mode} article page: ${searchUrl}`);
+      }
 
       const res = await fetchUrl(`${searchUrl}`);
 
@@ -72,9 +78,11 @@ function fetchLoop(mode: PageMode, $html: JQuery<HTMLElement>): PromiseFunc {
       }
 
       if (!!url) {
-        console.log(
-          `Fetching Complete ${mode} article page: ${articlePageUrl}`,
-        );
+        if (process.env.NODE_ENV === 'development') {
+          console.log(
+            `Fetching Complete ${mode} article page: ${articlePageUrl}`,
+          );
+        }
 
         if (mode === 'PREV') {
           c.articleList.unshift(...filteredLinks);
@@ -88,9 +96,11 @@ function fetchLoop(mode: PageMode, $html: JQuery<HTMLElement>): PromiseFunc {
       }
       count += 1;
 
-      console.log(
-        `No articles found on page ${articlePageUrl}, trying ${mode} page...`,
-      );
+      if (process.env.NODE_ENV === 'development') {
+        console.log(
+          `No articles found on page ${articlePageUrl}, trying ${mode} page...`,
+        );
+      }
     }
   }
 }
