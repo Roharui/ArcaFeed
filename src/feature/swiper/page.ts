@@ -88,7 +88,8 @@ function pageRender(mode: PageMode): PromiseFunc {
 
 function alertPageIsFetching(mode: PageMode) {
   return ({ v }: Param) => {
-    $(v.currentSlide || getCurrentSlide(v))
+    const currentSlide = $(v.currentSlide || getCurrentSlide(v));
+    currentSlide
       .find('.loading-info')
       .append(
         $('<div>').text(
@@ -99,7 +100,7 @@ function alertPageIsFetching(mode: PageMode) {
 }
 
 function setCurrentArticle({ v }: Param) {
-  const currentSlide = $(v.currentSlide || getCurrentSlide(v))
+  const currentSlide = $(v.currentSlide || getCurrentSlide(v));
 
   const currentArticleUrl = currentSlide.attr('data-article-href');
   const currentArticleTitle = checkNotNull(currentSlide.attr('data-article-title'));
@@ -109,7 +110,7 @@ function setCurrentArticle({ v }: Param) {
 }
 
 function showCurrentSlide({ v }: Param) {
-  const currentSlide = $(v.currentSlide || getCurrentSlide(v))
+  const currentSlide = $(v.currentSlide || getCurrentSlide(v));
   currentSlide.find('.loader-container').remove();
   currentSlide.removeClass('slide-empty');
 }
@@ -125,7 +126,7 @@ function linkPageRender(mode: PageMode): PromiseFunc {
 
     const { nextArticleUrl, prevArticleUrl } = v;
 
-    const url = checkNotNull(mode === 'NEXT' ? nextArticleUrl : prevArticleUrl)
+    const url = checkNotNull(mode === 'NEXT' ? nextArticleUrl : prevArticleUrl);
 
     while (!res) {
       res = await fetchUrl(url);
@@ -136,7 +137,8 @@ function linkPageRender(mode: PageMode): PromiseFunc {
           return;
         }
 
-        $(getCurrentSlide(v))
+        const currentSlide = $(getCurrentSlide(v));
+        currentSlide
           .find('.loading-info')
           .append($('<div>').text('글 불러오기 실패'));
 
@@ -152,7 +154,7 @@ function linkPageRender(mode: PageMode): PromiseFunc {
 
     const currentArticleId = getArticleId(url);
 
-    const currentSlide = $(v.currentSlide || getCurrentSlide(v))
+    const currentSlide = $(v.currentSlide || getCurrentSlide(v));
 
     currentSlide.append($article);
 

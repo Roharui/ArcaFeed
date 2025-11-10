@@ -7,9 +7,9 @@ const homePageRegex = /arca\.live\/?$/;
 const channelPageRegex = /b\/[a-zA-Z0-9]+/;
 const articlePageRegex = /b\/([A-Za-z0-9])+\/[0-9]+/;
 
-const channelAndArticleIdRegex =
-  /(?<=\/b\/).([A-Za-z0-9])+|(?<=\/b\/([A-Za-z0-9])+\/).[0-9]+|\?.+/g;
-const articelIdRegex = /(?<=\/b\/([A-Za-z0-9])+\/).[0-9]+|\?.+/g;
+// Optimized: Use capturing groups instead of lookbehind/lookahead for better performance
+const channelAndArticleIdRegex = /\/b\/([A-Za-z0-9]+)(?:\/([0-9]+))?(\?.+)?/;
+const articelIdRegex = /\/b\/[A-Za-z0-9]+\/([0-9]+)(\?.+)?/;
 
 const rootContainerRegex = /(?<=\"top\"\>\<\/div\>).+(?=\<div id=\"bottom\")/gs;
 const parseContentRegex =
@@ -37,7 +37,7 @@ function parseContent(responseText: string): string {
 function getArticleId(href: string): string {
   const articleIdMatch = href.match(articelIdRegex);
 
-  return getRegexMatchByIndex(articleIdMatch, 0);
+  return getRegexMatchByIndex(articleIdMatch, 1); // Changed from 0 to 1 for capturing group
 }
 
 function parseHref(href?: string) {
@@ -50,9 +50,9 @@ function parseHref(href?: string) {
   if (articlePageRegex.test(realHref)) {
     const matchArr = realHref.match(channelAndArticleIdRegex);
 
-    const channelId = getRegexMatchByIndex(matchArr, 0);
-    const articleId = getRegexMatchByIndex(matchArr, 1);
-    const search = getRegexMatchByIndexTry(matchArr, 2, '');
+    const channelId = getRegexMatchByIndex(matchArr, 1); // Changed from 0 to 1 for capturing group
+    const articleId = getRegexMatchByIndex(matchArr, 2); // Changed from 1 to 2 for capturing group
+    const search = getRegexMatchByIndexTry(matchArr, 3, ''); // Changed from 2 to 3 for capturing group
 
     hrefObj = { mode: 'ARTICLE', channelId, articleId, search };
   }
@@ -60,8 +60,8 @@ function parseHref(href?: string) {
   else if (channelPageRegex.test(realHref)) {
     const matchArr = realHref.match(channelAndArticleIdRegex);
 
-    const channelId = getRegexMatchByIndex(matchArr, 0);
-    const search = getRegexMatchByIndexTry(matchArr, 1, '');
+    const channelId = getRegexMatchByIndex(matchArr, 1); // Changed from 0 to 1 for capturing group
+    const search = getRegexMatchByIndexTry(matchArr, 3, ''); // Changed from 1 to 3 for capturing group
 
     hrefObj = { mode: 'CHANNEL', channelId, articleId: '', search };
   }

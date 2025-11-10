@@ -20,7 +20,7 @@ function fetchArticle(mode: PageMode): PromiseFunc {
 function fetchFromCurrentSlide(mode: PageMode): PromiseFunc {
   return async ({ v, c }: Param): Promise<PromiseFunc> => {
     const { searchQuery } = c;
-    const currentSlide = $(v.currentSlide || getCurrentSlide(v))
+    const currentSlide = $(v.currentSlide || getCurrentSlide(v));
 
     const searchUrl =
       currentSlide.attr('data-article-href') + searchQuery;
