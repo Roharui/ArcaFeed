@@ -1,7 +1,9 @@
 import $ from 'jquery';
 
 import type { Param } from '@/vault';
+
 import { Helper } from '@/core';
+
 import { nextLinkForce } from './swiper';
 import { toggleArticleFilterModal } from './modal';
 
@@ -13,20 +15,27 @@ import { toggleArticleFilterModal } from './modal';
 //   </a>
 // </li>
 
-function createHelperBtn(id: string, icon: string, callback: Function, display = 'block') {
+function createHelperBtn(
+  id: string,
+  icon: string,
+  callback: Function,
+  display = 'list-item',
+) {
   const btn = $('<li>', {
-    class: `nav-item dropdown ${id}`
+    class: `nav-item dropdown userscript-nav-item ${id}`,
   });
-  const a = $('<a>', {class: 'nav-link', style: "margin: 0 .5rem"});
-  const spanMargin = $('<span>', { class: 'd-none d-sm-inline navbar-top-margin' });
-  const spanIcon = $('<span>', { class: icon + " h5" });
+  const a = $('<a>', { class: 'nav-link' });
+  const spanMargin = $('<span>', {
+    class: 'd-none d-sm-inline navbar-top-margin',
+  });
+  const spanIcon = $('<span>', { class: icon + ' h5' });
 
   a.append(spanMargin);
   a.append(spanIcon);
-  
+
   btn.append(a);
   btn.css('display', display);
-  
+
   btn.on('click', () => callback());
 
   return btn;
@@ -46,7 +55,7 @@ function initButton({ v, c }: Param) {
         return { c } as Param;
       });
     },
-    c.slideMode === 'REFRESH' ? 'block' : 'none',
+    c.slideMode === 'REFRESH' ? 'list-item' : 'none',
   );
   const slideModeToRefresh = createHelperBtn(
     'play',
@@ -61,8 +70,9 @@ function initButton({ v, c }: Param) {
         return { c } as Param;
       });
     },
-    c.slideMode === 'RENDER' ? 'block' : 'none',
+    c.slideMode === 'RENDER' ? 'list-item' : 'none',
   );
+
   const nextPageBtn = createHelperBtn('next', 'ion-ios-arrow-forward', () =>
     Helper.runPromise(nextLinkForce),
   );
@@ -72,12 +82,12 @@ function initButton({ v, c }: Param) {
     'ion-ios-gear',
     toggleArticleFilterModal,
   );
-  
+
   const fullScreen = createHelperBtn(
     'play',
     'ion-ios-monitor',
     () => document.documentElement.requestFullscreen(),
-    c.slideMode === 'RENDER' ? 'block' : 'none',
+    c.slideMode === 'RENDER' ? 'list-item' : 'none',
   );
 
   const btns: JQuery<HTMLElement>[] = [];
@@ -92,7 +102,6 @@ function initButton({ v, c }: Param) {
   btns.forEach((btn) => {
     $('.navbar-nav').last().prepend(btn);
   });
-  
 }
 
 export { initButton };

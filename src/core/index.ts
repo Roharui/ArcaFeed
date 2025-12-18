@@ -2,7 +2,13 @@ import { PromiseManager } from '@/core/promise';
 
 import { initLink } from '@/feature/article';
 import { initSwiper, initPage, initSlide } from '@/feature/swiper';
-import { initEvent, initModal, initButton, initSeries, addVersionInfo } from '@/feature';
+import {
+  initEvent,
+  initModal,
+  initButton,
+  initSeries,
+  addVersionInfo,
+} from '@/feature';
 
 import type { PromiseFunc } from '@/types';
 

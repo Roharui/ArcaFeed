@@ -11,12 +11,11 @@ function addVersionInfo(_: Param): void {
   const versionInfo = `ArcaFeed Version: ${version} (Build Date: ${date})`;
 
   $('body').prepend(
-    $(
-      '<div>', 
-      {
-        text: versionInfo, style: 'font-size: 12px; color: var(--color-text); margin-bottom: 10px; background-color: var(--color-bd-inner); padding: 5px;'
-      }
-    )
+    $('<div>', {
+      text: versionInfo,
+      style:
+        'font-size: 12px; color: var(--color-text); margin-bottom: 10px; background-color: var(--color-bd-inner); padding: 5px;',
+    }),
   );
 
   return;

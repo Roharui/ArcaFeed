@@ -1,18 +1,20 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import MiniCssExtractPlugin from 'mini-css-extract-plugin';
+import { UserscriptPlugin } from 'webpack-userscript';
+
+import config from './package.json' with { type: 'json' };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export default function(_env, _args) {
+export default function (_env, _args) {
   return {
     entry: './src/index.ts',
 
     output: {
       path: path.resolve(__dirname, 'dist'),
-      filename: 'dist.min.js',
+      filename: 'dist.user.js',
     },
 
     resolve: {
@@ -30,7 +32,7 @@ export default function(_env, _args) {
           test: /\.css$/,
           use: [
             {
-              loader: MiniCssExtractPlugin.loader,
+              loader: 'style-loader',
             },
             {
               loader: 'css-loader',
@@ -46,9 +48,17 @@ export default function(_env, _args) {
     },
 
     plugins: [
-      new MiniCssExtractPlugin({
-        filename: "dist.min.css"
-      })
+      new UserscriptPlugin({
+        headers: {
+          name: 'ArcaFeed',
+          namespace: 'https://github.com/Roharui/ArcaFeed',
+          version: config.version,
+          description: 'Use ArcaLive as Shorts',
+          author: 'https://github.com/Roharui',
+          match: 'https://arca.live/*',
+          icon: 'https://www.google.com/s2/favicons?sz=64&domain=arca.live',
+        },
+      }),
     ],
   };
 }
