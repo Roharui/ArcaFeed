@@ -9,41 +9,50 @@ function filterLink(rows: JQuery<HTMLElement>, v: Vault, c: Config): string[] {
   const { href } = v;
 
   const articleFilter = articleFilterConfig[href.channelId];
-  const articleListString = articleList.join(',');
+  // Use Set for O(1) lookup instead of O(n) indexOf on comma-separated string
+  const articleIdSet = new Set(articleList);
 
   let resultRows = rows.toArray();
 
   if (articleFilter) {
+    // Cache tab filter set for faster lookups
+    const tabFilterSet = new Set(articleFilter.tab);
+    
     resultRows = resultRows.filter((ele) => {
-      const _tabTypeText = $(ele).find('.badge-success').text();
+      const $ele = $(ele); // Cache jQuery object
+      const _tabTypeText = $ele.find('.badge-success').text();
       const tabTypeText = _tabTypeText.length === 0 ? '노탭' : _tabTypeText;
 
-      const titleText = $(ele).find('.title').text().trim();
+      const titleText = $ele.find('.title').text().trim();
 
-      const tabAllow = articleFilter.tab.includes(tabTypeText);
+      const tabAllow = tabFilterSet.has(tabTypeText);
       const titleAllow = articleFilter.title.every(
         (keyword) => !titleText.includes(keyword),
       );
 
       const result = tabAllow && titleAllow;
 
-      if (!result) $(ele).css('opacity', '0.5');
-      else $(ele).css('opacity', '1');
+      // Set opacity directly instead of using css() method
+      $ele.css('opacity', result ? '1' : '0.5');
 
       return result;
     });
   }
 
-  return resultRows.reduce((prev: string[], ele: HTMLElement) => {
+  const result: string[] = [];
+  for (const ele of resultRows) {
     const r = $(ele).attr('href') as string;
-    if (!r) return prev;
+    if (!r) continue;
 
     const href = r.replace('https://arca.live', '').replace(/\?.+$/, '');
+    const articleId = getArticleId(href);
 
-    if (articleListString.indexOf(getArticleId(href)) >= 0) return prev;
+    if (!articleIdSet.has(articleId)) {
+      result.push(href);
+    }
+  }
 
-    return [...prev, href];
-  }, []);
+  return result;
 }
 
 export { filterLink };

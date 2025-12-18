@@ -16,12 +16,16 @@ export class PromiseManager extends Base {
   }
 
   async initPromise(): Promise<void> {
-    console.log('Promise Init Start');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Promise Init Start');
+    }
 
     this.isActive = true;
 
     while (this.promiseList.length > 0) {
-      console.log('Promise Start');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Promise Start');
+      }
 
       this.promiseListCurrent = this.promiseList.shift() || [];
 
@@ -33,7 +37,8 @@ export class PromiseManager extends Base {
         try {
           const result: PromiseFuncResult = await promiseFunc(this.p);
 
-          switch (isPromiseFuncResult(result)) {
+          const resultType = isPromiseFuncResult(result);
+          switch (resultType) {
             case 'void':
               break;
             case 'Function':
@@ -47,14 +52,16 @@ export class PromiseManager extends Base {
               break;
           }
 
-          console.log('PromiseFunc : ');
-          console.log(promiseFunc);
-          console.log('Result : ');
-          console.log(result);
-          console.log('Result Type : ' + isPromiseFuncResult(result));
-          console.log('Current Param : ');
-          console.log(this.p);
-          console.log('============================');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('PromiseFunc : ');
+            console.log(promiseFunc);
+            console.log('Result : ');
+            console.log(result);
+            console.log('Result Type : ' + resultType);
+            console.log('Current Param : ');
+            console.log(this.p);
+            console.log('============================');
+          }
         } catch (e) {
           console.log(e);
 
@@ -69,11 +76,15 @@ export class PromiseManager extends Base {
           this.promiseListCurrent.unshift(promiseFunc);
         }
       }
-      console.log('Promise End');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Promise End');
+      }
     }
-    console.log('Promise Init End');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Promise Init End');
+      console.log('Save Config Finish');
+    }
 
-    console.log('Save Config Finish');
     this.p.c.saveConfig();
 
     this.isActive = false;

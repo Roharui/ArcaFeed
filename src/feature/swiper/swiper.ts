@@ -48,8 +48,9 @@ function initSwiperObject({ v }: Param) {
 function initArticleToSlide({ v }: Param) {
   const { articleId } = v.href;
 
-  $('<div>', { class: 'swiper' }).appendTo('body');
-  $('<div>', { class: 'swiper-wrapper' }).appendTo('.swiper');
+  const $body = $('body');
+  const $swiper = $('<div>', { class: 'swiper' }).appendTo($body);
+  $('<div>', { class: 'swiper-wrapper' }).appendTo($swiper);
 
   const slide = $('<div>', { class: 'swiper-slide' });
 
@@ -57,14 +58,14 @@ function initArticleToSlide({ v }: Param) {
   slide.attr('data-article-href', window.location.pathname);
   slide.attr('data-article-title', document.title);
 
-  const html = $('body').html()
+  const html = $body.html();
   const content = $(parseContent(html));
 
-  $(".root-container").remove()
+  $(".root-container").remove();
 
   content.appendTo(slide);
 
-  slide.appendTo($(".swiper-wrapper"))
+  slide.appendTo($(".swiper-wrapper"));
 }
 
 export { initSwiper, initSwiperObject, initArticleToSlide }

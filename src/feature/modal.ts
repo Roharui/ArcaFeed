@@ -43,8 +43,8 @@ function createModal({ v, c }: Param) {
     title: [],
   };
 
-  const category = $('.root-container')
-    .first()
+  const $rootContainer = $('.root-container').first();
+  const category = $rootContainer
     .find('.board-category > span')
     .get()
     .map((ele) => $(ele).text().trim())
@@ -52,16 +52,20 @@ function createModal({ v, c }: Param) {
 
   category.splice(0, 0, '노탭');
 
+  // Use Set for O(1) lookup instead of O(n) array.includes
+  const tabSet = new Set(tab);
+  const $dialogCategory = $('#dialog #category');
+
   category
     .map((text) =>
-      createCategorySpan(text, 'ele-category', tab.includes(text), () =>
+      createCategorySpan(text, 'ele-category', tabSet.has(text), () =>
         $('.ele-category-all').prop(
           'checked',
           $('.ele-category').length === $('.ele-category:checked').length,
         ),
       ),
     )
-    .forEach((ele) => $('#dialog #category').append(ele));
+    .forEach((ele) => $dialogCategory.append(ele));
 
   const spanAll = createCategorySpan(
     '전체',
