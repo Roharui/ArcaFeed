@@ -2,7 +2,7 @@ import { PromiseManager } from '@/core/promise';
 
 import { initLink } from '@/feature/article';
 import { initSwiper, initPage, initSlide } from '@/feature/swiper';
-import { initEvent, initModal, initButton, initSeries } from '@/feature';
+import { initEvent, initModal, initButton, initSeries, addVersionInfo } from '@/feature';
 
 import type { PromiseFunc } from '@/types';
 
@@ -18,6 +18,7 @@ class Helper extends PromiseManager {
 
   async init() {
     this.addNextPromise([
+      addVersionInfo,
       checkPageMode,
       initSwiper,
       initSeries,

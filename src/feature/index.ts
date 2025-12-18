@@ -5,3 +5,4 @@ export * from './search';
 export * from './button';
 export * from './modal';
 export * from './series';
+export * from './version';

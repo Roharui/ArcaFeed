@@ -5,41 +5,43 @@ import { Helper } from '@/core';
 import { nextLinkForce } from './swiper';
 import { toggleArticleFilterModal } from './modal';
 
-function createHelperBtn(icon: string, callback: Function, display = 'block') {
-  const btn = $('<div>', {
-    class: 'helper-btn',
-    style: `display: ${display};`,
-  });
-  btn.append($('<span>', { class: icon }));
+// Example Button HTML:
+// <li class="nav-item dropdown user-menu-parent">
+//   <a class="nav-link user-menu-link" href="/u/login?goto=%2Fb%2Fbluearchive" title="Login">
+//     <span class="d-none d-sm-inline navbar-top-margin"></span>
+//     <span class="ion-person"></span>
+//   </a>
+// </li>
 
+function createHelperBtn(id: string, icon: string, callback: Function, display = 'block') {
+  const btn = $('<li>', {
+    class: `nav-item dropdown ${id}`
+  });
+  const a = $('<a>', {class: 'nav-link', style: "margin: 0 .5rem"});
+  const spanMargin = $('<span>', { class: 'd-none d-sm-inline navbar-top-margin' });
+  const spanIcon = $('<span>', { class: icon + " h5" });
+
+  a.append(spanMargin);
+  a.append(spanIcon);
+  
+  btn.append(a);
+  btn.css('display', display);
+  
   btn.on('click', () => callback());
 
   return btn;
 }
 
-function btnWrapper(cls: string, content: JQuery<HTMLElement>[]) {
-  const btnWrapperDiv = $('<div>', { class: cls });
-
-  content.reverse().forEach((btn) => {
-    btnWrapperDiv.append(btn);
-  });
-
-  return btnWrapperDiv;
-}
-
 function initButton({ v, c }: Param) {
-  // const consoleInfo = createHelperBtn('ion-information', () =>
-  //   showConsole(),
-  //);
   const slideModeToRender = createHelperBtn(
+    'refresh',
     'ion-ios-refresh',
     () => {
       Helper.runPromise(({ c }: Param) => {
         c.slideMode = c.slideMode === 'REFRESH' ? 'RENDER' : 'REFRESH';
 
-        $('.helper-btn .ion-ios-refresh').parent().hide();
-        $('.helper-btn .ion-ios-play').parent().show();
-        $('.helper-btn .ion-ios-monitor').parent().show();
+        $('.refresh').hide();
+        $('.play').show();
 
         return { c } as Param;
       });
@@ -47,28 +49,32 @@ function initButton({ v, c }: Param) {
     c.slideMode === 'REFRESH' ? 'block' : 'none',
   );
   const slideModeToRefresh = createHelperBtn(
+    'play',
     'ion-ios-play',
     () => {
       Helper.runPromise(({ c }: Param) => {
         c.slideMode = c.slideMode === 'REFRESH' ? 'RENDER' : 'REFRESH';
 
-        $('.helper-btn .ion-ios-refresh').parent().show();
-        $('.helper-btn .ion-ios-play').parent().hide();
-        $('.helper-btn .ion-ios-monitor').parent().hide();
+        $('.refresh').show();
+        $('.play').hide();
 
         return { c } as Param;
       });
     },
     c.slideMode === 'RENDER' ? 'block' : 'none',
   );
-  const nextPageBtn = createHelperBtn('ion-ios-arrow-forward', () =>
+  const nextPageBtn = createHelperBtn('next', 'ion-ios-arrow-forward', () =>
     Helper.runPromise(nextLinkForce),
   );
+
   const filterPageBtn = createHelperBtn(
+    'filter',
     'ion-ios-gear',
     toggleArticleFilterModal,
   );
+  
   const fullScreen = createHelperBtn(
+    'play',
     'ion-ios-monitor',
     () => document.documentElement.requestFullscreen(),
     c.slideMode === 'RENDER' ? 'block' : 'none',
@@ -77,78 +83,16 @@ function initButton({ v, c }: Param) {
   const btns: JQuery<HTMLElement>[] = [];
 
   if (v.isCurrentMode('CHANNEL')) {
-    btns.push(nextPageBtn, filterPageBtn);
+    btns.push(filterPageBtn);
   }
   if (v.isCurrentMode('ARTICLE')) {
     btns.push(slideModeToRender, slideModeToRefresh, fullScreen);
   }
 
-  $('body').append(btnWrapper('btn-wrapper right', btns));
+  btns.forEach((btn) => {
+    $('.navbar-nav').last().prepend(btn);
+  });
+  
 }
 
 export { initButton };
-
-/*
-import { Vault } from './vault';
-export class ButtonManager extends Vault {
-  initHelperBtn() {
-    const consoleInfo = createHelperBtn('ion-information', () =>
-      this.showConsole(),
-    );
-    const slideModeToRender = createHelperBtn(
-      'ion-ios-refresh',
-      () => {
-        this.toggleSlideMode();
-        $('.helper-btn .ion-ios-refresh').parent().hide();
-        $('.helper-btn .ion-ios-play').parent().show();
-        $('.helper-btn .ion-ios-monitor').parent().show();
-      },
-      this.slideMode === 'REFRESH' ? 'block' : 'none',
-    );
-    const slideModeToRefresh = createHelperBtn(
-      'ion-ios-play',
-      () => {
-        this.toggleSlideMode();
-        $('.helper-btn .ion-ios-refresh').parent().show();
-        $('.helper-btn .ion-ios-play').parent().hide();
-        $('.helper-btn .ion-ios-monitor').parent().hide();
-      },
-      this.slideMode === 'RENDER' ? 'block' : 'none',
-    );
-    const showCommentModal = createHelperBtn('ion-chatboxes', () =>
-      this.doHide('Comment'),
-    );
-    const nextPageBtn = createHelperBtn('ion-ios-arrow-forward', () =>
-      this.nextLinkForce(),
-    );
-    const filterPageBtn = createHelperBtn('ion-ios-gear', () =>
-      this.openArticleFilterModal(),
-    );
-    const fullScreen = createHelperBtn(
-      'ion-ios-monitor',
-      () => document.documentElement.requestFullscreen(),
-      this.slideMode === 'RENDER' ? 'block' : 'none',
-    );
-
-    const btns = [];
-
-    if (this.mode === 'ARTICLE') {
-      btns.push(showCommentModal);
-      btns.push(slideModeToRender);
-      btns.push(slideModeToRefresh);
-
-      btns.push(fullScreen);
-    }
-    if (this.mode === 'CHANNEL') {
-      btns.push(nextPageBtn);
-      btns.push(filterPageBtn);
-    }
-
-    if (process.env.NODE_ENV === 'development') {
-      btns.push(consoleInfo);
-    }
-
-    $('body').append(btnWrapper('btn-wrapper right', btns));
-  }
-}
-*/

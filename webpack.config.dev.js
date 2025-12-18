@@ -1,12 +1,12 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import WebpackHookPlugin from 'webpack-hook-plugin';
+import webpack from 'webpack';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export default function(_env, _args) {
+export default function (env, _args) {
   return {
     entry: './src/index.ts',
 
@@ -46,9 +46,10 @@ export default function(_env, _args) {
     },
 
     plugins: [
-      new WebpackHookPlugin({
-        onBuildEnd: ["./upload.sh"]
-      })
+      new webpack.DefinePlugin({
+          'process.env.GIT_HASH': JSON.stringify(env.GIT_HASH || 'unknown'),
+          'process.env.BUILD_DATE': JSON.stringify(env.BUILD_DATE || 'unknown'),
+      }),
     ],
   };
 }
