@@ -1,6 +1,7 @@
 import $ from 'jquery';
 
 import type { Param } from '@/vault';
+import type { HrefImpl } from '@/types';
 
 import { Helper } from '@/core';
 
@@ -41,7 +42,20 @@ function createHelperBtn(
   return btn;
 }
 
-function initButton({ v, c }: Param) {
+function btnWrapper(btn: JQuery<HTMLElement>[]): JQuery<HTMLElement> {
+  const ul = $('<ul>', { class: 'nav navbar-nav userscript-nav' });
+
+  btn.forEach((b) => ul.append(b));
+
+  return ul;
+}
+
+function returnButtons(
+  currentMode: HrefImpl['mode'],
+  slideMode: 'REFRESH' | 'RENDER',
+): JQuery<HTMLElement> {
+  const btns: JQuery<HTMLElement>[] = [];
+
   const slideModeToRender = createHelperBtn(
     'refresh',
     'ion-ios-refresh',
@@ -55,7 +69,7 @@ function initButton({ v, c }: Param) {
         return { c } as Param;
       });
     },
-    c.slideMode === 'REFRESH' ? 'list-item' : 'none',
+    slideMode === 'REFRESH' ? 'list-item' : 'none',
   );
   const slideModeToRefresh = createHelperBtn(
     'play',
@@ -70,7 +84,7 @@ function initButton({ v, c }: Param) {
         return { c } as Param;
       });
     },
-    c.slideMode === 'RENDER' ? 'list-item' : 'none',
+    slideMode === 'RENDER' ? 'list-item' : 'none',
   );
 
   const nextPageBtn = createHelperBtn('next', 'ion-ios-arrow-forward', () =>
@@ -87,21 +101,29 @@ function initButton({ v, c }: Param) {
     'play',
     'ion-ios-monitor',
     () => document.documentElement.requestFullscreen(),
-    c.slideMode === 'RENDER' ? 'list-item' : 'none',
+    slideMode === 'RENDER' ? 'list-item' : 'none',
   );
 
-  const btns: JQuery<HTMLElement>[] = [];
-
-  if (v.isCurrentMode('CHANNEL')) {
-    btns.push(filterPageBtn);
+  if (currentMode === 'CHANNEL') {
+    btns.push(filterPageBtn, nextPageBtn);
   }
-  if (v.isCurrentMode('ARTICLE')) {
+  if (currentMode === 'ARTICLE') {
     btns.push(slideModeToRender, slideModeToRefresh, fullScreen);
   }
 
-  btns.forEach((btn) => {
-    $('.navbar-nav').last().prepend(btn);
-  });
+  return btnWrapper(btns);
 }
 
-export { initButton };
+function initButton({ v, c }: Param) {
+  const btns = returnButtons(v.href.mode, c.slideMode);
+
+  $('ul.nav.navbar-nav').last().before(btns);
+}
+
+function initButtonAtSlide(currentSlide: JQuery<HTMLElement>) {
+  const btns = returnButtons('ARTICLE', 'RENDER');
+
+  currentSlide.find('ul.nav.navbar-nav').last().before(btns);
+}
+
+export { initButton, initButtonAtSlide };

@@ -35,11 +35,11 @@ body {
 
 /* userscript-nav-btn */
 
-ul.nav.navbar-nav.ml-auto.ml-lg-0 li:nth-last-child(2) {
-  border-left: 1px solid var(--color-text);
+ul.userscript-nav {
+  border-right: 1px solid var(--color-text);
 }
 
-ul.navbar-nav li.userscript-nav-item > a {
+li.userscript-nav-item > a {
   margin-right: 0.5rem;
 }
 

@@ -1,17 +1,30 @@
 // hider, regex, slide, link, hider
 
-import $ from 'jquery'
+import $ from 'jquery';
 
 import { Helper } from '@/core';
 
-import { getCurrentSlide } from '@/feature';
-import { addNewEmptySlidePromise, focusCurrentSlide, removeSlidePromise, setCurrentSlide } from '@/feature/swiper';
+import { getCurrentSlide, initButtonAtSlide } from '@/feature';
+import {
+  addNewEmptySlidePromise,
+  focusCurrentSlide,
+  removeSlidePromise,
+  setCurrentSlide,
+} from '@/feature/swiper';
 import { initArticleLinkActive } from '@/feature/article';
 
-import type { PageMode, PromiseFunc } from "@/types";
-import type { Param } from "@/vault";
+import type { PageMode, PromiseFunc } from '@/types';
+import type { Param } from '@/vault';
 
-import { checkNotNull, isString, fetchUrl, sleep, getArticleId, getCurrentHTMLTitle, parseContent } from "@/utils";
+import {
+  checkNotNull,
+  isString,
+  fetchUrl,
+  sleep,
+  getArticleId,
+  getCurrentHTMLTitle,
+  parseContent,
+} from '@/utils';
 
 // Init
 function initPage({ v }: Param): void {
@@ -27,7 +40,7 @@ function initPage({ v }: Param): void {
 // For Event
 function nextLinkForce({ v }: Param) {
   if (!isString(v.nextArticleUrl)) {
-    throw Error("No Next Article Url")
+    throw Error('No Next Article Url');
   }
   window.location.href = v.nextArticleUrl;
 }
@@ -40,22 +53,21 @@ function toLink(mode: PageMode): PromiseFunc {
 
     if (!isString(url)) {
       if (process.env.NODE_ENV === 'development') {
-        console.log("No url at toLink");
+        console.log('No url at toLink');
       }
       return;
     }
 
-    if (c.isSlideMode('REFRESH'))
-      window.location.replace(url);
+    if (c.isSlideMode('REFRESH')) window.location.replace(url);
     else return pageRender(mode);
-  }
+  };
 }
 
 function pageRender(mode: PageMode): PromiseFunc {
   return ({ v }: Param): PromiseFunc[] => {
     if (!v.swiper) {
       if (process.env.NODE_ENV === 'development') {
-        console.log("No Swiper Init");
+        console.log('No Swiper Init');
       }
       return [];
     }
@@ -72,14 +84,20 @@ function pageRender(mode: PageMode): PromiseFunc {
       (mode === 'NEXT' && activeIndex === slides.length - 1)
     ) {
       promiseList.push(() => swiper.disable());
-      promiseList.push(() => { swiper.allowTouchMove = false; return; });
+      promiseList.push(() => {
+        swiper.allowTouchMove = false;
+        return;
+      });
       promiseList.push(alertPageIsFetching(mode));
       promiseList.push(linkPageRender(mode));
       promiseList.push(showCurrentSlide);
       promiseList.push(() => swiper.enable());
       promiseList.push(removeSlidePromise(mode));
       promiseList.push(addNewEmptySlidePromise(mode));
-      promiseList.push(() => { swiper.allowTouchMove = true; return; });
+      promiseList.push(() => {
+        swiper.allowTouchMove = true;
+        return;
+      });
     }
     promiseList.push(setCurrentArticle);
     promiseList.push(focusCurrentSlide);
@@ -87,7 +105,7 @@ function pageRender(mode: PageMode): PromiseFunc {
     promiseList.push(initArticleLinkActive);
 
     return promiseList;
-  }
+  };
 }
 
 function alertPageIsFetching(mode: PageMode) {
@@ -100,14 +118,16 @@ function alertPageIsFetching(mode: PageMode) {
           `${mode === 'NEXT' ? '다음' : '이전'} 글 불러오는 중...`,
         ),
       );
-  }
+  };
 }
 
 function setCurrentArticle({ v }: Param) {
   const currentSlide = $(v.currentSlide || getCurrentSlide(v));
 
   const currentArticleUrl = currentSlide.attr('data-article-href');
-  const currentArticleTitle = checkNotNull(currentSlide.attr('data-article-title'));
+  const currentArticleTitle = checkNotNull(
+    currentSlide.attr('data-article-title'),
+  );
 
   document.title = currentArticleTitle;
   window.history.pushState({}, currentArticleTitle, currentArticleUrl);
@@ -162,10 +182,12 @@ function linkPageRender(mode: PageMode): PromiseFunc {
 
     currentSlide.append($article);
 
+    initButtonAtSlide(currentSlide);
+
     currentSlide.attr('data-article-id', currentArticleId);
     currentSlide.attr('data-article-href', url);
     currentSlide.attr('data-article-title', title);
-  }
+  };
 }
 
-export { initPage, nextLinkForce, toLink }
+export { initPage, nextLinkForce, toLink };
