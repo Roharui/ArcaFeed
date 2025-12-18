@@ -23,16 +23,19 @@ class Config implements ConfigImpl {
 
   loadConfig(): void {
     const articleFilterConfigStr = localStorage.getItem('articleFilterConfig');
-    const articleListStr = localStorage.getItem('articleList');
+    const articleListStr = sessionStorage.getItem('articleList');
 
     this.articleFilterConfig = articleFilterConfigStr
       ? JSON.parse(articleFilterConfigStr)
       : {};
     this.articleList = articleListStr ? JSON.parse(articleListStr) : [];
+
     this.slideMode =
-      (localStorage.getItem('slideMode') as 'REFRESH' | 'RENDER') || 'REFRESH';
-    this.searchQuery = localStorage.getItem('searchQuery') || '';
-    this.seriesName = localStorage.getItem('seriesName') || '';
+      (sessionStorage.getItem('slideMode') as 'REFRESH' | 'RENDER') ||
+      'REFRESH';
+
+    this.searchQuery = sessionStorage.getItem('searchQuery') || '';
+    this.seriesName = sessionStorage.getItem('seriesName') || '';
   }
 
   saveConfig(): void {
@@ -40,11 +43,11 @@ class Config implements ConfigImpl {
       'articleFilterConfig',
       JSON.stringify(this.articleFilterConfig),
     );
-    localStorage.setItem('articleList', JSON.stringify(this.articleList));
+    sessionStorage.setItem('articleList', JSON.stringify(this.articleList));
 
-    localStorage.setItem('slideMode', this.slideMode);
-    localStorage.setItem('searchQuery', this.searchQuery);
-    localStorage.setItem('seriesName', this.seriesName);
+    sessionStorage.setItem('slideMode', this.slideMode);
+    sessionStorage.setItem('searchQuery', this.searchQuery);
+    sessionStorage.setItem('seriesName', this.seriesName);
   }
 }
 

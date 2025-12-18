@@ -8,7 +8,9 @@ import config from './package.json' with { type: 'json' };
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export default function (_env, _args) {
+export default function (env, _args) {
+  const currentVersion = env.GIT_HASH ?? config.version;
+
   return {
     entry: './src/index.ts',
 
@@ -52,7 +54,7 @@ export default function (_env, _args) {
         headers: {
           name: 'ArcaFeed',
           namespace: 'https://github.com/Roharui/ArcaFeed',
-          version: config.version,
+          version: currentVersion,
           description: 'Use ArcaLive as Shorts',
           author: 'https://github.com/Roharui',
           match: 'https://arca.live/*',
