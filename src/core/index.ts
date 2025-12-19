@@ -1,51 +1,30 @@
-import { PromiseManager } from '@/core/promise';
+import type { MethodKeys, PromiseFunc } from '@/types';
 
-import { initLink } from '@/feature/article';
-import { initSwiper, initPage, initSlide } from '@/feature/swiper';
-import {
-  initEvent,
-  initModal,
-  initButton,
-  addVersionInfo,
-  initSeriesLinkBtn,
-  initSeriesContent,
-} from '@/feature';
+import { EventManager } from './event';
 
-import type { PromiseFunc } from '@/types';
-
-import { checkPageMode, newAllPromise } from '@/utils';
-
-class Helper extends PromiseManager {
-  private static instance: Helper;
+class ArcaFeed extends EventManager {
+  private static instance: ArcaFeed;
 
   constructor() {
     super();
-    Helper.instance = this;
+    ArcaFeed.instance = this;
   }
 
-  async init() {
-    this.addNextPromise([
-      newAllPromise(addVersionInfo, checkPageMode),
-      initSwiper,
-      initLink,
-      initSlide,
-      newAllPromise(
-        initSeriesContent,
-        initSeriesLinkBtn,
-        initPage,
-        initButton,
-        initEvent,
-      ),
-      initModal,
-    ]);
+  private static getInstance(): ArcaFeed {
+    return ArcaFeed.instance ?? new ArcaFeed();
+  }
 
-    await this.initPromise();
+  static async runEvent(eventName: MethodKeys<EventManager>) {
+    const func = ArcaFeed.getInstance()[eventName] as Function;
+
+    func.apply(ArcaFeed.getInstance());
+    await ArcaFeed.getInstance().initPromise();
   }
 
   static async runPromise(...func: PromiseFunc[]) {
-    Helper.instance.addNextPromise(func);
-    await Helper.instance.initPromise();
+    ArcaFeed.getInstance().addNextPromise(...func);
+    await ArcaFeed.getInstance().initPromise();
   }
 }
 
-export { Helper };
+export { ArcaFeed };

@@ -1,6 +1,6 @@
 import $ from 'jquery';
 
-import { Helper } from '@/core';
+import { ArcaFeed } from '@/core';
 
 import type { Param } from '@/vault';
 import type { ArticleFilterImpl, PromiseFunc } from '@/types';
@@ -29,10 +29,13 @@ const NEXT_PAGE_MODAL_HTML = `
 </div>
 `;
 
-function appendModal({ v }: Param) {
+function initModal({ v }: Param): void | PromiseFunc {
   if (!v.isCurrentMode('ARTICLE', 'CHANNEL')) return;
+
   const dialog = $(NEXT_PAGE_MODAL_HTML);
   $('body').append(dialog);
+
+  return createModal;
 }
 
 function createModal({ v, c }: Param) {
@@ -84,7 +87,7 @@ function createModal({ v, c }: Param) {
   title.forEach((tag) => createExcludeSpan(tag));
 
   $('#check-btn').on('click', () =>
-    Helper.runPromise(checkFn, initLink, () => toggleArticleFilterModal),
+    ArcaFeed.runPromise(checkFn, initLink, () => toggleArticleFilterModal),
   );
   $('#cancel-btn').on('click', () => toggleArticleFilterModal());
   $('#exclude-btn').on('click', () => {
@@ -173,10 +176,6 @@ function checkFn({ v, c }: Param) {
 
 function toggleArticleFilterModal() {
   $('#dialog').toggle();
-}
-
-function initModal(): PromiseFunc[] {
-  return [appendModal, createModal];
 }
 
 export { initModal, toggleArticleFilterModal };

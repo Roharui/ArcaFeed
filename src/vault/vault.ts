@@ -3,7 +3,7 @@ import type { Swiper } from '@swiper/types';
 
 class Vault {
   href: HrefImpl = {
-    mode: 'OTHER',
+    mode: 'NOT_CHECKED',
     channelId: '',
     articleId: '',
     search: '',

@@ -1,10 +1,9 @@
 import $ from 'jquery';
 
-import { checkNotNull, newAllPromise } from '@/utils';
+import { checkNotNull } from '@/utils';
 
 import type { Param, VaultWithSwiper } from '@/vault';
-import type { PromiseFunc } from '@/types';
-import { Helper } from '@/core';
+import { ArcaFeed } from '@/core';
 
 type SeriesLink = {
   idx: number;
@@ -148,7 +147,7 @@ function initSeriesLinkBtn({ v, c }: Param) {
     seriesNameEle.css('color', 'blue');
   }
 
-  seriesNameEle.on('click', () => Helper.runPromise(linkThisSereis));
+  seriesNameEle.on('click', () => ArcaFeed.runPromise(linkThisSereis));
 }
 
 function linkThisSereis({ v, c }: Param) {

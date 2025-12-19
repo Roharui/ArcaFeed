@@ -1,13 +1,18 @@
 import { Base } from '@/core/base';
 
-import type { PromiseFunc, PromiseFuncResult } from '@/types';
+import type {
+  PromiseFunc,
+  PromiseFuncCondition,
+  PromiseFuncResult,
+} from '@/types';
 import type { Param } from '@/vault';
 
-import { sleep, isPromiseFuncResult } from '@/utils';
+import { sleep, isPromiseFuncResult, newAllPromise } from '@/utils';
 
 export class PromiseManager extends Base {
-  private promiseListCurrent: PromiseFunc[] = [];
   private promiseList: PromiseFunc[][] = [];
+  private promiseListCurrent: PromiseFunc[] = [];
+  private promiseListCondition: PromiseFuncCondition[] = [];
 
   private isActive = false;
 
@@ -15,13 +20,13 @@ export class PromiseManager extends Base {
     super();
   }
 
-  private log(msg: any) {
+  protected log(msg: any) {
     if (process.env.NODE_ENV === 'development') {
       console.log(msg);
     }
   }
 
-  async initPromise(): Promise<void> {
+  protected async initPromise(): Promise<void> {
     this.log('Promise Init Start');
 
     this.isActive = true;
@@ -40,6 +45,7 @@ export class PromiseManager extends Base {
           const result: PromiseFuncResult = await promiseFunc(this.p);
 
           const resultType = isPromiseFuncResult(result);
+
           switch (resultType) {
             case 'void':
               break;
@@ -54,16 +60,14 @@ export class PromiseManager extends Base {
               break;
           }
 
-          if (process.env.NODE_ENV === 'development') {
-            this.log('PromiseFunc : ');
-            this.log(promiseFunc);
-            this.log('Result : ');
-            this.log(result);
-            this.log('Result Type : ' + resultType);
-            this.log('Current Param : ');
-            this.log(this.p);
-            this.log('============================');
-          }
+          this.log('PromiseFunc : ');
+          this.log(promiseFunc);
+          this.log('Result : ');
+          this.log(result);
+          this.log('Result Type : ' + resultType);
+          this.log('Current Param : ');
+          this.log(this.p);
+          this.log('============================');
         } catch (e) {
           console.log(e);
 
@@ -88,7 +92,77 @@ export class PromiseManager extends Base {
     this.isActive = false;
   }
 
-  addPromiseCurrent(...promiseFuncList: PromiseFunc[]) {
+  // protected async initPromiseByCondition(): Promise<void> {
+  //   this.log('Promise Condition Init Start');
+
+  //   this.isActive = true;
+
+  //   let i = 0;
+  //   while (this.promiseListCondition.length > 0) {
+  //     this.log('Promise Start');
+
+  //     const conditionFuncList = this.promiseListCondition
+  //       .filter(([_, conditon]) => conditon(this.p))
+  //       .map(([func, _]) => func);
+  //     this.promiseListCondition = this.promiseListCondition.filter(
+  //       ([_, conditon]) => !conditon(this.p),
+  //     );
+
+  //     if (conditionFuncList.length === 0) {
+  //       this.log('No Condition Met, Break Loop');
+  //       break;
+  //     }
+
+  //     try {
+  //       const result = await newAllPromise(...conditionFuncList)(this.p);
+
+  //       this.p = Object.assign(this.p, result[0] as Param);
+
+  //       const resultArray = result[1] as PromiseFunc[];
+  //       this.promiseListCondition.push(
+  //         ...(resultArray.map((func) => [
+  //           func,
+  //           () => true,
+  //         ]) as PromiseFuncCondition[]),
+  //       );
+
+  //       this.log('PromiseFunc : ');
+  //       this.log(conditionFuncList);
+  //       this.log('Result : ');
+  //       this.log(result);
+  //       this.log('Current Param : ');
+  //       this.log(this.p);
+  //       this.log('============================');
+  //     } catch (e) {
+  //       console.log(e);
+
+  //       this.log('No Loop For Development Mode');
+
+  //       if (process.env.NODE_ENV === 'development') {
+  //         break;
+  //       }
+
+  //       await sleep(1000);
+  //     }
+
+  //     if (i++ > 10) {
+  //       this.log('Too Many Loops, Break Loop');
+  //       break;
+  //     }
+  //     this.log('Promise End');
+  //   }
+  //   this.log('Promise Init End');
+  //   this.log('Save Config Finish');
+
+  //   this.log('Promise Condition Reset');
+  //   this.promiseListCondition = [];
+
+  //   this.p.c.saveConfig();
+
+  //   this.isActive = false;
+  // }
+
+  private addPromiseCurrent(...promiseFuncList: PromiseFunc[]) {
     if (this.isActive) {
       this.promiseListCurrent.unshift(...promiseFuncList);
     } else {
@@ -96,7 +170,11 @@ export class PromiseManager extends Base {
     }
   }
 
-  addNextPromise(promiseFuncList: PromiseFunc[]) {
+  protected addNextPromise(...promiseFuncList: PromiseFunc[]) {
     this.promiseList.push(promiseFuncList);
   }
+
+  // protected addNextPromiseCondition(...promiseFunc: PromiseFuncCondition[]) {
+  //   this.promiseListCondition.push(...promiseFunc);
+  // }
 }

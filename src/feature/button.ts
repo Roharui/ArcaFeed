@@ -3,7 +3,7 @@ import $ from 'jquery';
 import type { Param } from '@/vault';
 import type { HrefImpl } from '@/types';
 
-import { Helper } from '@/core';
+import { ArcaFeed } from '@/core';
 
 import { nextLinkForce } from './swiper';
 import { toggleArticleFilterModal } from './modal';
@@ -16,7 +16,7 @@ import { toggleArticleFilterModal } from './modal';
 //   </a>
 // </li>
 
-function createHelperBtn(
+function createArcaFeedBtn(
   id: string,
   icon: string,
   callback: Function,
@@ -56,11 +56,11 @@ function returnButtons(
 ): JQuery<HTMLElement> {
   const btns: JQuery<HTMLElement>[] = [];
 
-  const slideModeToRender = createHelperBtn(
+  const slideModeToRender = createArcaFeedBtn(
     'refresh',
     'ion-ios-refresh',
     () => {
-      Helper.runPromise(({ c }: Param) => {
+      ArcaFeed.runPromise(({ c }: Param) => {
         c.slideMode = c.slideMode === 'REFRESH' ? 'RENDER' : 'REFRESH';
 
         $('.refresh').hide();
@@ -71,11 +71,11 @@ function returnButtons(
     },
     slideMode === 'REFRESH' ? 'list-item' : 'none',
   );
-  const slideModeToRefresh = createHelperBtn(
+  const slideModeToRefresh = createArcaFeedBtn(
     'play',
     'ion-ios-play',
     () => {
-      Helper.runPromise(({ c }: Param) => {
+      ArcaFeed.runPromise(({ c }: Param) => {
         c.slideMode = c.slideMode === 'REFRESH' ? 'RENDER' : 'REFRESH';
 
         $('.refresh').show();
@@ -87,11 +87,11 @@ function returnButtons(
     slideMode === 'RENDER' ? 'list-item' : 'none',
   );
 
-  const nextPageBtn = createHelperBtn('next', 'ion-ios-arrow-forward', () =>
-    Helper.runPromise(nextLinkForce),
+  const nextPageBtn = createArcaFeedBtn('next', 'ion-ios-arrow-forward', () =>
+    ArcaFeed.runPromise(nextLinkForce),
   );
 
-  const filterPageBtn = createHelperBtn(
+  const filterPageBtn = createArcaFeedBtn(
     'filter',
     'ion-ios-gear',
     toggleArticleFilterModal,

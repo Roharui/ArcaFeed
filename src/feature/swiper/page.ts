@@ -2,7 +2,7 @@
 
 import $ from 'jquery';
 
-import { Helper } from '@/core';
+import { ArcaFeed } from '@/core';
 
 import {
   getCurrentSlide,
@@ -37,8 +37,12 @@ function initPage({ v }: Param): void {
 
   const { swiper } = v as VaultWithSwiper;
 
-  swiper.on('slideNextTransitionEnd', () => Helper.runPromise(toLink('NEXT')));
-  swiper.on('slidePrevTransitionEnd', () => Helper.runPromise(toLink('PREV')));
+  swiper.on('slideNextTransitionEnd', () =>
+    ArcaFeed.runEvent('renderNextPage'),
+  );
+  swiper.on('slidePrevTransitionEnd', () =>
+    ArcaFeed.runEvent('renderPrevPage'),
+  );
 }
 
 // For Event
@@ -50,79 +54,79 @@ function nextLinkForce({ v }: Param) {
 }
 
 // For Event
-function toLink(mode: PageMode): PromiseFunc {
-  return ({ v, c }: Param): void | PromiseFunc => {
-    const { nextArticleUrl, prevArticleUrl } = v;
-    const url = mode === 'NEXT' ? nextArticleUrl : prevArticleUrl;
+// function toLink(mode: PageMode): PromiseFunc {
+//   return ({ v, c }: Param): void | PromiseFunc => {
+//     const { nextArticleUrl, prevArticleUrl } = v;
+//     const url = mode === 'NEXT' ? nextArticleUrl : prevArticleUrl;
 
-    if (!isString(url)) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('No url at toLink');
-      }
-      return;
-    }
+//     if (!isString(url)) {
+//       if (process.env.NODE_ENV === 'development') {
+//         console.log('No url at toLink');
+//       }
+//       return;
+//     }
 
-    if (c.isSlideMode('REFRESH')) window.location.replace(url);
-    else return pageRender(mode);
-  };
-}
+//     if (c.isSlideMode('REFRESH')) window.location.replace(url);
+//     else return pageRender(mode);
+//   };
+// }
 
-function pageRender(mode: PageMode): PromiseFunc {
-  return ({ v }: Param): PromiseFunc[] => {
-    if (!v.swiper) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('No Swiper Init');
-      }
-      return [];
-    }
+// function pageRender(mode: PageMode): PromiseFunc {
+//   return ({ v }: Param): PromiseFunc[] => {
+//     if (!v.swiper) {
+//       if (process.env.NODE_ENV === 'development') {
+//         console.log('No Swiper Init');
+//       }
+//       return [];
+//     }
 
-    const { swiper } = v;
-    const { slides, activeIndex } = swiper;
+//     const { swiper } = v;
+//     const { slides, activeIndex } = swiper;
 
-    const promiseList: PromiseFunc[] = [];
+//     const promiseList: PromiseFunc[] = [];
 
-    promiseList.push(setCurrentSlide);
+//     promiseList.push(setCurrentSlide);
 
-    if (
-      (mode === 'PREV' && activeIndex === 0) ||
-      (mode === 'NEXT' && activeIndex === slides.length - 1)
-    ) {
-      promiseList.push(
-        newAllPromise(
-          () => swiper.disable(),
-          () => {
-            swiper.allowTouchMove = false;
-            return;
-          },
-          alertPageIsFetching(mode),
-        ),
-      );
-      promiseList.push(linkPageRender(mode));
-      promiseList.push(
-        newAllPromise(
-          showCurrentSlide,
-          () => swiper.enable(),
-          () => {
-            swiper.allowTouchMove = true;
-            return;
-          },
-          removeSlidePromise(mode),
-          addNewEmptySlidePromise(mode),
-        ),
-      );
-    }
-    promiseList.push(
-      newAllPromise(
-        setCurrentArticle,
-        focusCurrentSlide,
-        initArticleLinkActive,
-      ),
-    );
-    promiseList.push(initSeriesContent);
+//     if (
+//       (mode === 'PREV' && activeIndex === 0) ||
+//       (mode === 'NEXT' && activeIndex === slides.length - 1)
+//     ) {
+//       promiseList.push(
+//         newAllPromise(
+//           () => swiper.disable(),
+//           () => {
+//             swiper.allowTouchMove = false;
+//             return;
+//           },
+//           alertPageIsFetching(mode),
+//         ),
+//       );
+//       promiseList.push(linkPageRender(mode));
+//       promiseList.push(
+//         newAllPromise(
+//           showCurrentSlide,
+//           () => swiper.enable(),
+//           () => {
+//             swiper.allowTouchMove = true;
+//             return;
+//           },
+//           removeSlidePromise(mode),
+//           addNewEmptySlidePromise(mode),
+//         ),
+//       );
+//     }
+//     promiseList.push(
+//       newAllPromise(
+//         setCurrentArticle,
+//         focusCurrentSlide,
+//         initArticleLinkActive,
+//       ),
+//     );
+//     promiseList.push(initSeriesContent);
 
-    return promiseList;
-  };
-}
+//     return promiseList;
+//   };
+// }
 
 function alertPageIsFetching(mode: PageMode) {
   return ({ v }: Param) => {
@@ -206,4 +210,4 @@ function linkPageRender(mode: PageMode): PromiseFunc {
   };
 }
 
-export { initPage, nextLinkForce, toLink };
+export { initPage, nextLinkForce };

@@ -3,7 +3,7 @@ type SlideMode = 'REFRESH' | 'RENDER';
 type PageMode = 'NEXT' | 'PREV' | 'ALL';
 
 interface HrefImpl {
-  mode: 'HOME' | 'CHANNEL' | 'ARTICLE' | 'OTHER';
+  mode: 'HOME' | 'CHANNEL' | 'ARTICLE' | 'OTHER' | 'NOT_CHECKED';
   channelId: string;
   articleId: string;
   search: string;
