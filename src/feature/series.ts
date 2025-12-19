@@ -1,15 +1,10 @@
 import $ from 'jquery';
 
-import { checkNotNull } from '@/utils';
+import { checkNotNull, newAllPromise } from '@/utils';
 
-import type { Param } from '@/vault';
+import type { Param, VaultWithSwiper } from '@/vault';
 import type { PromiseFunc } from '@/types';
 import { Helper } from '@/core';
-
-function initSeries({ v }: Param): void | PromiseFunc[] {
-  if (!v.isCurrentMode('ARTICLE')) return;
-  return [modifySeriesLinks, checkIsThisSeriseLinked];
-}
 
 type SeriesLink = {
   idx: number;
@@ -18,10 +13,14 @@ type SeriesLink = {
 };
 
 // 페이지가 로드된 후 실행
-function modifySeriesLinks({ v }: Param): void | Param {
-  const { currentSlide } = v;
+function initSeriesContent({ v }: Param): void | Param {
+  if (!v.isCurrentMode('ARTICLE')) return;
 
-  const $html = $(checkNotNull(currentSlide));
+  console.log('Initializing series content modification...');
+
+  const { currentSlide } = v as VaultWithSwiper;
+
+  const $html = $(currentSlide);
 
   // article-series 요소들이 2개 이상이면 첫 번째를 제외한 나머지 삭제
   const articleSeriesElements = $html.find('.article-series');
@@ -137,7 +136,9 @@ function createShortcutSeriesDiv(
   articleBody.append(shortcutDiv);
 }
 
-function checkIsThisSeriseLinked({ c }: Param) {
+function initSeriesLinkBtn({ v, c }: Param) {
+  if (!v.isCurrentMode('ARTICLE')) return;
+
   const seriesNameEle = $('.article-series').prev();
   const seriesName = seriesNameEle.text();
 
@@ -172,4 +173,4 @@ function linkThisSereis({ v, c }: Param) {
   window.location.reload();
 }
 
-export { initSeries };
+export { initSeriesContent, initSeriesLinkBtn };

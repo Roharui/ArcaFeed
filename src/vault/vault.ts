@@ -22,4 +22,7 @@ class Vault {
   }
 }
 
+type VaultWithSwiper = Vault & { swiper: Swiper; currentSlide: HTMLElement };
+
 export { Vault };
+export type { VaultWithSwiper };

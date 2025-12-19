@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default function (env, _args) {
-  const currentVersion = env.GIT_HASH ?? config.version;
+  const currentVersion = env.BUILD_DATE ?? config.version;
 
   return {
     entry: './src/index.ts',

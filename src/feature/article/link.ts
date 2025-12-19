@@ -1,4 +1,3 @@
-
 import $ from 'jquery';
 
 import type { Param } from '@/vault';
@@ -6,24 +5,22 @@ import type { PromiseFunc } from '@/types';
 
 import { getCurrentSlide, filterLink, parseSearchQuery } from '@/feature';
 import { fetchArticle } from '@/feature/article';
+import { newAllPromise } from '@/utils';
 
-function initLink({ v }: Param): PromiseFunc[] {
-  const promiseFuncList = []
-
-  if (!v.isCurrentMode('ARTICLE')) {
-    promiseFuncList.push(({ c }: Param) => c.resetArticleList());
-  }
-
-  if (v.isCurrentMode('CHANNEL')) {
-    promiseFuncList.push(parseSearchQuery);
-    promiseFuncList.push(initArticleLinkChannel);
-  }
+function initLink({ v }: Param): PromiseFunc {
+  const promiseFuncList = [];
 
   if (v.isCurrentMode('ARTICLE')) {
-    promiseFuncList.push(initArticleLinkActive);
+    return initArticleLinkActive;
   }
 
-  return promiseFuncList;
+  promiseFuncList.push(({ c }: Param) => c.resetArticleList());
+
+  if (v.isCurrentMode('CHANNEL')) {
+    promiseFuncList.push(parseSearchQuery, initArticleLinkChannel);
+  }
+
+  return newAllPromise(...promiseFuncList);
 }
 
 function initArticleLinkChannel({ v, c }: Param): Param | PromiseFunc {
@@ -40,10 +37,13 @@ function initArticleLinkChannel({ v, c }: Param): Param | PromiseFunc {
   c.articleList = filteredLinks;
   v.nextArticleUrl = filteredLinks[0] || '';
 
-  return { v, c }
+  return { v, c };
 }
 
-function initArticleLinkActive({ v, c }: Param): Param | PromiseFunc | PromiseFunc[] {
+function initArticleLinkActive({
+  v,
+  c,
+}: Param): Param | PromiseFunc | PromiseFunc[] {
   let { href } = v;
   const { articleList } = c;
 
@@ -63,7 +63,7 @@ function initArticleLinkActive({ v, c }: Param): Param | PromiseFunc | PromiseFu
   if (currentArticleIndex === -1) {
     c.articleList.push(window.location.href);
     c.articleList = c.articleList.sort().reverse();
-    return [() => ({ v, c }), fetchArticle('NEXT')]
+    return [() => ({ v, c }), fetchArticle('NEXT')];
   }
 
   if (
@@ -72,10 +72,8 @@ function initArticleLinkActive({ v, c }: Param): Param | PromiseFunc | PromiseFu
     currentArticleIndex !== c.articleList.length - 1 &&
     currentArticleIndex !== 0
   ) {
-    v.nextArticleUrl =
-      c.articleList[currentArticleIndex + 1] || null;
-    v.prevArticleUrl =
-      c.articleList[currentArticleIndex - 1] || null;
+    v.nextArticleUrl = c.articleList[currentArticleIndex + 1] || null;
+    v.prevArticleUrl = c.articleList[currentArticleIndex - 1] || null;
 
     return { v, c };
   }
@@ -99,9 +97,7 @@ function initArticleLinkActive({ v, c }: Param): Param | PromiseFunc | PromiseFu
     promiseFuncList.push(fetchArticle('PREV'));
   }
 
-  promiseFuncList.unshift(() => ({ v, c }))
-
-  return promiseFuncList;
+  return [() => ({ v, c }), newAllPromise(...promiseFuncList)];
 }
 
 export { initLink, initArticleLinkActive, initArticleLinkChannel };

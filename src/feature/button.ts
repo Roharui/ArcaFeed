@@ -97,18 +97,11 @@ function returnButtons(
     toggleArticleFilterModal,
   );
 
-  const fullScreen = createHelperBtn(
-    'play',
-    'ion-ios-monitor',
-    () => document.documentElement.requestFullscreen(),
-    slideMode === 'RENDER' ? 'list-item' : 'none',
-  );
-
   if (currentMode === 'CHANNEL') {
     btns.push(filterPageBtn, nextPageBtn);
   }
   if (currentMode === 'ARTICLE') {
-    btns.push(slideModeToRender, slideModeToRefresh, fullScreen);
+    btns.push(slideModeToRender, slideModeToRefresh);
   }
 
   return btnWrapper(btns);

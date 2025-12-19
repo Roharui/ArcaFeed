@@ -6,13 +6,14 @@ import {
   initEvent,
   initModal,
   initButton,
-  initSeries,
   addVersionInfo,
+  initSeriesLinkBtn,
+  initSeriesContent,
 } from '@/feature';
 
 import type { PromiseFunc } from '@/types';
 
-import { checkPageMode } from '@/utils';
+import { checkPageMode, newAllPromise } from '@/utils';
 
 class Helper extends PromiseManager {
   private static instance: Helper;
@@ -24,15 +25,17 @@ class Helper extends PromiseManager {
 
   async init() {
     this.addNextPromise([
-      addVersionInfo,
-      checkPageMode,
+      newAllPromise(addVersionInfo, checkPageMode),
       initSwiper,
-      initSeries,
       initLink,
       initSlide,
-      initPage,
-      initEvent,
-      initButton,
+      newAllPromise(
+        initSeriesContent,
+        initSeriesLinkBtn,
+        initPage,
+        initButton,
+        initEvent,
+      ),
       initModal,
     ]);
 

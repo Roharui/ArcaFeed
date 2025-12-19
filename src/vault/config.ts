@@ -23,7 +23,7 @@ class Config implements ConfigImpl {
 
   loadConfig(): void {
     const articleFilterConfigStr = localStorage.getItem('articleFilterConfig');
-    const articleListStr = sessionStorage.getItem('articleList');
+    const articleListStr = localStorage.getItem('articleList');
 
     this.articleFilterConfig = articleFilterConfigStr
       ? JSON.parse(articleFilterConfigStr)
@@ -31,11 +31,10 @@ class Config implements ConfigImpl {
     this.articleList = articleListStr ? JSON.parse(articleListStr) : [];
 
     this.slideMode =
-      (sessionStorage.getItem('slideMode') as 'REFRESH' | 'RENDER') ||
-      'REFRESH';
+      (localStorage.getItem('slideMode') as 'REFRESH' | 'RENDER') || 'REFRESH';
 
-    this.searchQuery = sessionStorage.getItem('searchQuery') || '';
-    this.seriesName = sessionStorage.getItem('seriesName') || '';
+    this.searchQuery = localStorage.getItem('searchQuery') || '';
+    this.seriesName = localStorage.getItem('seriesName') || '';
   }
 
   saveConfig(): void {
@@ -43,11 +42,11 @@ class Config implements ConfigImpl {
       'articleFilterConfig',
       JSON.stringify(this.articleFilterConfig),
     );
-    sessionStorage.setItem('articleList', JSON.stringify(this.articleList));
+    localStorage.setItem('articleList', JSON.stringify(this.articleList));
 
-    sessionStorage.setItem('slideMode', this.slideMode);
-    sessionStorage.setItem('searchQuery', this.searchQuery);
-    sessionStorage.setItem('seriesName', this.seriesName);
+    localStorage.setItem('slideMode', this.slideMode);
+    localStorage.setItem('searchQuery', this.searchQuery);
+    localStorage.setItem('seriesName', this.seriesName);
   }
 }
 

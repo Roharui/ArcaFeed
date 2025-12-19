@@ -1,6 +1,6 @@
 // vault, promise, page
 
-import $ from 'jquery'
+import $ from 'jquery';
 
 import Swiper from 'swiper';
 import { Manipulation } from 'swiper/modules';
@@ -8,7 +8,7 @@ import { Manipulation } from 'swiper/modules';
 import type { SwiperOptions } from '@swiper/types';
 import type { Param } from '@/vault';
 
-import { parseContent } from '@/utils';
+import { newAllPromise, parseContent } from '@/utils';
 import { setCurrentSlide } from './slide';
 
 const swiperOptions: SwiperOptions = {
@@ -28,21 +28,7 @@ const swiperOptions: SwiperOptions = {
 function initSwiper({ v }: Param) {
   if (!v.isCurrentMode('ARTICLE')) return;
 
-  return [
-    initArticleToSlide,
-    initSwiperObject,
-    setCurrentSlide,
-  ]
-}
-
-function initSwiperObject({ v }: Param) {
-  v.swiper = new Swiper('.swiper', swiperOptions);
-
-  v.swiper.on('update', () => v.updateFn());
-
-  return {
-    v
-  } as Param;
+  return [newAllPromise(initArticleToSlide, initSwiperObject), setCurrentSlide];
 }
 
 function initArticleToSlide({ v }: Param) {
@@ -61,11 +47,21 @@ function initArticleToSlide({ v }: Param) {
   const html = $body.html();
   const content = $(parseContent(html));
 
-  $(".root-container").remove();
+  $('.root-container').remove();
 
   content.appendTo(slide);
 
-  slide.appendTo($(".swiper-wrapper"));
+  slide.appendTo($('.swiper-wrapper'));
 }
 
-export { initSwiper, initSwiperObject, initArticleToSlide }
+function initSwiperObject({ v }: Param) {
+  v.swiper = new Swiper('.swiper', swiperOptions);
+
+  v.swiper.on('update', () => v.updateFn());
+
+  return {
+    v,
+  } as Param;
+}
+
+export { initSwiper, initSwiperObject, initArticleToSlide };

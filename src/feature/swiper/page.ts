@@ -4,7 +4,11 @@ import $ from 'jquery';
 
 import { Helper } from '@/core';
 
-import { getCurrentSlide, initButtonAtSlide } from '@/feature';
+import {
+  getCurrentSlide,
+  initButtonAtSlide,
+  initSeriesContent,
+} from '@/feature';
 import {
   addNewEmptySlidePromise,
   focusCurrentSlide,
@@ -14,7 +18,7 @@ import {
 import { initArticleLinkActive } from '@/feature/article';
 
 import type { PageMode, PromiseFunc } from '@/types';
-import type { Param } from '@/vault';
+import type { Param, VaultWithSwiper } from '@/vault';
 
 import {
   checkNotNull,
@@ -24,14 +28,14 @@ import {
   getArticleId,
   getCurrentHTMLTitle,
   parseContent,
+  newAllPromise,
 } from '@/utils';
 
 // Init
 function initPage({ v }: Param): void {
   if (!v.isCurrentMode('ARTICLE')) return;
 
-  const { swiper: _swiper } = v;
-  const swiper = checkNotNull(_swiper);
+  const { swiper } = v as VaultWithSwiper;
 
   swiper.on('slideNextTransitionEnd', () => Helper.runPromise(toLink('NEXT')));
   swiper.on('slidePrevTransitionEnd', () => Helper.runPromise(toLink('PREV')));
@@ -83,26 +87,38 @@ function pageRender(mode: PageMode): PromiseFunc {
       (mode === 'PREV' && activeIndex === 0) ||
       (mode === 'NEXT' && activeIndex === slides.length - 1)
     ) {
-      promiseList.push(() => swiper.disable());
-      promiseList.push(() => {
-        swiper.allowTouchMove = false;
-        return;
-      });
-      promiseList.push(alertPageIsFetching(mode));
+      promiseList.push(
+        newAllPromise(
+          () => swiper.disable(),
+          () => {
+            swiper.allowTouchMove = false;
+            return;
+          },
+          alertPageIsFetching(mode),
+        ),
+      );
       promiseList.push(linkPageRender(mode));
-      promiseList.push(showCurrentSlide);
-      promiseList.push(() => swiper.enable());
-      promiseList.push(removeSlidePromise(mode));
-      promiseList.push(addNewEmptySlidePromise(mode));
-      promiseList.push(() => {
-        swiper.allowTouchMove = true;
-        return;
-      });
+      promiseList.push(
+        newAllPromise(
+          showCurrentSlide,
+          () => swiper.enable(),
+          () => {
+            swiper.allowTouchMove = true;
+            return;
+          },
+          removeSlidePromise(mode),
+          addNewEmptySlidePromise(mode),
+        ),
+      );
     }
-    promiseList.push(setCurrentArticle);
-    promiseList.push(focusCurrentSlide);
-
-    promiseList.push(initArticleLinkActive);
+    promiseList.push(
+      newAllPromise(
+        setCurrentArticle,
+        focusCurrentSlide,
+        initArticleLinkActive,
+      ),
+    );
+    promiseList.push(initSeriesContent);
 
     return promiseList;
   };
@@ -110,7 +126,7 @@ function pageRender(mode: PageMode): PromiseFunc {
 
 function alertPageIsFetching(mode: PageMode) {
   return ({ v }: Param) => {
-    const currentSlide = $(v.currentSlide || getCurrentSlide(v));
+    const currentSlide = $((v as VaultWithSwiper).currentSlide);
     currentSlide
       .find('.loading-info')
       .append(
@@ -122,7 +138,7 @@ function alertPageIsFetching(mode: PageMode) {
 }
 
 function setCurrentArticle({ v }: Param) {
-  const currentSlide = $(v.currentSlide || getCurrentSlide(v));
+  const currentSlide = $((v as VaultWithSwiper).currentSlide);
 
   const currentArticleUrl = currentSlide.attr('data-article-href');
   const currentArticleTitle = checkNotNull(
@@ -134,7 +150,7 @@ function setCurrentArticle({ v }: Param) {
 }
 
 function showCurrentSlide({ v }: Param) {
-  const currentSlide = $(v.currentSlide || getCurrentSlide(v));
+  const currentSlide = $((v as VaultWithSwiper).currentSlide);
   currentSlide.find('.loader-container').remove();
   currentSlide.removeClass('slide-empty');
 }

@@ -38,6 +38,7 @@ function appendModal({ v }: Param) {
 function createModal({ v, c }: Param) {
   const { href } = v;
   const { articleFilterConfig } = c;
+
   const { tab, title } = articleFilterConfig[href.channelId] || {
     tab: [],
     title: [],
