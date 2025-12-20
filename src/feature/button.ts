@@ -7,15 +7,7 @@ import { ArcaFeed } from '@/core';
 
 import { nextLinkForce } from './swiper';
 import { toggleArticleFilterModal } from './modal';
-import { conditionMaker, wrapperFunction } from '@/utils';
-
-// Example Button HTML:
-// <li class="nav-item dropdown user-menu-parent">
-//   <a class="nav-link user-menu-link" href="/u/login?goto=%2Fb%2Fbluearchive" title="Login">
-//     <span class="d-none d-sm-inline navbar-top-margin"></span>
-//     <span class="ion-person"></span>
-//   </a>
-// </li>
+import { wrapperFunction } from '@/utils';
 
 function createArcaFeedBtn(
   id: string,
@@ -108,21 +100,30 @@ function returnButtons(
   return btnWrapper(btns);
 }
 
-function initButtonFeature({ v, c }: Param) {
-  const btns = returnButtons(v.href.mode, c.slideMode);
-
-  $('ul.nav.navbar-nav').last().before(btns);
-}
-
-function initButtonAtSlide(currentSlide: JQuery<HTMLElement>) {
+function buttonAtSlide(currentSlide: JQuery<HTMLElement>) {
   const btns = returnButtons('ARTICLE', 'RENDER');
 
   currentSlide.find('ul.nav.navbar-nav').last().before(btns);
 }
 
-const initButton = wrapperFunction(
-  conditionMaker('HREF', 'SWIPER', 'SLIDE'),
-  initButtonFeature,
-);
+function initButtonFeature(mode: HrefImpl['mode']) {
+  const result = ({ c }: Param) => {
+    const btns = returnButtons(mode, c.slideMode);
 
-export { initButton, initButtonAtSlide };
+    $('ul.nav.navbar-nav').last().before(btns);
+  };
+  return Object.defineProperty(result, 'name', {
+    value: `initButtonFeature_${mode}`,
+  });
+}
+
+const initButton = (_: Param) => {
+  const w1 = wrapperFunction(
+    ['ARTICLE', 'SWIPER', 'SLIDE'],
+    initButtonFeature('ARTICLE'),
+  );
+  const w2 = wrapperFunction(['CHANNEL'], initButtonFeature('CHANNEL'));
+  return [w1, w2];
+};
+
+export { initButton, buttonAtSlide };

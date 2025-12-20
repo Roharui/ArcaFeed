@@ -4,37 +4,30 @@ import type { PageMode } from '@/types';
 import type { Param, Vault, VaultWithSwiper } from '@/vault';
 
 import { getCurrentSlide } from '@/feature';
-import {
-  conditionMaker,
-  isNotNull,
-  newAllPromise,
-  wrapperFunction,
-} from '@/utils';
+import { wrapperFunction } from '@/utils';
 
-function initSlide({ v }: Param) {
-  if (!v.isCurrentMode('ARTICLE')) return;
-
+function initSlideFeature(_: Param) {
   return [
-    newAllPromise(
-      ({ v }: Param) => addNewEmptySlide('NEXT', v),
-      ({ v }: Param) => addNewEmptySlide('PREV', v),
-    ),
-    focusCurrentSlide,
+    initAddNewEmptyNextSlide,
+    initAddNewEmptyPrevSlide,
+    initFocusCurrentSlide,
   ];
 }
+
+const initSlide = wrapperFunction(['ARTICLE'], initSlideFeature);
 
 function setCurrentSlide({ v }: Param): Param {
   v.currentSlide = getCurrentSlide(v);
   return { v } as Param;
 }
 
-function focusCurrentSlideFunc({ v }: Param) {
+function initFocusCurrentSlideFeature({ v }: Param) {
   v.currentSlide?.focus();
 }
 
-const focusCurrentSlide = wrapperFunction(
-  conditionMaker('SLIDE'),
-  focusCurrentSlideFunc,
+const initFocusCurrentSlide = wrapperFunction(
+  ['SLIDE'],
+  initFocusCurrentSlideFeature,
 );
 
 function removeSlide(mode: PageMode, v: Vault) {
@@ -59,15 +52,25 @@ function removeSlidePromise(mode: PageMode) {
   };
 }
 
+function initAddNewEmptySlideFeature(mode: PageMode) {
+  const fn = ({ v }: Param) => addNewEmptySlide(mode, v);
+  return Object.defineProperties(fn, {
+    name: { value: `initAddNewEmpty${mode}SlideFeature` },
+  });
+}
+
+const initAddNewEmptyNextSlide = wrapperFunction(
+  ['ARTICLE', 'SWIPER', 'NEXTURL'],
+  initAddNewEmptySlideFeature('NEXT'),
+);
+
+const initAddNewEmptyPrevSlide = wrapperFunction(
+  ['ARTICLE', 'SWIPER', 'PREVURL'],
+  initAddNewEmptySlideFeature('PREV'),
+);
+
 function addNewEmptySlide(mode: PageMode, v: Vault) {
   const { swiper } = v as VaultWithSwiper;
-  const { nextArticleUrl, prevArticleUrl } = v;
-
-  const url = mode === 'NEXT' ? nextArticleUrl : prevArticleUrl;
-
-  if (!isNotNull(url)) {
-    return;
-  }
 
   const slide = $('<div>', { class: 'swiper-slide slide-empty' });
   const loader = $('<div>', { class: 'loader-container' });
@@ -93,7 +96,7 @@ function addNewEmptySlidePromise(mode: PageMode) {
 export {
   initSlide,
   setCurrentSlide,
-  focusCurrentSlide,
+  initFocusCurrentSlide,
   removeSlide,
   removeSlidePromise,
   addNewEmptySlide,

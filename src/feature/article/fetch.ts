@@ -2,45 +2,63 @@
 
 import $ from 'jquery';
 
-import { fetchUrl } from "@/utils/fetch";
-import { getCurrentSlide, filterLink } from "@/feature";
+import { fetchUrl as initFetchUrl } from '@/utils/fetch';
+import { filterLink } from '@/feature';
 
 import type { PageMode, PromiseFunc } from '@/types';
-import type { Param } from '@/vault';
+import type { Param, VaultWithSwiper } from '@/vault';
 
+import { wrapperFunction } from '@/utils';
+import { ArcaFeed } from '@/core';
 
-function fetchArticle(mode: PageMode): PromiseFunc {
-  return ({ v }: Param) => {
-    if (!v.swiper) return fetchLoop(mode, $(".root-container"));
-    return fetchFromCurrentSlide(mode);
-  }
+function initFetchArticle(mode: PageMode): PromiseFunc {
+  const result = ({ v }: Param) => {
+    if (!v.swiper) return initFetchLoop(mode, $('.root-container'));
+    return initFetchFromCurrentSlide(mode);
+  };
+  return Object.defineProperty(result, 'name', {
+    value: `initFetchArticle${mode}`,
+  });
 }
 
 // 현재 슬라이드에서 게시글 링크를 검색
-function fetchFromCurrentSlide(mode: PageMode): PromiseFunc {
-  return async ({ v, c }: Param): Promise<PromiseFunc> => {
+function initFetchFromCurrentSlideFeature(mode: PageMode): PromiseFunc {
+  const result = async ({ v, c }: Param): Promise<PromiseFunc> => {
     const { searchQuery } = c;
-    const currentSlide = $(v.currentSlide || getCurrentSlide(v));
+    const currentSlide = $((v as VaultWithSwiper).currentSlide);
 
-    const searchUrl =
-      currentSlide.attr('data-article-href') + searchQuery;
+    const searchUrl = currentSlide.attr('data-article-href') + searchQuery;
 
     if (process.env.NODE_ENV === 'development') {
-      console.log(`Fetching ${mode} article From Current article: ${searchUrl}`);
+      ArcaFeed.log(
+        `Fetching ${mode} article From Current article: ${searchUrl}`,
+      );
     }
 
-    const res = await fetchUrl(searchUrl);
+    const res = await initFetchUrl(searchUrl);
     const $html = $(res.responseText);
 
-    return fetchLoop(mode, $html);
-  }
+    return initFetchLoop(mode, $html);
+  };
+  return Object.defineProperty(result, 'name', {
+    value: `initFetchFromCurrentSlide${mode}`,
+  });
 }
 
-function fetchLoop(mode: PageMode, $html: JQuery<HTMLElement>): PromiseFunc {
-  return async ({ v, c }: Param): Promise<void | Param> => {
+const initFetchFromCurrentSlide = (mode: PageMode) =>
+  wrapperFunction(['SLIDE'], initFetchFromCurrentSlideFeature(mode));
+
+function initFetchLoop(
+  mode: PageMode,
+  $html: JQuery<HTMLElement>,
+): PromiseFunc {
+  const result = async ({ v, c }: Param): Promise<void | Param> => {
     let filteredLinks: string[] = [];
     let url: string | undefined;
     let count: number = 0;
+
+    v.nextArticleUrl = v.nextArticleUrl || '';
+    v.prevArticleUrl = v.prevArticleUrl || '';
 
     while (!url && count <= 10) {
       const articlePage = $html.find('.page-item.active');
@@ -51,19 +69,15 @@ function fetchLoop(mode: PageMode, $html: JQuery<HTMLElement>): PromiseFunc {
       const articlePageUrl = articlePageElement.find('a').attr('href');
 
       if (!articlePageUrl) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log("NO ARTICLE PAGE LINK FOUND");
-        }
+        ArcaFeed.log('NO ARTICLE PAGE LINK FOUND');
         return;
       }
 
       const searchUrl = articlePageUrl.replace('https://arca.live', '');
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`Fetching ${mode} article page: ${searchUrl}`);
-      }
+      ArcaFeed.log(`Fetching ${mode} article page: ${searchUrl}`);
 
-      const res = await fetchUrl(`${searchUrl}`);
+      const res = await initFetchUrl(`${searchUrl}`);
 
       $html = $(res.responseText);
 
@@ -78,11 +92,9 @@ function fetchLoop(mode: PageMode, $html: JQuery<HTMLElement>): PromiseFunc {
       }
 
       if (!!url) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log(
-            `Fetching Complete ${mode} article page: ${articlePageUrl}`,
-          );
-        }
+        ArcaFeed.log(
+          `Fetching Complete ${mode} article page: ${articlePageUrl}`,
+        );
 
         if (mode === 'PREV') {
           c.articleList.unshift(...filteredLinks);
@@ -96,13 +108,14 @@ function fetchLoop(mode: PageMode, $html: JQuery<HTMLElement>): PromiseFunc {
       }
       count += 1;
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log(
-          `No articles found on page ${articlePageUrl}, trying ${mode} page...`,
-        );
-      }
+      ArcaFeed.log(
+        `No articles found on page ${articlePageUrl}, trying ${mode} page...`,
+      );
     }
-  }
+  };
+  return Object.defineProperty(result, 'name', {
+    value: `initFetchLoop${mode}`,
+  });
 }
 
-export { fetchArticle }
+export { initFetchArticle };

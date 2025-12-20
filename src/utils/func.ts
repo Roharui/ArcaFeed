@@ -1,48 +1,98 @@
+import { ArcaFeed } from '@/core';
+
 import type {
   Condition,
+  ConditionFuncResult,
   PromiseFunc,
-  PromiseFuncNoFuncResult,
   PromiseFuncResult,
 } from '@/types';
+
 import type { Param } from '@/vault';
+
+import { isNotNull } from './type';
 
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function conditionMaker(
-  ...conditions: ('HREF' | 'SWIPER' | 'SLIDE' | 'URL')[]
-): Condition {
-  return ({ v }: Param): boolean => {
-    return (
-      (!conditions.includes('HREF') ||
-        (conditions.includes('HREF') && v.href.mode === 'NOT_CHECKED')) &&
-      (!conditions.includes('SWIPER') ||
-        (conditions.includes('SWIPER') && !!v.swiper)) &&
-      (!conditions.includes('SLIDE') ||
-        (conditions.includes('SLIDE') && !!v.currentSlide)) &&
-      (!conditions.includes('URL') ||
-        (conditions.includes('URL') &&
-          !!v.nextArticleUrl &&
-          !!v.prevArticleUrl))
-    );
+// ===
+
+type ConditionsKeys =
+  | 'HREF'
+  | 'CHANNEL'
+  | 'ARTICLE'
+  | 'SWIPER'
+  | 'SLIDE'
+  | 'NEXTURL'
+  | 'PREVURL';
+
+function conditions(keys: ConditionsKeys): Condition {
+  if (keys === 'HREF') {
+    return ({ v }: Param) => (v.href.mode === 'NOT_CHECKED' ? 'wait' : 'run');
+  }
+
+  if (keys === 'CHANNEL') {
+    return ({ v }: Param) =>
+      v.href.mode === 'NOT_CHECKED'
+        ? 'wait'
+        : v.href.mode === 'CHANNEL'
+          ? 'run'
+          : 'skip';
+  }
+  if (keys === 'ARTICLE') {
+    return ({ v }: Param) =>
+      v.href.mode === 'NOT_CHECKED'
+        ? 'wait'
+        : v.href.mode === 'ARTICLE'
+          ? 'run'
+          : 'skip';
+  }
+
+  if (keys === 'SWIPER') {
+    return ({ v }: Param) => (!!v.swiper ? 'run' : 'wait');
+  }
+  if (keys === 'SLIDE') {
+    return ({ v }: Param) => (!!v.currentSlide ? 'run' : 'wait');
+  }
+  if (keys === 'NEXTURL') {
+    return ({ v }: Param) => (isNotNull(v.nextArticleUrl) ? 'run' : 'wait');
+  }
+  if (keys === 'PREVURL') {
+    return ({ v }: Param) => (isNotNull(v.prevArticleUrl) ? 'run' : 'wait');
+  }
+
+  return () => 'skip';
+}
+
+function conditionMaker(...keys: ConditionsKeys[]): Condition {
+  return ({ v }: Param): ConditionFuncResult => {
+    const results = keys.map((key) => conditions(key)({ v } as Param));
+
+    if (results.includes('skip')) return 'skip';
+    if (results.every((result) => result === 'run')) return 'run';
+
+    return 'wait';
   };
 }
 
 export function wrapperFunction(
-  condition: Condition,
+  keys: ConditionsKeys[],
   func: PromiseFunc,
 ): PromiseFunc {
-  return async (p: Param): Promise<PromiseFuncResult> => {
-    if (condition(p)) return func(p);
-    return wrapperFunction(condition, func);
-  };
-}
+  const result = async function (p: Param): Promise<PromiseFuncResult> {
+    ArcaFeed.log(
+      'Wrapper Function:',
+      keys,
+      func.name,
+      conditionMaker(...keys)(p),
+    );
+    if (conditionMaker(...keys)(p) === 'run') return func(p);
+    if (conditionMaker(...keys)(p) === 'skip') return;
 
-export function newAllPromise(...promiseFuncList: PromiseFuncNoFuncResult[]) {
-  return async (p: Param): Promise<Param> => {
-    const result = await Promise.all(promiseFuncList.map((f) => f(p)));
-
-    return Object.assign({}, ...result) as Param;
+    // Wait Condition
+    return wrapperFunction(keys, func);
   };
+  return Object.defineProperty(result, 'name', {
+    value: func.name.replace('Feature', ''),
+  });
 }

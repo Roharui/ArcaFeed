@@ -4,14 +4,9 @@ import $ from 'jquery';
 
 import { ArcaFeed } from '@/core';
 
-import {
-  getCurrentSlide,
-  initButtonAtSlide,
-  initSeriesContent,
-} from '@/feature';
+import { buttonAtSlide, getCurrentSlide, initSeriesContent } from '@/feature';
 import {
   addNewEmptySlidePromise,
-  focusCurrentSlide,
   removeSlidePromise,
   setCurrentSlide,
 } from '@/feature/swiper';
@@ -28,11 +23,11 @@ import {
   getArticleId,
   getCurrentHTMLTitle,
   parseContent,
-  newAllPromise,
+  wrapperFunction,
 } from '@/utils';
 
 // Init
-function initPage({ v }: Param): void {
+function initPageFeature({ v }: Param): void {
   if (!v.isCurrentMode('ARTICLE')) return;
 
   const { swiper } = v as VaultWithSwiper;
@@ -45,13 +40,14 @@ function initPage({ v }: Param): void {
   );
 }
 
+const initPage = wrapperFunction(['ARTICLE', 'SWIPER'], initPageFeature);
+
 // For Event
-function nextLinkForce({ v }: Param) {
-  if (!isString(v.nextArticleUrl)) {
-    throw Error('No Next Article Url');
-  }
-  window.location.href = v.nextArticleUrl;
+function nextLinkForceFeature({ v }: Param) {
+  window.location.href = (v as { nextArticleUrl: string }).nextArticleUrl;
 }
+
+const nextLinkForce = wrapperFunction(['NEXTURL'], nextLinkForceFeature);
 
 // For Event
 // function toLink(mode: PageMode): PromiseFunc {
@@ -176,8 +172,8 @@ function linkPageRender(mode: PageMode): PromiseFunc {
       res = await fetchUrl(url);
 
       if (!res) {
+        ArcaFeed.log('Fetch failed, no loop for development mode');
         if (process.env.NODE_ENV === 'development') {
-          console.log('Fetch failed, no loop for development mode');
           return;
         }
 
@@ -202,7 +198,7 @@ function linkPageRender(mode: PageMode): PromiseFunc {
 
     currentSlide.append($article);
 
-    initButtonAtSlide(currentSlide);
+    buttonAtSlide(currentSlide);
 
     currentSlide.attr('data-article-id', currentArticleId);
     currentSlide.attr('data-article-href', url);

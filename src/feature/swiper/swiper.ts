@@ -8,12 +8,7 @@ import { Manipulation } from 'swiper/modules';
 import type { SwiperOptions } from '@swiper/types';
 import type { Param } from '@/vault';
 
-import {
-  conditionMaker,
-  newAllPromise,
-  parseContent,
-  wrapperFunction,
-} from '@/utils';
+import { parseContent, wrapperFunction } from '@/utils';
 import { setCurrentSlide } from './slide';
 
 const swiperOptions: SwiperOptions = {
@@ -30,13 +25,11 @@ const swiperOptions: SwiperOptions = {
   modules: [Manipulation],
 };
 
-function initSwiperFunc({ v }: Param) {
-  if (!v.isCurrentMode('ARTICLE')) return;
-
-  return [newAllPromise(initArticleToSlide, initSwiperObject), setCurrentSlide];
+function initSwiperFeature(_: Param) {
+  return [initArticleToSlide, initSwiperObject, setCurrentSlide];
 }
 
-const initSwiper = wrapperFunction(conditionMaker('HREF'), initSwiperFunc);
+const initSwiper = wrapperFunction(['ARTICLE'], initSwiperFeature);
 
 function initArticleToSlide({ v }: Param) {
   const { articleId } = v.href;
@@ -63,7 +56,6 @@ function initArticleToSlide({ v }: Param) {
 
 function initSwiperObject({ v }: Param) {
   v.swiper = new Swiper('.swiper', swiperOptions);
-
   v.swiper.on('update', () => v.updateFn());
 
   return {

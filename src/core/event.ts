@@ -5,15 +5,16 @@ import { initSwiper, initPage, initSlide } from '@/feature/swiper';
 import {
   initEvent,
   initModal,
-  initButton,
   addVersionInfo,
   initSeriesLinkBtn,
   initSeriesContent,
+  initButton,
 } from '@/feature';
 
-import { checkPageMode, isString, wrapperFunction } from '@/utils';
-import type { Param } from '@/vault';
+import { checkPageMode, isString } from '@/utils';
+import type { Param, Vault, VaultWithSwiper } from '@/vault';
 import type { PromiseFunc } from '@/types';
+import { ArcaFeed } from '.';
 
 class EventManager extends PromiseManager {
   constructor() {
@@ -21,123 +22,34 @@ class EventManager extends PromiseManager {
   }
 
   init() {
-    // this.addNextPromiseCondition([
-    //   initSwiper,
-    //   ({ v }) => v.href.mode !== 'NOT_CHECKED',
-    // ]);
-    // this.addNextPromiseCondition([
-    //   initLink,
-    //   ({ v }) => v.href.mode !== 'NOT_CHECKED',
-    // ]);
-    // this.addNextPromiseCondition([
-    //   initSlide,
-    //   ({ v }) => v.href.mode !== 'NOT_CHECKED',
-    // ]);
-    // this.addNextPromiseCondition([
-    //   initSeriesContent,
-    //   ({ v }) => v.href.mode !== 'NOT_CHECKED',
-    // ]);
-    // this.addNextPromiseCondition([
-    //   initSeriesLinkBtn,
-    //   ({ v }) => v.href.mode !== 'NOT_CHECKED',
-    // ]);
-    // this.addNextPromiseCondition([
-    //   initPage,
-    //   ({ v }) => v.href.mode !== 'NOT_CHECKED' && !!v.swiper,
-    // ]);
-    // this.addNextPromiseCondition([
-    //   initButton,
-    //   ({ v }) => v.href.mode !== 'NOT_CHECKED',
-    // ]);
-    // this.addNextPromiseCondition([
-    //   initEvent,
-    //   ({ v }) => v.href.mode !== 'NOT_CHECKED' && !!v.swiper,
-    // ]);
-    // this.addNextPromiseCondition([
-    //   initModal,
-    //   ({ v }) => v.href.mode !== 'NOT_CHECKED',
-    // ]);
-
-    this.addNextPromise(addVersionInfo, checkPageMode, initSwiper);
+    this.addNextPromise(
+      addVersionInfo,
+      checkPageMode,
+      initSwiper,
+      initLink,
+      initSlide,
+      initPage,
+      initButton,
+      initEvent,
+      initModal,
+    );
   }
 
-  /*
-  // For Event
-  // NEXT가 기준
-  function toLink(mode: PageMode): PromiseFunc {
-    return ({ v, c }: Param): void | PromiseFunc => {
-      const { nextArticleUrl } = v;
-      const url = nextArticleUrl
-  
-      if (!isString(url)) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('No url at toLink');
-        }
-        return;
-      }
-  
-      if (c.isSlideMode('REFRESH')) window.location.replace(url);
-      else return pageRender(mode);
-    };
-  }
-  
-  function pageRender(mode: PageMode): PromiseFunc {
-    return ({ v }: Param): PromiseFunc[] => {
-      if (!v.swiper) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('No Swiper Init');
-        }
-        return [];
-      }
-  
-      const { swiper } = v;
-      const { slides, activeIndex } = swiper;
-  
-      const promiseList: PromiseFunc[] = [];
-  
-      promiseList.push(setCurrentSlide);
-  
-      if (
-        (mode === 'NEXT' && activeIndex === slides.length - 1)
-      ) {
-        promiseList.push(
-          newAllPromise(
-            () => swiper.disable(),
-            () => {
-              swiper.allowTouchMove = false;
-              return;
-            },
-            alertPageIsFetching(mode),
-          ),
-        );
-        promiseList.push(linkPageRender(mode));
-        promiseList.push(
-          newAllPromise(
-            showCurrentSlide,
-            () => swiper.enable(),
-            () => {
-              swiper.allowTouchMove = true;
-              return;
-            },
-            removeSlidePromise(mode),
-            addNewEmptySlidePromise(mode),
-          ),
-        );
-      }
-      promiseList.push(
-        newAllPromise(
-          setCurrentArticle,
-          focusCurrentSlide,
-          initArticleLinkActive,
-        ),
-      );
-      promiseList.push(initSeriesContent);
-  
-      return promiseList;
-    };
+  toNextPage() {
+    this.addNextPromise(({ v }: Param) => {
+      const { swiper } = v as VaultWithSwiper;
+      swiper.slideNext();
+      return;
+    });
   }
 
-  */
+  toPrevPage() {
+    this.addNextPromise(({ v }: Param) => {
+      const { swiper } = v as VaultWithSwiper;
+      swiper.slidePrev();
+      return;
+    });
+  }
 
   renderNextPage() {
     this.addNextPromise(({ v, c }: Param): void | PromiseFunc => {
@@ -145,7 +57,7 @@ class EventManager extends PromiseManager {
       const url = nextArticleUrl;
 
       if (!isString(url)) {
-        this.log('No url at toLink');
+        ArcaFeed.log('No url at toLink');
         return;
       }
 
@@ -165,7 +77,7 @@ class EventManager extends PromiseManager {
       const url = prevArticleUrl;
 
       if (!isString(url)) {
-        this.log('No url at toLink');
+        ArcaFeed.log('No url at toLink');
         return;
       }
 

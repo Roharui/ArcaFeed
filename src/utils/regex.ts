@@ -2,6 +2,7 @@ import type { HrefImpl } from '@/types';
 import type { Param } from '@/vault';
 
 import { getRegexMatchByIndex, getRegexMatchByIndexTry } from '@/utils';
+import { ArcaFeed } from '@/core';
 
 const homePageRegex = /arca\.live\/?$/;
 const channelPageRegex = /b\/[a-zA-Z0-9]+/;
@@ -42,10 +43,8 @@ function getArticleId(href: string): string {
 
 function parseHref(href?: string) {
   const realHref = href || window.location.href;
-  
-  if (process.env.NODE_ENV === 'development') {
-    console.log('Checking page mode for href:', realHref);
-  }
+
+  ArcaFeed.log('Checking page mode for href:', realHref);
 
   let hrefObj: HrefImpl;
 

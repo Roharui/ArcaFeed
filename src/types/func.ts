@@ -1,14 +1,16 @@
 import type { Param } from '@/vault';
 
-type PromiseFuncParamResult = Param | void;
-type PromiseFuncResult = PromiseFuncParamResult | PromiseFunc | PromiseFunc[];
+type PromiseFuncResultObj = Param | PromiseFunc;
+type PromiseFuncResult =
+  | void
+  | PromiseFuncResultObj
+  | Array<PromiseFuncResultObj>;
 
-type Condition = (p: Param) => boolean;
+type ConditionFuncResult = 'wait' | 'skip' | 'run';
+
+type Condition = (p: Param) => ConditionFuncResult;
 
 type PromiseFunc = (p: Param) => Promise<PromiseFuncResult> | PromiseFuncResult;
-type PromiseFuncNoFuncResult = (
-  p: Param,
-) => Promise<PromiseFuncParamResult> | PromiseFuncParamResult;
 
 type MethodKeys<T> = {
   [K in keyof T]: T[K] extends (...args: any[]) => any ? K : never;
@@ -18,7 +20,6 @@ export type {
   PromiseFunc,
   PromiseFuncResult,
   Condition,
-  PromiseFuncParamResult,
-  PromiseFuncNoFuncResult,
+  ConditionFuncResult,
   MethodKeys,
 };

@@ -54,18 +54,8 @@ function checkNotNull<T>(obj: T | null | undefined): T {
 
 function isPromiseFuncResult(
   r: PromiseFuncResult,
-): 'Function' | 'FunctionArray' | 'Param' | 'void' {
+): 'Function' | 'Param' | 'void' {
   if (typeof r === 'function') return 'Function';
-
-  if (Array.isArray(r)) {
-    if (r.length === 0) {
-      return 'void';
-    }
-
-    if (typeof r?.[0] === 'function') {
-      return 'FunctionArray';
-    }
-  }
 
   if (r === undefined || r === null) return 'void';
 

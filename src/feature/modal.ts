@@ -6,7 +6,7 @@ import type { Param } from '@/vault';
 import type { ArticleFilterImpl, PromiseFunc } from '@/types';
 
 import { initLink } from './article';
-import { checkNotNull } from '@/utils';
+import { checkNotNull, wrapperFunction } from '@/utils';
 
 const NEXT_PAGE_MODAL_HTML = `
 <div id="dialog" class="helper-modal" style="display: none">
@@ -29,16 +29,18 @@ const NEXT_PAGE_MODAL_HTML = `
 </div>
 `;
 
-function initModal({ v }: Param): void | PromiseFunc {
+function initModalFeature({ v }: Param): void | PromiseFunc {
   if (!v.isCurrentMode('ARTICLE', 'CHANNEL')) return;
 
   const dialog = $(NEXT_PAGE_MODAL_HTML);
   $('body').append(dialog);
 
-  return createModal;
+  return initCreateModal;
 }
 
-function createModal({ v, c }: Param) {
+const initModal = wrapperFunction(['HREF'], initModalFeature);
+
+function initCreateModal({ v, c }: Param) {
   const { href } = v;
   const { articleFilterConfig } = c;
 

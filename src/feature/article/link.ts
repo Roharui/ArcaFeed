@@ -1,13 +1,13 @@
 import $ from 'jquery';
 
 import type { Param } from '@/vault';
-import type { PromiseFunc } from '@/types';
+import type { PromiseFunc, PromiseFuncResult } from '@/types';
 
 import { getCurrentSlide, filterLink, parseSearchQuery } from '@/feature';
-import { fetchArticle } from '@/feature/article';
-import { newAllPromise } from '@/utils';
+import { initFetchArticle } from '@/feature/article';
+import { wrapperFunction } from '@/utils';
 
-function initLink({ v }: Param): PromiseFunc {
+function initLinkFeature({ v }: Param): PromiseFunc | PromiseFunc[] {
   const promiseFuncList = [];
 
   if (v.isCurrentMode('ARTICLE')) {
@@ -20,8 +20,10 @@ function initLink({ v }: Param): PromiseFunc {
     promiseFuncList.push(parseSearchQuery, initArticleLinkChannel);
   }
 
-  return newAllPromise(...promiseFuncList);
+  return promiseFuncList;
 }
+
+const initLink = wrapperFunction(['HREF'], initLinkFeature);
 
 function initArticleLinkChannel({ v, c }: Param): Param | PromiseFunc {
   const totalLinks = $(
@@ -31,26 +33,24 @@ function initArticleLinkChannel({ v, c }: Param): Param | PromiseFunc {
   const filteredLinks = filterLink(totalLinks, v, c);
 
   if (filteredLinks.length === 0) {
-    return fetchArticle('NEXT');
+    return initFetchArticle('NEXT');
   }
 
   c.articleList = filteredLinks;
   v.nextArticleUrl = filteredLinks[0] || '';
+  v.prevArticleUrl = '';
 
   return { v, c };
 }
 
-function initArticleLinkActive({
-  v,
-  c,
-}: Param): Param | PromiseFunc | PromiseFunc[] {
+function initArticleLinkActiveFeature({ v, c }: Param): PromiseFuncResult {
   let { href } = v;
   const { articleList } = c;
 
   const $html = $(v.currentSlide || getCurrentSlide(v)) || $('.root-container');
 
   if (c.articleList.length === 0) {
-    return fetchArticle('NEXT');
+    return initFetchArticle('NEXT');
   }
 
   const currentArticleId =
@@ -63,7 +63,7 @@ function initArticleLinkActive({
   if (currentArticleIndex === -1) {
     c.articleList.push(window.location.href);
     c.articleList = c.articleList.sort().reverse();
-    return [() => ({ v, c }), fetchArticle('NEXT')];
+    return [{ v, c }, initFetchArticle('NEXT')];
   }
 
   if (
@@ -72,8 +72,8 @@ function initArticleLinkActive({
     currentArticleIndex !== c.articleList.length - 1 &&
     currentArticleIndex !== 0
   ) {
-    v.nextArticleUrl = c.articleList[currentArticleIndex + 1] || null;
-    v.prevArticleUrl = c.articleList[currentArticleIndex - 1] || null;
+    v.nextArticleUrl = c.articleList[currentArticleIndex + 1] || '';
+    v.prevArticleUrl = c.articleList[currentArticleIndex - 1] || '';
 
     return { v, c };
   }
@@ -87,17 +87,22 @@ function initArticleLinkActive({
   const promiseFuncList = [];
 
   if (currentArticleIndex === c.articleList.length - 1) {
-    v.prevArticleUrl = articleList[currentArticleIndex - 1] || null;
+    v.prevArticleUrl = articleList[currentArticleIndex - 1] || '';
 
-    promiseFuncList.push(fetchArticle('NEXT'));
+    promiseFuncList.push(initFetchArticle('NEXT'));
   }
   if (currentArticleIndex === 0) {
-    v.nextArticleUrl = articleList[currentArticleIndex + 1] || null;
+    v.nextArticleUrl = articleList[currentArticleIndex + 1] || '';
 
-    promiseFuncList.push(fetchArticle('PREV'));
+    promiseFuncList.push(initFetchArticle('PREV'));
   }
 
-  return [() => ({ v, c }), ...promiseFuncList];
+  return [{ v, c }, ...promiseFuncList];
 }
+
+const initArticleLinkActive = wrapperFunction(
+  ['SLIDE'],
+  initArticleLinkActiveFeature,
+);
 
 export { initLink, initArticleLinkActive, initArticleLinkChannel };

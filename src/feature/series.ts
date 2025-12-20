@@ -1,6 +1,6 @@
 import $ from 'jquery';
 
-import { checkNotNull } from '@/utils';
+import { checkNotNull, wrapperFunction } from '@/utils';
 
 import type { Param, VaultWithSwiper } from '@/vault';
 import { ArcaFeed } from '@/core';
@@ -12,11 +12,7 @@ type SeriesLink = {
 };
 
 // 페이지가 로드된 후 실행
-function initSeriesContent({ v }: Param): void | Param {
-  if (!v.isCurrentMode('ARTICLE')) return;
-
-  console.log('Initializing series content modification...');
-
+function initSeriesContentFeature({ v }: Param): void | Param {
   const { currentSlide } = v as VaultWithSwiper;
 
   const $html = $(currentSlide);
@@ -81,6 +77,11 @@ function initSeriesContent({ v }: Param): void | Param {
   createShortcutSeriesDiv(shortCutLink, $html);
 }
 
+const initSeriesContent = wrapperFunction(
+  ['ARTICLE', 'SLIDE'],
+  initSeriesContentFeature,
+);
+
 function getCurrentSeriesLink(links: JQuery<HTMLElement>): SeriesLink[] {
   return links
     .toArray()
@@ -135,9 +136,7 @@ function createShortcutSeriesDiv(
   articleBody.append(shortcutDiv);
 }
 
-function initSeriesLinkBtn({ v, c }: Param) {
-  if (!v.isCurrentMode('ARTICLE')) return;
-
+function initSeriesLinkBtnFeature({ c }: Param) {
   const seriesNameEle = $('.article-series').prev();
   const seriesName = seriesNameEle.text();
 
@@ -147,13 +146,18 @@ function initSeriesLinkBtn({ v, c }: Param) {
     seriesNameEle.css('color', 'blue');
   }
 
-  seriesNameEle.on('click', () => ArcaFeed.runPromise(linkThisSereis));
+  seriesNameEle.on('click', () => ArcaFeed.runPromise(initLinkThisSeries));
 }
 
-function linkThisSereis({ v, c }: Param) {
-  const { currentSlide } = v;
+const initSeriesLinkBtn = wrapperFunction(
+  ['ARTICLE', 'SLIDE'],
+  initSeriesLinkBtnFeature,
+);
 
-  const $html = $(checkNotNull(currentSlide));
+function initLinkThisSeriesFeature({ v, c }: Param) {
+  const { currentSlide } = v as VaultWithSwiper;
+
+  const $html = $(currentSlide);
 
   const seriesNameEle = $html.find('.article-series').prev();
   const seriesName = seriesNameEle.text();
@@ -171,5 +175,10 @@ function linkThisSereis({ v, c }: Param) {
 
   window.location.reload();
 }
+
+const initLinkThisSeries = wrapperFunction(
+  ['SLIDE'],
+  initLinkThisSeriesFeature,
+);
 
 export { initSeriesContent, initSeriesLinkBtn };

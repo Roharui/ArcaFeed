@@ -1,19 +1,28 @@
 import $ from 'jquery';
 
-import type { Param, VaultWithSwiper } from '@/vault';
+import type { Param } from '@/vault';
 
 import { nextLinkForce } from '@/feature/swiper';
+import { wrapperFunction } from '@/utils';
+import { ArcaFeed } from '@/core';
 
-function initEvent({ v }: Param): void {
-  const vault = v as VaultWithSwiper;
+function initChannelEventFeature(_: Param): void {
   $(document).on('keydown', (e) => {
-    if (e.key === 'ArrowRight' && v.isCurrentMode('CHANNEL'))
-      nextLinkForce({ v } as Param);
-    else if (e.key === 'ArrowRight' && v.isCurrentMode('ARTICLE'))
-      vault.swiper.slideNext();
-    else if (e.key === 'ArrowLeft' && v.isCurrentMode('ARTICLE'))
-      vault.swiper.slidePrev();
+    if (e.key === 'ArrowRight') ArcaFeed.runPromise(nextLinkForce);
   });
 }
+
+function initArticleEventFeature(_: Param): void {
+  $(document).on('keydown', (e) => {
+    if (e.key === 'ArrowRight') ArcaFeed.runEvent('toNextPage');
+    else if (e.key === 'ArrowLeft') ArcaFeed.runEvent('toPrevPage');
+  });
+}
+
+const initEvent = (_: Param) => {
+  const w1 = wrapperFunction(['CHANNEL'], initChannelEventFeature);
+  const w2 = wrapperFunction(['ARTICLE', 'SWIPER'], initArticleEventFeature);
+  return [w1, w2];
+};
 
 export { initEvent };
