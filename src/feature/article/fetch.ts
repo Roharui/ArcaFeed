@@ -29,11 +29,7 @@ function initFetchFromCurrentSlideFeature(mode: PageMode): PromiseFunc {
 
     const searchUrl = currentSlide.attr('data-article-href') + searchQuery;
 
-    if (process.env.NODE_ENV === 'development') {
-      ArcaFeed.log(
-        `Fetching ${mode} article From Current article: ${searchUrl}`,
-      );
-    }
+    ArcaFeed.log(`Fetching ${mode} article From Current article: ${searchUrl}`);
 
     const res = await initFetchUrl(searchUrl);
     const $html = $(res.responseText);
@@ -54,13 +50,12 @@ function initFetchLoop(
 ): PromiseFunc {
   const result = async ({ v, c }: Param): Promise<void | Param> => {
     let filteredLinks: string[] = [];
-    let url: string | undefined;
     let count: number = 0;
 
-    v.nextArticleUrl = v.nextArticleUrl || '';
-    v.prevArticleUrl = v.prevArticleUrl || '';
+    v.nextArticleUrlList = [];
+    v.prevArticleUrlList = [];
 
-    while (!url && count <= 10) {
+    while (filteredLinks.length < 3 && count <= 10) {
       const articlePage = $html.find('.page-item.active');
 
       const articlePageElement =
@@ -70,7 +65,10 @@ function initFetchLoop(
 
       if (!articlePageUrl) {
         ArcaFeed.log('NO ARTICLE PAGE LINK FOUND');
-        return;
+
+        if (mode === 'NEXT') v.nextSearchCompleted = true;
+
+        return { v, c } as Param;
       }
 
       const searchUrl = articlePageUrl.replace('https://arca.live', '');
@@ -87,21 +85,19 @@ function initFetchLoop(
 
       filteredLinks = filterLink(totalLinks, v, c);
 
-      if (filteredLinks.length > 0) {
-        url = mode === 'NEXT' ? filteredLinks[0] : filteredLinks.slice(-1)[0];
-      }
-
-      if (!!url) {
+      if (filteredLinks.length > 3) {
         ArcaFeed.log(
           `Fetching Complete ${mode} article page: ${articlePageUrl}`,
         );
 
         if (mode === 'PREV') {
           c.articleList.unshift(...filteredLinks);
-          v.prevArticleUrl = url || '';
+          v.prevArticleUrlList = filteredLinks.reverse().splice(0, 3);
+          v.prevSearchCompleted = true;
         } else if (mode === 'NEXT') {
           c.articleList.push(...filteredLinks);
-          v.nextArticleUrl = url || '';
+          v.nextArticleUrlList = filteredLinks.splice(0, 3);
+          v.nextSearchCompleted = true;
         }
 
         return { v, c } as Param;

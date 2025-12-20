@@ -9,8 +9,13 @@ class Vault {
     search: '',
   };
 
-  nextArticleUrl: string | null = null;
-  prevArticleUrl: string | null = null;
+  nextArticleUrlList: string[] = [];
+  prevArticleUrlList: string[] = [];
+
+  nextSearchCompleted: boolean = false;
+  prevSearchCompleted: boolean = false;
+
+  currentArticleUrlList: string[] = [];
 
   swiper: Swiper | null = null;
   currentSlide: HTMLElement | undefined;

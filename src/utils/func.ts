@@ -9,8 +9,6 @@ import type {
 
 import type { Param } from '@/vault';
 
-import { isNotNull } from './type';
-
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -55,10 +53,20 @@ function conditions(keys: ConditionsKeys): Condition {
     return ({ v }: Param) => (!!v.currentSlide ? 'run' : 'wait');
   }
   if (keys === 'NEXTURL') {
-    return ({ v }: Param) => (isNotNull(v.nextArticleUrl) ? 'run' : 'wait');
+    return ({ v }: Param) =>
+      v.nextArticleUrlList.length >= 3
+        ? 'run'
+        : v.nextSearchCompleted
+          ? 'skip'
+          : 'wait';
   }
   if (keys === 'PREVURL') {
-    return ({ v }: Param) => (isNotNull(v.prevArticleUrl) ? 'run' : 'wait');
+    return ({ v }: Param) =>
+      v.prevArticleUrlList.length >= 1
+        ? 'run'
+        : v.prevSearchCompleted
+          ? 'skip'
+          : 'wait';
   }
 
   return () => 'skip';

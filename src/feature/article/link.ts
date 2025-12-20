@@ -1,11 +1,12 @@
 import $ from 'jquery';
 
-import type { Param } from '@/vault';
+import type { Param, VaultWithSwiper } from '@/vault';
 import type { PromiseFunc, PromiseFuncResult } from '@/types';
 
 import { getCurrentSlide, filterLink, parseSearchQuery } from '@/feature';
 import { initFetchArticle } from '@/feature/article';
 import { wrapperFunction } from '@/utils';
+import { ArcaFeed } from '@/core';
 
 function initLinkFeature({ v }: Param): PromiseFunc | PromiseFunc[] {
   const promiseFuncList = [];
@@ -32,72 +33,76 @@ function initArticleLinkChannel({ v, c }: Param): Param | PromiseFunc {
 
   const filteredLinks = filterLink(totalLinks, v, c);
 
-  if (filteredLinks.length === 0) {
+  if (filteredLinks.length < 3) {
     return initFetchArticle('NEXT');
   }
 
-  c.articleList = filteredLinks;
-  v.nextArticleUrl = filteredLinks[0] || '';
-  v.prevArticleUrl = '';
+  c.articleList = filteredLinks.slice();
+
+  v.nextArticleUrlList = filteredLinks.splice(0, 3);
+  v.prevArticleUrlList = [];
+
+  v.nextSearchCompleted = true;
+  v.prevSearchCompleted = true;
 
   return { v, c };
 }
 
 function initArticleLinkActiveFeature({ v, c }: Param): PromiseFuncResult {
-  let { href } = v;
-  const { articleList } = c;
+  let { href, currentSlide } = v as VaultWithSwiper;
 
-  const $html = $(v.currentSlide || getCurrentSlide(v)) || $('.root-container');
+  const $html = $(currentSlide);
 
   if (c.articleList.length === 0) {
-    return initFetchArticle('NEXT');
+    ArcaFeed.log(
+      'Article list is empty. Initializing article list from current slide.',
+    );
+    v.prevArticleUrlList = [];
+    v.prevSearchCompleted = true;
+    return [{ v, c }, initFetchArticle('NEXT')];
   }
 
   const currentArticleId =
     $html.attr('data-article-id')?.trim() || href.articleId;
 
-  let currentArticleIndex = c.articleList.findIndex((ele: string) =>
-    ele.includes(currentArticleId),
-  );
+  let currentArticleIndex = c.articleList
+    .slice()
+    .findIndex((ele: string) => ele.includes(currentArticleId));
 
   if (currentArticleIndex === -1) {
-    c.articleList.push(window.location.href);
-    c.articleList = c.articleList.sort().reverse();
+    ArcaFeed.log(
+      `Current article ID ${currentArticleId} not found in article list.`,
+    );
+    c.articleList = [];
+    v.prevArticleUrlList = [];
+    v.prevSearchCompleted = true;
     return [{ v, c }, initFetchArticle('NEXT')];
   }
 
-  if (
-    c.articleList.length > 0 &&
-    currentArticleIndex >= 0 &&
-    currentArticleIndex !== c.articleList.length - 1 &&
-    currentArticleIndex !== 0
-  ) {
-    v.nextArticleUrl = c.articleList[currentArticleIndex + 1] || '';
-    v.prevArticleUrl = c.articleList[currentArticleIndex - 1] || '';
+  v.nextArticleUrlList = c.articleList
+    .slice()
+    .splice(currentArticleIndex + 1, 3);
 
-    return { v, c };
+  v.prevArticleUrlList = c.articleList
+    .slice()
+    .splice(
+      Math.max(0, currentArticleIndex - 3),
+      Math.min(3, currentArticleIndex),
+    )
+    .reverse();
+
+  if (v.nextArticleUrlList.length < 3) {
+    ArcaFeed.log(
+      `Current article ID ${currentArticleId} not found in article list.`,
+    );
+    v.prevSearchCompleted = true;
+    return [{ v } as Param, initFetchArticle('NEXT')];
   }
 
-  // TODO: 시리즈 활성화 상태일 경우 fetch를 통해 게시글 목록 가져오지 않도록 만들기
-  // nextArticleUrl, prevArticleUrl을 가져오는 부분 추가 함수로 분할하기
+  v.nextSearchCompleted = true;
+  v.prevSearchCompleted = true;
 
-  href = { ...href, articleId: currentArticleId };
-  v.href = href;
-
-  const promiseFuncList = [];
-
-  if (currentArticleIndex === c.articleList.length - 1) {
-    v.prevArticleUrl = articleList[currentArticleIndex - 1] || '';
-
-    promiseFuncList.push(initFetchArticle('NEXT'));
-  }
-  if (currentArticleIndex === 0) {
-    v.nextArticleUrl = articleList[currentArticleIndex + 1] || '';
-
-    promiseFuncList.push(initFetchArticle('PREV'));
-  }
-
-  return [{ v, c }, ...promiseFuncList];
+  return { v } as Param;
 }
 
 const initArticleLinkActive = wrapperFunction(

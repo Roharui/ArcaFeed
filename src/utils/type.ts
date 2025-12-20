@@ -52,6 +52,13 @@ function checkNotNull<T>(obj: T | null | undefined): T {
   throw Error('this Object is Null');
 }
 
+function getFirstArrayItem<T>(arr: T[]): T {
+  if (arr.length > 0) {
+    return arr[0]!;
+  }
+  throw Error('Array is Empty');
+}
+
 function isPromiseFuncResult(
   r: PromiseFuncResult,
 ): 'Function' | 'Param' | 'void' {
@@ -71,4 +78,5 @@ export {
   isPromiseFuncResult,
   getRegexMatchByIndex,
   getRegexMatchByIndexTry,
+  getFirstArrayItem,
 };

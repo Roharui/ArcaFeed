@@ -56,7 +56,6 @@ function initArticleToSlide({ v }: Param) {
 
 function initSwiperObject({ v }: Param) {
   v.swiper = new Swiper('.swiper', swiperOptions);
-  v.swiper.on('update', () => v.updateFn());
 
   return {
     v,

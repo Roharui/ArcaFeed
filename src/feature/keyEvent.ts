@@ -1,6 +1,6 @@
 import $ from 'jquery';
 
-import type { Param } from '@/vault';
+import type { Param, VaultWithSwiper } from '@/vault';
 
 import { nextLinkForce } from '@/feature/swiper';
 import { wrapperFunction } from '@/utils';
@@ -12,10 +12,11 @@ function initChannelEventFeature(_: Param): void {
   });
 }
 
-function initArticleEventFeature(_: Param): void {
+function initArticleEventFeature({ v }: Param): void {
+  const { swiper } = v as VaultWithSwiper;
   $(document).on('keydown', (e) => {
-    if (e.key === 'ArrowRight') ArcaFeed.runEvent('toNextPage');
-    else if (e.key === 'ArrowLeft') ArcaFeed.runEvent('toPrevPage');
+    if (e.key === 'ArrowRight') swiper.slideNext();
+    else if (e.key === 'ArrowLeft') swiper.slidePrev();
   });
 }
 
