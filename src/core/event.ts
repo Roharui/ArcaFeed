@@ -11,7 +11,7 @@ import {
   initSeriesContent,
 } from '@/feature';
 
-import { checkPageMode, isString, newAllPromise } from '@/utils';
+import { checkPageMode, isString, wrapperFunction } from '@/utils';
 import type { Param } from '@/vault';
 import type { PromiseFunc } from '@/types';
 
@@ -21,8 +21,6 @@ class EventManager extends PromiseManager {
   }
 
   init() {
-    // this.addNextPromiseCondition([addVersionInfo, () => true]);
-    // this.addNextPromiseCondition([checkPageMode, () => true]);
     // this.addNextPromiseCondition([
     //   initSwiper,
     //   ({ v }) => v.href.mode !== 'NOT_CHECKED',
@@ -59,19 +57,8 @@ class EventManager extends PromiseManager {
     //   initModal,
     //   ({ v }) => v.href.mode !== 'NOT_CHECKED',
     // ]);
-    this.addNextPromise(
-      addVersionInfo,
-      checkPageMode,
-      initSwiper,
-      initLink,
-      initSlide,
-      initSeriesContent,
-      initSeriesLinkBtn,
-      initPage,
-      initButton,
-      initEvent,
-      initModal,
-    );
+
+    this.addNextPromise(addVersionInfo, checkPageMode, initSwiper);
   }
 
   /*

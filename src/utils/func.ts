@@ -1,33 +1,48 @@
-import type { PromiseFunc, PromiseFuncResult } from '@/types';
+import type {
+  Condition,
+  PromiseFunc,
+  PromiseFuncNoFuncResult,
+  PromiseFuncResult,
+} from '@/types';
 import type { Param } from '@/vault';
-import { isPromiseFuncResult } from './type';
 
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function newAllPromise(...promiseFuncList: PromiseFunc[]): PromiseFunc {
-  return async (p: Param) => {
+export function conditionMaker(
+  ...conditions: ('HREF' | 'SWIPER' | 'SLIDE' | 'URL')[]
+): Condition {
+  return ({ v }: Param): boolean => {
+    return (
+      (!conditions.includes('HREF') ||
+        (conditions.includes('HREF') && v.href.mode === 'NOT_CHECKED')) &&
+      (!conditions.includes('SWIPER') ||
+        (conditions.includes('SWIPER') && !!v.swiper)) &&
+      (!conditions.includes('SLIDE') ||
+        (conditions.includes('SLIDE') && !!v.currentSlide)) &&
+      (!conditions.includes('URL') ||
+        (conditions.includes('URL') &&
+          !!v.nextArticleUrl &&
+          !!v.prevArticleUrl))
+    );
+  };
+}
+
+export function wrapperFunction(
+  condition: Condition,
+  func: PromiseFunc,
+): PromiseFunc {
+  return async (p: Param): Promise<PromiseFuncResult> => {
+    if (condition(p)) return func(p);
+    return wrapperFunction(condition, func);
+  };
+}
+
+export function newAllPromise(...promiseFuncList: PromiseFuncNoFuncResult[]) {
+  return async (p: Param): Promise<Param> => {
     const result = await Promise.all(promiseFuncList.map((f) => f(p)));
 
-    let resultObj = {};
-    let funcArray: PromiseFunc[] = [];
-
-    result.forEach((res) => {
-      const type = isPromiseFuncResult(res);
-
-      if (type === 'Function') {
-        funcArray.push(res as PromiseFunc);
-      }
-      if (type === 'FunctionArray') {
-        funcArray.push(...(res as PromiseFunc[]));
-      }
-
-      if (type === 'Param') {
-        resultObj = Object.assign(resultObj, res);
-      }
-    });
-
-    return [(_: Param) => resultObj as Param, ...funcArray];
+    return Object.assign({}, ...result) as Param;
   };
 }

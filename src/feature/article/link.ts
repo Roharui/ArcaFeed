@@ -97,7 +97,7 @@ function initArticleLinkActive({
     promiseFuncList.push(fetchArticle('PREV'));
   }
 
-  return [() => ({ v, c }), newAllPromise(...promiseFuncList)];
+  return [() => ({ v, c }), ...promiseFuncList];
 }
 
 export { initLink, initArticleLinkActive, initArticleLinkChannel };

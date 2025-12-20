@@ -7,6 +7,7 @@ import { ArcaFeed } from '@/core';
 
 import { nextLinkForce } from './swiper';
 import { toggleArticleFilterModal } from './modal';
+import { conditionMaker, wrapperFunction } from '@/utils';
 
 // Example Button HTML:
 // <li class="nav-item dropdown user-menu-parent">
@@ -107,7 +108,7 @@ function returnButtons(
   return btnWrapper(btns);
 }
 
-function initButton({ v, c }: Param) {
+function initButtonFeature({ v, c }: Param) {
   const btns = returnButtons(v.href.mode, c.slideMode);
 
   $('ul.nav.navbar-nav').last().before(btns);
@@ -118,5 +119,10 @@ function initButtonAtSlide(currentSlide: JQuery<HTMLElement>) {
 
   currentSlide.find('ul.nav.navbar-nav').last().before(btns);
 }
+
+const initButton = wrapperFunction(
+  conditionMaker('HREF', 'SWIPER', 'SLIDE'),
+  initButtonFeature,
+);
 
 export { initButton, initButtonAtSlide };
