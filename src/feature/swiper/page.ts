@@ -49,33 +49,22 @@ function nextLinkForceFeature({ v }: Param) {
 
 const nextLinkForce = wrapperFunction(['NEXTURL'], nextLinkForceFeature);
 
+const toNextLink = wrapperFunction(['NEXTURL'], toLink('NEXT'));
+const toPrevLink = wrapperFunction(['PREVURL'], toLink('PREV'));
+
 // For Event
-// function toLink(mode: PageMode): PromiseFunc {
-//   return ({ v, c }: Param): void | PromiseFunc => {
-//     const { nextArticleUrl, prevArticleUrl } = v;
-//     const url = mode === 'NEXT' ? nextArticleUrl : prevArticleUrl;
+function toLink(mode: PageMode): PromiseFunc {
+  return ({ v, c }: Param): void | PromiseFunc => {
+    const { nextArticleUrl, prevArticleUrl } = v;
+    const url = mode === 'NEXT' ? nextArticleUrl : prevArticleUrl;
 
-//     if (!isString(url)) {
-//       if (process.env.NODE_ENV === 'development') {
-//         console.log('No url at toLink');
-//       }
-//       return;
-//     }
-
-//     if (c.isSlideMode('REFRESH')) window.location.replace(url);
-//     else return pageRender(mode);
-//   };
-// }
+    if (c.isSlideMode('REFRESH')) window.location.replace(url || '');
+    else return pageRender(mode);
+  };
+}
 
 // function pageRender(mode: PageMode): PromiseFunc {
 //   return ({ v }: Param): PromiseFunc[] => {
-//     if (!v.swiper) {
-//       if (process.env.NODE_ENV === 'development') {
-//         console.log('No Swiper Init');
-//       }
-//       return [];
-//     }
-
 //     const { swiper } = v;
 //     const { slides, activeIndex } = swiper;
 
@@ -89,11 +78,6 @@ const nextLinkForce = wrapperFunction(['NEXTURL'], nextLinkForceFeature);
 //     ) {
 //       promiseList.push(
 //         newAllPromise(
-//           () => swiper.disable(),
-//           () => {
-//             swiper.allowTouchMove = false;
-//             return;
-//           },
 //           alertPageIsFetching(mode),
 //         ),
 //       );
@@ -101,11 +85,6 @@ const nextLinkForce = wrapperFunction(['NEXTURL'], nextLinkForceFeature);
 //       promiseList.push(
 //         newAllPromise(
 //           showCurrentSlide,
-//           () => swiper.enable(),
-//           () => {
-//             swiper.allowTouchMove = true;
-//             return;
-//           },
 //           removeSlidePromise(mode),
 //           addNewEmptySlidePromise(mode),
 //         ),
@@ -113,8 +92,6 @@ const nextLinkForce = wrapperFunction(['NEXTURL'], nextLinkForceFeature);
 //     }
 //     promiseList.push(
 //       newAllPromise(
-//         setCurrentArticle,
-//         focusCurrentSlide,
 //         initArticleLinkActive,
 //       ),
 //     );
@@ -194,15 +171,21 @@ function linkPageRender(mode: PageMode): PromiseFunc {
 
     const currentArticleId = getArticleId(url);
 
-    const currentSlide = $(v.currentSlide || getCurrentSlide(v));
+    const $currentSlide = $(v.currentSlide || getCurrentSlide(v));
+    const $newSlide = $currentSlide.clone();
 
-    currentSlide.append($article);
+    $currentSlide.append($article);
 
-    buttonAtSlide(currentSlide);
+    buttonAtSlide($currentSlide);
 
-    currentSlide.attr('data-article-id', currentArticleId);
-    currentSlide.attr('data-article-href', url);
-    currentSlide.attr('data-article-title', title);
+    $currentSlide.attr('data-article-id', currentArticleId);
+    $currentSlide.attr('data-article-href', url);
+    $currentSlide.attr('data-article-title', title);
+
+    $currentSlide.find('.loader-container').remove();
+    $currentSlide.removeClass('slide-empty');
+
+    $currentSlide.replaceWith($newSlide);
   };
 }
 

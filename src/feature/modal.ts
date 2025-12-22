@@ -33,78 +33,86 @@ function initModalFeature({ v }: Param): void | PromiseFunc {
   if (!v.isCurrentMode('ARTICLE', 'CHANNEL')) return;
 
   const dialog = $(NEXT_PAGE_MODAL_HTML);
-  $('body').append(dialog);
 
-  return initCreateModal;
+  return initCreateModalFeature(dialog);
 }
 
 const initModal = wrapperFunction(['HREF'], initModalFeature);
 
-function initCreateModal({ v, c }: Param) {
-  const { href } = v;
-  const { articleFilterConfig } = c;
+function initCreateModalFeature(dialog: JQuery<HTMLElement>) {
+  return function initCreateModal({ v, c }: Param) {
+    const { href } = v;
+    const { articleFilterConfig } = c;
 
-  const { tab, title } = articleFilterConfig[href.channelId] || {
-    tab: [],
-    title: [],
-  };
+    const { tab, title } = articleFilterConfig[href.channelId] || {
+      tab: [],
+      title: [],
+    };
 
-  const $rootContainer = $('.root-container').first();
-  const category = $rootContainer
-    .find('.board-category > span')
-    .get()
-    .map((ele) => $(ele).text().trim())
-    .filter((text) => text !== '전체');
+    const $rootContainer = $('.root-container').first();
+    const category = $rootContainer
+      .find('.board-category > span')
+      .get()
+      .map((ele) => $(ele).text().trim())
+      .filter((text) => text !== '전체');
 
-  category.splice(0, 0, '노탭');
+    category.splice(0, 0, '노탭');
 
-  // Use Set for O(1) lookup instead of O(n) array.includes
-  const tabSet = new Set(tab);
-  const $dialogCategory = $('#dialog #category');
+    // Use Set for O(1) lookup instead of O(n) array.includes
+    const tabSet = new Set(tab);
+    const $dialogCategory = dialog.find('#category');
 
-  category
-    .map((text) =>
-      createCategorySpan(text, 'ele-category', tabSet.has(text), () =>
-        $('.ele-category-all').prop(
-          'checked',
-          $('.ele-category').length === $('.ele-category:checked').length,
+    category
+      .map((text) =>
+        createCategorySpan(text, 'ele-category', tabSet.has(text), () =>
+          dialog
+            .find('.ele-category-all')
+            .prop(
+              'checked',
+              dialog.find('.ele-category').length ===
+                dialog.find('.ele-category:checked').length,
+            ),
         ),
-      ),
-    )
-    .forEach((ele) => $dialogCategory.append(ele));
+      )
+      .forEach((ele) => $dialogCategory.append(ele));
 
-  const spanAll = createCategorySpan(
-    '전체',
-    'ele-category-all',
-    tab.length === category.length,
-    () =>
-      $('.ele-category').prop(
-        'checked',
-        $('.ele-category-all').prop('checked'),
-      ),
-  );
+    const spanAll = createCategorySpan(
+      '전체',
+      'ele-category-all',
+      tab.length === category.length,
+      () =>
+        $('.ele-category').prop(
+          'checked',
+          $('.ele-category-all').prop('checked'),
+        ),
+    );
 
-  $('#category-all').append(spanAll);
+    dialog.find('#category-all').append(spanAll);
 
-  title.forEach((tag) => createExcludeSpan(tag));
+    title.forEach((tag) => createExcludeSpan(tag));
 
-  $('#check-btn').on('click', () =>
-    ArcaFeed.runPromise(checkFn, initLink, () => toggleArticleFilterModal),
-  );
-  $('#cancel-btn').on('click', () => toggleArticleFilterModal());
-  $('#exclude-btn').on('click', () => {
-    const excludeTagsStr = $('#exclude-title').val() || '';
+    dialog
+      .find('#check-btn')
+      .on('click', () =>
+        ArcaFeed.runPromise(checkFn, initLink, () => toggleArticleFilterModal),
+      );
+    dialog.find('#cancel-btn').on('click', () => toggleArticleFilterModal());
+    dialog.find('#exclude-btn').on('click', () => {
+      const excludeTagsStr = dialog.find('#exclude-title').val() || '';
 
-    if (typeof excludeTagsStr !== 'string') {
-      return;
-    }
+      if (typeof excludeTagsStr !== 'string') {
+        return;
+      }
 
-    const excludeTags = excludeTagsStr.split(',') || [];
+      const excludeTags = excludeTagsStr.split(',') || [];
 
-    excludeTags.forEach((tag) => createExcludeSpan(tag));
+      excludeTags.forEach((tag) => createExcludeSpan(tag));
 
-    $('#exclude-title').val('');
-  });
+      $('#exclude-title').val('');
+    });
+
+    $('body').append(dialog);
+  };
 }
 
 function createExcludeSpan(text: string) {

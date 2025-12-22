@@ -15,20 +15,13 @@ function createArcaFeedBtn(
   callback: Function,
   display = 'list-item',
 ) {
-  const btn = $('<li>', {
-    class: `nav-item dropdown userscript-nav-item ${id}`,
-  });
-  const a = $('<a>', { class: 'nav-link' });
-  const spanMargin = $('<span>', {
-    class: 'd-none d-sm-inline navbar-top-margin',
-  });
-  const spanIcon = $('<span>', { class: icon + ' h5' });
-
-  a.append(spanMargin);
-  a.append(spanIcon);
-
-  btn.append(a);
-  btn.css('display', display);
+  const btn =
+    $(`<li class="nav-item dropdown userscript-nav-item ${id}" style="display: ${display};">
+  <a class="nav-link">
+    <span class="d-none d-sm-inline navbar-top-margin"></span>
+    <span class="${icon} h5"></span>
+  </a>
+  </li>`);
 
   btn.on('click', () => callback());
 

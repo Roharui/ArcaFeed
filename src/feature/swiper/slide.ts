@@ -35,39 +35,11 @@ function removeSlide(mode: PageMode, v: Vault) {
 
   if (swiper === null) return;
 
-  if (swiper.slides.length > 10)
+  if (swiper.slides.length > 10) {
     swiper.removeSlide(mode === 'NEXT' ? 1 : swiper.slides.length - 2);
+  }
+  swiper.updateSlides();
 }
-
-function removeSlidePromise(mode: PageMode) {
-  return ({ v }: Param): Promise<void> | void => {
-    const { swiper } = v as VaultWithSwiper;
-
-    if (swiper.slides.length > 10) {
-      return new Promise<void>((res) => {
-        v.updateFn = res;
-        removeSlide(mode, v);
-      });
-    } else return Promise.resolve();
-  };
-}
-
-function initAddNewEmptySlideFeature(mode: PageMode) {
-  const fn = ({ v }: Param) => addNewEmptySlide(mode, v);
-  return Object.defineProperties(fn, {
-    name: { value: `initAddNewEmpty${mode}SlideFeature` },
-  });
-}
-
-const initAddNewEmptyNextSlide = wrapperFunction(
-  ['ARTICLE', 'SWIPER', 'NEXTURL'],
-  initAddNewEmptySlideFeature('NEXT'),
-);
-
-const initAddNewEmptyPrevSlide = wrapperFunction(
-  ['ARTICLE', 'SWIPER', 'PREVURL'],
-  initAddNewEmptySlideFeature('PREV'),
-);
 
 function addNewEmptySlide(mode: PageMode, v: Vault) {
   const { swiper } = v as VaultWithSwiper;
@@ -83,14 +55,56 @@ function addNewEmptySlide(mode: PageMode, v: Vault) {
   const fn = mode === 'NEXT' ? swiper.appendSlide : swiper.prependSlide;
 
   fn.call(swiper, slide.get());
+  swiper.updateSlides();
 }
+
+function initAddNewEmptySlideFeature(mode: PageMode) {
+  return addNewEmptySlidePromise(mode);
+}
+
+const initAddNewEmptyNextSlide = wrapperFunction(
+  ['ARTICLE', 'SWIPER', 'NEXTURL'],
+  initAddNewEmptySlideFeature('NEXT'),
+);
+
+const initAddNewEmptyPrevSlide = wrapperFunction(
+  ['ARTICLE', 'SWIPER', 'PREVURL'],
+  initAddNewEmptySlideFeature('PREV'),
+);
 
 function addNewEmptySlidePromise(mode: PageMode) {
   return ({ v }: Param): Promise<void> =>
     new Promise<void>((res) => {
-      v.updateFn = res;
+      const { swiper } = v as VaultWithSwiper;
+      swiper.once('slidesUpdated', () => {
+        res();
+      });
       addNewEmptySlide(mode, v);
     });
+}
+
+function addNewEmptySlideAndGetSlide(mode: PageMode, activeIndex: number) {
+  return ({ v }: Param): Promise<HTMLElement> =>
+    new Promise<HTMLElement>((res) => {
+      const { swiper } = v as VaultWithSwiper;
+      swiper.once('slidesUpdated', () => {
+        res(swiper.slides[activeIndex] as HTMLElement);
+      });
+      addNewEmptySlide(mode, v);
+    });
+}
+
+function removeSlidePromise(mode: PageMode) {
+  return ({ v }: Param): Promise<void> | void => {
+    const { swiper } = v as VaultWithSwiper;
+
+    if (swiper.slides.length > 10) {
+      return new Promise<void>((res) => {
+        v.updateFn = res;
+        removeSlide(mode, v);
+      });
+    } else return Promise.resolve();
+  };
 }
 
 export {
@@ -101,4 +115,5 @@ export {
   removeSlidePromise,
   addNewEmptySlide,
   addNewEmptySlidePromise,
+  addNewEmptySlideAndGetSlide,
 };

@@ -64,11 +64,19 @@ function isPromiseFuncResult(
   throw Error('PromiseFuncResult is Not Availe : ' + r);
 }
 
+function getFirstArrayItem<T>(arr: T[]): T {
+  if (arr.length > 0) {
+    return arr[0]!;
+  }
+  throw Error('Array is Empty');
+}
+
 export {
   isString,
   isNotNull,
   checkNotNull,
   isPromiseFuncResult,
+  getFirstArrayItem,
   getRegexMatchByIndex,
   getRegexMatchByIndexTry,
 };

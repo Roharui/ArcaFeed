@@ -35,28 +35,27 @@ function initArticleToSlide({ v }: Param) {
   const { articleId } = v.href;
 
   const $body = $('body');
-  const $swiper = $('<div>', { class: 'swiper' }).appendTo($body);
-  $('<div>', { class: 'swiper-wrapper' }).appendTo($swiper);
 
-  const slide = $('<div>', { class: 'swiper-slide' });
+  const $swiper = $('<div>', { class: 'swiper' });
+  const $swiperWrapper = $('<div>', { class: 'swiper-wrapper' });
+  const $slide = $('<div>', { class: 'swiper-slide' });
 
-  slide.attr('data-article-id', articleId);
-  slide.attr('data-article-href', window.location.pathname);
-  slide.attr('data-article-title', document.title);
+  $slide.attr('data-article-id', articleId);
+  $slide.attr('data-article-href', window.location.pathname);
+  $slide.attr('data-article-title', document.title);
 
   const html = $body.html();
-  const content = $(parseContent(html));
+  const $content = $(parseContent(html));
 
-  $('.root-container').remove();
+  $content.appendTo($slide);
+  $slide.appendTo($swiperWrapper);
+  $swiperWrapper.appendTo($swiper);
 
-  content.appendTo(slide);
-
-  slide.appendTo($('.swiper-wrapper'));
+  $('.root-container').replaceWith($swiper);
 }
 
 function initSwiperObject({ v }: Param) {
   v.swiper = new Swiper('.swiper', swiperOptions);
-  v.swiper.on('update', () => v.updateFn());
 
   return {
     v,

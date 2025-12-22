@@ -7,6 +7,15 @@ import { getCurrentSlide, filterLink, parseSearchQuery } from '@/feature';
 import { initFetchArticle } from '@/feature/article';
 import { wrapperFunction } from '@/utils';
 
+const initLink = wrapperFunction(['HREF'], initLinkFeature);
+
+const initArticleLinkActive = wrapperFunction(
+  ['SLIDE'],
+  initArticleLinkActiveFeature,
+);
+
+// ===
+
 function initLinkFeature({ v }: Param): PromiseFunc | PromiseFunc[] {
   const promiseFuncList = [];
 
@@ -23,8 +32,6 @@ function initLinkFeature({ v }: Param): PromiseFunc | PromiseFunc[] {
   return promiseFuncList;
 }
 
-const initLink = wrapperFunction(['HREF'], initLinkFeature);
-
 function initArticleLinkChannel({ v, c }: Param): Param | PromiseFunc {
   const totalLinks = $(
     'div.article-list > div.list-table.table > a.vrow.column',
@@ -33,7 +40,7 @@ function initArticleLinkChannel({ v, c }: Param): Param | PromiseFunc {
   const filteredLinks = filterLink(totalLinks, v, c);
 
   if (filteredLinks.length === 0) {
-    return initFetchArticle('NEXT');
+    return initFetchArticle;
   }
 
   c.articleList = filteredLinks;
@@ -45,12 +52,11 @@ function initArticleLinkChannel({ v, c }: Param): Param | PromiseFunc {
 
 function initArticleLinkActiveFeature({ v, c }: Param): PromiseFuncResult {
   let { href } = v;
-  const { articleList } = c;
 
   const $html = $(v.currentSlide || getCurrentSlide(v)) || $('.root-container');
 
   if (c.articleList.length === 0) {
-    return initFetchArticle('NEXT');
+    return initFetchArticle;
   }
 
   const currentArticleId =
@@ -63,46 +69,33 @@ function initArticleLinkActiveFeature({ v, c }: Param): PromiseFuncResult {
   if (currentArticleIndex === -1) {
     c.articleList.push(window.location.href);
     c.articleList = c.articleList.sort().reverse();
-    return [{ v, c }, initFetchArticle('NEXT')];
+    return [{ v, c }, initFetchArticle];
   }
 
-  if (
-    c.articleList.length > 0 &&
-    currentArticleIndex >= 0 &&
-    currentArticleIndex !== c.articleList.length - 1 &&
-    currentArticleIndex !== 0
-  ) {
-    v.nextArticleUrl = c.articleList[currentArticleIndex + 1] || '';
-    v.prevArticleUrl = c.articleList[currentArticleIndex - 1] || '';
+  v.prevArticleUrl = c.articleList[currentArticleIndex - 1] || 'none';
 
+  if (c.articleList.length - currentArticleIndex > 1) {
+    v.nextArticleUrl = c.articleList[currentArticleIndex + 1] || '';
     return { v, c };
+  } else {
+    return [{ v, c }, initFetchArticle];
   }
 
   // TODO: 시리즈 활성화 상태일 경우 fetch를 통해 게시글 목록 가져오지 않도록 만들기
   // nextArticleUrl, prevArticleUrl을 가져오는 부분 추가 함수로 분할하기
 
-  href = { ...href, articleId: currentArticleId };
-  v.href = href;
+  // href = { ...href, articleId: currentArticleId };
+  // v.href = href;
 
-  const promiseFuncList = [];
+  // const promiseFuncList = [];
 
-  if (currentArticleIndex === c.articleList.length - 1) {
-    v.prevArticleUrl = articleList[currentArticleIndex - 1] || '';
+  // if (currentArticleIndex === c.articleList.length - 1) {
+  //   v.prevArticleUrl = articleList[currentArticleIndex - 1] || '';
 
-    promiseFuncList.push(initFetchArticle('NEXT'));
-  }
-  if (currentArticleIndex === 0) {
-    v.nextArticleUrl = articleList[currentArticleIndex + 1] || '';
+  //   promiseFuncList.push(initFetchArticle);
+  // }
 
-    promiseFuncList.push(initFetchArticle('PREV'));
-  }
-
-  return [{ v, c }, ...promiseFuncList];
+  // return [{ v, c }, ...promiseFuncList];
 }
-
-const initArticleLinkActive = wrapperFunction(
-  ['SLIDE'],
-  initArticleLinkActiveFeature,
-);
 
 export { initLink, initArticleLinkActive, initArticleLinkChannel };
