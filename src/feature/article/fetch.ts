@@ -2,73 +2,37 @@
 
 import $ from 'jquery';
 
-import { fetchUrl as initFetchUrl } from '@/utils/fetch';
-import { filterLink } from '@/feature';
-
-import type { PageMode, PromiseFunc } from '@/types';
-import type { Param, VaultWithSwiper } from '@/vault';
-
-import { getFirstArrayItem, wrapperFunction } from '@/utils';
 import { ArcaFeed } from '@/core';
+import { getFirstArrayItem } from '@/utils';
 
-function initFetchArticle({ v }: Param) {
-  if (!v.swiper) return initFetchLoop($('.root-container'));
-  return initFetchFromCurrentSlide;
-}
+import { filterLink } from '@/feature';
+import { fetchUrl as initFetchUrl } from '@/utils/fetch';
 
-// 현재 슬라이드에서 게시글 링크를 검색
-async function initFetchFromCurrentSlideFeature({
-  v,
-  c,
-}: Param): Promise<PromiseFunc> {
-  const { searchQuery } = c;
-  const currentSlide = $((v as VaultWithSwiper).currentSlide);
+import type { PromiseFunc } from '@/types';
+import type { Param } from '@/vault';
 
-  const searchUrl = currentSlide.attr('data-article-href') + searchQuery;
-
-  ArcaFeed.log(`Fetching article From Current article: ${searchUrl}`);
-
-  const res = await initFetchUrl(searchUrl);
-  const $html = $(res.responseText);
-
-  return initFetchLoop($html);
-}
-
-const initFetchFromCurrentSlide = wrapperFunction(
-  ['SLIDE'],
-  initFetchFromCurrentSlideFeature,
-);
-
-function initFetchLoop($html: JQuery<HTMLElement>): PromiseFunc {
+function initFetchArticle(targetUrl?: string): PromiseFunc {
   const result = async ({ v, c }: Param) => {
+    let articlePageUrl: string = targetUrl || window.location.href;
     let filteredLinks: string[] = [];
     let count: number = 0;
 
-    while (filteredLinks.length === 0 && count <= 10) {
-      const articlePage = $html.find('.page-item.active');
-
-      const articlePageElement = articlePage.next();
-
-      const articlePageUrl = articlePageElement.find('a').attr('href');
-
-      if (!articlePageUrl) {
-        ArcaFeed.log('NO ARTICLE PAGE LINK FOUND');
-        return { v, c } as Param;
-      }
-
+    while (count <= 10) {
       const searchUrl = articlePageUrl.replace('https://arca.live', '');
 
       ArcaFeed.log(`Fetching article page: ${searchUrl}`);
 
       const res = await initFetchUrl(`${searchUrl}`);
 
-      $html = $(res.responseText);
+      const $html = $(res.responseText);
 
       const totalLinks = $html
         .find('div.article-list > div.list-table.table > a.vrow.column')
         .not('.notice');
 
-      filteredLinks = filterLink(totalLinks, v, c);
+      filteredLinks = filterLink(totalLinks, v, c).filter((ele: string) => {
+        return !c.articleList.includes(ele);
+      });
 
       if (filteredLinks.length > 0) {
         ArcaFeed.log(`Fetching Completearticle page: ${articlePageUrl}`);
@@ -78,15 +42,31 @@ function initFetchLoop($html: JQuery<HTMLElement>): PromiseFunc {
 
         return { v, c } as Param;
       }
-      count += 1;
+
+      const articlePage = $html.find('.page-item.active');
+      const articlePageElement = articlePage.next();
+
+      const tempUrl = articlePageElement.find('a').attr('href');
+
+      if (!tempUrl) {
+        ArcaFeed.log('NO ARTICLE PAGE LINK FOUND');
+        return { v, c } as Param;
+      }
+
+      articlePageUrl = tempUrl;
 
       ArcaFeed.log(
         `No articles found on page ${articlePageUrl}, trying page...`,
       );
+      count += 1;
     }
+
+    ArcaFeed.log('Counts Over! No more article pages to fetch.');
+
+    return { v, c } as Param;
   };
   return Object.defineProperty(result, 'name', {
-    value: `initFetchLoop`,
+    value: `initFetchArticle`,
   });
 }
 

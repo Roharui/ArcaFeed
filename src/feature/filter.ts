@@ -1,8 +1,8 @@
 import $ from 'jquery';
 
-import type { Config, Vault } from '@/vault';
-
 import { getArticleId } from '@/utils';
+
+import type { Config, Vault } from '@/vault';
 
 function filterLink(rows: JQuery<HTMLElement>, v: Vault, c: Config): string[] {
   const { articleList, articleFilterConfig } = c;
@@ -17,7 +17,7 @@ function filterLink(rows: JQuery<HTMLElement>, v: Vault, c: Config): string[] {
   if (articleFilter) {
     // Cache tab filter set for faster lookups
     const tabFilterSet = new Set(articleFilter.tab);
-    
+
     resultRows = resultRows.filter((ele) => {
       const $ele = $(ele); // Cache jQuery object
       const _tabTypeText = $ele.find('.badge-success').text();

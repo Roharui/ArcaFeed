@@ -9,7 +9,6 @@ import type { SwiperOptions } from '@swiper/types';
 import type { Param } from '@/vault';
 
 import { parseContent, wrapperFunction } from '@/utils';
-import { setCurrentSlide } from './slide';
 
 const swiperOptions: SwiperOptions = {
   slidesPerView: 1,
@@ -25,11 +24,13 @@ const swiperOptions: SwiperOptions = {
   modules: [Manipulation],
 };
 
-function initSwiperFeature(_: Param) {
-  return [initArticleToSlide, initSwiperObject, setCurrentSlide];
-}
-
 const initSwiper = wrapperFunction(['ARTICLE'], initSwiperFeature);
+
+// ===
+
+function initSwiperFeature(_: Param) {
+  return [initArticleToSlide];
+}
 
 function initArticleToSlide({ v }: Param) {
   const { articleId } = v.href;
@@ -52,9 +53,7 @@ function initArticleToSlide({ v }: Param) {
   $swiperWrapper.appendTo($swiper);
 
   $('.root-container').replaceWith($swiper);
-}
 
-function initSwiperObject({ v }: Param) {
   v.swiper = new Swiper('.swiper', swiperOptions);
 
   return {
@@ -62,4 +61,4 @@ function initSwiperObject({ v }: Param) {
   } as Param;
 }
 
-export { initSwiper, initSwiperObject, initArticleToSlide };
+export { initSwiper, initArticleToSlide };

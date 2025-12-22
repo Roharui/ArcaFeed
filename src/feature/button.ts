@@ -9,6 +9,17 @@ import { nextLinkForce } from './swiper';
 import { toggleArticleFilterModal } from './modal';
 import { wrapperFunction } from '@/utils';
 
+const initButton = (_: Param) => {
+  const w1 = wrapperFunction(
+    ['ARTICLE', 'SWIPER'],
+    initButtonFeature('ARTICLE'),
+  );
+  const w2 = wrapperFunction(['CHANNEL'], initButtonFeature('CHANNEL'));
+  return [w1, w2];
+};
+
+// ===
+
 function createArcaFeedBtn(
   id: string,
   icon: string,
@@ -109,14 +120,5 @@ function initButtonFeature(mode: HrefImpl['mode']) {
     value: `initButtonFeature_${mode}`,
   });
 }
-
-const initButton = (_: Param) => {
-  const w1 = wrapperFunction(
-    ['ARTICLE', 'SWIPER', 'SLIDE'],
-    initButtonFeature('ARTICLE'),
-  );
-  const w2 = wrapperFunction(['CHANNEL'], initButtonFeature('CHANNEL'));
-  return [w1, w2];
-};
 
 export { initButton, buttonAtSlide };

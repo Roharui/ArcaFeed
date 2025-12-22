@@ -1,10 +1,10 @@
 import $ from 'jquery';
 
-import type { Param } from '@/vault';
-
 import { nextLinkForce } from '@/feature/swiper';
 import { wrapperFunction } from '@/utils';
 import { ArcaFeed } from '@/core';
+
+import type { Param } from '@/vault';
 
 function initChannelEventFeature(_: Param): void {
   $(document).on('keydown', (e) => {

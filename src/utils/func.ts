@@ -22,7 +22,6 @@ type ConditionsKeys =
   | 'CHANNEL'
   | 'ARTICLE'
   | 'SWIPER'
-  | 'SLIDE'
   | 'NEXTURL'
   | 'PREVURL';
 
@@ -51,12 +50,11 @@ function conditions(keys: ConditionsKeys): Condition {
   if (keys === 'SWIPER') {
     return ({ v }: Param) => (!!v.swiper ? 'run' : 'wait');
   }
-  if (keys === 'SLIDE') {
-    return ({ v }: Param) => (!!v.currentSlide ? 'run' : 'wait');
-  }
+
   if (keys === 'NEXTURL') {
     return ({ v }: Param) => (isNotNull(v.nextArticleUrl) ? 'run' : 'wait');
   }
+
   if (keys === 'PREVURL') {
     return ({ v }: Param) => (isNotNull(v.prevArticleUrl) ? 'run' : 'wait');
   }

@@ -1,23 +1,14 @@
 // hider, regex, slide, link, hider
 
-import $ from 'jquery';
+import $, { get } from 'jquery';
 
 import { ArcaFeed } from '@/core';
 
-import { buttonAtSlide, getCurrentSlide, initSeriesContent } from '@/feature';
-import {
-  addNewEmptySlidePromise,
-  removeSlidePromise,
-  setCurrentSlide,
-} from '@/feature/swiper';
+import { buttonAtSlide, getCurrentSlide } from '@/feature';
+import { addNewEmptySlidePromise } from '@/feature/swiper';
 import { initArticleLinkActive } from '@/feature/article';
 
-import type { PageMode, PromiseFunc } from '@/types';
-import type { Param, VaultWithSwiper } from '@/vault';
-
 import {
-  checkNotNull,
-  isString,
   fetchUrl,
   sleep,
   getArticleId,
@@ -26,11 +17,19 @@ import {
   wrapperFunction,
 } from '@/utils';
 
+import type { PageMode, PromiseFunc, PromiseFuncResult } from '@/types';
+import type { Param, VaultFull } from '@/vault';
+
+// ===
+
+const toNextLink = wrapperFunction(['SWIPER', 'NEXTURL'], toLink('NEXT'));
+const toPrevLink = wrapperFunction(['SWIPER', 'PREVURL'], toLink('PREV'));
+
+// ===
+
 // Init
 function initPageFeature({ v }: Param): void {
-  if (!v.isCurrentMode('ARTICLE')) return;
-
-  const { swiper } = v as VaultWithSwiper;
+  const { swiper } = v as VaultFull;
 
   swiper.on('slideNextTransitionEnd', () =>
     ArcaFeed.runEvent('renderNextPage'),
@@ -49,144 +48,86 @@ function nextLinkForceFeature({ v }: Param) {
 
 const nextLinkForce = wrapperFunction(['NEXTURL'], nextLinkForceFeature);
 
-const toNextLink = wrapperFunction(['NEXTURL'], toLink('NEXT'));
-const toPrevLink = wrapperFunction(['PREVURL'], toLink('PREV'));
-
 // For Event
 function toLink(mode: PageMode): PromiseFunc {
-  return ({ v, c }: Param): void | PromiseFunc => {
-    const { nextArticleUrl, prevArticleUrl } = v;
-    const url = mode === 'NEXT' ? nextArticleUrl : prevArticleUrl;
+  return ({ v, c }: Param): PromiseFuncResult => {
+    const { nextArticleUrl, prevArticleUrl } = v as VaultFull;
 
-    if (c.isSlideMode('REFRESH')) window.location.replace(url || '');
-    else return pageRender(mode);
+    if (c.isSlideMode('RENDER') && mode === 'PREV') return;
+    if (c.isSlideMode('RENDER') && mode === 'NEXT')
+      return [renderPage, linkPageRender];
+
+    window.location.replace(mode === 'NEXT' ? nextArticleUrl : prevArticleUrl);
   };
 }
 
-// function pageRender(mode: PageMode): PromiseFunc {
-//   return ({ v }: Param): PromiseFunc[] => {
-//     const { swiper } = v;
-//     const { slides, activeIndex } = swiper;
+const linkPageRender = wrapperFunction(
+  ['ARTICLE', 'SWIPER', 'NEXTURL'],
+  linkPageRenderFeature,
+);
 
-//     const promiseList: PromiseFunc[] = [];
+function renderPage({ v }: Param) {
+  const { swiper, nextRenderSlide } = v as VaultFull;
 
-//     promiseList.push(setCurrentSlide);
-
-//     if (
-//       (mode === 'PREV' && activeIndex === 0) ||
-//       (mode === 'NEXT' && activeIndex === slides.length - 1)
-//     ) {
-//       promiseList.push(
-//         newAllPromise(
-//           alertPageIsFetching(mode),
-//         ),
-//       );
-//       promiseList.push(linkPageRender(mode));
-//       promiseList.push(
-//         newAllPromise(
-//           showCurrentSlide,
-//           removeSlidePromise(mode),
-//           addNewEmptySlidePromise(mode),
-//         ),
-//       );
-//     }
-//     promiseList.push(
-//       newAllPromise(
-//         initArticleLinkActive,
-//       ),
-//     );
-//     promiseList.push(initSeriesContent);
-
-//     return promiseList;
-//   };
-// }
-
-function alertPageIsFetching(mode: PageMode) {
-  return ({ v }: Param) => {
-    const currentSlide = $((v as VaultWithSwiper).currentSlide);
-    currentSlide
-      .find('.loading-info')
-      .append(
-        $('<div>').text(
-          `${mode === 'NEXT' ? '다음' : '이전'} 글 불러오는 중...`,
-        ),
-      );
-  };
-}
-
-function setCurrentArticle({ v }: Param) {
-  const currentSlide = $((v as VaultWithSwiper).currentSlide);
-
-  const currentArticleUrl = currentSlide.attr('data-article-href');
-  const currentArticleTitle = checkNotNull(
-    currentSlide.attr('data-article-title'),
-  );
-
-  document.title = currentArticleTitle;
-  window.history.pushState({}, currentArticleTitle, currentArticleUrl);
-}
-
-function showCurrentSlide({ v }: Param) {
-  const currentSlide = $((v as VaultWithSwiper).currentSlide);
-  currentSlide.find('.loader-container').remove();
-  currentSlide.removeClass('slide-empty');
+  if (typeof nextRenderSlide !== 'undefined') {
+    swiper.once('update', () => {
+      getCurrentSlide(v).replaceWith(nextRenderSlide);
+      getCurrentSlide(v).focus();
+    });
+  }
 }
 
 // 로직 정리
-// 1. 다음 슬라이드가 빈 슬라이드면 다음 글 불러오기
-// 2. 다음 글을 불러온 후 빈 슬라이드에 추가 (display: none)
-// 3. 블러온 글에 대한 hider 처리 진행
-// 4. 슬라이드 갱신
-function linkPageRender(mode: PageMode): PromiseFunc {
-  return async ({ v }: Param) => {
-    let res;
+async function linkPageRenderFeature({ v }: Param) {
+  let res;
 
-    const { nextArticleUrl, prevArticleUrl } = v;
+  const { swiper, nextArticleUrl: url } = v as VaultFull;
 
-    const url = checkNotNull(mode === 'NEXT' ? nextArticleUrl : prevArticleUrl);
+  if (swiper.slides.length - swiper.activeIndex > 2) {
+    return;
+  }
 
-    while (!res) {
-      res = await fetchUrl(url);
+  while (!res) {
+    res = await fetchUrl(url);
 
-      if (!res) {
-        ArcaFeed.log('Fetch failed, no loop for development mode');
-        if (process.env.NODE_ENV === 'development') {
-          return;
-        }
-
-        const currentSlide = $(getCurrentSlide(v));
-        currentSlide
-          .find('.loading-info')
-          .append($('<div>').text('글 불러오기 실패'));
-
-        await sleep(5000);
-        continue;
+    if (!res) {
+      ArcaFeed.log('Fetch failed, no loop for development mode');
+      if (process.env.NODE_ENV === 'development') {
+        return;
       }
+
+      await sleep(5000);
+      continue;
     }
+  }
 
-    const content = parseContent(res.responseText);
-    const title = getCurrentHTMLTitle(res.responseText);
+  ArcaFeed.log(url);
 
-    const $article = $(content);
+  const content = parseContent(res.responseText);
+  const title = getCurrentHTMLTitle(res.responseText);
+  const currentArticleId = getArticleId(url);
 
-    const currentArticleId = getArticleId(url);
+  const $article = $(content);
+  const $newSlide = $('<div>', { class: 'swiper-slide' });
 
-    const $currentSlide = $(v.currentSlide || getCurrentSlide(v));
-    const $newSlide = $currentSlide.clone();
+  $newSlide.append($article);
 
-    $currentSlide.append($article);
+  buttonAtSlide($newSlide);
 
-    buttonAtSlide($currentSlide);
+  $newSlide.attr('data-article-href', url);
+  $newSlide.attr('data-article-title', title);
+  $newSlide.attr('data-article-id', currentArticleId);
 
-    $currentSlide.attr('data-article-id', currentArticleId);
-    $currentSlide.attr('data-article-href', url);
-    $currentSlide.attr('data-article-title', title);
+  $newSlide.find('.loader-container').remove();
+  $newSlide.removeClass('slide-empty');
 
-    $currentSlide.find('.loader-container').remove();
-    $currentSlide.removeClass('slide-empty');
+  v.nextRenderSlide = $newSlide.get(0);
 
-    $currentSlide.replaceWith($newSlide);
-  };
+  return [
+    { v } as Param,
+    addNewEmptySlidePromise('NEXT'),
+    initArticleLinkActive(currentArticleId),
+  ];
 }
 
-export { initPage, nextLinkForce };
+export { initPage, nextLinkForce, toNextLink, toPrevLink, linkPageRender };

@@ -2,11 +2,11 @@ import $ from 'jquery';
 
 import { ArcaFeed } from '@/core';
 
-import type { Param } from '@/vault';
-import type { ArticleFilterImpl, PromiseFunc } from '@/types';
-
 import { initLink } from './article';
 import { checkNotNull, wrapperFunction } from '@/utils';
+
+import type { Param } from '@/vault';
+import type { ArticleFilterImpl, PromiseFunc } from '@/types';
 
 const NEXT_PAGE_MODAL_HTML = `
 <div id="dialog" class="helper-modal" style="display: none">
@@ -29,9 +29,7 @@ const NEXT_PAGE_MODAL_HTML = `
 </div>
 `;
 
-function initModalFeature({ v }: Param): void | PromiseFunc {
-  if (!v.isCurrentMode('ARTICLE', 'CHANNEL')) return;
-
+function initModalFeature(_: Param): void | PromiseFunc {
   const dialog = $(NEXT_PAGE_MODAL_HTML);
 
   return initCreateModalFeature(dialog);

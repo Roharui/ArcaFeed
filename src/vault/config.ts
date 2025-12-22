@@ -3,8 +3,11 @@ import type { ArticleFilterConfigImpl, ConfigImpl, SlideMode } from '@/types';
 class Config implements ConfigImpl {
   articleList: string[] = [];
   articleFilterConfig: ArticleFilterConfigImpl = {};
+
   seriesName: string = '';
   searchQuery: string = '';
+  lastSearchedPage: number = 1;
+
   slideMode: SlideMode;
 
   constructor() {
@@ -33,6 +36,10 @@ class Config implements ConfigImpl {
     this.slideMode =
       (localStorage.getItem('slideMode') as 'REFRESH' | 'RENDER') || 'REFRESH';
 
+    this.lastSearchedPage = parseInt(
+      localStorage.getItem('lastSearchedPage') || '1',
+      10,
+    );
     this.searchQuery = localStorage.getItem('searchQuery') || '';
     this.seriesName = localStorage.getItem('seriesName') || '';
   }
@@ -44,6 +51,7 @@ class Config implements ConfigImpl {
     );
     localStorage.setItem('articleList', JSON.stringify(this.articleList));
 
+    localStorage.setItem('lastSearchedPage', this.lastSearchedPage.toString());
     localStorage.setItem('slideMode', this.slideMode);
     localStorage.setItem('searchQuery', this.searchQuery);
     localStorage.setItem('seriesName', this.seriesName);

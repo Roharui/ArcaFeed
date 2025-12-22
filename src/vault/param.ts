@@ -1,8 +1,8 @@
-import type { Config, VaultWithSwiper } from '@/vault';
+import type { Config, VaultFull } from '@/vault';
 import type { Vault } from '@/vault';
 
 type Param = {
-  v: Vault | VaultWithSwiper;
+  v: Vault;
   c: Config;
 };
 

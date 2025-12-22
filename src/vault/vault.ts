@@ -13,7 +13,7 @@ class Vault {
   prevArticleUrl: string | null = null;
 
   swiper: Swiper | null = null;
-  currentSlide: HTMLElement | undefined;
+  nextRenderSlide: HTMLElement | undefined;
 
   updateFn: () => void = () => {};
 
@@ -22,7 +22,11 @@ class Vault {
   }
 }
 
-type VaultWithSwiper = Vault & { swiper: Swiper; currentSlide: HTMLElement };
+type VaultFull = Vault & {
+  swiper: Swiper;
+  nextArticleUrl: string;
+  prevArticleUrl: string;
+};
 
 export { Vault };
-export type { VaultWithSwiper };
+export type { VaultFull };

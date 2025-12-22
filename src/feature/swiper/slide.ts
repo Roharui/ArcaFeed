@@ -1,34 +1,32 @@
 import $ from 'jquery';
 
 import type { PageMode } from '@/types';
-import type { Param, Vault, VaultWithSwiper } from '@/vault';
+import type { Param, Vault, VaultFull } from '@/vault';
 
-import { getCurrentSlide } from '@/feature';
 import { wrapperFunction } from '@/utils';
+import { linkPageRender } from './page';
 
-function initSlideFeature(_: Param) {
-  return [
-    initAddNewEmptyNextSlide,
-    initAddNewEmptyPrevSlide,
-    initFocusCurrentSlide,
-  ];
+function initSlideFeature({ c }: Param) {
+  if (c.isSlideMode('RENDER')) {
+    return [linkPageRender];
+  }
+
+  return [initAddNewEmptyNextSlide, initAddNewEmptyPrevSlide];
 }
 
 const initSlide = wrapperFunction(['ARTICLE'], initSlideFeature);
 
-function setCurrentSlide({ v }: Param): Param {
-  v.currentSlide = getCurrentSlide(v);
-  return { v } as Param;
-}
-
-function initFocusCurrentSlideFeature({ v }: Param) {
-  v.currentSlide?.focus();
-}
-
-const initFocusCurrentSlide = wrapperFunction(
-  ['SLIDE'],
-  initFocusCurrentSlideFeature,
+const initAddNewEmptyNextSlide = wrapperFunction(
+  ['ARTICLE', 'SWIPER', 'NEXTURL'],
+  addNewEmptySlidePromise('NEXT'),
 );
+
+const initAddNewEmptyPrevSlide = wrapperFunction(
+  ['ARTICLE', 'SWIPER', 'PREVURL'],
+  addNewEmptySlidePromise('PREV'),
+);
+
+// ===
 
 function removeSlide(mode: PageMode, v: Vault) {
   const { swiper } = v;
@@ -41,9 +39,20 @@ function removeSlide(mode: PageMode, v: Vault) {
   swiper.updateSlides();
 }
 
-function addNewEmptySlide(mode: PageMode, v: Vault) {
-  const { swiper } = v as VaultWithSwiper;
+function addNewSlide(
+  mode: PageMode,
+  v: Vault,
+  slideContent: JQuery<HTMLElement>,
+) {
+  const { swiper } = v as VaultFull;
 
+  const fn = mode === 'NEXT' ? swiper.appendSlide : swiper.prependSlide;
+
+  fn.call(swiper, slideContent.get());
+  swiper.updateSlides();
+}
+
+function addNewEmptySlide(mode: PageMode, v: Vault) {
   const slide = $('<div>', { class: 'swiper-slide slide-empty' });
   const loader = $('<div>', { class: 'loader-container' });
 
@@ -52,30 +61,13 @@ function addNewEmptySlide(mode: PageMode, v: Vault) {
 
   loader.appendTo(slide);
 
-  const fn = mode === 'NEXT' ? swiper.appendSlide : swiper.prependSlide;
-
-  fn.call(swiper, slide.get());
-  swiper.updateSlides();
+  addNewSlide(mode, v, slide);
 }
-
-function initAddNewEmptySlideFeature(mode: PageMode) {
-  return addNewEmptySlidePromise(mode);
-}
-
-const initAddNewEmptyNextSlide = wrapperFunction(
-  ['ARTICLE', 'SWIPER', 'NEXTURL'],
-  initAddNewEmptySlideFeature('NEXT'),
-);
-
-const initAddNewEmptyPrevSlide = wrapperFunction(
-  ['ARTICLE', 'SWIPER', 'PREVURL'],
-  initAddNewEmptySlideFeature('PREV'),
-);
 
 function addNewEmptySlidePromise(mode: PageMode) {
   return ({ v }: Param): Promise<void> =>
     new Promise<void>((res) => {
-      const { swiper } = v as VaultWithSwiper;
+      const { swiper } = v as VaultFull;
       swiper.once('slidesUpdated', () => {
         res();
       });
@@ -83,20 +75,20 @@ function addNewEmptySlidePromise(mode: PageMode) {
     });
 }
 
-function addNewEmptySlideAndGetSlide(mode: PageMode, activeIndex: number) {
-  return ({ v }: Param): Promise<HTMLElement> =>
-    new Promise<HTMLElement>((res) => {
-      const { swiper } = v as VaultWithSwiper;
+function addNewSlidePromise(mode: PageMode, slideContent: JQuery<HTMLElement>) {
+  return ({ v }: Param): Promise<void> =>
+    new Promise<void>((res) => {
+      const { swiper } = v as VaultFull;
       swiper.once('slidesUpdated', () => {
-        res(swiper.slides[activeIndex] as HTMLElement);
+        res();
       });
-      addNewEmptySlide(mode, v);
+      addNewSlide(mode, v, slideContent);
     });
 }
 
 function removeSlidePromise(mode: PageMode) {
   return ({ v }: Param): Promise<void> | void => {
-    const { swiper } = v as VaultWithSwiper;
+    const { swiper } = v as VaultFull;
 
     if (swiper.slides.length > 10) {
       return new Promise<void>((res) => {
@@ -109,11 +101,9 @@ function removeSlidePromise(mode: PageMode) {
 
 export {
   initSlide,
-  setCurrentSlide,
-  initFocusCurrentSlide,
   removeSlide,
   removeSlidePromise,
   addNewEmptySlide,
   addNewEmptySlidePromise,
-  addNewEmptySlideAndGetSlide,
+  addNewSlidePromise,
 };

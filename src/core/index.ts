@@ -1,6 +1,6 @@
-import type { MethodKeys, PromiseFunc } from '@/types';
-
 import { EventManager } from './event';
+
+import type { MethodKeys, PromiseFunc } from '@/types';
 
 class ArcaFeed extends EventManager {
   private static instance: ArcaFeed;

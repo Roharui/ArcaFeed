@@ -1,14 +1,13 @@
 import { Base } from '@/core/base';
 
+import { ArcaFeed } from '.';
+import { sleep, isPromiseFuncResult } from '@/utils';
+
 import type { PromiseFunc, PromiseFuncResult } from '@/types';
 import type { Param } from '@/vault';
 
-import { sleep, isPromiseFuncResult } from '@/utils';
-
-import { ArcaFeed } from '.';
-
 export class PromiseManager extends Base {
-  private promiseList: PromiseFunc[] = [];
+  private promiseList: PromiseFunc[][] = [];
 
   private active: boolean = false;
 
@@ -22,49 +21,54 @@ export class PromiseManager extends Base {
     this.active = true;
 
     ArcaFeed.log('Promise Start');
-    let count = 0;
 
     while (this.promiseList.length > 0) {
-      ArcaFeed.log('Running Promise List : ');
-      ArcaFeed.log(this.promiseList.map((f) => f.name).join(' , '));
+      let count = 0;
 
-      try {
-        const result: PromiseFuncResult[] = await Promise.all(
-          this.promiseList.map((f) => f(this.p)),
-        );
+      let promiseListCurrent = this.promiseList.shift() || [];
 
-        this.promiseList = result.flat().reduce((acc, r) => {
-          const resultType = isPromiseFuncResult(r);
-          switch (resultType) {
-            case 'void':
-              return acc as PromiseFunc[];
-            case 'Function':
-              return [...(acc as PromiseFunc[]), r as PromiseFunc];
-            case 'Param':
-              this.p = Object.assign(this.p, r as Param);
-              return acc as PromiseFunc[];
+      while (promiseListCurrent.length > 0) {
+        ArcaFeed.log('Running Promise List : ');
+        ArcaFeed.log(promiseListCurrent.map((f) => f.name).join(' , '));
+
+        try {
+          const result: PromiseFuncResult[] = await Promise.all(
+            promiseListCurrent.map((f) => f(this.p)),
+          );
+
+          promiseListCurrent = result.flat().reduce((acc, r) => {
+            const resultType = isPromiseFuncResult(r);
+            switch (resultType) {
+              case 'void':
+                return acc as PromiseFunc[];
+              case 'Function':
+                return [...(acc as PromiseFunc[]), r as PromiseFunc];
+              case 'Param':
+                this.p = Object.assign(this.p, r as Param);
+                return acc as PromiseFunc[];
+            }
+          }, [] as PromiseFunc[]) as PromiseFunc[];
+
+          ArcaFeed.log('Result : ');
+          ArcaFeed.log(result);
+          ArcaFeed.log('Current Param : ');
+          ArcaFeed.log(this.p);
+          ArcaFeed.log('============================');
+        } catch (e) {
+          ArcaFeed.log(e);
+
+          ArcaFeed.log('No Loop For Development Mode');
+          if (ArcaFeed.isDev()) {
+            break;
           }
-        }, [] as PromiseFunc[]) as PromiseFunc[];
 
-        ArcaFeed.log('Result : ');
-        ArcaFeed.log(result);
-        ArcaFeed.log('Current Param : ');
-        ArcaFeed.log(this.p);
-        ArcaFeed.log('============================');
-      } catch (e) {
-        ArcaFeed.log(e);
-
-        ArcaFeed.log('No Loop For Development Mode');
-        if (ArcaFeed.isDev()) {
-          break;
+          await sleep(1000);
         }
 
-        await sleep(1000);
-      }
-
-      if (count++ >= 50) {
-        ArcaFeed.log('Too Many Loop Breaker');
-        break;
+        if (count++ >= 50) {
+          ArcaFeed.log('Too Many Loop Breaker');
+          break;
+        }
       }
     }
     ArcaFeed.log('Promise End');
@@ -76,7 +80,6 @@ export class PromiseManager extends Base {
   }
 
   protected addNextPromise(...promiseFuncList: PromiseFunc[]) {
-    if (this.active) return;
-    this.promiseList.push(...promiseFuncList);
+    this.promiseList.push(promiseFuncList);
   }
 }

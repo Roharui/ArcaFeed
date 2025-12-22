@@ -3,33 +3,27 @@ import $ from 'jquery';
 import type { Param } from '@/vault';
 import type { PromiseFunc, PromiseFuncResult } from '@/types';
 
-import { getCurrentSlide, filterLink, parseSearchQuery } from '@/feature';
+import { filterLink, parseSearchQuery } from '@/feature';
 import { initFetchArticle } from '@/feature/article';
 import { wrapperFunction } from '@/utils';
+import { ArcaFeed } from '@/core';
 
 const initLink = wrapperFunction(['HREF'], initLinkFeature);
 
-const initArticleLinkActive = wrapperFunction(
-  ['SLIDE'],
-  initArticleLinkActiveFeature,
-);
-
 // ===
 
-function initLinkFeature({ v }: Param): PromiseFunc | PromiseFunc[] {
-  const promiseFuncList = [];
-
+function initLinkFeature({ v, c }: Param): PromiseFuncResult {
   if (v.isCurrentMode('ARTICLE')) {
-    return initArticleLinkActive;
+    return initArticleLinkActive(v.href.articleId);
   }
 
-  promiseFuncList.push(({ c }: Param) => c.resetArticleList());
+  c.resetArticleList();
 
   if (v.isCurrentMode('CHANNEL')) {
-    promiseFuncList.push(parseSearchQuery, initArticleLinkChannel);
+    return [{ v, c } as Param, parseSearchQuery, initArticleLinkChannel];
   }
 
-  return promiseFuncList;
+  return { v, c } as Param;
 }
 
 function initArticleLinkChannel({ v, c }: Param): Param | PromiseFunc {
@@ -40,7 +34,7 @@ function initArticleLinkChannel({ v, c }: Param): Param | PromiseFunc {
   const filteredLinks = filterLink(totalLinks, v, c);
 
   if (filteredLinks.length === 0) {
-    return initFetchArticle;
+    return initFetchArticle();
   }
 
   c.articleList = filteredLinks;
@@ -50,52 +44,38 @@ function initArticleLinkChannel({ v, c }: Param): Param | PromiseFunc {
   return { v, c };
 }
 
-function initArticleLinkActiveFeature({ v, c }: Param): PromiseFuncResult {
-  let { href } = v;
+function initArticleLinkActive(articleId: string): PromiseFunc {
+  const result = ({ v, c }: Param): PromiseFuncResult => {
+    if (c.articleList.length === 0) {
+      return initFetchArticle();
+    }
 
-  const $html = $(v.currentSlide || getCurrentSlide(v)) || $('.root-container');
+    const currentArticleIndex = c.articleList.findIndex((ele: string) =>
+      ele.includes(articleId),
+    );
 
-  if (c.articleList.length === 0) {
-    return initFetchArticle;
-  }
+    ArcaFeed.log(`Current Article Id: ${articleId}`);
+    ArcaFeed.log(`Current Article Index: ${currentArticleIndex}`);
 
-  const currentArticleId =
-    $html.attr('data-article-id')?.trim() || href.articleId;
+    if (currentArticleIndex === -1) {
+      c.articleList.push(window.location.href);
+      c.articleList = c.articleList.sort().reverse();
+      return [{ v, c }, initFetchArticle()];
+    }
 
-  let currentArticleIndex = c.articleList.findIndex((ele: string) =>
-    ele.includes(currentArticleId),
-  );
+    v.nextArticleUrl = null;
+    v.prevArticleUrl = c.articleList[currentArticleIndex - 1] || 'none';
 
-  if (currentArticleIndex === -1) {
-    c.articleList.push(window.location.href);
-    c.articleList = c.articleList.sort().reverse();
-    return [{ v, c }, initFetchArticle];
-  }
-
-  v.prevArticleUrl = c.articleList[currentArticleIndex - 1] || 'none';
-
-  if (c.articleList.length - currentArticleIndex > 1) {
-    v.nextArticleUrl = c.articleList[currentArticleIndex + 1] || '';
-    return { v, c };
-  } else {
-    return [{ v, c }, initFetchArticle];
-  }
-
-  // TODO: 시리즈 활성화 상태일 경우 fetch를 통해 게시글 목록 가져오지 않도록 만들기
-  // nextArticleUrl, prevArticleUrl을 가져오는 부분 추가 함수로 분할하기
-
-  // href = { ...href, articleId: currentArticleId };
-  // v.href = href;
-
-  // const promiseFuncList = [];
-
-  // if (currentArticleIndex === c.articleList.length - 1) {
-  //   v.prevArticleUrl = articleList[currentArticleIndex - 1] || '';
-
-  //   promiseFuncList.push(initFetchArticle);
-  // }
-
-  // return [{ v, c }, ...promiseFuncList];
+    if (c.articleList.length - currentArticleIndex > 1) {
+      v.nextArticleUrl = c.articleList[currentArticleIndex + 1] || '';
+      return { v, c };
+    } else {
+      return [{ v, c }, initFetchArticle()];
+    }
+  };
+  return Object.defineProperty(result, 'name', {
+    value: `initArticleLinkActive`,
+  });
 }
 
 export { initLink, initArticleLinkActive, initArticleLinkChannel };
