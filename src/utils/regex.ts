@@ -32,7 +32,7 @@ function parseContent(responseText: string): string {
 
   const html = rootContainer.replace(parseContentRegex, '');
 
-  return html;
+  return html + '</div></div></article></div>';
 }
 
 function getArticleId(href: string): string {

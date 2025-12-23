@@ -1,13 +1,7 @@
 import { PromiseManager } from '@/core/promise';
 
 import { initLink } from '@/feature/article';
-import {
-  initSwiper,
-  initPage,
-  initSlide,
-  toNextLink,
-  toPrevLink,
-} from '@/feature/swiper';
+import { initSwiper, toLink } from '@/feature/swiper';
 import { initEvent, initModal, addVersionInfo, initButton } from '@/feature';
 import { checkPageMode } from '@/utils';
 
@@ -19,17 +13,8 @@ class EventManager extends PromiseManager {
   }
 
   init() {
-    this.addNextPromise(
-      addVersionInfo,
-      checkPageMode,
-      initSwiper,
-      initLink,
-      initSlide,
-      initPage,
-      initButton,
-      initEvent,
-      initModal,
-    );
+    this.addNextPromise(addVersionInfo, checkPageMode);
+    this.addNextPromise(initSwiper, initLink, initButton, initEvent, initModal);
   }
 
   toNextPage() {
@@ -49,11 +34,11 @@ class EventManager extends PromiseManager {
   }
 
   renderNextPage() {
-    this.addNextPromise(toNextLink);
+    this.addNextPromise(toLink('NEXT'));
   }
 
   renderPrevPage() {
-    this.addNextPromise(toPrevLink);
+    this.addNextPromise(toLink('PREV'));
   }
 }
 

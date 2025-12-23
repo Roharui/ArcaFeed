@@ -7,15 +7,9 @@ import { ArcaFeed } from '@/core';
 
 import { nextLinkForce } from './swiper';
 import { toggleArticleFilterModal } from './modal';
-import { wrapperFunction } from '@/utils';
 
-const initButton = (_: Param) => {
-  const w1 = wrapperFunction(
-    ['ARTICLE', 'SWIPER'],
-    initButtonFeature('ARTICLE'),
-  );
-  const w2 = wrapperFunction(['CHANNEL'], initButtonFeature('CHANNEL'));
-  return [w1, w2];
+const initButton = ({ v, c }: Param) => {
+  initButtonFeature(v.href.mode, c.slideMode);
 };
 
 // ===
@@ -110,15 +104,13 @@ function buttonAtSlide(currentSlide: JQuery<HTMLElement>) {
   currentSlide.find('ul.nav.navbar-nav').last().before(btns);
 }
 
-function initButtonFeature(mode: HrefImpl['mode']) {
-  const result = ({ c }: Param) => {
-    const btns = returnButtons(mode, c.slideMode);
+function initButtonFeature(
+  mode: HrefImpl['mode'],
+  slideMode: 'REFRESH' | 'RENDER',
+) {
+  const btns = returnButtons(mode, slideMode);
 
-    $('ul.nav.navbar-nav').last().before(btns);
-  };
-  return Object.defineProperty(result, 'name', {
-    value: `initButtonFeature_${mode}`,
-  });
+  $('ul.nav.navbar-nav').last().before(btns);
 }
 
 export { initButton, buttonAtSlide };

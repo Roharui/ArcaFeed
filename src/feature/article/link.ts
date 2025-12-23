@@ -5,14 +5,11 @@ import type { PromiseFunc, PromiseFuncResult } from '@/types';
 
 import { filterLink, parseSearchQuery } from '@/feature';
 import { initFetchArticle } from '@/feature/article';
-import { wrapperFunction } from '@/utils';
 import { ArcaFeed } from '@/core';
-
-const initLink = wrapperFunction(['HREF'], initLinkFeature);
 
 // ===
 
-function initLinkFeature({ v, c }: Param): PromiseFuncResult {
+function initLink({ v, c }: Param): PromiseFuncResult {
   if (v.isCurrentMode('ARTICLE')) {
     return initArticleLinkActive(v.href.articleId);
   }
@@ -34,7 +31,7 @@ function initArticleLinkChannel({ v, c }: Param): Param | PromiseFunc {
   const filteredLinks = filterLink(totalLinks, v, c);
 
   if (filteredLinks.length === 0) {
-    return initFetchArticle();
+    return initFetchArticle(v.href.articleId);
   }
 
   c.articleList = filteredLinks;
@@ -47,7 +44,7 @@ function initArticleLinkChannel({ v, c }: Param): Param | PromiseFunc {
 function initArticleLinkActive(articleId: string): PromiseFunc {
   const result = ({ v, c }: Param): PromiseFuncResult => {
     if (c.articleList.length === 0) {
-      return initFetchArticle();
+      return initFetchArticle(articleId);
     }
 
     const currentArticleIndex = c.articleList.findIndex((ele: string) =>
@@ -60,7 +57,7 @@ function initArticleLinkActive(articleId: string): PromiseFunc {
     if (currentArticleIndex === -1) {
       c.articleList.push(window.location.href);
       c.articleList = c.articleList.sort().reverse();
-      return [{ v, c }, initFetchArticle()];
+      return [{ v, c }, initFetchArticle(articleId)];
     }
 
     v.nextArticleUrl = null;
@@ -70,7 +67,7 @@ function initArticleLinkActive(articleId: string): PromiseFunc {
       v.nextArticleUrl = c.articleList[currentArticleIndex + 1] || '';
       return { v, c };
     } else {
-      return [{ v, c }, initFetchArticle()];
+      return [{ v, c }, initFetchArticle(articleId)];
     }
   };
   return Object.defineProperty(result, 'name', {
@@ -78,4 +75,4 @@ function initArticleLinkActive(articleId: string): PromiseFunc {
   });
 }
 
-export { initLink, initArticleLinkActive, initArticleLinkChannel };
+export { initLink, initArticleLinkActive };

@@ -11,9 +11,9 @@ import { fetchUrl as initFetchUrl } from '@/utils/fetch';
 import type { PromiseFunc } from '@/types';
 import type { Param } from '@/vault';
 
-function initFetchArticle(targetUrl?: string): PromiseFunc {
+function initFetchArticle(articleId: string): PromiseFunc {
   const result = async ({ v, c }: Param) => {
-    let articlePageUrl: string = targetUrl || window.location.href;
+    let articlePageUrl: string = articleId;
     let filteredLinks: string[] = [];
     let count: number = 0;
 

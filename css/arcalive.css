@@ -270,3 +270,7 @@ div.root-container {
   width: 84%;
   outline: none;
 }
+
+iframe {
+  display: none;
+}

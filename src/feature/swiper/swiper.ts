@@ -8,9 +8,11 @@ import { Manipulation } from 'swiper/modules';
 import type { SwiperOptions } from '@swiper/types';
 import type { Param } from '@/vault';
 
-import { parseContent, wrapperFunction } from '@/utils';
+import { parseContent } from '@/utils';
+import { ArcaFeed } from '@/core';
 
 const swiperOptions: SwiperOptions = {
+  initialSlide: 1,
   slidesPerView: 1,
   loop: false,
   nested: true,
@@ -24,41 +26,35 @@ const swiperOptions: SwiperOptions = {
   modules: [Manipulation],
 };
 
-const initSwiper = wrapperFunction(['ARTICLE'], initSwiperFeature);
-
 // ===
 
-function initSwiperFeature(_: Param) {
-  return [initArticleToSlide];
-}
+function initSwiper({ v }: Param) {
+  if (!v.isCurrentMode('ARTICLE')) return;
 
-function initArticleToSlide({ v }: Param) {
-  const { articleId } = v.href;
+  const content = parseContent(document.body.innerHTML);
 
-  const $body = $('body');
+  const swiper = `<div class="swiper">
+  <div class="swiper-wrapper">
+  <div class="swiper-slide slide-empty"><div class="loader-container"><div class="custom-loader"></div><div class="loading-info"></div></div></div>
+  <div class="swiper-slide">${content}</div>
+  <div class="swiper-slide slide-empty"><div class="loader-container"><div class="custom-loader"></div><div class="loading-info"></div></div></div>
+  </div>
+  </div>`;
 
-  const $swiper = $('<div>', { class: 'swiper' });
-  const $swiperWrapper = $('<div>', { class: 'swiper-wrapper' });
-  const $slide = $('<div>', { class: 'swiper-slide' });
-
-  $slide.attr('data-article-id', articleId);
-  $slide.attr('data-article-href', window.location.pathname);
-  $slide.attr('data-article-title', document.title);
-
-  const html = $body.html();
-  const $content = $(parseContent(html));
-
-  $content.appendTo($slide);
-  $slide.appendTo($swiperWrapper);
-  $swiperWrapper.appendTo($swiper);
-
-  $('.root-container').replaceWith($swiper);
+  $('.root-container').replaceWith($(swiper));
 
   v.swiper = new Swiper('.swiper', swiperOptions);
+
+  v.swiper.on('slideNextTransitionEnd', () =>
+    ArcaFeed.runEvent('renderNextPage'),
+  );
+  v.swiper.on('slidePrevTransitionEnd', () =>
+    ArcaFeed.runEvent('renderPrevPage'),
+  );
 
   return {
     v,
   } as Param;
 }
 
-export { initSwiper, initArticleToSlide };
+export { initSwiper };

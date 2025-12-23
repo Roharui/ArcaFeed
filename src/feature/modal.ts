@@ -3,7 +3,7 @@ import $ from 'jquery';
 import { ArcaFeed } from '@/core';
 
 import { initLink } from './article';
-import { checkNotNull, wrapperFunction } from '@/utils';
+import { checkNotNull } from '@/utils';
 
 import type { Param } from '@/vault';
 import type { ArticleFilterImpl, PromiseFunc } from '@/types';
@@ -29,88 +29,80 @@ const NEXT_PAGE_MODAL_HTML = `
 </div>
 `;
 
-function initModalFeature(_: Param): void | PromiseFunc {
+function initModal({ v, c }: Param): void | PromiseFunc {
   const dialog = $(NEXT_PAGE_MODAL_HTML);
 
-  return initCreateModalFeature(dialog);
-}
+  const { href } = v;
+  const { articleFilterConfig } = c;
 
-const initModal = wrapperFunction(['HREF'], initModalFeature);
-
-function initCreateModalFeature(dialog: JQuery<HTMLElement>) {
-  return function initCreateModal({ v, c }: Param) {
-    const { href } = v;
-    const { articleFilterConfig } = c;
-
-    const { tab, title } = articleFilterConfig[href.channelId] || {
-      tab: [],
-      title: [],
-    };
-
-    const $rootContainer = $('.root-container').first();
-    const category = $rootContainer
-      .find('.board-category > span')
-      .get()
-      .map((ele) => $(ele).text().trim())
-      .filter((text) => text !== '전체');
-
-    category.splice(0, 0, '노탭');
-
-    // Use Set for O(1) lookup instead of O(n) array.includes
-    const tabSet = new Set(tab);
-    const $dialogCategory = dialog.find('#category');
-
-    category
-      .map((text) =>
-        createCategorySpan(text, 'ele-category', tabSet.has(text), () =>
-          dialog
-            .find('.ele-category-all')
-            .prop(
-              'checked',
-              dialog.find('.ele-category').length ===
-                dialog.find('.ele-category:checked').length,
-            ),
-        ),
-      )
-      .forEach((ele) => $dialogCategory.append(ele));
-
-    const spanAll = createCategorySpan(
-      '전체',
-      'ele-category-all',
-      tab.length === category.length,
-      () =>
-        $('.ele-category').prop(
-          'checked',
-          $('.ele-category-all').prop('checked'),
-        ),
-    );
-
-    dialog.find('#category-all').append(spanAll);
-
-    title.forEach((tag) => createExcludeSpan(tag));
-
-    dialog
-      .find('#check-btn')
-      .on('click', () =>
-        ArcaFeed.runPromise(checkFn, initLink, () => toggleArticleFilterModal),
-      );
-    dialog.find('#cancel-btn').on('click', () => toggleArticleFilterModal());
-    dialog.find('#exclude-btn').on('click', () => {
-      const excludeTagsStr = dialog.find('#exclude-title').val() || '';
-
-      if (typeof excludeTagsStr !== 'string') {
-        return;
-      }
-
-      const excludeTags = excludeTagsStr.split(',') || [];
-
-      excludeTags.forEach((tag) => createExcludeSpan(tag));
-
-      $('#exclude-title').val('');
-    });
-
-    $('body').append(dialog);
+  const { tab, title } = articleFilterConfig[href.channelId] || {
+    tab: [],
+    title: [],
   };
+
+  const $rootContainer = $('.root-container').first();
+  const category = $rootContainer
+    .find('.board-category > span')
+    .get()
+    .map((ele) => $(ele).text().trim())
+    .filter((text) => text !== '전체');
+
+  category.splice(0, 0, '노탭');
+
+  // Use Set for O(1) lookup instead of O(n) array.includes
+  const tabSet = new Set(tab);
+  const $dialogCategory = dialog.find('#category');
+
+  category
+    .map((text) =>
+      createCategorySpan(text, 'ele-category', tabSet.has(text), () =>
+        dialog
+          .find('.ele-category-all')
+          .prop(
+            'checked',
+            dialog.find('.ele-category').length ===
+              dialog.find('.ele-category:checked').length,
+          ),
+      ),
+    )
+    .forEach((ele) => $dialogCategory.append(ele));
+
+  const spanAll = createCategorySpan(
+    '전체',
+    'ele-category-all',
+    tab.length === category.length,
+    () =>
+      $('.ele-category').prop(
+        'checked',
+        $('.ele-category-all').prop('checked'),
+      ),
+  );
+
+  dialog.find('#category-all').append(spanAll);
+
+  title.forEach((tag) => createExcludeSpan(tag));
+
+  dialog
+    .find('#check-btn')
+    .on('click', () =>
+      ArcaFeed.runPromise(checkFn, initLink, () => toggleArticleFilterModal),
+    );
+  dialog.find('#cancel-btn').on('click', () => toggleArticleFilterModal());
+  dialog.find('#exclude-btn').on('click', () => {
+    const excludeTagsStr = dialog.find('#exclude-title').val() || '';
+
+    if (typeof excludeTagsStr !== 'string') {
+      return;
+    }
+
+    const excludeTags = excludeTagsStr.split(',') || [];
+
+    excludeTags.forEach((tag) => createExcludeSpan(tag));
+
+    $('#exclude-title').val('');
+  });
+
+  $('body').append(dialog);
 }
 
 function createExcludeSpan(text: string) {
