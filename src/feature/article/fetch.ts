@@ -13,7 +13,7 @@ import type { Param } from '@/vault';
 
 function initFetchArticle(articleId: string): PromiseFunc {
   const result = async ({ v, c }: Param) => {
-    let articlePageUrl: string = articleId;
+    let articlePageUrl: string = articleId + c.searchQuery;
     let filteredLinks: string[] = [];
     let count: number = 0;
 

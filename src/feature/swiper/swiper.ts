@@ -8,7 +8,6 @@ import { Manipulation } from 'swiper/modules';
 import type { SwiperOptions } from '@swiper/types';
 import type { Param } from '@/vault';
 
-import { parseContent } from '@/utils';
 import { ArcaFeed } from '@/core';
 
 const swiperOptions: SwiperOptions = {
@@ -31,17 +30,18 @@ const swiperOptions: SwiperOptions = {
 function initSwiper({ v }: Param) {
   if (!v.isCurrentMode('ARTICLE')) return;
 
-  const content = parseContent(document.body.innerHTML);
-
   const swiper = `<div class="swiper">
   <div class="swiper-wrapper">
   <div class="swiper-slide slide-empty"><div class="loader-container"><div class="custom-loader"></div><div class="loading-info"></div></div></div>
-  <div class="swiper-slide">${content}</div>
+  <div class="swiper-slide slide-active"></div>
   <div class="swiper-slide slide-empty"><div class="loader-container"><div class="custom-loader"></div><div class="loading-info"></div></div></div>
   </div>
   </div>`;
 
-  $('.root-container').replaceWith($(swiper));
+  const container = document.body;
+  container.insertAdjacentHTML('beforeend', swiper);
+
+  $('.root-container').appendTo('.slide-active');
 
   v.swiper = new Swiper('.swiper', swiperOptions);
 

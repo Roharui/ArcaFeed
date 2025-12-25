@@ -59,6 +59,7 @@ export default function (env, _args) {
           author: 'https://github.com/Roharui',
           match: 'https://arca.live/*',
           icon: 'https://www.google.com/s2/favicons?sz=64&domain=arca.live',
+          'run-at': 'document-body',
         },
       }),
     ],

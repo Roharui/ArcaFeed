@@ -23,6 +23,10 @@ body {
 
 /* default Page */
 
+.left-ad-area {
+  display: none !important;
+}
+
 .body .content-wrapper {
   grid-template-columns: none !important;
 }
@@ -79,6 +83,8 @@ li.userscript-nav-item > a {
 .nav-control {
   display: none !important;
 }
+
+/* swiper */
 
 .swiper {
   width: 100%;
@@ -140,6 +146,12 @@ li.userscript-nav-item > a {
   display: none;
 }
 
+.topbar-area {
+  min-height: 1.7rem;
+}
+
+/* root container */
+
 div.root-container {
   display: flex;
   flex-direction: column;
@@ -160,6 +172,27 @@ div.root-container {
 
 .content-wrapper::after {
   content: none !important;
+}
+
+.swiper-slide
+  .root-container
+  .content-wrapper
+  article
+  .article-view
+  > .btns-board,
+.swiper-slide
+  .root-container
+  .content-wrapper
+  article
+  .article-view
+  > .clearfix,
+.swiper-slide
+  .root-container
+  .content-wrapper
+  article
+  .article-view
+  > .included-article-list {
+  display: none !important;
 }
 
 /* modal */
@@ -244,24 +277,8 @@ div.root-container {
   color: var(--color-text);
 }
 
-/* console */
-
-#console {
-  z-index: 9999;
-  position: fixed;
-  top: 10px;
-  width: 100%;
-  height: 250px;
-  background: white;
-  border: 2px solid black;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-}
-
-#console > textarea {
-  color: var(--color-text);
-}
-
 /* modal input */
+
 .exclude-title-input-wrapper {
   display: inline;
 }
@@ -270,6 +287,8 @@ div.root-container {
   width: 84%;
   outline: none;
 }
+
+/* No Twitter iframe */
 
 iframe {
   display: none;
