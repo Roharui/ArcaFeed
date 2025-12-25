@@ -2,7 +2,7 @@ import $ from 'jquery';
 
 import { ArcaFeed } from '@/core';
 
-import { initLink } from './article';
+import { initLink } from '@/feature';
 import { checkNotNull } from '@/utils';
 
 import type { Param } from '@/vault';

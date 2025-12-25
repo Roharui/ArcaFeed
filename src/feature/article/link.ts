@@ -1,11 +1,9 @@
 import $ from 'jquery';
 
+import { initFetchArticle, filterLink, parseSearchQuery } from '@/feature';
+
 import type { Param } from '@/vault';
 import type { PromiseFunc, PromiseFuncResult } from '@/types';
-
-import { filterLink, parseSearchQuery } from '@/feature';
-import { initFetchArticle } from '@/feature/article';
-import { ArcaFeed } from '@/core';
 
 // ===
 
@@ -51,8 +49,8 @@ function initArticleLinkActive(articleId: string): PromiseFunc {
       ele.includes(articleId),
     );
 
-    ArcaFeed.log(`Current Article Id: ${articleId}`);
-    ArcaFeed.log(`Current Article Index: ${currentArticleIndex}`);
+    console.log(`Current Article Id: ${articleId}`);
+    console.log(`Current Article Index: ${currentArticleIndex}`);
 
     if (currentArticleIndex === -1) {
       c.articleList.push(window.location.href);

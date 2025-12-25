@@ -12,6 +12,7 @@ export default function (env, _args) {
   const currentVersion = env.BUILD_DATE ?? config.version;
 
   return {
+    mode: 'production',
     entry: './src/index.ts',
 
     output: {
@@ -69,7 +70,7 @@ export default function (env, _args) {
             'https://code.jquery.com/jquery-3.6.0.min.js',
             'https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js',
           ],
-          'run-at': 'document-body',
+          'run-at': 'document-end',
         },
       }),
     ],

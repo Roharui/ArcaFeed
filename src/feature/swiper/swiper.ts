@@ -3,12 +3,11 @@
 import $ from 'jquery';
 
 import Swiper from 'swiper';
-import { Manipulation } from 'swiper/modules';
+
+import { ArcaFeed } from '@/core';
 
 import type { SwiperOptions } from '@swiper/types';
 import type { Param } from '@/vault';
-
-import { ArcaFeed } from '@/core';
 
 const swiperOptions: SwiperOptions = {
   initialSlide: 1,
@@ -22,7 +21,6 @@ const swiperOptions: SwiperOptions = {
   longSwipesMs: 100,
   longSwipesRatio: 0.1,
   touchMoveStopPropagation: true,
-  modules: [Manipulation],
 };
 
 // ===
@@ -38,12 +36,16 @@ function initSwiper({ v }: Param) {
   </div>
   </div>`;
 
-  const container = document.body;
-  container.insertAdjacentHTML('beforeend', swiper);
+  document.body.insertAdjacentHTML('beforeend', swiper);
 
   $('.root-container').appendTo('.slide-active');
 
-  v.swiper = new Swiper('.swiper', swiperOptions);
+  v.swiper = new Swiper(
+    '.swiper',
+    Object.assign(swiperOptions, {
+      allowSlidePrev: v.prevArticleUrl !== 'none',
+    }),
+  );
 
   v.swiper.on('slideNextTransitionEnd', () =>
     ArcaFeed.runEvent('renderNextPage'),

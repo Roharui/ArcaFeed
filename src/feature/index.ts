@@ -6,3 +6,5 @@ export * from './button';
 export * from './modal';
 export * from './series';
 export * from './version';
+export * from './swiper';
+export * from './article';

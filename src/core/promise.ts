@@ -20,7 +20,7 @@ export class PromiseManager extends Base {
 
     this.active = true;
 
-    ArcaFeed.log('Promise Start');
+    console.log('Promise Start');
 
     while (this.promiseList.length > 0) {
       let count = 0;
@@ -28,8 +28,8 @@ export class PromiseManager extends Base {
       let promiseListCurrent = this.promiseList.shift() || [];
 
       while (promiseListCurrent.length > 0) {
-        ArcaFeed.log('Running Promise List : ');
-        ArcaFeed.log(promiseListCurrent.map((f) => f.name).join(' , '));
+        console.log('Running Promise List : ');
+        console.log(promiseListCurrent.map((f) => f.name).join(' , '));
 
         try {
           const result: PromiseFuncResult[] = await Promise.all(
@@ -49,16 +49,16 @@ export class PromiseManager extends Base {
             }
           }, [] as PromiseFunc[]) as PromiseFunc[];
 
-          ArcaFeed.log('Result : ');
-          ArcaFeed.log(result);
-          ArcaFeed.log('Current Param : ');
-          ArcaFeed.log(this.p);
-          ArcaFeed.log('============================');
+          console.log('Result : ');
+          console.log(result);
+          console.log('Current Param : ');
+          console.log(this.p);
+          console.log('============================');
         } catch (e) {
-          ArcaFeed.log(e);
+          console.log(e);
 
-          ArcaFeed.log('No Loop For Development Mode');
-          if (ArcaFeed.isDev()) {
+          console.log('No Loop For Development Mode');
+          if (process.env.NODE_ENV === 'development') {
             break;
           }
 
@@ -66,13 +66,13 @@ export class PromiseManager extends Base {
         }
 
         if (count++ >= 50) {
-          ArcaFeed.log('Too Many Loop Breaker');
+          console.log('Too Many Loop Breaker');
           break;
         }
       }
     }
-    ArcaFeed.log('Promise End');
-    ArcaFeed.log('Save Config Finish');
+    console.log('Promise End');
+    console.log('Save Config Finish');
 
     this.p.c.saveConfig();
 

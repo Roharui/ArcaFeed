@@ -1,5 +1,4 @@
 type ArticleShowMode = 'Article' | 'Comment';
-type SlideMode = 'REFRESH' | 'RENDER';
 type PageMode = 'NEXT' | 'PREV' | 'ALL';
 
 interface HrefImpl {
@@ -22,7 +21,6 @@ interface ConfigImpl {
   articleList: string[];
   articleFilterConfig: ArticleFilterConfigImpl;
   searchQuery: string;
-  slideMode: SlideMode;
 }
 
 export type {
@@ -31,6 +29,5 @@ export type {
   ArticleFilterConfigImpl,
   ArticleFilterImpl,
   ConfigImpl,
-  SlideMode,
   PageMode,
 };

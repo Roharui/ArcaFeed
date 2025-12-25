@@ -1,8 +1,14 @@
 import { PromiseManager } from '@/core/promise';
 
-import { initLink } from '@/feature/article';
-import { initSwiper, toLink } from '@/feature/swiper';
-import { initEvent, initModal, addVersionInfo, initButton } from '@/feature';
+import {
+  initLink,
+  initSwiper,
+  toLink,
+  initEvent,
+  initModal,
+  addVersionInfo,
+  initButton,
+} from '@/feature';
 import { checkPageMode } from '@/utils';
 
 import type { Param, VaultFull } from '@/vault';
@@ -14,7 +20,8 @@ class EventManager extends PromiseManager {
 
   init() {
     this.addNextPromise(addVersionInfo, checkPageMode);
-    this.addNextPromise(initSwiper, initLink, initButton, initEvent, initModal);
+    this.addNextPromise(initLink);
+    this.addNextPromise(initSwiper, initButton, initEvent, initModal);
   }
 
   toNextPage() {

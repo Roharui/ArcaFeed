@@ -20,7 +20,7 @@ function initFetchArticle(articleId: string): PromiseFunc {
     while (count <= 10) {
       const searchUrl = articlePageUrl.replace('https://arca.live', '');
 
-      ArcaFeed.log(`Fetching article page: ${searchUrl}`);
+      console.log(`Fetching article page: ${searchUrl}`);
 
       const res = await initFetchUrl(`${searchUrl}`);
 
@@ -35,7 +35,7 @@ function initFetchArticle(articleId: string): PromiseFunc {
       });
 
       if (filteredLinks.length > 0) {
-        ArcaFeed.log(`Fetching Completearticle page: ${articlePageUrl}`);
+        console.log(`Fetching Completearticle page: ${articlePageUrl}`);
 
         c.articleList.push(...filteredLinks);
         v.nextArticleUrl = getFirstArrayItem(filteredLinks);
@@ -49,19 +49,19 @@ function initFetchArticle(articleId: string): PromiseFunc {
       const tempUrl = articlePageElement.find('a').attr('href');
 
       if (!tempUrl) {
-        ArcaFeed.log('NO ARTICLE PAGE LINK FOUND');
+        console.log('NO ARTICLE PAGE LINK FOUND');
         return { v, c } as Param;
       }
 
       articlePageUrl = tempUrl;
 
-      ArcaFeed.log(
+      console.log(
         `No articles found on page ${articlePageUrl}, trying page...`,
       );
       count += 1;
     }
 
-    ArcaFeed.log('Counts Over! No more article pages to fetch.');
+    console.log('Counts Over! No more article pages to fetch.');
 
     return { v, c } as Param;
   };

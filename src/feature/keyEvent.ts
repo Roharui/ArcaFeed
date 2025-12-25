@@ -1,7 +1,7 @@
 import $ from 'jquery';
 
 import { ArcaFeed } from '@/core';
-import { nextLinkForce } from '@/feature/swiper';
+import { nextLinkForce } from '@/feature';
 
 import type { Param } from '@/vault';
 

@@ -14,16 +14,6 @@ class ArcaFeed extends EventManager {
     return ArcaFeed.instance ?? new ArcaFeed();
   }
 
-  static isDev(): boolean {
-    return process.env.NODE_ENV === 'development';
-  }
-
-  static log(...args: any[]) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[ArcaFeed]', ...args);
-    }
-  }
-
   static async runEvent(eventName: MethodKeys<EventManager>) {
     const func = ArcaFeed.getInstance()[eventName] as Function;
 

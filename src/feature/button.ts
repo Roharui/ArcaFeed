@@ -1,16 +1,27 @@
 import $ from 'jquery';
 
-import type { Param } from '@/vault';
-import type { HrefImpl } from '@/types';
-
 import { ArcaFeed } from '@/core';
 
-import { nextLinkForce } from './swiper';
-import { toggleArticleFilterModal } from './modal';
+import { toggleArticleFilterModal, nextLinkForce } from '@/feature';
 
-const initButton = ({ v, c }: Param) => {
+import type { Param } from '@/vault';
+
+const initButton = ({ v }: Param) => {
   if (!v.isCurrentMode('CHANNEL')) return;
-  initButtonFeature(v.href.mode, c.slideMode);
+
+  const nextPageBtn = createArcaFeedBtn('next', 'ion-ios-arrow-forward', () =>
+    ArcaFeed.runPromise(nextLinkForce),
+  );
+
+  const filterPageBtn = createArcaFeedBtn(
+    'filter',
+    'ion-ios-gear',
+    toggleArticleFilterModal,
+  );
+
+  $('ul.nav.navbar-nav')
+    .last()
+    .before(btnWrapper([filterPageBtn, nextPageBtn]));
 };
 
 // ===
@@ -42,77 +53,4 @@ function btnWrapper(btn: JQuery<HTMLElement>[]): JQuery<HTMLElement> {
   return ul;
 }
 
-function returnButtons(
-  currentMode: HrefImpl['mode'],
-  slideMode: 'REFRESH' | 'RENDER',
-): JQuery<HTMLElement> {
-  const btns: JQuery<HTMLElement>[] = [];
-
-  const slideModeToRender = createArcaFeedBtn(
-    'refresh',
-    'ion-ios-refresh',
-    () => {
-      ArcaFeed.runPromise(({ c }: Param) => {
-        c.slideMode = c.slideMode === 'REFRESH' ? 'RENDER' : 'REFRESH';
-
-        $('.refresh').hide();
-        $('.play').show();
-
-        return { c } as Param;
-      });
-    },
-    slideMode === 'REFRESH' ? 'list-item' : 'none',
-  );
-  const slideModeToRefresh = createArcaFeedBtn(
-    'play',
-    'ion-ios-play',
-    () => {
-      ArcaFeed.runPromise(({ c }: Param) => {
-        c.slideMode = c.slideMode === 'REFRESH' ? 'RENDER' : 'REFRESH';
-
-        $('.refresh').show();
-        $('.play').hide();
-
-        return { c } as Param;
-      });
-    },
-    slideMode === 'RENDER' ? 'list-item' : 'none',
-  );
-
-  const nextPageBtn = createArcaFeedBtn('next', 'ion-ios-arrow-forward', () =>
-    ArcaFeed.runPromise(nextLinkForce),
-  );
-
-  const filterPageBtn = createArcaFeedBtn(
-    'filter',
-    'ion-ios-gear',
-    toggleArticleFilterModal,
-  );
-
-  if (currentMode === 'CHANNEL') {
-    btns.push(filterPageBtn, nextPageBtn);
-    return btnWrapper(btns);
-  }
-  if (currentMode === 'ARTICLE') {
-    btns.push(slideModeToRender, slideModeToRefresh);
-  }
-
-  return btnWrapper(btns);
-}
-
-function buttonAtSlide(currentSlide: JQuery<HTMLElement>) {
-  const btns = returnButtons('ARTICLE', 'RENDER');
-
-  currentSlide.find('ul.nav.navbar-nav').last().before(btns);
-}
-
-function initButtonFeature(
-  mode: HrefImpl['mode'],
-  slideMode: 'REFRESH' | 'RENDER',
-) {
-  const btns = returnButtons(mode, slideMode);
-
-  $('ul.nav.navbar-nav').last().before(btns);
-}
-
-export { initButton, buttonAtSlide };
+export { initButton };
