@@ -30,6 +30,8 @@ const NEXT_PAGE_MODAL_HTML = `
 `;
 
 function initModal({ v, c }: Param): void | PromiseFunc {
+  if (!v.isCurrentMode('CHANNEL')) return;
+
   const dialog = $(NEXT_PAGE_MODAL_HTML);
 
   const { href } = v;

@@ -28,6 +28,12 @@ export default function (env, _args) {
       },
     },
 
+    externals: {
+      $: 'jQuery',
+      jquery: 'jQuery',
+      swiper: 'Swiper',
+    },
+
     module: {
       rules: [
         {
@@ -59,6 +65,10 @@ export default function (env, _args) {
           author: 'https://github.com/Roharui',
           match: 'https://arca.live/*',
           icon: 'https://www.google.com/s2/favicons?sz=64&domain=arca.live',
+          require: [
+            'https://code.jquery.com/jquery-3.6.0.min.js',
+            'https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js',
+          ],
           'run-at': 'document-body',
         },
       }),

@@ -9,6 +9,7 @@ import { nextLinkForce } from './swiper';
 import { toggleArticleFilterModal } from './modal';
 
 const initButton = ({ v, c }: Param) => {
+  if (!v.isCurrentMode('CHANNEL')) return;
   initButtonFeature(v.href.mode, c.slideMode);
 };
 
@@ -90,6 +91,7 @@ function returnButtons(
 
   if (currentMode === 'CHANNEL') {
     btns.push(filterPageBtn, nextPageBtn);
+    return btnWrapper(btns);
   }
   if (currentMode === 'ARTICLE') {
     btns.push(slideModeToRender, slideModeToRefresh);

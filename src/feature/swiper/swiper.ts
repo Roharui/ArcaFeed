@@ -32,9 +32,9 @@ function initSwiper({ v }: Param) {
 
   const swiper = `<div class="swiper">
   <div class="swiper-wrapper">
-  <div class="swiper-slide slide-empty"><div class="loader-container"><div class="custom-loader"></div><div class="loading-info"></div></div></div>
+  <div class="swiper-slide slide-empty"><div class="loader-container"><div class="custom-loader"></div></div></div>
   <div class="swiper-slide slide-active"></div>
-  <div class="swiper-slide slide-empty"><div class="loader-container"><div class="custom-loader"></div><div class="loading-info"></div></div></div>
+  <div class="swiper-slide slide-empty"><div class="loader-container"><div class="custom-loader"></div></div></div>
   </div>
   </div>`;
 

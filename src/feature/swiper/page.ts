@@ -1,6 +1,6 @@
 // hider, regex, slide, link, hider
 
-import $, { get } from 'jquery';
+import $ from 'jquery';
 
 import { ArcaFeed } from '@/core';
 
@@ -33,7 +33,11 @@ function toLink(mode: PageMode): PromiseFunc {
     if (c.isSlideMode('RENDER') && mode === 'NEXT')
       return [linkPageRender, renderPage];
 
-    window.location.replace(mode === 'NEXT' ? nextArticleUrl : prevArticleUrl);
+    const url = mode === 'NEXT' ? nextArticleUrl : prevArticleUrl;
+
+    if (url === 'none') return;
+
+    window.location.replace(url);
   };
 }
 

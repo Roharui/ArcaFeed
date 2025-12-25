@@ -22,7 +22,6 @@ function addNewEmptySlide(mode: PageMode, v: Vault) {
   const loader = $('<div>', { class: 'loader-container' });
 
   $('<div>', { class: 'custom-loader' }).appendTo(loader);
-  $('<div>', { class: 'loading-info' }).appendTo(loader);
 
   loader.appendTo(slide);
 
