@@ -6,11 +6,11 @@ import { filterLink } from '@/feature';
 import { fetchUrl } from '@/utils/fetch';
 
 import type { PromiseFunc } from '@/types';
-import type { Param } from '@/vault';
+import type { Vault } from '@/vault';
 
 function initFetchArticle(articleId: string): PromiseFunc {
-  return async function fetchArticle({ v, c }: Param) {
-    let articlePageUrl: string = articleId + c.searchQuery;
+  return async function fetchArticle(p: Vault) {
+    let articlePageUrl: string = articleId + p.searchQuery;
     let filteredLinks: string[] = [];
     let count: number = 0;
 
@@ -27,16 +27,16 @@ function initFetchArticle(articleId: string): PromiseFunc {
         .find('div.article-list > div.list-table.table > a.vrow.column')
         .not('.notice');
 
-      filteredLinks = filterLink(totalLinks, v, c).filter((ele: string) => {
-        return !c.articleList.includes(ele);
+      filteredLinks = filterLink(totalLinks, p).filter((ele: string) => {
+        return !p.articleList.includes(ele);
       });
 
       if (filteredLinks.length > 0) {
         console.log(`Fetching Completearticle page: ${articlePageUrl}`);
 
-        c.articleList.push(...filteredLinks);
+        p.articleList.push(...filteredLinks);
 
-        return { v, c } as Param;
+        return p;
       }
 
       const articlePage = $html.find('.page-item.active');
@@ -46,7 +46,7 @@ function initFetchArticle(articleId: string): PromiseFunc {
 
       if (!tempUrl) {
         console.log('NO ARTICLE PAGE LINK FOUND');
-        return { v, c } as Param;
+        return p;
       }
 
       articlePageUrl = tempUrl;
@@ -59,7 +59,7 @@ function initFetchArticle(articleId: string): PromiseFunc {
 
     console.log('Counts Over! No more article pages to fetch.');
 
-    return { v, c } as Param;
+    return p;
   };
 }
 

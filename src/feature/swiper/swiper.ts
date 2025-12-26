@@ -7,7 +7,7 @@ import Swiper from 'swiper';
 import { ArcaFeed } from '@/core';
 
 import type { SwiperOptions } from '@swiper/types';
-import type { Param } from '@/vault';
+import type { Vault } from '@/vault';
 
 const swiperOptions: SwiperOptions = {
   initialSlide: 1,
@@ -25,8 +25,8 @@ const swiperOptions: SwiperOptions = {
 
 // ===
 
-function initSwiper({ v }: Param) {
-  if (!v.isCurrentMode('ARTICLE')) return;
+function initSwiper(p: Vault) {
+  if (!p.isCurrentMode('ARTICLE')) return;
 
   const swiper = `<div class="swiper">
   <div class="swiper-wrapper">
@@ -40,23 +40,22 @@ function initSwiper({ v }: Param) {
 
   $('.root-container').appendTo('.slide-active');
 
-  v.swiper = new Swiper(
+  p.swiper = new Swiper(
     '.swiper',
     Object.assign(swiperOptions, {
-      allowSlidePrev: v.activeIndex > 0,
+      allowSlidePrev: p.isPrevPageActive(),
+      allowSlideNext: p.isNextPageActive(),
     }),
   );
 
-  v.swiper.on('slideNextTransitionEnd', () =>
+  p.swiper.on('slideNextTransitionEnd', () =>
     ArcaFeed.runEvent('renderNextPage'),
   );
-  v.swiper.on('slidePrevTransitionEnd', () =>
+  p.swiper.on('slidePrevTransitionEnd', () =>
     ArcaFeed.runEvent('renderPrevPage'),
   );
 
-  return {
-    v,
-  } as Param;
+  return p;
 }
 
 export { initSwiper };

@@ -1,7 +1,7 @@
-import type { Param } from '@/vault';
+import type { Vault } from '@/vault';
 
-function parseSearchQuery({ v, c }: Param): Param {
-  const { search } = v.href;
+function parseSearchQuery(p: Vault): Vault {
+  const { search } = p.href;
 
   const searchParams = new URLSearchParams(search);
 
@@ -11,10 +11,10 @@ function parseSearchQuery({ v, c }: Param): Param {
   searchParams.delete('before');
   searchParams.delete('tz');
 
-  c.searchQuery = searchParams.toString();
-  c.searchQuery = c.searchQuery ? `?${c.searchQuery}` : '';
+  p.searchQuery = searchParams.toString();
+  p.searchQuery = p.searchQuery ? `?${p.searchQuery}` : '';
 
-  return { v, c } as Param;
+  return p as Vault;
 }
 
 export { parseSearchQuery };

@@ -2,66 +2,80 @@ import $ from 'jquery';
 
 import { initFetchArticle, filterLink, parseSearchQuery } from '@/feature';
 
-import type { Param } from '@/vault';
+import type { Vault } from '@/vault';
 import type { PromiseFunc, PromiseFuncResult } from '@/types';
 
 // ===
 
-function initLink({ v, c }: Param): PromiseFuncResult {
-  if (v.isCurrentMode('ARTICLE')) {
-    return initArticleLinkActive(v.href.articleId);
+function initLink(p: Vault): PromiseFuncResult {
+  if (p.isCurrentMode('ARTICLE') && p.seriesList.length > 0) {
+    return initArticleSeriesLink(p.href.articleId);
   }
 
-  c.resetArticleList();
-
-  if (v.isCurrentMode('CHANNEL')) {
-    return [{ v, c } as Param, parseSearchQuery, initArticleLinkChannel];
+  if (p.isCurrentMode('ARTICLE')) {
+    return initArticleLinkActive(p.href.articleId);
   }
 
-  return { v, c } as Param;
+  p.resetArticleList();
+
+  if (p.isCurrentMode('CHANNEL')) {
+    return [p, parseSearchQuery, initArticleLinkChannel];
+  }
+
+  return p;
 }
 
-function initArticleLinkChannel({ v, c }: Param): PromiseFuncResult {
+function initArticleLinkChannel(p: Vault): PromiseFuncResult {
   const totalLinks = $(
     'div.article-list > div.list-table.table > a.vrow.column',
   ).not('.notice');
 
-  const filteredLinks = filterLink(totalLinks, v, c);
+  const filteredLinks = filterLink(totalLinks, p, true);
 
   if (filteredLinks.length === 0) {
-    return initFetchArticle(v.href.articleId);
+    return initFetchArticle(p.href.articleId);
   }
 
-  c.articleList = filteredLinks;
+  p.articleList = filteredLinks;
 
-  return { v, c };
+  return p;
+}
+
+function initArticleSeriesLink(articleId: string): PromiseFunc {
+  return function initSeriesLink(p: Vault) {
+    p.seriesIndex = p.seriesList.findIndex((ele: string) =>
+      ele.includes(articleId),
+    );
+
+    return p;
+  };
 }
 
 function initArticleLinkActive(articleId: string): PromiseFunc {
-  return function articleLinkActive({ v, c }: Param): PromiseFuncResult {
-    v.activeIndex = 0;
+  return function articleLinkActive(p: Vault): PromiseFuncResult {
+    p.activeIndex = 0;
 
-    if (c.articleList.length === 0) {
-      return [{ v, c }, initFetchArticle(articleId)];
+    if (p.articleList.length === 0) {
+      return [p, initFetchArticle(articleId)];
     }
 
-    v.activeIndex = c.articleList.findIndex((ele: string) =>
+    p.activeIndex = p.articleList.findIndex((ele: string) =>
       ele.includes(articleId),
     );
 
     console.log(`Current Article Id: ${articleId}`);
-    console.log(`Current Article Index: ${v.activeIndex}`);
+    console.log(`Current Article Index: ${p.activeIndex}`);
 
-    if (v.activeIndex === -1) {
-      c.articleList.push(window.location.href);
-      return [{ v, c }, initFetchArticle(articleId)];
+    if (p.activeIndex === -1) {
+      p.articleList.push(window.location.href);
+      return [p, initFetchArticle(articleId)];
     }
 
-    if (c.articleList.length - v.activeIndex <= 1) {
-      return [{ v, c }, initFetchArticle(articleId)];
+    if (p.articleList.length - p.activeIndex <= 1) {
+      return [p, initFetchArticle(articleId)];
     }
 
-    return { v, c };
+    return p;
   };
 }
 

@@ -1,6 +1,7 @@
 import $ from 'jquery';
 
-import type { Param } from '@/vault';
+import type { Vault } from '@/vault';
+import { ArcaFeed } from '@/core';
 
 type SeriesLink = {
   idx: number;
@@ -9,13 +10,15 @@ type SeriesLink = {
 };
 
 // 페이지가 로드된 후 실행
-function initSeriesContent(_: Param): void | Param {
+function initSeriesContent(_: Vault): void | Vault {
   // article-series 요소들이 2개 이상이면 첫 번째를 제외한 나머지 삭제
   const articleSeriesElements = $('.article-series');
 
   if (articleSeriesElements.length === 0) {
     return; // article-series 요소가 없으면 종료
   }
+
+  // $('.series-collapsible').remove();
 
   articleSeriesElements.last().remove();
 
@@ -28,8 +31,11 @@ function initSeriesContent(_: Param): void | Param {
     url.includes(currentPageUrl),
   );
 
+  $('.series-collapsible').on('click', () =>
+    ArcaFeed.runPromise(initEnableSeries),
+  );
+
   // 시리즈 바로가기 링크 저장 변수
-  const shortCutLink: SeriesLink[] = [];
   const shortCutLinkCount = 5;
 
   // 전편과 후편 찾기 (대안 포함)
@@ -44,9 +50,10 @@ function initSeriesContent(_: Param): void | Param {
 
   // 현재 인덱스에서부터 양쪽으로 shortCutLinkCount 개수만큼 링크를 선택
 
-  const prevIdx = Math.max(0, currentIndex - 2);
+  const nextIdx = Math.min(allSeriesLinks.length, currentIndex + 2);
+  const prevIdx = Math.max(0, nextIdx - 5);
 
-  const seriesLink = shortCutLink.slice().splice(prevIdx, shortCutLinkCount);
+  const seriesLink = allSeriesLinks.slice().splice(prevIdx, shortCutLinkCount);
 
   // 새로운 shortcut article-series div 생성
   createShortcutSeriesDiv(seriesLink);
@@ -101,9 +108,36 @@ function createShortcutSeriesDiv(shortCutLinks: SeriesLink[]) {
 
   // article-body에 추가 (맨 앞에 추가)
   articleBody.append(shortcutDiv);
+
+  const btns = $('<div>', {
+    style: ` display: flex;justify-content: space-around;`,
+  });
+
+  const enableSeries = $('<div>', {
+    text: '시리즈 바로가기 활성화',
+    style: 'padding: 5px; background-color: var(--color-primary-theme);',
+  });
+
+  enableSeries.on('click', () =>
+    ArcaFeed.runPromise(initEnableSeries, () => window.location.reload()),
+  );
+
+  const disableSeries = $('<div>', {
+    text: '시리즈 바로가기 비활성화',
+    style: 'padding: 5px; background-color: var(--color-link-broken);',
+  });
+
+  disableSeries.on('click', () =>
+    ArcaFeed.runPromise(initDisableSeries, () => window.location.reload()),
+  );
+
+  btns.append(enableSeries);
+  btns.append(disableSeries);
+
+  articleBody.after(btns);
 }
 
-function initLinkThisSeries({ c }: Param) {
+function initEnableSeries(p: Vault) {
   // article-series 요소들이 2개 이상이면 첫 번째를 제외한 나머지 삭제
   const articleSeriesElement = $('.article-series').first();
   const articleSeriesElementLinks = articleSeriesElement.find('.series-link');
@@ -112,9 +146,19 @@ function initLinkThisSeries({ c }: Param) {
     articleSeriesElementLinks,
   ).map(({ url }) => url);
 
-  c.seriesList = allSeriesLinks;
+  p.seriesList = allSeriesLinks;
+  p.seriesIndex = allSeriesLinks.findIndex((url) =>
+    url.includes(p.href.articleId),
+  );
+  p.saveLastActiveIndex();
 
-  return { c } as Param;
+  return p;
 }
 
-export { initSeriesContent, initLinkThisSeries };
+function initDisableSeries(p: Vault) {
+  p.seriesList = [];
+  p.activeIndex = p.lastActiveIndex;
+
+  return p;
+}
+export { initSeriesContent, initEnableSeries };

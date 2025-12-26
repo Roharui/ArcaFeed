@@ -12,7 +12,7 @@ import {
 } from '@/feature';
 import { checkPageMode } from '@/utils';
 
-import type { Param, VaultFull } from '@/vault';
+import type { Vault } from '@/vault';
 
 class EventManager extends PromiseManager {
   constructor() {
@@ -27,17 +27,17 @@ class EventManager extends PromiseManager {
   }
 
   toNextPage() {
-    this.addNextPromise(({ v }: Param) => {
-      const { swiper } = v as VaultFull;
-      swiper.slideNext();
+    this.addNextPromise((p: Vault) => {
+      const { swiper } = p;
+      swiper!.slideNext();
       return;
     });
   }
 
   toPrevPage() {
-    this.addNextPromise(({ v }: Param) => {
-      const { swiper } = v as VaultFull;
-      swiper.slidePrev();
+    this.addNextPromise((p: Vault) => {
+      const { swiper } = p;
+      swiper!.slidePrev();
       return;
     });
   }

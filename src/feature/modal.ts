@@ -5,7 +5,7 @@ import { ArcaFeed } from '@/core';
 import { initLink } from '@/feature';
 import { checkNotNull } from '@/utils';
 
-import type { Param } from '@/vault';
+import type { Vault } from '@/vault';
 import type { ArticleFilterImpl, PromiseFunc } from '@/types';
 
 const NEXT_PAGE_MODAL_HTML = `
@@ -29,13 +29,12 @@ const NEXT_PAGE_MODAL_HTML = `
 </div>
 `;
 
-function initModal({ v, c }: Param): void | PromiseFunc {
-  if (!v.isCurrentMode('CHANNEL')) return;
+function initModal(p: Vault): void | PromiseFunc {
+  if (!p.isCurrentMode('CHANNEL')) return;
 
   const dialog = $(NEXT_PAGE_MODAL_HTML);
 
-  const { href } = v;
-  const { articleFilterConfig } = c;
+  const { href, articleFilterConfig } = p;
 
   const { tab, title } = articleFilterConfig[href.channelId] || {
     tab: [],
@@ -151,9 +150,9 @@ function createCategorySpan(
   return span;
 }
 
-function checkFn({ v, c }: Param) {
-  const { href } = v;
-  const channelId = href.channelId;
+function checkFn(p: Vault) {
+  const { href } = p;
+  const { channelId } = href;
 
   const tab = $('.ele-category:checked')
     .toArray()
@@ -171,9 +170,9 @@ function checkFn({ v, c }: Param) {
     title: title.length > 0 ? title : [],
   };
 
-  c.articleFilterConfig[channelId] = pageFilter;
+  p.articleFilterConfig[channelId] = pageFilter;
 
-  return { v, c } as Param;
+  return p;
 }
 
 function toggleArticleFilterModal() {

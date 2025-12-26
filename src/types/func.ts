@@ -1,6 +1,6 @@
-import type { Param } from '@/vault';
+import { Vault } from '@/vault';
 
-type PromiseFuncResultObj = Param | PromiseFunc;
+type PromiseFuncResultObj = Vault | PromiseFunc;
 type PromiseFuncResult =
   | void
   | PromiseFuncResultObj
@@ -8,9 +8,9 @@ type PromiseFuncResult =
 
 type ConditionFuncResult = 'wait' | 'skip' | 'run';
 
-type Condition = (p: Param) => ConditionFuncResult;
+type Condition = (p: Vault) => ConditionFuncResult;
 
-type PromiseFunc = (p: Param) => Promise<PromiseFuncResult> | PromiseFuncResult;
+type PromiseFunc = (p: Vault) => Promise<PromiseFuncResult> | PromiseFuncResult;
 
 type MethodKeys<T> = {
   [K in keyof T]: T[K] extends (...args: any[]) => any ? K : never;

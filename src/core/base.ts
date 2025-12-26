@@ -1,13 +1,10 @@
-import { Config, Vault, type Param } from '@/vault';
+import { Vault } from '@/vault';
 
 class Base {
-  p: Param;
+  p: Vault;
 
   constructor() {
-    const v = new Vault();
-    const c = new Config();
-
-    this.p = { v, c };
+    this.p = new Vault();
   }
 }
 

@@ -4,10 +4,10 @@ import { ArcaFeed } from '@/core';
 
 import { toggleArticleFilterModal, nextLinkForce } from '@/feature';
 
-import type { Param } from '@/vault';
+import type { Vault } from '@/vault';
 
-const initButton = ({ v }: Param) => {
-  if (!v.isCurrentMode('CHANNEL')) return;
+const initButton = (p: Vault) => {
+  if (!p.isCurrentMode('CHANNEL')) return;
 
   const nextPageBtn = createArcaFeedBtn('next', 'ion-ios-arrow-forward', () =>
     ArcaFeed.runPromise(nextLinkForce),

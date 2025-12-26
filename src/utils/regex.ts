@@ -1,5 +1,5 @@
 import type { HrefImpl } from '@/types';
-import type { Param } from '@/vault';
+import type { Vault } from '@/vault';
 
 import { getRegexMatchByIndex, getRegexMatchByIndexTry } from '@/utils';
 
@@ -58,10 +58,10 @@ function parseHref(href?: string) {
   return hrefObj;
 }
 
-function checkPageMode({ v }: Param): Param {
-  v.href = parseHref(window.location.href);
+function checkPageMode(p: Vault): Vault {
+  p.href = parseHref(window.location.href);
 
-  return { v } as Param;
+  return p;
 }
 
 export { checkPageMode, getArticleId, parseHref };

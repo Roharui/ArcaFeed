@@ -1,10 +1,9 @@
 import { Base } from '@/core/base';
 
-import { ArcaFeed } from '.';
 import { sleep, isPromiseFuncResult } from '@/utils';
 
 import type { PromiseFunc, PromiseFuncResult } from '@/types';
-import type { Param } from '@/vault';
+import type { Vault } from '@/vault';
 
 export class PromiseManager extends Base {
   private promiseList: PromiseFunc[][] = [];
@@ -44,14 +43,14 @@ export class PromiseManager extends Base {
               case 'Function':
                 return [...(acc as PromiseFunc[]), r as PromiseFunc];
               case 'Param':
-                this.p = Object.assign(this.p, r as Param);
+                this.p = Object.assign(this.p, r as Vault);
                 return acc as PromiseFunc[];
             }
           }, [] as PromiseFunc[]) as PromiseFunc[];
 
           console.log('Result : ');
           console.log(result);
-          console.log('Current Param : ');
+          console.log('Current Vault : ');
           console.log(this.p);
           console.log('============================');
         } catch (e) {
@@ -74,7 +73,7 @@ export class PromiseManager extends Base {
     console.log('Promise End');
     console.log('Save Config Finish');
 
-    this.p.c.saveConfig();
+    this.p.saveConfig();
 
     this.active = false;
   }
