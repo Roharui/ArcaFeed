@@ -19,6 +19,8 @@ interface ArticleFilterConfigImpl {
 
 interface ConfigImpl {
   articleList: string[];
+  seriesList: string[];
+
   articleFilterConfig: ArticleFilterConfigImpl;
   searchQuery: string;
 }

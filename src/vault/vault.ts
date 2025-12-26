@@ -9,11 +9,9 @@ class Vault {
     search: '',
   };
 
-  nextArticleUrl: string | null = null;
-  prevArticleUrl: string | null = null;
+  activeIndex: number = -1;
 
   swiper: Swiper | null = null;
-  nextRenderSlide: HTMLElement | undefined;
 
   isCurrentMode(...mode: HrefImpl['mode'][]): boolean {
     return mode.includes(this.href.mode);
@@ -22,8 +20,6 @@ class Vault {
 
 type VaultFull = Vault & {
   swiper: Swiper;
-  nextArticleUrl: string;
-  prevArticleUrl: string;
 };
 
 export { Vault };

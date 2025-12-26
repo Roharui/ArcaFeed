@@ -64,11 +64,18 @@ function isPromiseFuncResult(
   throw Error('PromiseFuncResult is Not Availe : ' + r);
 }
 
-function getFirstArrayItem<T>(arr: T[]): T {
-  if (arr.length > 0) {
-    return arr[0]!;
+function getArrayItem<T>(arr: T[], idx: number): T {
+  if (arr.length === 0) {
+    throw Error('Array is Empty');
   }
-  throw Error('Array is Empty');
+  if (idx < 0) {
+    throw Error('Index is Negative');
+  }
+  if (arr.length <= idx) {
+    throw Error('Index is Over Array Length');
+  }
+
+  return arr[idx]!;
 }
 
 export {
@@ -76,7 +83,7 @@ export {
   isNotNull,
   checkNotNull,
   isPromiseFuncResult,
-  getFirstArrayItem,
+  getArrayItem,
   getRegexMatchByIndex,
   getRegexMatchByIndexTry,
 };

@@ -21,7 +21,7 @@ function initLink({ v, c }: Param): PromiseFuncResult {
   return { v, c } as Param;
 }
 
-function initArticleLinkChannel({ v, c }: Param): Param | PromiseFunc {
+function initArticleLinkChannel({ v, c }: Param): PromiseFuncResult {
   const totalLinks = $(
     'div.article-list > div.list-table.table > a.vrow.column',
   ).not('.notice');
@@ -33,44 +33,36 @@ function initArticleLinkChannel({ v, c }: Param): Param | PromiseFunc {
   }
 
   c.articleList = filteredLinks;
-  v.nextArticleUrl = filteredLinks[0] || '';
-  v.prevArticleUrl = '';
 
   return { v, c };
 }
 
 function initArticleLinkActive(articleId: string): PromiseFunc {
-  const result = ({ v, c }: Param): PromiseFuncResult => {
+  return function articleLinkActive({ v, c }: Param): PromiseFuncResult {
+    v.activeIndex = 0;
+
     if (c.articleList.length === 0) {
-      return initFetchArticle(articleId);
+      return [{ v, c }, initFetchArticle(articleId)];
     }
 
-    const currentArticleIndex = c.articleList.findIndex((ele: string) =>
+    v.activeIndex = c.articleList.findIndex((ele: string) =>
       ele.includes(articleId),
     );
 
     console.log(`Current Article Id: ${articleId}`);
-    console.log(`Current Article Index: ${currentArticleIndex}`);
+    console.log(`Current Article Index: ${v.activeIndex}`);
 
-    if (currentArticleIndex === -1) {
+    if (v.activeIndex === -1) {
       c.articleList.push(window.location.href);
-      c.articleList = c.articleList.sort().reverse();
       return [{ v, c }, initFetchArticle(articleId)];
     }
 
-    v.nextArticleUrl = null;
-    v.prevArticleUrl = c.articleList[currentArticleIndex - 1] || 'none';
-
-    if (c.articleList.length - currentArticleIndex > 1) {
-      v.nextArticleUrl = c.articleList[currentArticleIndex + 1] || '';
-      return { v, c };
-    } else {
+    if (c.articleList.length - v.activeIndex <= 1) {
       return [{ v, c }, initFetchArticle(articleId)];
     }
+
+    return { v, c };
   };
-  return Object.defineProperty(result, 'name', {
-    value: `initArticleLinkActive`,
-  });
 }
 
 export { initLink, initArticleLinkActive };

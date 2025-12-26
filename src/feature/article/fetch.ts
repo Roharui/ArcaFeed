@@ -2,17 +2,14 @@
 
 import $ from 'jquery';
 
-import { ArcaFeed } from '@/core';
-import { getFirstArrayItem } from '@/utils';
-
 import { filterLink } from '@/feature';
-import { fetchUrl as initFetchUrl } from '@/utils/fetch';
+import { fetchUrl } from '@/utils/fetch';
 
 import type { PromiseFunc } from '@/types';
 import type { Param } from '@/vault';
 
 function initFetchArticle(articleId: string): PromiseFunc {
-  const result = async ({ v, c }: Param) => {
+  return async function fetchArticle({ v, c }: Param) {
     let articlePageUrl: string = articleId + c.searchQuery;
     let filteredLinks: string[] = [];
     let count: number = 0;
@@ -22,7 +19,7 @@ function initFetchArticle(articleId: string): PromiseFunc {
 
       console.log(`Fetching article page: ${searchUrl}`);
 
-      const res = await initFetchUrl(`${searchUrl}`);
+      const res = await fetchUrl(`${searchUrl}`);
 
       const $html = $(res.responseText);
 
@@ -38,7 +35,6 @@ function initFetchArticle(articleId: string): PromiseFunc {
         console.log(`Fetching Completearticle page: ${articlePageUrl}`);
 
         c.articleList.push(...filteredLinks);
-        v.nextArticleUrl = getFirstArrayItem(filteredLinks);
 
         return { v, c } as Param;
       }
@@ -65,9 +61,6 @@ function initFetchArticle(articleId: string): PromiseFunc {
 
     return { v, c } as Param;
   };
-  return Object.defineProperty(result, 'name', {
-    value: `initFetchArticle`,
-  });
 }
 
 export { initFetchArticle };

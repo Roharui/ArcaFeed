@@ -43,7 +43,7 @@ function initSwiper({ v }: Param) {
   v.swiper = new Swiper(
     '.swiper',
     Object.assign(swiperOptions, {
-      allowSlidePrev: v.prevArticleUrl !== 'none',
+      allowSlidePrev: v.activeIndex > 0,
     }),
   );
 

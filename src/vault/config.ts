@@ -1,10 +1,10 @@
 import type { ArticleFilterConfigImpl, ConfigImpl } from '@/types';
 
 class Config implements ConfigImpl {
+  seriesList: string[] = [];
   articleList: string[] = [];
   articleFilterConfig: ArticleFilterConfigImpl = {};
 
-  seriesName: string = '';
   searchQuery: string = '';
 
   constructor() {
@@ -12,21 +12,24 @@ class Config implements ConfigImpl {
   }
 
   resetArticleList() {
-    this.seriesName = '';
+    this.seriesList = [];
     this.articleList = [];
   }
 
   loadConfig(): void {
     const articleFilterConfigStr = localStorage.getItem('articleFilterConfig');
-    const articleListStr = localStorage.getItem('articleList');
 
     this.articleFilterConfig = articleFilterConfigStr
       ? JSON.parse(articleFilterConfigStr)
       : {};
+
+    const articleListStr = localStorage.getItem('articleList');
     this.articleList = articleListStr ? JSON.parse(articleListStr) : [];
 
+    const seriesListStr = localStorage.getItem('seriesList');
+    this.seriesList = seriesListStr ? JSON.parse(seriesListStr) : [];
+
     this.searchQuery = localStorage.getItem('searchQuery') || '';
-    this.seriesName = localStorage.getItem('seriesName') || '';
   }
 
   saveConfig(): void {
@@ -35,8 +38,9 @@ class Config implements ConfigImpl {
       JSON.stringify(this.articleFilterConfig),
     );
     localStorage.setItem('articleList', JSON.stringify(this.articleList));
+    localStorage.setItem('seriesList', JSON.stringify(this.seriesList));
+
     localStorage.setItem('searchQuery', this.searchQuery);
-    localStorage.setItem('seriesName', this.seriesName);
   }
 }
 

@@ -8,6 +8,7 @@ import {
   initModal,
   addVersionInfo,
   initButton,
+  initSeriesContent,
 } from '@/feature';
 import { checkPageMode } from '@/utils';
 
@@ -21,7 +22,8 @@ class EventManager extends PromiseManager {
   init() {
     this.addNextPromise(addVersionInfo, checkPageMode);
     this.addNextPromise(initLink);
-    this.addNextPromise(initSwiper, initButton, initEvent, initModal);
+    this.addNextPromise(initSwiper, initEvent, initModal);
+    this.addNextPromise(initButton, initSeriesContent);
   }
 
   toNextPage() {
