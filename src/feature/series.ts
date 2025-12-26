@@ -18,8 +18,7 @@ function initSeriesContent(_: Vault): void | Vault {
     return; // article-series 요소가 없으면 종료
   }
 
-  // $('.series-collapsible').remove();
-
+  $('.series-collapsible').remove();
   articleSeriesElements.last().remove();
 
   // 현재 페이지 URL
@@ -29,10 +28,6 @@ function initSeriesContent(_: Vault): void | Vault {
   const allSeriesLinks = getCurrentSeriesLink(links);
   const currentIndex = allSeriesLinks.findIndex(({ url }) =>
     url.includes(currentPageUrl),
-  );
-
-  $('.series-collapsible').on('click', () =>
-    ArcaFeed.runPromise(initEnableSeries),
   );
 
   // 시리즈 바로가기 링크 저장 변수
@@ -51,7 +46,7 @@ function initSeriesContent(_: Vault): void | Vault {
   // 현재 인덱스에서부터 양쪽으로 shortCutLinkCount 개수만큼 링크를 선택
 
   const nextIdx = Math.min(allSeriesLinks.length, currentIndex + 2);
-  const prevIdx = Math.max(0, nextIdx - 5);
+  const prevIdx = Math.max(0, nextIdx - 4);
 
   const seriesLink = allSeriesLinks.slice().splice(prevIdx, shortCutLinkCount);
 
