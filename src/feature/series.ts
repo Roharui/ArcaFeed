@@ -45,8 +45,8 @@ function initSeriesContent(_: Vault): void | Vault {
 
   // 현재 인덱스에서부터 양쪽으로 shortCutLinkCount 개수만큼 링크를 선택
 
-  const nextIdx = Math.min(allSeriesLinks.length, currentIndex + 2);
-  const prevIdx = Math.max(0, nextIdx - 4);
+  const nextIdx = Math.min(allSeriesLinks.length, currentIndex + 2 + 1);
+  const prevIdx = Math.max(0, nextIdx - 5);
 
   const seriesLink = allSeriesLinks.slice().splice(prevIdx, shortCutLinkCount);
 
