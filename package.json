@@ -1,9 +1,9 @@
 {
   "name": "acalive_tampermonkey",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "main": "main.js",
   "scripts": {
-    "build": "webpack --config webpack.config.prod.js --mode production --env BUILD_DATE=$(date +%Y-%m-%d_%H-%M-%S)",
+    "build": "webpack --config webpack.config.build.js --mode production --env BUILD_DATE=$(date +%Y-%m-%d_%H-%M-%S)",
     "build:prod": "webpack --config webpack.config.prod.js --mode production",
     "dev": "webpack --config webpack.config.dev.js --mode development --env GIT_HASH=$(git rev-parse --short HEAD) --env BUILD_DATE=$(date +%Y-%m-%d_%H-%M-%S)",
     "lint": "eslint . --ext .ts"

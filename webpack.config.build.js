@@ -3,13 +3,11 @@ import { fileURLToPath } from 'url';
 
 import { UserscriptPlugin } from 'webpack-userscript';
 
-import config from './package.json' with { type: 'json' };
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export default function (_env, _args) {
-  const currentVersion = config.version;
+export default function (env, _args) {
+  const currentVersion = env.BUILD_DATE;
 
   return {
     mode: 'production',
@@ -17,7 +15,7 @@ export default function (_env, _args) {
 
     output: {
       path: path.resolve(__dirname, 'dist'),
-      filename: 'ArcaFeed.user.js',
+      filename: 'dist.js',
     },
 
     resolve: {
