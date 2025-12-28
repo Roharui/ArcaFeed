@@ -111,25 +111,21 @@ function createShortcutSeriesDiv(shortCutLinks: SeriesLink[]) {
     articleBody.append(shortcutDiv);
 
     const btns = $('<div>', {
-      style: ` display: flex;justify-content: space-around;`,
+      class: 'series-control-btns',
     });
 
     const enableSeries = $('<div>', {
       text: '시리즈 바로가기 활성화',
-      style:
-        'padding: 5px; background-color: var(--color-primary-theme); cursor: pointer;',
+      class: 'series-control-btn enable-series',
     });
     enableSeries.css('opacity', v.isSeriesMode() ? '0.5' : '1');
-
     enableSeries.on('click', () => ArcaFeed.runEvent('enableSeries'));
 
     const disableSeries = $('<div>', {
       text: '시리즈 바로가기 비활성화',
-      style:
-        'padding: 5px; background-color: var(--color-link-broken); cursor: pointer;',
+      class: 'series-control-btn disable-series',
     });
     disableSeries.css('opacity', !v.isSeriesMode() ? '0.5' : '1');
-
     disableSeries.on('click', () => ArcaFeed.runEvent('disableSeries'));
 
     btns.append(enableSeries);

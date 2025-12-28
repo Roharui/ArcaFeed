@@ -54,6 +54,13 @@ function initArticleSeriesLink(articleId: string): PromiseFunc {
 
 function initArticleLinkActive(articleId: string): PromiseFunc {
   return function articleLinkActive(p: Vault): PromiseFuncResult {
+    const totalLinks = $(
+      `div.article-list > div.list-table.table > a.vrow.column, 
+     div.article-list > div.list-table.hybrid a.title.hybrid-title`,
+    ).not('.notice');
+
+    filterLink(totalLinks, p, true);
+
     p.activeIndex = 0;
 
     if (p.articleList.length === 0) {

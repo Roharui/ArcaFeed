@@ -36,9 +36,10 @@ function initSwiper(p: Vault) {
   </div>
   </div>`;
 
-  document.body.insertAdjacentHTML('beforeend', swiper);
-
+  $('body').append($(swiper));
   $('.root-container').appendTo('.slide-active');
+  $('.nav-control').appendTo('body');
+  $('.ad.small-ad').prependTo('.sticky-container');
 
   p.swiper = new Swiper(
     '.swiper',

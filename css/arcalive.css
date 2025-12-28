@@ -22,7 +22,7 @@ body {
 
 /* default Page */
 
-.left-ad-area {
+.left-sidebar {
   display: none !important;
 }
 
@@ -66,10 +66,6 @@ li.userscript-nav-item > a {
   background-color: var(--color-bg-main);
 }
 
-.board-relay {
-  display: none !important;
-}
-
 #comment > .title {
   border-top: none !important;
 }
@@ -77,10 +73,6 @@ li.userscript-nav-item > a {
 .included-article-list {
   border-top: none !important;
   margin-top: 0px !important;
-}
-
-.nav-control {
-  display: none !important;
 }
 
 /* swiper */
@@ -136,27 +128,6 @@ li.userscript-nav-item > a {
 
 .content-wrapper::after {
   content: none !important;
-}
-
-.swiper-slide
-  .root-container
-  .content-wrapper
-  article
-  .article-view
-  > .btns-board,
-.swiper-slide
-  .root-container
-  .content-wrapper
-  article
-  .article-view
-  > .clearfix,
-.swiper-slide
-  .root-container
-  .content-wrapper
-  article
-  .article-view
-  > .included-article-list {
-  display: none !important;
 }
 
 /* modal */
@@ -234,11 +205,11 @@ li.userscript-nav-item > a {
   color: var(--color-text-opposite);
 }
 
-.category-check {
+input.category-check {
   display: none;
 }
 
-.category-check:checked + span {
+input.category-check:checked + span {
   background-color: var(--color-bd-btn-hover);
   color: var(--color-text);
 }
@@ -285,4 +256,26 @@ div.exclude-title-list {
 div.exclude-title-list:has(> label) {
   border-bottom: 1px solid #ddd;
   margin: 5px 1px 0px 1px;
+}
+
+/* series */
+
+.series-control-btns {
+  display: flex;
+  justify-content: space-around;
+}
+
+.series-control-btn {
+  cursor: pointer;
+  border-radius: 5px;
+
+  padding: 5px;
+}
+
+.series-control-btn.enable-series {
+  background-color: var(--color-primary-theme);
+}
+
+.series-control-btn.disable-series {
+  background-color: var(--color-link-broken);
 }
