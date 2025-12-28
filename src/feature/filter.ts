@@ -13,43 +13,50 @@ function filterLink(
 
   const { articleList, articleFilterConfig, href } = p;
 
-  const articleFilter = articleFilterConfig[href.channelId];
   // Use Set for O(1) lookup instead of O(n) indexOf on comma-separated string
   const articleIdSet = new Set(articleList);
 
-  if (articleFilter) {
-    // Cache tab filter set for faster lookups
-    const tabFilterSet = new Set(articleFilter.tab);
+  const articleFilter = articleFilterConfig[href.channelId];
+  const { tab: tabFilter, title: titleFilter } = articleFilter || {
+    tab: [],
+    title: [],
+  };
 
-    rows = rows.filter(function () {
-      const $ele = $(this); // Cache jQuery object
+  let resultRows: { $ele: JQuery<HTMLElement>; result: boolean }[] = [];
+
+  if (!!articleFilter && tabFilter.length + titleFilter.length > 0) {
+    // Cache tab filter set for faster lookups
+    const tabFilterSet = new Set(tabFilter);
+
+    resultRows = rows.toArray().map(function (ele) {
+      const $ele = $(ele);
+
       const _tabTypeText = $ele.find('.badge-success').text();
       const tabTypeText = _tabTypeText.length === 0 ? '노탭' : _tabTypeText;
 
       const titleText = $ele.find('.title').text().trim();
 
       const tabAllow = tabFilterSet.has(tabTypeText);
-      const titleAllow = articleFilter.title.every(
+      const titleAllow = titleFilter.every(
         (keyword) => !titleText.includes(keyword),
       );
 
       const result = tabAllow && titleAllow;
 
-      if (css) {
-        $ele.css('opacity', result ? '1' : '0.5');
-      }
-
-      return result;
+      return { $ele, result };
     });
+  } else {
+    resultRows = rows.toArray().map((ele) => ({ $ele: $(ele), result: true }));
   }
 
-  return rows
-    .map(function () {
-      return $(this).attr('href');
+  return resultRows
+    .filter(({ $ele, result }) => {
+      if (css) $ele.css('opacity', result ? '1' : '0.5');
+      return result;
     })
-    .get()
+    .map(({ $ele }) => $ele.attr('href'))
     .filter((href) => !!href)
-    .map((href) => href.replace('https://arca.live', '').replace(/\?.+$/, ''))
+    .map((href) => href!.replace('https://arca.live', '').replace(/\?.+$/, ''))
     .filter((href) => !articleIdSet.has(getArticleId(href)));
 }
 

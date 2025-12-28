@@ -1,5 +1,3 @@
-import eruda from 'eruda';
-
 import { ArcaFeed } from '@/core';
 
 import '@swiper/swiper.css';
@@ -10,7 +8,7 @@ import '@css/arcalive.css';
     process.env.NODE_ENV === 'development' &&
     process.env.DEVICE === 'mobile'
   ) {
-    eruda.init();
+    import('eruda').then((eruda) => eruda.default.init());
   }
   ArcaFeed.runEvent('init');
 })();
