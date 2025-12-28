@@ -82,11 +82,7 @@ function initModal(p: Vault): void | PromiseFunc {
 
   title.forEach((tag) => createExcludeSpan(tag));
 
-  dialog
-    .find('#check-btn')
-    .on('click', () =>
-      ArcaFeed.runPromise(checkFn, initLink, () => toggleArticleFilterModal),
-    );
+  dialog.find('#check-btn').on('click', () => ArcaFeed.runEvent('checkModal'));
   dialog.find('#cancel-btn').on('click', () => toggleArticleFilterModal());
   dialog.find('#exclude-btn').on('click', () => {
     const excludeTagsStr = dialog.find('#exclude-title').val() || '';
@@ -137,7 +133,7 @@ function createCategorySpan(
   return span;
 }
 
-function checkFn(p: Vault) {
+function initCheckModal(p: Vault) {
   const { href } = p;
   const { channelId } = href;
 
@@ -167,4 +163,4 @@ function toggleArticleFilterModal() {
   $('#dialog').toggle();
 }
 
-export { initModal, toggleArticleFilterModal };
+export { initModal, initCheckModal, toggleArticleFilterModal };

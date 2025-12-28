@@ -1,13 +1,12 @@
 import $ from 'jquery';
 
 import { ArcaFeed } from '@/core';
-import { nextLinkForce } from '@/feature';
 
 import type { Vault } from '@/vault';
 
 function initChannelEvent(_: Vault): void {
   $(document).on('keydown', (e) => {
-    if (e.key === 'ArrowRight') ArcaFeed.runPromise(nextLinkForce);
+    if (e.key === 'ArrowRight') ArcaFeed.runEvent('toNextLinkForce');
   });
 }
 

@@ -121,9 +121,7 @@ function createShortcutSeriesDiv(shortCutLinks: SeriesLink[]) {
     });
     enableSeries.css('opacity', v.isSeriesMode() ? '0.5' : '1');
 
-    enableSeries.on('click', () =>
-      ArcaFeed.runPromise(initEnableSeries, () => window.location.reload()),
-    );
+    enableSeries.on('click', () => ArcaFeed.runEvent('enableSeries'));
 
     const disableSeries = $('<div>', {
       text: '시리즈 바로가기 비활성화',
@@ -132,9 +130,7 @@ function createShortcutSeriesDiv(shortCutLinks: SeriesLink[]) {
     });
     disableSeries.css('opacity', !v.isSeriesMode() ? '0.5' : '1');
 
-    disableSeries.on('click', () =>
-      ArcaFeed.runPromise(initDisableSeries, () => window.location.reload()),
-    );
+    disableSeries.on('click', () => ArcaFeed.runEvent('disableSeries'));
 
     btns.append(enableSeries);
     btns.append(disableSeries);
@@ -167,4 +163,4 @@ function initDisableSeries(p: Vault) {
 
   return p;
 }
-export { initSeriesContent, initEnableSeries };
+export { initSeriesContent, initEnableSeries, initDisableSeries };

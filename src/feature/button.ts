@@ -2,7 +2,7 @@ import $ from 'jquery';
 
 import { ArcaFeed } from '@/core';
 
-import { toggleArticleFilterModal, nextLinkForce } from '@/feature';
+import { toggleArticleFilterModal } from '@/feature';
 
 import type { Vault } from '@/vault';
 
@@ -10,7 +10,7 @@ const initButton = (p: Vault) => {
   if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
 
   const nextPageBtn = createArcaFeedBtn('next', 'ion-ios-arrow-forward', () =>
-    ArcaFeed.runPromise(nextLinkForce),
+    ArcaFeed.runEvent('toNextLinkForce'),
   );
 
   const filterPageBtn = createArcaFeedBtn(

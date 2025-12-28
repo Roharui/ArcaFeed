@@ -1,6 +1,6 @@
 import { EventManager } from './event';
 
-import type { MethodKeys, PromiseFunc } from '@/types';
+import type { MethodKeys } from '@/types';
 
 class ArcaFeed extends EventManager {
   private static instance: ArcaFeed;
@@ -18,11 +18,6 @@ class ArcaFeed extends EventManager {
     const func = ArcaFeed.getInstance()[eventName] as Function;
 
     func.apply(ArcaFeed.getInstance());
-    await ArcaFeed.getInstance().initPromise();
-  }
-
-  static async runPromise(...func: PromiseFunc[]) {
-    ArcaFeed.getInstance().addNextPromise(...func);
     await ArcaFeed.getInstance().initPromise();
   }
 }

@@ -9,6 +9,11 @@ import {
   addVersionInfo,
   initButton,
   initSeriesContent,
+  nextLinkForce,
+  initEnableSeries,
+  initDisableSeries,
+  toggleArticleFilterModal,
+  initCheckModal,
 } from '@/feature';
 import { checkPageMode } from '@/utils';
 
@@ -21,25 +26,32 @@ class EventManager extends PromiseManager {
 
   init() {
     this.addNextPromise(addVersionInfo, checkPageMode);
-    this.addNextPromise(initLink);
-    this.addNextPromise(initSwiper, initEvent, initModal);
-    this.addNextPromise(initButton, initSeriesContent);
+    this.addNextPromise(
+      initLink,
+      initModal,
+      initButton,
+      initEvent,
+      initSeriesContent,
+    );
+    this.addNextPromise(initSwiper);
   }
 
   toNextPage() {
     this.addNextPromise((p: Vault) => {
-      const { swiper } = p;
-      swiper!.slideNext();
+      p.swiper!.slideNext();
       return;
     });
   }
 
   toPrevPage() {
     this.addNextPromise((p: Vault) => {
-      const { swiper } = p;
-      swiper!.slidePrev();
+      p.swiper!.slidePrev();
       return;
     });
+  }
+
+  toNextLinkForce() {
+    this.addNextPromise(nextLinkForce);
   }
 
   renderNextPage() {
@@ -48,6 +60,20 @@ class EventManager extends PromiseManager {
 
   renderPrevPage() {
     this.addNextPromise(toLink('PREV'));
+  }
+
+  enableSeries() {
+    this.addNextPromise(initEnableSeries, () => window.location.reload());
+  }
+
+  disableSeries() {
+    this.addNextPromise(initDisableSeries, () => window.location.reload());
+  }
+
+  checkModal() {
+    this.addNextPromise(initCheckModal, initLink, () =>
+      toggleArticleFilterModal(),
+    );
   }
 }
 
