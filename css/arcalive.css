@@ -186,6 +186,8 @@ li.userscript-nav-item > a {
   padding: 20px;
 
   background-color: var(--color-bg-main);
+
+  border: 1px solid var(--color-bd-btn);
   border-radius: 10px;
 }
 
@@ -250,4 +252,37 @@ li.userscript-nav-item > a {
 #exclude-title {
   width: 84%;
   outline: none;
+}
+
+/* exclude title tags */
+
+input.ele-exclude {
+  display: none;
+}
+
+span.exclude-title-tag {
+  display: inline-block;
+  padding: 5px 8px 5px 8px;
+  margin: 3px;
+  border-radius: 10px;
+
+  background-color: var(--color-link-broken);
+  color: var(--color-text-opposite);
+  cursor: pointer;
+}
+
+span.exclude-title-tag:after {
+  display: inline-block;
+  content: '\00d7';
+}
+
+div.exclude-title-list {
+  border-bottom: none;
+  margin: 0px;
+  padding-bottom: 0px;
+}
+
+div.exclude-title-list:has(> label) {
+  border-bottom: 1px solid #ddd;
+  margin: 5px 1px 0px 1px;
 }

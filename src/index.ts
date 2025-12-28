@@ -6,7 +6,10 @@ import '@swiper/swiper.css';
 import '@css/arcalive.css';
 
 (function () {
-  if (process.env.NODE_ENV === 'development') {
+  if (
+    process.env.NODE_ENV === 'development' &&
+    process.env.DEVICE === 'mobile'
+  ) {
     eruda.init();
   }
   ArcaFeed.runEvent('init');

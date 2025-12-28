@@ -13,9 +13,8 @@ const NEXT_PAGE_MODAL_HTML = `
   <div class="helper-modal-body">
     <div id="category-all"></div>
     <div id="category"></div>
+    <div class="exclude-title-list"></div>
     <div class="exclude-title-wrapper">
-      <div class="exclude-tag-wrapper">
-      </div>
       <span class="helper-modal-btns exclude-title-input-wrapper">
         <input type="text" id="exclude-title" placeholder="차단 제목 입력..."/>
         <input type="button" id="exclude-btn" class="helper-button button" value="입력"/>
@@ -92,9 +91,7 @@ function initModal(p: Vault): void | PromiseFunc {
   dialog.find('#exclude-btn').on('click', () => {
     const excludeTagsStr = dialog.find('#exclude-title').val() || '';
 
-    if (typeof excludeTagsStr !== 'string') {
-      return;
-    }
+    if (typeof excludeTagsStr !== 'string') return;
 
     const excludeTags = excludeTagsStr.split(',') || [];
 
@@ -107,25 +104,15 @@ function initModal(p: Vault): void | PromiseFunc {
 }
 
 function createExcludeSpan(text: string) {
-  const label = $('<label>', { class: 'exclude-label' });
-  const input = $('<input>', {
-    class: 'exclude-tag-input',
-    type: 'hidden',
-    value: text,
-  });
-  const tagSpan = $('<span>', { class: 'exclude-tag-span' });
-  const tagDelete = $('<span>', { class: 'exclude-span-delete' });
+  const $ele = $(`
+    <label class="exclude-title-tag" data-text="${text}">
+      <span class="exclude-title-tag">${text}</span>
+    </label>
+  `);
 
-  tagSpan.text(text);
-  tagDelete.on('click', function () {
-    $(this).parent().remove();
-  });
+  $ele.on('click', () => $ele.remove());
 
-  input.appendTo(label);
-  tagSpan.appendTo(label);
-  tagDelete.appendTo(label);
-
-  label.appendTo('#exclude-tag-wrapper');
+  $ele.appendTo('.exclude-title-list');
 }
 
 function createCategorySpan(
@@ -161,9 +148,9 @@ function checkFn(p: Vault) {
       return [...prev, r];
     }, []);
 
-  const title = $('.exclude-tag-input')
+  const title = $('.exclude-title-tag')
     .toArray()
-    .map((ele): string => $(ele).val() as string);
+    .map((ele): string => $(ele).attr('data-text') as string);
 
   const pageFilter: ArticleFilterImpl = {
     tab,

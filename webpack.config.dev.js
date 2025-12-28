@@ -13,6 +13,7 @@ export default function (env, _args) {
     'process.env.NODE_ENV': JSON.stringify('development'),
     'process.env.GIT_HASH': JSON.stringify(env.GIT_HASH || 'unknown'),
     'process.env.BUILD_DATE': JSON.stringify(env.BUILD_DATE || 'unknown'),
+    'process.env.DEVICE': JSON.stringify(env.DEVICE || 'unknown'),
   });
   const webpackUserscriptPlugin = new UserscriptPlugin({
     headers: {
@@ -26,7 +27,9 @@ export default function (env, _args) {
       require: [
         'https://code.jquery.com/jquery-3.6.0.min.js',
         'https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js',
-        'https://cdn.jsdelivr.net/npm/eruda',
+        env.DEVICE === 'mobile'
+          ? 'https://cdn.jsdelivr.net/npm/eruda'
+          : undefined,
       ],
       'run-at': 'document-end',
     },
