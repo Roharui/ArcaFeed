@@ -16,10 +16,10 @@
 
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
-    "module": "es6",
-    "target": "es2015",
+    "module": "esnext",
+    "target": "es2020",
     // For nodejs:
-    "lib": ["dom"],
+    "lib": ["es2020", "dom"],
     "types": ["node"],
     // and npm install -D @types/node
 

@@ -33,6 +33,7 @@ export default function (_env, _args) {
       $: 'jQuery',
       jquery: 'jQuery',
       swiper: 'Swiper',
+      eruda: 'eruda',
     },
 
     module: {
