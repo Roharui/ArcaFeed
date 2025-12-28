@@ -251,9 +251,3 @@ li.userscript-nav-item > a {
   width: 84%;
   outline: none;
 }
-
-/* No Twitter iframe */
-
-iframe {
-  display: none;
-}

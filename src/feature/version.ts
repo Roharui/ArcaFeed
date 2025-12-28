@@ -10,7 +10,12 @@ function addVersionInfo(_: Vault): void {
 
   const versionInfo = `ArcaFeed Version: ${version} (Build Date: ${date})`;
 
-  $('body').prepend(
+  if (localStorage.getItem('arca_version_info') !== versionInfo)
+    window.location.reload();
+
+  localStorage.setItem('arca_version_info', versionInfo);
+
+  $('footer').append(
     $('<div>', {
       text: versionInfo,
       style:

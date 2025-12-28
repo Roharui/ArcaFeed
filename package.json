@@ -3,15 +3,16 @@
   "version": "2.1.0",
   "main": "main.js",
   "scripts": {
-    "build": "webpack --config webpack.config.build.js --mode production --env BUILD_DATE=$(date +%Y-%m-%d_%H-%M-%S)",
-    "build:prod": "webpack --config webpack.config.prod.js --mode production",
-    "dev": "webpack --config webpack.config.dev.js --mode development --env GIT_HASH=$(git rev-parse --short HEAD) --env BUILD_DATE=$(date +%Y-%m-%d_%H-%M-%S)",
+    "dev": "webpack --config webpack.config.dev.js --env GIT_HASH=$(git rev-parse --short HEAD) --env BUILD_DATE=$(date +%Y-%m-%d_%H-%M-%S)",
+    "dev:mobile": "webpack --config webpack.config.dev.js --env DEVICE=mobile --env GIT_HASH=$(git rev-parse --short HEAD) --env BUILD_DATE=$(date +%Y-%m-%d_%H-%M-%S)",
+    "prod": "webpack --config webpack.config.prod.js --mode production",
     "lint": "eslint . --ext .ts"
   },
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "eruda": "^3.4.3",
     "jquery": "^3.7.1",
     "jquery-ui-dist": "^1.13.3",
     "swiper": "^12.0.2"

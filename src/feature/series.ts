@@ -1,7 +1,9 @@
 import $ from 'jquery';
 
-import type { Vault } from '@/vault';
 import { ArcaFeed } from '@/core';
+
+import type { Vault } from '@/vault';
+import type { PromiseFuncResult } from '@/types';
 
 type SeriesLink = {
   idx: number;
@@ -10,7 +12,7 @@ type SeriesLink = {
 };
 
 // 페이지가 로드된 후 실행
-function initSeriesContent(_: Vault): void | Vault {
+function initSeriesContent(_: Vault): PromiseFuncResult {
   // article-series 요소들이 2개 이상이면 첫 번째를 제외한 나머지 삭제
   const articleSeriesElements = $('.article-series');
 
@@ -18,12 +20,16 @@ function initSeriesContent(_: Vault): void | Vault {
     return; // article-series 요소가 없으면 종료
   }
 
-  $('.series-collapsible').remove();
   articleSeriesElements.last().remove();
 
   // 현재 페이지 URL
   const currentPageUrl = window.location.pathname;
   const links = articleSeriesElements.first().find('.series-link');
+  links.css('display', 'block !important');
+
+  $('.series-collapsible').on('click', function () {
+    $(this).parent().toggleClass('extend');
+  });
 
   const allSeriesLinks = getCurrentSeriesLink(links);
   const currentIndex = allSeriesLinks.findIndex(({ url }) =>
@@ -39,8 +45,7 @@ function initSeriesContent(_: Vault): void | Vault {
   }
 
   if (allSeriesLinks.length < shortCutLinkCount) {
-    createShortcutSeriesDiv(allSeriesLinks.slice());
-    return;
+    return createShortcutSeriesDiv(allSeriesLinks.slice());
   }
 
   // 현재 인덱스에서부터 양쪽으로 shortCutLinkCount 개수만큼 링크를 선택
@@ -51,7 +56,7 @@ function initSeriesContent(_: Vault): void | Vault {
   const seriesLink = allSeriesLinks.slice().splice(prevIdx, shortCutLinkCount);
 
   // 새로운 shortcut article-series div 생성
-  createShortcutSeriesDiv(seriesLink);
+  return createShortcutSeriesDiv(seriesLink);
 }
 
 function getCurrentSeriesLink(links: JQuery<HTMLElement>): SeriesLink[] {
@@ -82,54 +87,60 @@ function getCurrentSeriesLink(links: JQuery<HTMLElement>): SeriesLink[] {
 
 // shortCutLink를 이용해 새로운 article-series div 생성 및 추가
 function createShortcutSeriesDiv(shortCutLinks: SeriesLink[]) {
-  // article-body 요소 찾기
-  const articleBody = $('.article-body');
+  return function showShortcutSeries(v: Vault) {
+    // article-body 요소 찾기
+    const articleBody = $('.article-body');
 
-  if (!articleBody) {
-    return;
-  }
+    if (!articleBody) {
+      return;
+    }
 
-  // 새로운 article-series div 생성
-  const shortcutDiv = $('<div>');
+    // 새로운 article-series div 생성
+    const shortcutDiv = $('<div>');
 
-  shortcutDiv.addClass('article-series');
-  shortcutDiv.css('max-height', 'max-content');
-  shortcutDiv.css('margin-top', '1rem');
+    shortcutDiv.addClass('article-series');
+    shortcutDiv.css('max-height', 'max-content');
+    shortcutDiv.css('margin-top', '1rem');
 
-  // shortCutLink의 각 링크를 series-link div로 생성
-  shortCutLinks.forEach((linkData) => {
-    shortcutDiv.append($(linkData.element).clone());
-  });
+    // shortCutLink의 각 링크를 series-link div로 생성
+    shortCutLinks.forEach((linkData) => {
+      shortcutDiv.append($(linkData.element).clone());
+    });
 
-  // article-body에 추가 (맨 앞에 추가)
-  articleBody.append(shortcutDiv);
+    // article-body에 추가 (맨 앞에 추가)
+    articleBody.append(shortcutDiv);
 
-  const btns = $('<div>', {
-    style: ` display: flex;justify-content: space-around;`,
-  });
+    const btns = $('<div>', {
+      style: ` display: flex;justify-content: space-around;`,
+    });
 
-  const enableSeries = $('<div>', {
-    text: '시리즈 바로가기 활성화',
-    style: 'padding: 5px; background-color: var(--color-primary-theme);',
-  });
+    const enableSeries = $('<div>', {
+      text: '시리즈 바로가기 활성화',
+      style:
+        'padding: 5px; background-color: var(--color-primary-theme); cursor: pointer;',
+    });
+    enableSeries.css('opacity', v.isSeriesMode() ? '0.5' : '1');
 
-  enableSeries.on('click', () =>
-    ArcaFeed.runPromise(initEnableSeries, () => window.location.reload()),
-  );
+    enableSeries.on('click', () =>
+      ArcaFeed.runPromise(initEnableSeries, () => window.location.reload()),
+    );
 
-  const disableSeries = $('<div>', {
-    text: '시리즈 바로가기 비활성화',
-    style: 'padding: 5px; background-color: var(--color-link-broken);',
-  });
+    const disableSeries = $('<div>', {
+      text: '시리즈 바로가기 비활성화',
+      style:
+        'padding: 5px; background-color: var(--color-link-broken); cursor: pointer;',
+    });
+    disableSeries.css('opacity', !v.isSeriesMode() ? '0.5' : '1');
 
-  disableSeries.on('click', () =>
-    ArcaFeed.runPromise(initDisableSeries, () => window.location.reload()),
-  );
+    disableSeries.on('click', () =>
+      ArcaFeed.runPromise(initDisableSeries, () => window.location.reload()),
+    );
 
-  btns.append(enableSeries);
-  btns.append(disableSeries);
+    btns.append(enableSeries);
+    btns.append(disableSeries);
 
-  articleBody.after(btns);
+    articleBody.after(btns);
+  };
 }
 
 function initEnableSeries(p: Vault) {
