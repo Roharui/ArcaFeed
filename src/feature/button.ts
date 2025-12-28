@@ -7,7 +7,7 @@ import { toggleArticleFilterModal, nextLinkForce } from '@/feature';
 import type { Vault } from '@/vault';
 
 const initButton = (p: Vault) => {
-  if (!p.isCurrentMode('CHANNEL')) return;
+  if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
 
   const nextPageBtn = createArcaFeedBtn('next', 'ion-ios-arrow-forward', () =>
     ArcaFeed.runPromise(nextLinkForce),
@@ -19,9 +19,18 @@ const initButton = (p: Vault) => {
     toggleArticleFilterModal,
   );
 
-  $('ul.nav.navbar-nav')
-    .last()
-    .before(btnWrapper([filterPageBtn, nextPageBtn]));
+  const btns = [];
+
+  if (p.isCurrentMode('CHANNEL')) {
+    btns.push(filterPageBtn);
+    btns.push(nextPageBtn);
+  }
+
+  if (p.isCurrentMode('ARTICLE')) {
+    btns.push(filterPageBtn);
+  }
+
+  $('ul.nav.navbar-nav').last().before(btnWrapper(btns));
 };
 
 // ===

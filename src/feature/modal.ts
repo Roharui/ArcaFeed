@@ -29,7 +29,7 @@ const NEXT_PAGE_MODAL_HTML = `
 `;
 
 function initModal(p: Vault): void | PromiseFunc {
-  if (!p.isCurrentMode('CHANNEL')) return;
+  if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
 
   const dialog = $(NEXT_PAGE_MODAL_HTML);
 
@@ -158,6 +158,7 @@ function checkFn(p: Vault) {
   };
 
   p.articleFilterConfig[channelId] = pageFilter;
+  p.articleList = p.articleList.slice(0, p.activeIndex + 1);
 
   return p;
 }

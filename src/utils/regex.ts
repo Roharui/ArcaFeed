@@ -4,8 +4,8 @@ import type { Vault } from '@/vault';
 import { getRegexMatchByIndex, getRegexMatchByIndexTry } from '@/utils';
 
 const homePageRegex = /arca\.live\/?$/;
-const channelPageRegex = /b\/[a-zA-Z0-9]+/;
-const articlePageRegex = /b\/([A-Za-z0-9])+\/[0-9]+/;
+const channelPageRegex = /b\/[a-zA-Z0-9]+(\?|\?.+)?$/;
+const articlePageRegex = /b\/([A-Za-z0-9])+\/[0-9]+(\?|\?.+)?$/;
 
 // Optimized: Use capturing groups instead of lookbehind/lookahead for better performance
 const channelAndArticleIdRegex = /\/b\/([A-Za-z0-9]+)(?:\/([0-9]+))?(\?.+)?/;

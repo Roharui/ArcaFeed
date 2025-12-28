@@ -68,6 +68,7 @@ function initArticleLinkActive(articleId: string): PromiseFunc {
     console.log(`Current Article Index: ${p.activeIndex}`);
 
     if (p.activeIndex === -1) {
+      p.articleList = [];
       p.articleList.push(window.location.href);
       return [p, initFetchArticle(articleId)];
     }
