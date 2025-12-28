@@ -8,7 +8,7 @@ import type { PromiseFunc, PromiseFuncResult } from '@/types';
 // ===
 
 function initLink(p: Vault): PromiseFuncResult {
-  if (p.isCurrentMode('ARTICLE') && p.seriesList.length > 0) {
+  if (p.isCurrentMode('ARTICLE') && p.isSeriesMode()) {
     return initArticleSeriesLink(p.href.articleId);
   }
 
@@ -27,7 +27,8 @@ function initLink(p: Vault): PromiseFuncResult {
 
 function initArticleLinkChannel(p: Vault): PromiseFuncResult {
   const totalLinks = $(
-    'div.article-list > div.list-table.table > a.vrow.column',
+    `div.article-list > div.list-table.table > a.vrow.column, 
+     div.article-list > div.list-table.hybrid a.title.hybrid-title`,
   ).not('.notice');
 
   const filteredLinks = filterLink(totalLinks, p, true);

@@ -24,7 +24,10 @@ function initFetchArticle(articleId: string): PromiseFunc {
       const $html = $(res.responseText);
 
       const totalLinks = $html
-        .find('div.article-list > div.list-table.table > a.vrow.column')
+        .find(
+          `div.article-list > div.list-table.table > a.vrow.column, 
+           div.article-list > div.list-table.hybrid a.title.hybrid-title`,
+        )
         .not('.notice');
 
       filteredLinks = filterLink(totalLinks, p).filter((ele: string) => {
