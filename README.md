@@ -1,4 +1,5 @@
 # 아카피드
+
 > 아카라이브를 쇼츠처럼
 
 아카라이브를 쇼츠처럼 사용하기 위한 유저스크립트입니다. [예시영상](https://arca.live/b/bluearchive/149927310)
@@ -8,15 +9,13 @@
 # 기능
 
 - **슬라이드 게시글 기능**
-  - 새로고침 모드 / 랜더링 모드
 - 게시글 필터링
   - 게시글 탭 필터링 기능
-  - ~~게시글 제목 필터링 기능~~ (개발예정)
+  - 게시글 제목 필터링 기능
 - 시리즈 등록 기능
-  - 시리즈를 슬라이드 형식으로 몰아보기 가능
-  - 시리즈 제목 클릭 (초록색일 경우 등록 완료)
 
 # 설치
+
 > TamperMonkey/크롬을 기준으로 작성되었습니다.
 
 1. [TamperMonkey](https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo?hl=ko) 설치
