@@ -17,7 +17,7 @@ export default function (env, _args) {
   });
   const webpackUserscriptPlugin = new UserscriptPlugin({
     headers: {
-      name: 'ArcaFeed',
+      name: 'ArcaFeed-dev',
       namespace: 'https://github.com/Roharui/ArcaFeed',
       version: env.BUILD_DATE || 'unknown',
       description: 'Use ArcaLive as Shorts',

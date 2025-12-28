@@ -39,7 +39,7 @@ body {
 /* userscript-nav-btn */
 
 ul.userscript-nav {
-  border-right: 1px solid var(--color-text);
+  border-right: 1px solid white;
 }
 
 li.userscript-nav-item > a {

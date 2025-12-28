@@ -1,6 +1,6 @@
 {
   "name": "acalive_tampermonkey",
-  "version": "2.1.0",
+  "version": "2.1.2",
   "main": "main.js",
   "scripts": {
     "dev": "webpack --config webpack.config.dev.js --env GIT_HASH=$(git rev-parse --short HEAD) --env BUILD_DATE=$(date +%Y-%m-%d_%H-%M-%S)",
