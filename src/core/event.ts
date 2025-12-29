@@ -14,6 +14,8 @@ import {
   initDisableSeries,
   toggleArticleFilterModal,
   initCheckModal,
+  initSwiperPage,
+  initSeriesBtnCss,
 } from '@/feature';
 import { checkPageMode } from '@/utils';
 
@@ -63,11 +65,13 @@ class EventManager extends PromiseManager {
   }
 
   enableSeries() {
-    this.addNextPromise(initEnableSeries, () => window.location.reload());
+    this.addNextPromise(initEnableSeries);
+    this.addNextPromise(initSeriesBtnCss, initSwiperPage);
   }
 
   disableSeries() {
-    this.addNextPromise(initDisableSeries, () => window.location.reload());
+    this.addNextPromise(initDisableSeries);
+    this.addNextPromise(initSeriesBtnCss, initSwiperPage);
   }
 
   checkModal() {

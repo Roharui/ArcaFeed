@@ -135,6 +135,17 @@ function createShortcutSeriesDiv(shortCutLinks: SeriesLink[]) {
   };
 }
 
+function initSeriesBtnCss(v: Vault) {
+  $('.series-control-btn.enable-series').css(
+    'opacity',
+    v.isSeriesMode() ? '0.5' : '1',
+  );
+  $('.series-control-btn.disable-series').css(
+    'opacity',
+    !v.isSeriesMode() ? '0.5' : '1',
+  );
+}
+
 function initEnableSeries(p: Vault) {
   // article-series 요소들이 2개 이상이면 첫 번째를 제외한 나머지 삭제
   const articleSeriesElement = $('.article-series').first();
@@ -155,8 +166,13 @@ function initEnableSeries(p: Vault) {
 
 function initDisableSeries(p: Vault) {
   p.seriesList = [];
-  p.activeIndex = p.lastActiveIndex;
+  p.activeIndex = Math.max(0, p.lastActiveIndex);
 
   return p;
 }
-export { initSeriesContent, initEnableSeries, initDisableSeries };
+export {
+  initSeriesContent,
+  initEnableSeries,
+  initDisableSeries,
+  initSeriesBtnCss,
+};

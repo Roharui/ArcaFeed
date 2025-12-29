@@ -1,5 +1,3 @@
-import $ from 'jquery';
-
 import { initFetchArticle, filterLink, parseSearchQuery } from '@/feature';
 
 import type { Vault } from '@/vault';
@@ -8,30 +6,25 @@ import type { PromiseFunc, PromiseFuncResult } from '@/types';
 // ===
 
 function initLink(p: Vault): PromiseFuncResult {
-  if (p.isCurrentMode('ARTICLE') && p.isSeriesMode()) {
-    return initArticleSeriesLink(p.href.articleId);
-  }
-
   if (p.isCurrentMode('ARTICLE')) {
-    return initArticleLinkActive(p.href.articleId);
+    filterLink(p, true);
+
+    if (p.isSeriesMode()) return initArticleSeriesLink(p.href.articleId);
+
+    return initArticleSeriesLink(p.href.articleId);
   }
 
   p.resetArticleList();
 
   if (p.isCurrentMode('CHANNEL')) {
-    return [p, parseSearchQuery, initArticleLinkChannel];
+    return [p, parseSearchQuery, initLinkChannel];
   }
 
   return p;
 }
 
-function initArticleLinkChannel(p: Vault): PromiseFuncResult {
-  const totalLinks = $(
-    `div.article-list > div.list-table.table > a.vrow.column, 
-     div.article-list > div.list-table.hybrid a.title.hybrid-title`,
-  ).not('.notice');
-
-  const filteredLinks = filterLink(totalLinks, p, true);
+function initLinkChannel(p: Vault): PromiseFuncResult {
+  const filteredLinks = filterLink(p, true);
 
   if (filteredLinks.length === 0) {
     return initFetchArticle(p.href.articleId);
@@ -54,13 +47,6 @@ function initArticleSeriesLink(articleId: string): PromiseFunc {
 
 function initArticleLinkActive(articleId: string): PromiseFunc {
   return function articleLinkActive(p: Vault): PromiseFuncResult {
-    const totalLinks = $(
-      `div.article-list > div.list-table.table > a.vrow.column, 
-     div.article-list > div.list-table.hybrid a.title.hybrid-title`,
-    ).not('.notice');
-
-    filterLink(totalLinks, p, true);
-
     p.activeIndex = 0;
 
     if (p.articleList.length === 0) {
@@ -75,8 +61,6 @@ function initArticleLinkActive(articleId: string): PromiseFunc {
     console.log(`Current Article Index: ${p.activeIndex}`);
 
     if (p.activeIndex === -1) {
-      p.articleList = [];
-      p.articleList.push(window.location.href);
       return [p, initFetchArticle(articleId)];
     }
 

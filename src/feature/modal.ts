@@ -1,8 +1,6 @@
 import $ from 'jquery';
 
 import { ArcaFeed } from '@/core';
-
-import { initLink } from '@/feature';
 import { checkNotNull } from '@/utils';
 
 import type { Vault } from '@/vault';

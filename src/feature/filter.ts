@@ -5,11 +5,18 @@ import { getArticleId } from '@/utils';
 import type { Vault } from '@/vault';
 
 function filterLink(
-  rows: JQuery<HTMLElement>,
   p: Vault,
   css: boolean = false,
+  $html?: JQuery<HTMLElement>,
 ): string[] {
   console.log('Filtering links based on article list and filter config...');
+
+  let rowsLocal = ($html ?? $('.root-container'))
+    .find(
+      `div.article-list > div.list-table.table > a.vrow.column, 
+           div.article-list > div.list-table.hybrid a.title.hybrid-title`,
+    )
+    .not('.notice');
 
   const { articleList, articleFilterConfig, href } = p;
 
@@ -28,7 +35,7 @@ function filterLink(
     // Cache tab filter set for faster lookups
     const tabFilterSet = new Set(tabFilter);
 
-    resultRows = rows.toArray().map(function (ele) {
+    resultRows = rowsLocal.toArray().map(function (ele) {
       const $ele = $(ele);
 
       const _tabTypeText = $ele.find('.badge-success').text();
@@ -46,7 +53,9 @@ function filterLink(
       return { $ele, result };
     });
   } else {
-    resultRows = rows.toArray().map((ele) => ({ $ele: $(ele), result: true }));
+    resultRows = rowsLocal
+      .toArray()
+      .map((ele) => ({ $ele: $(ele), result: true }));
   }
 
   return resultRows

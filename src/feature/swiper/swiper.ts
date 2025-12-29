@@ -41,6 +41,12 @@ function initSwiper(p: Vault) {
   $('.nav-control').appendTo('body');
   $('.ad.small-ad').prependTo('.sticky-container');
 
+  return initSwiperPage;
+}
+
+function initSwiperPage(p: Vault) {
+  if (p.swiper) p.swiper.destroy(true, true);
+
   p.swiper = new Swiper(
     '.swiper',
     Object.assign(swiperOptions, {
@@ -59,4 +65,4 @@ function initSwiper(p: Vault) {
   return p;
 }
 
-export { initSwiper };
+export { initSwiper, initSwiperPage };
