@@ -11,7 +11,7 @@ function initLink(p: Vault): PromiseFuncResult {
 
     if (p.isSeriesMode()) return initArticleSeriesLink(p.href.articleId);
 
-    return initArticleSeriesLink(p.href.articleId);
+    return initArticleLinkActive(p.href.articleId);
   }
 
   p.resetArticleList();
