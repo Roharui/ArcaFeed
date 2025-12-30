@@ -78,7 +78,7 @@ function initModal(p: Vault): void | PromiseFunc {
 
   dialog.find('#category-all').append(spanAll);
 
-  title.forEach((tag) => createExcludeSpan(tag));
+  title.forEach((tag) => createExcludeSpan(tag, dialog));
 
   dialog.find('#check-btn').on('click', () => ArcaFeed.runEvent('checkModal'));
   dialog.find('#cancel-btn').on('click', () => toggleArticleFilterModal());
@@ -89,7 +89,7 @@ function initModal(p: Vault): void | PromiseFunc {
 
     const excludeTags = excludeTagsStr.split(',') || [];
 
-    excludeTags.forEach((tag) => createExcludeSpan(tag));
+    excludeTags.forEach((tag) => createExcludeSpan(tag, dialog));
 
     $('#exclude-title').val('');
   });
@@ -97,7 +97,7 @@ function initModal(p: Vault): void | PromiseFunc {
   $('body').append(dialog);
 }
 
-function createExcludeSpan(text: string) {
+function createExcludeSpan(text: string, $dialog: JQuery<HTMLElement>) {
   const $ele = $(`
     <label class="exclude-title-tag" data-text="${text}">
       <span class="exclude-title-tag">${text}</span>
@@ -106,7 +106,7 @@ function createExcludeSpan(text: string) {
 
   $ele.on('click', () => $ele.remove());
 
-  $ele.appendTo('.exclude-title-list');
+  $dialog.find('.exclude-title-list').append($ele);
 }
 
 function createCategorySpan(
@@ -142,7 +142,7 @@ function initCheckModal(p: Vault) {
       return [...prev, r];
     }, []);
 
-  const title = $('.exclude-title-tag')
+  const title = $('label.exclude-title-tag')
     .toArray()
     .map((ele): string => $(ele).attr('data-text') as string);
 
