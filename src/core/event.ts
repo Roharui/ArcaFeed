@@ -31,7 +31,6 @@ class EventManager extends PromiseManager {
     this.addNextPromise(addVersionInfo, checkPageMode);
     this.addNextPromise(
       initLink,
-      initModal,
       initButton,
       initEvent,
       initSeriesContent,
@@ -74,6 +73,10 @@ class EventManager extends PromiseManager {
   disableSeries() {
     this.addNextPromise(initDisableSeries);
     this.addNextPromise(initSeriesBtnCss, initSwiperPage);
+  }
+
+  showModal() {
+    this.addNextPromise(initModal);
   }
 
   checkModal() {

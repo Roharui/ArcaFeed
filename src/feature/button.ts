@@ -2,8 +2,6 @@ import $ from 'jquery';
 
 import { ArcaFeed } from '@/core';
 
-import { toggleArticleFilterModal } from '@/feature';
-
 import type { Vault } from '@/vault';
 
 const initButton = (p: Vault) => {
@@ -13,10 +11,8 @@ const initButton = (p: Vault) => {
     ArcaFeed.runEvent('toNextLinkForce'),
   );
 
-  const filterPageBtn = createArcaFeedBtn(
-    'filter',
-    'ion-ios-gear',
-    toggleArticleFilterModal,
+  const filterPageBtn = createArcaFeedBtn('filter', 'ion-ios-gear', () =>
+    ArcaFeed.runEvent('showModal'),
   );
 
   const btns = [];

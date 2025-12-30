@@ -7,7 +7,7 @@ import type { Vault } from '@/vault';
 import type { ArticleFilterImpl, PromiseFunc } from '@/types';
 
 const NEXT_PAGE_MODAL_HTML = `
-<div id="dialog" class="helper-modal" style="display: none">
+<div id="dialog" class="helper-modal">
   <div class="helper-modal-body">
     <input id="filter" class="helper-modal-tab-radio" type="radio" name="helper-modal-tab-group" checked/>
     <label class="helper-modal-tab-label" for="filter">🔍</label>
@@ -166,7 +166,7 @@ function initCheckModal(p: Vault) {
 }
 
 function toggleArticleFilterModal() {
-  $('#dialog').toggle();
+  $('#dialog').remove();
 }
 
 export { initModal, initCheckModal, toggleArticleFilterModal };
