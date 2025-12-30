@@ -38,8 +38,6 @@ function initSwiper(p: Vault) {
 
   $('body').append($(swiper));
   $('.root-container').appendTo('.slide-active');
-  $('.nav-control').appendTo('body');
-  $('.ad.small-ad').prependTo('.sticky-container');
 
   return initSwiperPage;
 }

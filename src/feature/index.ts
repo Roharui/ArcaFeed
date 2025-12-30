@@ -7,3 +7,4 @@ export * from './series';
 export * from './version';
 export * from './swiper';
 export * from './article';
+export * from './ui';

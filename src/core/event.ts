@@ -16,6 +16,7 @@ import {
   initCheckModal,
   initSwiperPage,
   initSeriesBtnCss,
+  initUi,
 } from '@/feature';
 import { checkPageMode } from '@/utils';
 
@@ -34,6 +35,7 @@ class EventManager extends PromiseManager {
       initButton,
       initEvent,
       initSeriesContent,
+      initUi,
     );
     this.addNextPromise(initSwiper);
   }
