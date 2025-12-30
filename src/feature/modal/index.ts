@@ -9,18 +9,26 @@ import type { ArticleFilterImpl, PromiseFunc } from '@/types';
 const NEXT_PAGE_MODAL_HTML = `
 <div id="dialog" class="helper-modal" style="display: none">
   <div class="helper-modal-body">
-    <div id="category-all"></div>
-    <div id="category"></div>
-    <div class="exclude-title-list"></div>
-    <div class="exclude-title-wrapper">
-      <span class="helper-modal-btns exclude-title-input-wrapper">
-        <input type="text" id="exclude-title" placeholder="차단 제목 입력..."/>
-        <input type="button" id="exclude-btn" class="helper-button button" value="입력"/>
-      </span>
+    <input id="filter" class="helper-modal-tab-radio" type="radio" name="helper-modal-tab-group" checked/>
+    <label class="helper-modal-tab-label" for="filter">🔍</label>
+    <input id="ui" class="helper-modal-tab-radio" type="radio" name="helper-modal-tab-group" />
+    <label class="helper-modal-tab-label" for="ui">🪟</label>
+    <div class="helper-modal-tab helper-modal-filter">
+      <div id="category-all"></div>
+      <div id="category"></div>
+      <div class="exclude-title-list"></div>
+      <div class="exclude-title-wrapper">
+        <span class="helper-modal-btns exclude-title-input-wrapper">
+          <input type="text" id="exclude-title" placeholder="차단 제목 입력..."/>
+          <input type="button" id="exclude-btn" class="helper-button button" value="입력"/>
+        </span>
+      </div>
+      <div id="modal-buttons" class="helper-modal-btns f-right" style="border-bottom: 0px none;">
+        <input id="check-btn" class="helper-button button" type="button" value="확인"/>
+        <input id="cancel-btn" class="helper-button button" type="button" value="취소"/>
+      </div>
     </div>
-    <div id="modal-buttons" class="helper-modal-btns f-right" style="border-bottom: 0px none;">
-      <input id="check-btn" class="helper-button button" type="button" value="확인"/>
-      <input id="cancel-btn" class="helper-button button" type="button" value="취소"/>
+    <div class="helper-modal-tab helper-modal-ui"> 
     </div>
   </div>
 </div>
