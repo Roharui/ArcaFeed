@@ -12,11 +12,11 @@ import {
   nextLinkForce,
   initEnableSeries,
   initDisableSeries,
-  toggleArticleFilterModal,
-  initCheckModal,
   initSwiperPage,
   initSeriesBtnCss,
   initUi,
+  initCloseModal,
+  initCheckFilterModal,
 } from '@/feature';
 import { checkPageMode } from '@/utils';
 
@@ -26,6 +26,8 @@ class EventManager extends PromiseManager {
   constructor() {
     super();
   }
+
+  // Init Event
 
   init() {
     this.addNextPromise(addVersionInfo, checkPageMode);
@@ -38,6 +40,8 @@ class EventManager extends PromiseManager {
     );
     this.addNextPromise(initSwiper);
   }
+
+  // Keyboard Events
 
   toNextPage() {
     this.addNextPromise((p: Vault) => {
@@ -53,6 +57,8 @@ class EventManager extends PromiseManager {
     });
   }
 
+  // Page Events
+
   toNextLinkForce() {
     this.addNextPromise(nextLinkForce);
   }
@@ -65,6 +71,8 @@ class EventManager extends PromiseManager {
     this.addNextPromise(toLink('PREV'));
   }
 
+  // Series Events
+
   enableSeries() {
     this.addNextPromise(initEnableSeries);
     this.addNextPromise(initSeriesBtnCss, initSwiperPage);
@@ -75,14 +83,22 @@ class EventManager extends PromiseManager {
     this.addNextPromise(initSeriesBtnCss, initSwiperPage);
   }
 
+  // Modal Events
+
   showModal() {
     this.addNextPromise(initModal);
   }
 
-  checkModal() {
-    this.addNextPromise(initCheckModal, initLink, () =>
-      toggleArticleFilterModal(),
-    );
+  checkFilterModal() {
+    this.addNextPromise(initCheckFilterModal, initLink, initCloseModal);
+  }
+
+  checkUIModal() {
+    this.addNextPromise(initUi, initCloseModal);
+  }
+
+  closeModal() {
+    this.addNextPromise(initCloseModal);
   }
 }
 

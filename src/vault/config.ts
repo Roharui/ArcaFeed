@@ -1,10 +1,20 @@
-import type { ArticleFilterConfigImpl, ConfigImpl } from '@/types';
+import type {
+  ArticleFilterConfigImpl,
+  UISettingArticle,
+  UISettingChannel,
+} from '@/types';
 
-class Config implements ConfigImpl {
+class Config {
   seriesList: string[] = [];
   articleList: string[] = [];
 
   articleFilterConfig: ArticleFilterConfigImpl = {};
+
+  articleUiSetting: UISettingArticle = {
+    showNavBtn: true,
+    showArticleList: true,
+  };
+  channelUiSetting: UISettingChannel = {};
 
   searchQuery: string = '';
   lastActiveIndex: number = -1;
@@ -30,6 +40,16 @@ class Config implements ConfigImpl {
     const seriesListStr = localStorage.getItem('seriesList');
     this.seriesList = seriesListStr ? JSON.parse(seriesListStr) : [];
 
+    const articleUiSettingStr = localStorage.getItem('articleUiSetting');
+    if (articleUiSettingStr) {
+      this.articleUiSetting = JSON.parse(articleUiSettingStr);
+    }
+
+    const channelUiSettingStr = localStorage.getItem('channelUiSetting');
+    if (channelUiSettingStr) {
+      this.channelUiSetting = JSON.parse(channelUiSettingStr);
+    }
+
     this.searchQuery = localStorage.getItem('searchQuery') || '';
     this.lastActiveIndex = parseInt(
       localStorage.getItem('lastActiveIndex') || '-1',
@@ -40,6 +60,15 @@ class Config implements ConfigImpl {
     localStorage.setItem(
       'articleFilterConfig',
       JSON.stringify(this.articleFilterConfig),
+    );
+
+    localStorage.setItem(
+      'articleUiSetting',
+      JSON.stringify(this.articleUiSetting),
+    );
+    localStorage.setItem(
+      'channelUiSetting',
+      JSON.stringify(this.channelUiSetting),
     );
 
     localStorage.setItem('articleList', JSON.stringify(this.articleList));

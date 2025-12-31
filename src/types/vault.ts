@@ -1,5 +1,4 @@
-type ArticleShowMode = 'Article' | 'Comment';
-type PageMode = 'NEXT' | 'PREV' | 'ALL';
+type PageMode = 'NEXT' | 'PREV';
 
 interface HrefImpl {
   mode: 'HOME' | 'CHANNEL' | 'ARTICLE' | 'OTHER' | 'NOT_CHECKED';
@@ -17,19 +16,18 @@ interface ArticleFilterConfigImpl {
   [channelId: string]: ArticleFilterImpl;
 }
 
-interface ConfigImpl {
-  articleList: string[];
-  seriesList: string[];
-
-  articleFilterConfig: ArticleFilterConfigImpl;
-  searchQuery: string;
+interface UISettingArticle {
+  showNavBtn: boolean;
+  showArticleList: boolean;
 }
 
+interface UISettingChannel {}
+
 export type {
-  ArticleShowMode,
   HrefImpl,
   ArticleFilterConfigImpl,
   ArticleFilterImpl,
-  ConfigImpl,
   PageMode,
+  UISettingArticle,
+  UISettingChannel,
 };
