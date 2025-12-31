@@ -44,6 +44,8 @@ export default function (env, _args) {
     mode: 'development',
     entry: './src/index.ts',
 
+    watch: env.DEVICE !== 'mobile',
+
     output: {
       path: path.resolve(__dirname, 'dist'),
       filename: 'dist.js',
