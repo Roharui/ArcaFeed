@@ -1,5 +1,7 @@
 import $ from 'jquery';
 
+import '@css/series.css';
+
 import { ArcaFeed } from '@/core';
 
 import type { Vault } from '@/vault';

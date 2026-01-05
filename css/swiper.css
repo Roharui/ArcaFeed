@@ -1,0 +1,43 @@
+/* swiper */
+
+.swiper {
+  overflow: clip;
+}
+
+.swiper-wrapper {
+  align-items: flex-start;
+}
+
+.swiper-slide {
+  outline: none;
+}
+
+.slide-empty {
+  position: sticky;
+  height: 100vh;
+  top: 0;
+  align-self: flex-start;
+}
+
+.loader-container {
+  position: relative;
+  top: calc(50% - 25px);
+  width: 50px;
+  margin: auto;
+}
+
+.custom-loader {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 8px solid;
+  border-color: #e4e4ed;
+  border-right-color: #766df4;
+  animation: s2 1s infinite linear;
+}
+
+@keyframes s2 {
+  to {
+    transform: rotate(1turn);
+  }
+}

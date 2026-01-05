@@ -1,0 +1,21 @@
+/* series */
+
+.series-control-btns {
+  display: flex;
+  justify-content: space-around;
+}
+
+.series-control-btn {
+  cursor: pointer;
+  border-radius: 5px;
+
+  padding: 5px;
+}
+
+.series-control-btn.enable-series {
+  background-color: var(--color-primary-theme);
+}
+
+.series-control-btn.disable-series {
+  background-color: var(--color-link-broken);
+}

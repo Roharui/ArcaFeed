@@ -1,0 +1,15 @@
+/* modal ui */
+
+.ui-title {
+  font-weight: bold;
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+}
+
+.helper-modal-ui label {
+  width: 100%;
+}
+
+.helper-modal-ui label > input {
+  float: right;
+}

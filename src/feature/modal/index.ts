@@ -1,5 +1,7 @@
 import $ from 'jquery';
 
+import '@css/modal.css';
+
 import { createArticleFilterModal } from './filterUi';
 
 import type { Vault } from '@/vault';

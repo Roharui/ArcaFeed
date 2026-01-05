@@ -2,6 +2,8 @@
 
 import $ from 'jquery';
 
+import '@css/swiper.css';
+
 import Swiper from 'swiper';
 
 import { ArcaFeed } from '@/core';

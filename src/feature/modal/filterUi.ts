@@ -1,5 +1,7 @@
 import $ from 'jquery';
 
+import '@css/filter.css';
+
 import { ArcaFeed } from '@/core';
 import { checkNotNull } from '@/utils';
 
