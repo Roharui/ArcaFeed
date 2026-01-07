@@ -16,18 +16,4 @@ interface ArticleFilterConfigImpl {
   [channelId: string]: ArticleFilterImpl;
 }
 
-interface UISettingArticle {
-  showNavBtn: boolean;
-  showArticleList: boolean;
-}
-
-interface UISettingChannel {}
-
-export type {
-  HrefImpl,
-  ArticleFilterConfigImpl,
-  ArticleFilterImpl,
-  PageMode,
-  UISettingArticle,
-  UISettingChannel,
-};
+export type { HrefImpl, ArticleFilterConfigImpl, ArticleFilterImpl, PageMode };

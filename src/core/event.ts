@@ -46,14 +46,12 @@ class EventManager extends PromiseManager {
   toNextPage() {
     this.addNextPromise((p: Vault) => {
       p.swiper!.slideNext();
-      return;
     });
   }
 
   toPrevPage() {
     this.addNextPromise((p: Vault) => {
       p.swiper!.slidePrev();
-      return;
     });
   }
 

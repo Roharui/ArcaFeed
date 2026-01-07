@@ -8,7 +8,6 @@ import type { Vault } from '@/vault';
 
 const MODAL_UI_TAB = `
 <div class="helper-modal-tab helper-modal-ui"> 
-  <div class="ui-title">%title%</div>
   <div id="ui-buttons" class="helper-modal-btns f-right" style="border-bottom: 0px none;">
     <input id="check-btn" class="helper-button button" type="button" value="확인"/>
     <input id="cancel-btn" class="helper-button button" type="button" value="취소"/>

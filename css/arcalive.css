@@ -85,9 +85,3 @@ li.userscript-nav-item > a {
 .content-wrapper::after {
   content: none !important;
 }
-
-/* temp */
-
-.nav-control {
-  display: none !important;
-}
