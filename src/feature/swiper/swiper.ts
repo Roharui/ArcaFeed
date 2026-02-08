@@ -27,9 +27,7 @@ const swiperOptions: SwiperOptions = {
 
 // ===
 
-function initSwiper(p: Vault) {
-  if (!p.isCurrentMode('ARTICLE')) return;
-
+function initSwiper() {
   const swiper = `<div class="swiper">
   <div class="swiper-wrapper">
   <div class="swiper-slide slide-empty"><div class="loader-container"><div class="custom-loader"></div></div></div>
@@ -50,13 +48,16 @@ function initSwiperPage(p: Vault) {
   p.swiper = new Swiper(
     '.swiper',
     Object.assign(swiperOptions, {
+      allowSlideNext: p.isCurrentMode('CHANNEL') || p.isNextPageActive(),
       allowSlidePrev: p.isPrevPageActive(),
-      allowSlideNext: p.isNextPageActive(),
     }),
   );
 
-  p.swiper.on('slideNextTransitionEnd', () =>
-    ArcaFeed.runEvent('renderNextPage'),
+  p.swiper.on(
+    'slideNextTransitionEnd',
+    p.isCurrentMode('CHANNEL')
+      ? () => ArcaFeed.runEvent('toNextLinkForce')
+      : () => ArcaFeed.runEvent('renderNextPage'),
   );
   p.swiper.on('slidePrevTransitionEnd', () =>
     ArcaFeed.runEvent('renderPrevPage'),

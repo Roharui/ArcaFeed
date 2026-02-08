@@ -32,7 +32,7 @@ body {
 
 @media screen and (min-width: 1024px) {
   .body .content-wrapper {
-    max-width: 800px !important;
+    max-width: 650px !important;
   }
 }
 
@@ -84,4 +84,18 @@ li.userscript-nav-item > a {
 
 .content-wrapper::after {
   content: none !important;
+}
+
+/* No Iframe Event */
+
+iframe {
+  pointer-events: none !important;
+}
+
+/* Test Area */
+
+.col-time,
+.col-id,
+.col-rate {
+  display: none !important;
 }

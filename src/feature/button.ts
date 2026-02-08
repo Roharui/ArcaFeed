@@ -17,14 +17,7 @@ const initButton = (p: Vault) => {
 
   const btns = [];
 
-  if (p.isCurrentMode('CHANNEL')) {
-    btns.push(filterPageBtn);
-    btns.push(nextPageBtn);
-  }
-
-  if (p.isCurrentMode('ARTICLE')) {
-    btns.push(filterPageBtn);
-  }
+  btns.push(filterPageBtn);
 
   $('ul.nav.navbar-nav').last().before(btnWrapper(btns));
 };
