@@ -7,8 +7,10 @@ import type { Vault } from '@/vault';
 const initButton = (p: Vault) => {
   if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
 
-  const nextPageBtn = createArcaFeedBtn('next', 'ion-ios-arrow-forward', () =>
-    ArcaFeed.runEvent('toNextLinkForce'),
+  const { disableSwiper } = p.articleFilterConfig[p.href.channelId] || { disableSwiper: false };
+
+  const toggleSwiper = createArcaFeedBtn('next', disableSwiper ? 'ion-ios-locked' : 'ion-ios-arrow-forward', () =>
+    ArcaFeed.runEvent('toggleSwiper'),
   );
 
   const filterPageBtn = createArcaFeedBtn('filter', 'ion-ios-gear', () =>
@@ -17,6 +19,7 @@ const initButton = (p: Vault) => {
 
   const btns = [];
 
+  btns.push(toggleSwiper);
   btns.push(filterPageBtn);
 
   $('ul.nav.navbar-nav').last().before(btnWrapper(btns));

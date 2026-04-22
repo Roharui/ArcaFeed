@@ -58,7 +58,7 @@ function createArticleFilterModal(p: Vault) {
           .prop(
             'checked',
             $filterTab.find('.ele-category').length ===
-              $filterTab.find('.ele-category:checked').length,
+            $filterTab.find('.ele-category:checked').length,
           ),
       ),
     )
@@ -156,6 +156,7 @@ function initCheckFilterModal(p: Vault) {
   const pageFilter: ArticleFilterImpl = {
     tab,
     title: title.length > 0 ? title : [],
+    disableSwiper: false,
   };
 
   p.articleFilterConfig[channelId] = pageFilter;

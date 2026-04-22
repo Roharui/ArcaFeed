@@ -88,7 +88,7 @@ li.userscript-nav-item > a {
 
 /* No Iframe Event */
 
-iframe {
+iframe.tweet {
   pointer-events: none !important;
 }
 

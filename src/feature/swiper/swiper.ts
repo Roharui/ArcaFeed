@@ -27,7 +27,9 @@ const swiperOptions: SwiperOptions = {
 
 // ===
 
-function initSwiper() {
+function initSwiper(p: Vault) {
+  if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
+
   const swiper = `<div class="swiper">
   <div class="swiper-wrapper">
   <div class="swiper-slide slide-empty"><div class="loader-container"><div class="custom-loader"></div></div></div>
@@ -45,11 +47,14 @@ function initSwiper() {
 function initSwiperPage(p: Vault) {
   if (p.swiper) p.swiper.destroy(true, true);
 
+  const { disableSwiper } = p.articleFilterConfig[p.href.channelId] || { disableSwiper: false };
+
   p.swiper = new Swiper(
     '.swiper',
     Object.assign(swiperOptions, {
       allowSlideNext: p.isCurrentMode('CHANNEL') || p.isNextPageActive(),
       allowSlidePrev: p.isPrevPageActive(),
+      enabled: !disableSwiper,
     }),
   );
 

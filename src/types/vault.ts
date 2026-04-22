@@ -10,6 +10,7 @@ interface HrefImpl {
 interface ArticleFilterImpl {
   tab: string[];
   title: string[];
+  disableSwiper: boolean;
 }
 
 interface ArticleFilterConfigImpl {

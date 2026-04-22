@@ -98,6 +98,28 @@ class EventManager extends PromiseManager {
   closeModal() {
     this.addNextPromise(initCloseModal);
   }
+
+  // toggle Swiper
+
+  toggleSwiper() {
+    this.addNextPromise((p: Vault) => {
+      if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
+
+      const pageFilter = p.articleFilterConfig[p.href.channelId] || {
+        tab: [],
+        title: [],
+        disableSwiper: false,
+      };
+
+      pageFilter.disableSwiper = !pageFilter.disableSwiper;
+
+      p.articleFilterConfig[p.href.channelId] = pageFilter;
+
+      p.saveConfig();
+
+      window.location.reload();
+    });
+  }
 }
 
 export { EventManager };
