@@ -4,6 +4,12 @@ import { ArcaFeed } from '@/core';
 
 import type { Vault } from '@/vault';
 
+function initDisableInputEvent(_: Vault): void {
+  $('input, textarea').on('keydown', function (e) {
+    e.stopPropagation();
+  });
+}
+
 function initChannelEvent(_: Vault): void {
   $(document).on('keydown', (e) => {
     if (e.key === 'ArrowRight') ArcaFeed.runEvent('toNextLinkForce');
@@ -18,6 +24,7 @@ function initArticleEvent(_: Vault): void {
 }
 
 const initEvent = (p: Vault) => {
+  initDisableInputEvent(p);
   if (p.isCurrentMode('CHANNEL')) {
     initChannelEvent(p);
   } else if (p.isCurrentMode('ARTICLE')) {
