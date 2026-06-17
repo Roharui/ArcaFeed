@@ -9,8 +9,9 @@ function initUi(p: Vault): void {
 
   $('.board-category.hide-scrollbar').addClass('swiper-no-swiping');
 
-  if (p.isCurrentMode('SCRAP') || p.isSeriesMode) {
+  if (p.isSeriesMode) {
     $('div.included-article-list').hide();
+    $('div.btns-board').hide();
   }
 
   if (p.isCurrentMode('ARTICLE')) {
