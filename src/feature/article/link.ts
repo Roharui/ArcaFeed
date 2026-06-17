@@ -25,8 +25,8 @@ function initLink(p: Vault): PromiseFuncResult {
 }
 
 async function initLinkChannel(p: Vault): Promise<PromiseFuncResult> {
-  p.isSeriesMode = true;
   if (p.isCurrentMode('SCRAP')) {
+    p.isSeriesMode = true;
     return initLinkScrap(p);
   }
 
