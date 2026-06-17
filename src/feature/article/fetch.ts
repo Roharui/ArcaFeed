@@ -50,7 +50,9 @@ function initFetchArticle(articleId: string): PromiseFunc {
 
         p.articleList.push(...filteredLinks);
 
-        return p;
+        if (!p.isCurrentMode('SCRAP')) {
+          return p;
+        }
       }
 
       const articlePage = $html.find('.page-item.active');

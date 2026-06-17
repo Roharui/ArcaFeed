@@ -94,7 +94,11 @@ iframe.tweet {
 
 /* Test Area */
 
-.col-id,
-.col-rate {
+.table .col-id,
+.table .col-rate {
   display: none !important;
 }
+
+.article-list.admin .vrow-bottom {
+  display: none !important;
+} 

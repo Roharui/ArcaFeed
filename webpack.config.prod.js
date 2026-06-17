@@ -18,6 +18,7 @@ export default function (_env, _args) {
     output: {
       path: path.resolve(__dirname, 'dist'),
       filename: 'ArcaFeed.user.js',
+      clean: true,
     },
 
     resolve: {

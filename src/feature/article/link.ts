@@ -1,4 +1,5 @@
 import { initFetchArticle, filterLink, parseSearchQuery } from '@/feature';
+import { sleep } from '@/utils';
 
 import type { Vault } from '@/vault';
 import type { PromiseFunc, PromiseFuncResult } from '@/types';
@@ -23,7 +24,11 @@ function initLink(p: Vault): PromiseFuncResult {
   return p;
 }
 
-function initLinkChannel(p: Vault): PromiseFuncResult {
+async function initLinkChannel(p: Vault): Promise<PromiseFuncResult> {
+  if (p.isCurrentMode('SCRAP')) {
+    return initLinkScrap(p);
+  }
+
   const filteredLinks = filterLink(p, true);
 
   if (filteredLinks.length === 0) {
@@ -33,6 +38,10 @@ function initLinkChannel(p: Vault): PromiseFuncResult {
   p.articleList = filteredLinks;
 
   return p;
+}
+
+async function initLinkScrap(p: Vault): Promise<PromiseFuncResult> {
+  return initFetchArticle(p.href.articleId);
 }
 
 function initArticleLinkActive(articleId: string): PromiseFunc {
@@ -55,6 +64,10 @@ function initArticleLinkActive(articleId: string): PromiseFunc {
     }
 
     if (p.articleList.length - p.activeIndex <= 1) {
+      if (p.isSeriesMode) {
+        return p;
+      }
+
       return [p, initFetchArticle(articleId)];
     }
 

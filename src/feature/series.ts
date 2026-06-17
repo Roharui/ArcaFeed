@@ -40,6 +40,28 @@ function getStorageKey(articleKey: string, key: string): string {
   return `arcaFeed:${articleKey}:${key}`;
 }
 
+function normalizeArticleList(articleList: string[]): string[] {
+  return articleList.map((href) => {
+    const url = new URL(href, window.location.origin);
+
+    return url.pathname;
+  });
+}
+
+function normalizeSearchQuery(searchQuery: string, articleKey: string): string {
+  const searchParams = new URLSearchParams(
+    searchQuery.startsWith('?') ? searchQuery.slice(1) : searchQuery,
+  );
+
+  if (articleKey) {
+    searchParams.set('articleKey', articleKey);
+  }
+
+  const normalizedSearch = searchParams.toString();
+
+  return normalizedSearch ? `?${normalizedSearch}` : '';
+}
+
 function copySeriesStorage(
   sourceArticleKey: string,
   targetArticleKey: string,
@@ -47,21 +69,33 @@ function copySeriesStorage(
   activeIndex: number,
   searchQuery: string,
 ) {
-  const copyKeys = ['articleFilterConfig'];
+  const articleFilterConfig = localStorage.getItem(
+    getStorageKey(sourceArticleKey, 'articleFilterConfig'),
+  );
 
-  copyKeys.forEach((key) => {
-    const value = localStorage.getItem(getStorageKey(sourceArticleKey, key));
+  if (articleFilterConfig !== null) {
+    localStorage.setItem(
+      getStorageKey(targetArticleKey, 'articleFilterConfig'),
+      articleFilterConfig,
+    );
+  }
 
-    if (value !== null) {
-      localStorage.setItem(getStorageKey(targetArticleKey, key), value);
-    }
-  });
+  localStorage.setItem(getStorageKey(targetArticleKey, 'seriesMode'), 'true');
+
+  const normalizedArticleList = normalizeArticleList(articleList);
+  const normalizedSearchQuery = normalizeSearchQuery(
+    searchQuery,
+    targetArticleKey,
+  );
 
   localStorage.setItem(
     getStorageKey(targetArticleKey, 'articleList'),
-    JSON.stringify(articleList),
+    JSON.stringify(normalizedArticleList),
   );
-  localStorage.setItem(getStorageKey(targetArticleKey, 'searchQuery'), searchQuery);
+  localStorage.setItem(
+    getStorageKey(targetArticleKey, 'searchQuery'),
+    normalizedSearchQuery,
+  );
   localStorage.setItem(
     getStorageKey(targetArticleKey, 'lastActiveIndex'),
     activeIndex.toString(),

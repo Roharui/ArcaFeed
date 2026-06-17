@@ -1,6 +1,7 @@
 import type { ArticleFilterConfigImpl } from '@/types';
 
 const ARTICLE_KEY_CACHE_LIMIT = 5;
+const ARTICLE_FILTER_CONFIG_STORAGE_KEY = 'arcaFeed:articleFilterConfig';
 const RECENT_ARTICLE_KEYS_STORAGE_KEY = 'arcaFeed:recentArticleKeys';
 
 class Config {
@@ -9,6 +10,8 @@ class Config {
   articleList: string[] = [];
 
   articleFilterConfig: ArticleFilterConfigImpl = {};
+
+  isSeriesMode: boolean = false;
 
   searchQuery: string = '';
   lastActiveIndex: number = -1;
@@ -105,13 +108,17 @@ class Config {
   loadConfig(): void {
     this.articleKey = this.ensureArticleKey();
 
-    const articleFilterConfigStr = this.getStorageItem('articleFilterConfig');
+    const articleFilterConfigStr =
+      localStorage.getItem(ARTICLE_FILTER_CONFIG_STORAGE_KEY) ||
+      localStorage.getItem(this.getStorageKey('articleFilterConfig'));
     this.articleFilterConfig = articleFilterConfigStr
       ? JSON.parse(articleFilterConfigStr)
       : {};
 
     const articleListStr = this.getStorageItem('articleList');
     this.articleList = articleListStr ? JSON.parse(articleListStr) : [];
+
+    this.isSeriesMode = this.getStorageItem('seriesMode') === 'true';
 
     this.searchQuery = this.getStorageItem('searchQuery') || '';
     this.lastActiveIndex = parseInt(
@@ -122,13 +129,14 @@ class Config {
   }
 
   saveConfig(): void {
-    this.setStorageItem(
-      'articleFilterConfig',
+    localStorage.setItem(
+      ARTICLE_FILTER_CONFIG_STORAGE_KEY,
       JSON.stringify(this.articleFilterConfig),
     );
 
     this.setStorageItem('articleList', JSON.stringify(this.articleList));
 
+    this.setStorageItem('seriesMode', this.isSeriesMode.toString());
     this.setStorageItem('searchQuery', this.searchQuery);
     this.pruneArticleKeyCaches();
   }

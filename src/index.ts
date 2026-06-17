@@ -1,4 +1,4 @@
-import '@swiper/swiper.css';
+import '@css/swiper.css';
 import '@css/arcalive.css';
 
 import { ArcaFeed } from '@/core';

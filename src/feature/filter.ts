@@ -19,6 +19,24 @@ function filterLink(
     )
     .not('.notice');
 
+  const articleKey = p.href.articleKey;
+
+  if (articleKey) {
+    rowsLocal.toArray().forEach((ele) => {
+      const $ele = $(ele);
+      const href = $ele.attr('href');
+
+      if (!href) return;
+
+      const url = new URL(href, window.location.origin);
+
+      if (url.searchParams.get('articleKey') !== articleKey) {
+        url.searchParams.set('articleKey', articleKey);
+        $ele.attr('href', `${url.pathname}${url.search}`);
+      }
+    });
+  }
+
   const { articleList, articleFilterConfig, href } = p;
 
   // Use Set for O(1) lookup instead of O(n) indexOf on comma-separated string
