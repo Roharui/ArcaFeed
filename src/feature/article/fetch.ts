@@ -8,14 +8,32 @@ import { fetchUrl } from '@/utils/fetch';
 import type { PromiseFunc } from '@/types';
 import type { Vault } from '@/vault';
 
+function getInitialFetchPageUrl(p: Vault, articleId: string): string {
+  if (p.isCurrentMode('SCRAP')) {
+    return `/u/scrap_list${p.searchQuery}`;
+  }
+
+  return `${articleId}${p.searchQuery}`;
+}
+
+function getFetchUrl(pageUrl: string): string {
+  if (pageUrl.startsWith('http')) {
+    const parsedUrl = new URL(pageUrl);
+    return `${parsedUrl.pathname}${parsedUrl.search}`;
+  }
+
+  return pageUrl;
+}
+
 function initFetchArticle(articleId: string): PromiseFunc {
   return async function fetchArticle(p: Vault) {
-    let articlePageUrl: string = articleId + p.searchQuery;
+    let articlePageUrl: string = getInitialFetchPageUrl(p, articleId);
+    const basePagePath = p.isCurrentMode('SCRAP') ? '/u/scrap_list' : articleId;
     let filteredLinks: string[] = [];
     let count: number = 0;
 
     while (count <= 10) {
-      const searchUrl = articlePageUrl.replace('https://arca.live', '');
+      const searchUrl = getFetchUrl(articlePageUrl);
 
       console.log(`Fetching article page: ${searchUrl}`);
 
@@ -45,7 +63,9 @@ function initFetchArticle(articleId: string): PromiseFunc {
         return p;
       }
 
-      articlePageUrl = tempUrl;
+      articlePageUrl = tempUrl.startsWith('?')
+        ? `${basePagePath}${tempUrl}`
+        : tempUrl;
 
       console.log(
         `No articles found on page ${articlePageUrl}, trying page...`,

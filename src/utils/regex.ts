@@ -6,6 +6,7 @@ import { getRegexMatchByIndex, getRegexMatchByIndexTry } from '@/utils';
 const homePageRegex = /arca\.live\/?$/;
 const channelPageRegex = /b\/[a-zA-Z0-9]+(\?|\?.+)?$/;
 const articlePageRegex = /b\/([A-Za-z0-9])+\/[0-9]+(\?|\?.+)?$/;
+const scrapPageRegex = /\/u\/scrap_list(?:\/?|\?.+)?$/i;
 
 // Optimized: Use capturing groups instead of lookbehind/lookahead for better performance
 const channelAndArticleIdRegex = /\/b\/([A-Za-z0-9]+)(?:\/([0-9]+))?(\?.+)?/;
@@ -21,6 +22,9 @@ function getArticleId(href: string): string {
 
 function parseHref(href?: string) {
   const realHref = href || window.location.href;
+  const realUrl = new URL(realHref);
+  const search = realUrl.search;
+  const articleKey = new URLSearchParams(search).get('articleKey') || '';
 
   console.log('Checking page mode for href:', realHref);
 
@@ -34,7 +38,7 @@ function parseHref(href?: string) {
     const articleId = getRegexMatchByIndex(matchArr, 2); // Changed from 1 to 2 for capturing group
     const search = getRegexMatchByIndexTry(matchArr, 3, ''); // Changed from 2 to 3 for capturing group
 
-    hrefObj = { mode: 'ARTICLE', channelId, articleId, search };
+    hrefObj = { mode: 'ARTICLE', channelId, articleId, articleKey, search };
   }
   // CHANNEL: /b/{channelId}
   else if (channelPageRegex.test(realHref)) {
@@ -43,7 +47,17 @@ function parseHref(href?: string) {
     const channelId = getRegexMatchByIndex(matchArr, 1); // Changed from 0 to 1 for capturing group
     const search = getRegexMatchByIndexTry(matchArr, 3, ''); // Changed from 1 to 3 for capturing group
 
-    hrefObj = { mode: 'CHANNEL', channelId, articleId: '', search };
+    hrefObj = { mode: 'CHANNEL', channelId, articleId: '', articleKey, search };
+  }
+  // SCRAP: /scrap or related scrap list pages
+  else if (scrapPageRegex.test(realUrl.pathname)) {
+    hrefObj = {
+      mode: 'SCRAP',
+      channelId: '',
+      articleId: '',
+      articleKey,
+      search,
+    };
   }
   // HOME: arca.live or arca.live?...
   // OTHER: other pages
@@ -52,6 +66,7 @@ function parseHref(href?: string) {
       mode: homePageRegex.test(realHref) ? 'HOME' : 'OTHER',
       channelId: '',
       articleId: '',
+      articleKey,
       search: '',
     };
 

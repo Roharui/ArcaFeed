@@ -16,6 +16,8 @@ const swiperOptions: SwiperOptions = {
   slidesPerView: 1,
   loop: false,
   nested: true,
+  noSwiping: true,
+  noSwipingClass: 'swiper-no-swiping',
   touchAngle: 20,
   touchRatio: 0.75,
   threshold: 10,

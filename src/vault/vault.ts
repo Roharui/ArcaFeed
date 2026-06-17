@@ -8,11 +8,11 @@ class Vault extends Config {
     mode: 'NOT_CHECKED',
     channelId: '',
     articleId: '',
+    articleKey: '',
     search: '',
   };
 
   activeIndex: number = -1;
-  seriesIndex: number = -1;
 
   swiper: Swiper | null = null;
 
@@ -24,27 +24,16 @@ class Vault extends Config {
     return mode.includes(this.href.mode);
   }
 
-  isSeriesMode(): boolean {
-    return this.seriesList.length > 0;
-  }
-
   isNextPageActive(): boolean {
-    if (this.isSeriesMode()) {
-      return this.seriesIndex < this.seriesList.length - 1;
-    }
-
     return this.activeIndex < this.articleList.length - 1;
   }
 
   isPrevPageActive(): boolean {
-    if (this.isSeriesMode()) {
-      return this.seriesIndex > 0;
-    }
     return this.activeIndex > 0;
   }
 
   saveLastActiveIndex(): void {
-    localStorage.setItem('lastActiveIndex', this.activeIndex.toString());
+    this.setStorageItem('lastActiveIndex', this.activeIndex.toString());
   }
 }
 

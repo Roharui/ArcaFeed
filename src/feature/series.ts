@@ -3,6 +3,7 @@ import $ from 'jquery';
 import '@css/series.css';
 
 import { ArcaFeed } from '@/core';
+import { parseSearchQuery } from '@/feature';
 
 import type { Vault } from '@/vault';
 import type { PromiseFuncResult } from '@/types';
@@ -12,6 +13,60 @@ type SeriesLink = {
   url: string;
   element: HTMLElement;
 };
+
+function getCurrentArticleKey(): string {
+  return new URL(window.location.href).searchParams.get('articleKey') || '';
+}
+
+function withArticleKey(href: string, articleKey: string): string {
+  if (!articleKey) {
+    return href;
+  }
+
+  const url = new URL(href, window.location.origin);
+  url.searchParams.set('articleKey', articleKey);
+
+  return `${url.pathname}${url.search}`;
+}
+
+function createArticleKey(): string {
+  return (
+    window.crypto?.randomUUID?.().replace(/-/g, '').slice(0, 8) ||
+    Math.random().toString(36).slice(2, 10)
+  );
+}
+
+function getStorageKey(articleKey: string, key: string): string {
+  return `arcaFeed:${articleKey}:${key}`;
+}
+
+function copySeriesStorage(
+  sourceArticleKey: string,
+  targetArticleKey: string,
+  articleList: string[],
+  activeIndex: number,
+  searchQuery: string,
+) {
+  const copyKeys = ['articleFilterConfig'];
+
+  copyKeys.forEach((key) => {
+    const value = localStorage.getItem(getStorageKey(sourceArticleKey, key));
+
+    if (value !== null) {
+      localStorage.setItem(getStorageKey(targetArticleKey, key), value);
+    }
+  });
+
+  localStorage.setItem(
+    getStorageKey(targetArticleKey, 'articleList'),
+    JSON.stringify(articleList),
+  );
+  localStorage.setItem(getStorageKey(targetArticleKey, 'searchQuery'), searchQuery);
+  localStorage.setItem(
+    getStorageKey(targetArticleKey, 'lastActiveIndex'),
+    activeIndex.toString(),
+  );
+}
 
 // 페이지가 로드된 후 실행
 function initSeriesContent(_: Vault): PromiseFuncResult {
@@ -62,6 +117,8 @@ function initSeriesContent(_: Vault): PromiseFuncResult {
 }
 
 function getCurrentSeriesLink(links: JQuery<HTMLElement>): SeriesLink[] {
+  const articleKey = getCurrentArticleKey();
+
   return links
     .toArray()
     .map((seriesDiv: HTMLElement, index: number) => {
@@ -74,10 +131,11 @@ function getCurrentSeriesLink(links: JQuery<HTMLElement>): SeriesLink[] {
 
         // rel="noopener" 등의 속성도 제거 (새탭 관련)
         link.attr('rel', '');
+        link.attr('href', withArticleKey(href, articleKey));
 
         return {
           idx: index,
-          url: href,
+          url: withArticleKey(href, articleKey),
           element: seriesDiv,
         };
       }
@@ -120,32 +178,17 @@ function createShortcutSeriesDiv(shortCutLinks: SeriesLink[]) {
       text: '시리즈 바로가기 활성화',
       class: 'series-control-btn enable-series',
     });
-    enableSeries.css('opacity', v.isSeriesMode() ? '0.5' : '1');
+    enableSeries.css('opacity', '1');
     enableSeries.on('click', () => ArcaFeed.runEvent('enableSeries'));
 
-    const disableSeries = $('<div>', {
-      text: '시리즈 바로가기 비활성화',
-      class: 'series-control-btn disable-series',
-    });
-    disableSeries.css('opacity', !v.isSeriesMode() ? '0.5' : '1');
-    disableSeries.on('click', () => ArcaFeed.runEvent('disableSeries'));
-
     btns.append(enableSeries);
-    btns.append(disableSeries);
 
     articleBody.after(btns);
   };
 }
 
 function initSeriesBtnCss(v: Vault) {
-  $('.series-control-btn.enable-series').css(
-    'opacity',
-    v.isSeriesMode() ? '0.5' : '1',
-  );
-  $('.series-control-btn.disable-series').css(
-    'opacity',
-    !v.isSeriesMode() ? '0.5' : '1',
-  );
+  $('.series-control-btn.enable-series').css('opacity', '1');
 }
 
 function initEnableSeries(p: Vault) {
@@ -157,24 +200,30 @@ function initEnableSeries(p: Vault) {
     articleSeriesElementLinks,
   ).map(({ url }) => url);
 
-  p.seriesList = allSeriesLinks;
-  p.seriesIndex = allSeriesLinks.findIndex((url) =>
-    url.includes(p.href.articleId),
+  parseSearchQuery(p);
+
+  const currentActiveIndex =
+    Math.max(0, allSeriesLinks.findIndex((url) => url.includes(p.href.articleId)));
+
+  const nextArticleKey = createArticleKey();
+  const nextUrl = new URL(window.location.href);
+  nextUrl.searchParams.set('articleKey', nextArticleKey);
+
+  copySeriesStorage(
+    p.articleKey,
+    nextArticleKey,
+    allSeriesLinks,
+    currentActiveIndex,
+    p.searchQuery,
   );
-  p.saveLastActiveIndex();
+
+  window.open(nextUrl.toString(), '_blank', 'noopener');
 
   return p;
 }
 
-function initDisableSeries(p: Vault) {
-  p.seriesList = [];
-  p.activeIndex = Math.max(0, p.lastActiveIndex);
-
-  return p;
-}
 export {
   initSeriesContent,
   initEnableSeries,
-  initDisableSeries,
   initSeriesBtnCss,
 };

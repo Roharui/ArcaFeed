@@ -1,9 +1,10 @@
 type PageMode = 'NEXT' | 'PREV';
 
 interface HrefImpl {
-  mode: 'HOME' | 'CHANNEL' | 'ARTICLE' | 'OTHER' | 'NOT_CHECKED';
+  mode: 'HOME' | 'CHANNEL' | 'ARTICLE' | 'SCRAP' | 'OTHER' | 'NOT_CHECKED';
   channelId: string;
   articleId: string;
+  articleKey: string;
   search: string;
 }
 

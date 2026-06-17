@@ -9,16 +9,16 @@ function initLink(p: Vault): PromiseFuncResult {
   if (p.isCurrentMode('ARTICLE')) {
     filterLink(p, true);
 
-    if (p.isSeriesMode()) return initArticleSeriesLink(p.href.articleId);
-
     return initArticleLinkActive(p.href.articleId);
   }
 
-  p.resetArticleList();
+  if (p.isCurrentMode('CHANNEL', 'SCRAP')) {
+    p.resetArticleList();
 
-  if (p.isCurrentMode('CHANNEL')) {
     return [p, parseSearchQuery, initLinkChannel];
   }
+
+  p.resetArticleList();
 
   return p;
 }
@@ -33,16 +33,6 @@ function initLinkChannel(p: Vault): PromiseFuncResult {
   p.articleList = filteredLinks;
 
   return p;
-}
-
-function initArticleSeriesLink(articleId: string): PromiseFunc {
-  return function initSeriesLink(p: Vault) {
-    p.seriesIndex = p.seriesList.findIndex((ele: string) =>
-      ele.includes(articleId),
-    );
-
-    return p;
-  };
 }
 
 function initArticleLinkActive(articleId: string): PromiseFunc {

@@ -13,10 +13,10 @@ function nextLinkForce(p: Vault) {
 // For Event
 function toLink(mode: PageMode): PromiseFunc {
   return (p: Vault): void => {
-    const { activeIndex, seriesIndex, seriesList, articleList } = p;
+    const { activeIndex, articleList } = p;
 
-    const idx = p.isSeriesMode() ? seriesIndex : activeIndex;
-    const list = p.isSeriesMode() ? seriesList : articleList;
+    const idx = activeIndex;
+    const list = articleList;
 
     const nextIdx = idx + (mode === 'NEXT' ? 1 : -1);
     const url = getArrayItem(list, nextIdx);

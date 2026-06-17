@@ -1,7 +1,11 @@
 import type { ArticleFilterConfigImpl } from '@/types';
 
+const ARTICLE_KEY_CACHE_LIMIT = 5;
+const RECENT_ARTICLE_KEYS_STORAGE_KEY = 'arcaFeed:recentArticleKeys';
+
 class Config {
-  seriesList: string[] = [];
+  articleKey: string = '';
+
   articleList: string[] = [];
 
   articleFilterConfig: ArticleFilterConfigImpl = {};
@@ -13,39 +17,120 @@ class Config {
     this.loadConfig();
   }
 
+  private ensureArticleKey(): string {
+    const currentUrl = new URL(window.location.href);
+    const existingArticleKey = currentUrl.searchParams.get('articleKey');
+
+    if (existingArticleKey) {
+      return existingArticleKey;
+    }
+
+    const generatedArticleKey =
+      window.crypto?.randomUUID?.().replace(/-/g, '').slice(0, 8) ||
+      Math.random().toString(36).slice(2, 10);
+
+    currentUrl.searchParams.set('articleKey', generatedArticleKey);
+    window.history.replaceState({}, '', currentUrl.toString());
+
+    return generatedArticleKey;
+  }
+
+  protected getStorageKey(key: string): string {
+    return `arcaFeed:${this.articleKey}:${key}`;
+  }
+
+  protected getStorageItem(key: string): string | null {
+    return localStorage.getItem(this.getStorageKey(key));
+  }
+
+  protected setStorageItem(key: string, value: string): void {
+    localStorage.setItem(this.getStorageKey(key), value);
+  }
+
+  private getRecentArticleKeys(): string[] {
+    const storedValue = localStorage.getItem(RECENT_ARTICLE_KEYS_STORAGE_KEY);
+
+    if (!storedValue) {
+      return [];
+    }
+
+    try {
+      const parsedValue = JSON.parse(storedValue);
+
+      return Array.isArray(parsedValue)
+        ? parsedValue.filter((key): key is string => typeof key === 'string')
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private saveRecentArticleKeys(articleKeys: string[]): void {
+    localStorage.setItem(
+      RECENT_ARTICLE_KEYS_STORAGE_KEY,
+      JSON.stringify(articleKeys),
+    );
+  }
+
+  private pruneArticleKeyCaches(): void {
+    const recentArticleKeys = this.getRecentArticleKeys();
+    const nextArticleKeys = [
+      this.articleKey,
+      ...recentArticleKeys.filter((key) => key !== this.articleKey),
+    ].slice(0, ARTICLE_KEY_CACHE_LIMIT);
+
+    const expiredArticleKeys = recentArticleKeys.filter(
+      (key) => !nextArticleKeys.includes(key),
+    );
+
+    expiredArticleKeys.forEach((expiredArticleKey) => {
+      const expiredPrefix = `arcaFeed:${expiredArticleKey}:`;
+
+      for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+        const storageKey = localStorage.key(index);
+
+        if (storageKey && storageKey.startsWith(expiredPrefix)) {
+          localStorage.removeItem(storageKey);
+        }
+      }
+    });
+
+    this.saveRecentArticleKeys(nextArticleKeys);
+  }
+
   resetArticleList() {
-    this.seriesList = [];
     this.articleList = [];
   }
 
   loadConfig(): void {
-    const articleFilterConfigStr = localStorage.getItem('articleFilterConfig');
+    this.articleKey = this.ensureArticleKey();
+
+    const articleFilterConfigStr = this.getStorageItem('articleFilterConfig');
     this.articleFilterConfig = articleFilterConfigStr
       ? JSON.parse(articleFilterConfigStr)
       : {};
 
-    const articleListStr = localStorage.getItem('articleList');
+    const articleListStr = this.getStorageItem('articleList');
     this.articleList = articleListStr ? JSON.parse(articleListStr) : [];
 
-    const seriesListStr = localStorage.getItem('seriesList');
-    this.seriesList = seriesListStr ? JSON.parse(seriesListStr) : [];
-
-    this.searchQuery = localStorage.getItem('searchQuery') || '';
+    this.searchQuery = this.getStorageItem('searchQuery') || '';
     this.lastActiveIndex = parseInt(
-      localStorage.getItem('lastActiveIndex') || '-1',
+      this.getStorageItem('lastActiveIndex') || '-1',
     );
+
+    this.pruneArticleKeyCaches();
   }
 
   saveConfig(): void {
-    localStorage.setItem(
+    this.setStorageItem(
       'articleFilterConfig',
       JSON.stringify(this.articleFilterConfig),
     );
 
-    localStorage.setItem('articleList', JSON.stringify(this.articleList));
-    localStorage.setItem('seriesList', JSON.stringify(this.seriesList));
+    this.setStorageItem('articleList', JSON.stringify(this.articleList));
 
-    localStorage.setItem('searchQuery', this.searchQuery);
+    this.setStorageItem('searchQuery', this.searchQuery);
+    this.pruneArticleKeyCaches();
   }
 }
 

@@ -11,7 +11,6 @@ import {
   initSeriesContent,
   nextLinkForce,
   initEnableSeries,
-  initDisableSeries,
   initSwiperPage,
   initSeriesBtnCss,
   initUi,
@@ -73,11 +72,6 @@ class EventManager extends PromiseManager {
 
   enableSeries() {
     this.addNextPromise(initEnableSeries);
-    this.addNextPromise(initSeriesBtnCss, initSwiperPage);
-  }
-
-  disableSeries() {
-    this.addNextPromise(initDisableSeries);
     this.addNextPromise(initSeriesBtnCss, initSwiperPage);
   }
 

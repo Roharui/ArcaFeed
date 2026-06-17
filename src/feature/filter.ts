@@ -14,7 +14,8 @@ function filterLink(
   let rowsLocal = ($html ?? $('.root-container'))
     .find(
       `div.article-list > div.list-table.table > a.vrow.column, 
-           div.article-list > div.list-table.hybrid a.title.hybrid-title`,
+           div.article-list > div.list-table.hybrid a.title.hybrid-title,
+           div.scrap-list > div.article-list.admin > div.list-table > a.vrow.column`,
     )
     .not('.notice');
 

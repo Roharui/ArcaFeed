@@ -7,6 +7,8 @@ function initUi(p: Vault): void {
 
   $('.ad.small-ad').prependTo('.sticky-container');
 
+  $('.board-category.hide-scrollbar').addClass('swiper-no-swiping');
+
   if (p.isCurrentMode('ARTICLE')) {
     $('.nav-control').appendTo('body');
   }
