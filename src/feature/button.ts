@@ -6,7 +6,7 @@ import type { Vault } from '@/vault';
 
 const initButton = (p: Vault) => {
   if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
-  if (!p.isSeriesMode) return;
+  if (p.isSeriesMode) return;
 
   const { disableSwiper } = p.articleFilterConfig[p.href.channelId] || { disableSwiper: false };
 
