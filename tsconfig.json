@@ -18,7 +18,7 @@
     // See also https://aka.ms/tsconfig/module
     "module": "esnext",
     "target": "es2020",
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
     // For nodejs:
     "lib": ["es2020", "dom"],
     "types": ["node"],

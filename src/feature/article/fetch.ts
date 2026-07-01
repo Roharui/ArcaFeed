@@ -64,7 +64,9 @@ function initFetchArticle(articleId: string): PromiseFunc {
       if (!tempUrl) {
         console.log('NO ARTICLE PAGE LINK FOUND');
 
-        showToast('다음 게시글 탐색에 실패했습니다.');
+        if (!p.isCurrentMode('SCRAP')) {
+          showToast('다음 게시글 탐색에 실패했습니다.');
+        }
 
         if (p.isCurrentMode('SCRAP') && p.isSeriesMode) {
           return initOpenScrapSeriesArticle();
@@ -85,7 +87,9 @@ function initFetchArticle(articleId: string): PromiseFunc {
 
     console.log('Counts Over! No more article pages to fetch.');
 
-    showToast('다음 게시글 탐색에 실패했습니다.');
+    if (!p.isCurrentMode('SCRAP')) {
+      showToast('다음 게시글 탐색에 실패했습니다.');
+    }
 
     if (p.isCurrentMode('SCRAP') && p.isSeriesMode) {
       return initOpenScrapSeriesArticle();
@@ -100,7 +104,6 @@ function initOpenScrapSeriesArticle(): PromiseFunc {
     const firstArticleUrl = p.articleList[0];
 
     if (!firstArticleUrl) {
-      showToast('다음 게시글 탐색에 실패했습니다.');
       return p;
     }
 
