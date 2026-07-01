@@ -2,7 +2,10 @@ import $ from 'jquery';
 
 import { getArticleId } from '@/utils';
 
-import type { Vault } from '@/vault';
+import type { VaultAdapter } from '@/vault';
+import type { ArticleFilterImpl } from '@/types';
+
+// ── Constants ──────────────────────────────────────────
 
 const LEGACY_NO_TAB_CATEGORY = '노탭';
 const NO_TAB_CATEGORY_WITHOUT_IMAGE = '노탭(짤X)';
@@ -13,105 +16,137 @@ const NO_TAB_CATEGORIES = [
   NO_TAB_CATEGORY_WITH_IMAGE,
 ];
 
+// ── Row extraction ─────────────────────────────────────
+
+const ARTICLE_ROW_SELECTOR = [
+  'div.article-list > div.list-table.table > a.vrow.column',
+  'div.article-list > div.list-table.hybrid a.title.hybrid-title',
+  'div.scrap-list > div.article-list.admin > div.list-table > a.vrow.column',
+].join(', ');
+
+function extractArticleRows($scope: JQuery<HTMLElement>): JQuery<HTMLElement> {
+  return $scope.find(ARTICLE_ROW_SELECTOR).not('.notice');
+}
+
+// ── Article key injection ──────────────────────────────
+
+function injectArticleKeys(
+  $rows: JQuery<HTMLElement>,
+  articleKey: string,
+): void {
+  if (!articleKey) return;
+
+  $rows.each((_, el) => {
+    const $el = $(el);
+    const href = $el.attr('href');
+    if (!href) return;
+
+    const url = new URL(href, window.location.origin);
+    if (url.searchParams.get('articleKey') === articleKey) return;
+
+    url.searchParams.set('articleKey', articleKey);
+    $el.attr('href', `${url.pathname}${url.search}`);
+  });
+}
+
+// ── Tab / Title filtering ──────────────────────────────
+
 function expandTabCategories(tabCategories: string[]): string[] {
-  return [...new Set(
-    tabCategories.flatMap((category) =>
-      category === LEGACY_NO_TAB_CATEGORY ? NO_TAB_CATEGORIES : [category],
+  return [
+    ...new Set(
+      tabCategories.flatMap((cat) =>
+        cat === LEGACY_NO_TAB_CATEGORY ? NO_TAB_CATEGORIES : [cat],
+      ),
     ),
-  )];
+  ];
 }
 
 function getTabTypeText($ele: JQuery<HTMLElement>): string {
   const badgeText = $ele.find('.badge-success').text().trim();
-
-  if (badgeText.length > 0) {
-    return badgeText;
-  }
+  if (badgeText.length > 0) return badgeText;
 
   return $ele.find('.media-icon.ion-ios-photos-outline').length > 0
     ? NO_TAB_CATEGORY_WITH_IMAGE
     : NO_TAB_CATEGORY_WITHOUT_IMAGE;
 }
 
+function buildFilterPredicate(
+  filter: ArticleFilterImpl,
+): (ele: HTMLElement) => boolean {
+  const { tab: tabFilter, title: titleFilter } = filter;
+
+  // No active filters → allow all
+  if (tabFilter.length === 0 && titleFilter.length === 0) {
+    return () => true;
+  }
+
+  const allowedTabs = new Set(expandTabCategories(tabFilter));
+
+  return (ele: HTMLElement) => {
+    const $ele = $(ele);
+    const tabOk = allowedTabs.has(getTabTypeText($ele));
+    const titleOk = titleFilter.every(
+      (keyword) => !$ele.find('.title').text().trim().includes(keyword),
+    );
+    return tabOk && titleOk;
+  };
+}
+
+// ── Href extraction ────────────────────────────────────
+
+function extractArticleHref($ele: JQuery<HTMLElement>): string | null {
+  const href = $ele.attr('href');
+  if (!href) return null;
+
+  // Normalize: strip origin and query string → "/b/channel/12345"
+  return href.replace('https://arca.live', '').replace(/\?.+$/, '');
+}
+
+// ── Public API ─────────────────────────────────────────
+
+/**
+ * Filter article rows, optionally apply CSS opacity, and return
+ * deduplicated normalized hrefs.
+ */
 function filterLink(
-  p: Vault,
-  css: boolean = false,
+  p: VaultAdapter,
+  applyCss: boolean = false,
   $html?: JQuery<HTMLElement>,
 ): string[] {
   console.log('Filtering links based on article list and filter config...');
 
-  let rowsLocal = ($html ?? $('.root-container'))
-    .find(
-      `div.article-list > div.list-table.table > a.vrow.column, 
-           div.article-list > div.list-table.hybrid a.title.hybrid-title,
-           div.scrap-list > div.article-list.admin > div.list-table > a.vrow.column`,
-    )
-    .not('.notice');
+  const $scope = $html ?? $('.root-container');
+  const $rows = extractArticleRows($scope);
 
-  const articleKey = p.href.articleKey;
+  injectArticleKeys($rows, p.href.articleKey);
 
-  if (articleKey) {
-    rowsLocal.toArray().forEach((ele) => {
-      const $ele = $(ele);
-      const href = $ele.attr('href');
-
-      if (!href) return;
-
-      const url = new URL(href, window.location.origin);
-
-      if (url.searchParams.get('articleKey') !== articleKey) {
-        url.searchParams.set('articleKey', articleKey);
-        $ele.attr('href', `${url.pathname}${url.search}`);
-      }
-    });
-  }
-
-  const { articleList, articleFilterConfig, href } = p;
-
-  // Use Set for O(1) lookup instead of O(n) indexOf on comma-separated string
-  const articleIdSet = new Set(articleList);
-
-  const articleFilter = articleFilterConfig[href.channelId];
-  const { tab: tabFilter, title: titleFilter } = articleFilter || {
+  const filter = p.articleFilterConfig[p.href.channelId] || {
     tab: [],
     title: [],
+    disableSwiper: false,
   };
-  const expandedTabFilter = new Set(expandTabCategories(tabFilter));
+  const predicate = buildFilterPredicate(filter);
+  const existingIds = new Set(p.articleList);
 
-  let resultRows: { $ele: JQuery<HTMLElement>; result: boolean }[] = [];
+  const result: string[] = [];
 
-  if (!!articleFilter && tabFilter.length + titleFilter.length > 0) {
-    resultRows = rowsLocal.toArray().map(function (ele) {
-      const $ele = $(ele);
+  $rows.each((_, ele) => {
+    const allowed = predicate(ele);
+    const $ele = $(ele);
 
-      const tabTypeText = getTabTypeText($ele);
+    if (applyCss) {
+      $ele.css('opacity', allowed ? '1' : '0.5');
+    }
 
-      const titleText = $ele.find('.title').text().trim();
+    if (!allowed) return;
 
-      const tabAllow = expandedTabFilter.has(tabTypeText);
-      const titleAllow = titleFilter.every(
-        (keyword) => !titleText.includes(keyword),
-      );
+    const href = extractArticleHref($ele);
+    if (href && !existingIds.has(getArticleId(href))) {
+      result.push(href);
+    }
+  });
 
-      const result = tabAllow && titleAllow;
-
-      return { $ele, result };
-    });
-  } else {
-    resultRows = rowsLocal
-      .toArray()
-      .map((ele) => ({ $ele: $(ele), result: true }));
-  }
-
-  return resultRows
-    .filter(({ $ele, result }) => {
-      if (css) $ele.css('opacity', result ? '1' : '0.5');
-      return result;
-    })
-    .map(({ $ele }) => $ele.attr('href'))
-    .filter((href) => !!href)
-    .map((href) => href!.replace('https://arca.live', '').replace(/\?.+$/, ''))
-    .filter((href) => !articleIdSet.has(getArticleId(href)));
+  return result;
 }
 
 export {

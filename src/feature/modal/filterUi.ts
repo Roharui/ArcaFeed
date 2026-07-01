@@ -2,11 +2,11 @@ import $ from 'jquery';
 
 import '@css/filter.css';
 
-import { ArcaFeed } from '@/core';
+import { eventBus } from '@/core';
 import { NO_TAB_CATEGORIES, expandTabCategories } from '@/feature/filter';
 import { checkNotNull } from '@/utils';
 
-import type { Vault } from '@/vault';
+import type { VaultAdapter } from '@/vault';
 import type { ArticleFilterImpl } from '@/types';
 
 const MODAL_FILTER_TAB = `
@@ -27,7 +27,7 @@ const MODAL_FILTER_TAB = `
 </div>
 `;
 
-function createArticleFilterModal(p: Vault) {
+function createArticleFilterModal(p: VaultAdapter) {
   const $filterTab = $(MODAL_FILTER_TAB);
 
   const { href, articleFilterConfig } = p;
@@ -59,7 +59,7 @@ function createArticleFilterModal(p: Vault) {
           .prop(
             'checked',
             $filterTab.find('.ele-category').length ===
-            $filterTab.find('.ele-category:checked').length,
+              $filterTab.find('.ele-category:checked').length,
           ),
       ),
     )
@@ -83,10 +83,8 @@ function createArticleFilterModal(p: Vault) {
 
   $filterTab
     .find('#check-btn')
-    .on('click', () => ArcaFeed.runEvent('checkFilterModal'));
-  $filterTab
-    .find('#cancel-btn')
-    .on('click', () => ArcaFeed.runEvent('closeModal'));
+    .on('click', () => eventBus.emit('checkFilterModal'));
+  $filterTab.find('#cancel-btn').on('click', () => eventBus.emit('closeModal'));
   $filterTab
     .find('#exclude-btn')
     .on('click', () => addTitleExcludeTag($filterTab));
@@ -139,7 +137,7 @@ function addTitleExcludeTag($filterTab: JQuery<HTMLElement>) {
   $('#exclude-title').val('');
 }
 
-function initCheckFilterModal(p: Vault) {
+function initCheckFilterModal(p: VaultAdapter) {
   const { href } = p;
   const { channelId } = href;
 

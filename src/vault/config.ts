@@ -1,161 +1,187 @@
+/**
+ * Config Service - handles loading and saving application configuration.
+ * Uses StorageRepository instead of directly accessing localStorage.
+ */
+
+import { StorageRepository } from './repository';
+import { createArticleKey } from '@/utils/article-key';
+import { appendSearchParam } from '@/utils/url';
+
+import type { AppState } from '@/core/store';
 import type { ArticleFilterConfigImpl } from '@/types';
 
-const ARTICLE_KEY_CACHE_LIMIT = 5;
-const ARTICLE_FILTER_CONFIG_STORAGE_KEY = 'arcaFeed:articleFilterConfig';
-const RECENT_ARTICLE_KEYS_STORAGE_KEY = 'arcaFeed:recentArticleKeys';
+const ARTICLE_FILTER_CONFIG_GLOBAL_KEY = 'arcaFeed:articleFilterConfig';
 
-const channelOrArticlePageRegex = /^\/b\/[a-zA-Z0-9]+(\/\d+)?\/?$/;
+const CHANNEL_OR_ARTICLE_PAGE_REGEX = /^\/b\/[a-zA-Z0-9]+(\/\d+)?\/?$/;
 
-class Config {
-  articleKey: string = '';
+export class ConfigService {
+  constructor(private repo: StorageRepository) {}
 
-  articleList: string[] = [];
-
-  articleFilterConfig: ArticleFilterConfigImpl = {};
-
-  isSeriesMode: boolean = false;
-
-  searchQuery: string = '';
-  lastActiveIndex: number = -1;
-
-  constructor() {
-    this.loadConfig();
-  }
-
-  private ensureArticleKey(): string {
+  /**
+   * Ensure the current page has an articleKey in its URL query params.
+   */
+  ensureArticleKey(): string {
     const currentUrl = new URL(window.location.href);
-    const existingArticleKey = currentUrl.searchParams.get('articleKey');
+    const existingKey = currentUrl.searchParams.get('articleKey');
 
-    if (existingArticleKey) {
-      return existingArticleKey;
+    if (existingKey) {
+      return existingKey;
     }
 
-    if (!channelOrArticlePageRegex.test(currentUrl.pathname)) {
+    if (!CHANNEL_OR_ARTICLE_PAGE_REGEX.test(currentUrl.pathname)) {
       return '';
     }
 
-    const generatedArticleKey =
-      window.crypto?.randomUUID?.().replace(/-/g, '').slice(0, 8) ||
-      Math.random().toString(36).slice(2, 10);
+    const generatedKey = createArticleKey();
 
-    currentUrl.searchParams.set('articleKey', generatedArticleKey);
+    currentUrl.searchParams.set('articleKey', generatedKey);
     window.history.replaceState({}, '', currentUrl.toString());
 
-    return generatedArticleKey;
+    return generatedKey;
   }
 
-  protected getStorageKey(key: string): string {
-    return `arcaFeed:${this.articleKey}:${key}`;
-  }
+  /**
+   * Load saved config from localStorage and populate initial state.
+   */
+  loadConfig(): Partial<AppState> {
+    const articleKey = this.ensureArticleKey();
+    const patch: Partial<AppState> = { articleKey };
 
-  protected getStorageItem(key: string): string | null {
-    return localStorage.getItem(this.getStorageKey(key));
-  }
-
-  protected setStorageItem(key: string, value: string): void {
-    localStorage.setItem(this.getStorageKey(key), value);
-  }
-
-  private getRecentArticleKeys(): string[] {
-    const storedValue = localStorage.getItem(RECENT_ARTICLE_KEYS_STORAGE_KEY);
-
-    if (!storedValue) {
-      return [];
+    if (!articleKey) {
+      return patch;
     }
 
-    try {
-      const parsedValue = JSON.parse(storedValue);
+    // Load article filter config
+    const filterConfigStr =
+      this.repo.getItem(ARTICLE_FILTER_CONFIG_GLOBAL_KEY) ||
+      this.repo.getItem(this.repo.scopedKey(articleKey, 'articleFilterConfig'));
 
-      return Array.isArray(parsedValue)
-        ? parsedValue.filter((key): key is string => typeof key === 'string')
-        : [];
-    } catch {
-      return [];
-    }
+    patch.articleFilterConfig = filterConfigStr
+      ? (JSON.parse(filterConfigStr) as ArticleFilterConfigImpl)
+      : {};
+
+    // Load article list
+    const articleListStr = this.repo.getItem(
+      this.repo.scopedKey(articleKey, 'articleList'),
+    );
+    patch.articleList = articleListStr ? JSON.parse(articleListStr) : [];
+
+    // Load series mode
+    patch.isSeriesMode =
+      this.repo.getItem(this.repo.scopedKey(articleKey, 'seriesMode')) ===
+      'true';
+
+    // Load search query
+    patch.searchQuery =
+      this.repo.getItem(this.repo.scopedKey(articleKey, 'searchQuery')) || '';
+
+    // Load last active index
+    patch.lastActiveIndex = parseInt(
+      this.repo.getItem(this.repo.scopedKey(articleKey, 'lastActiveIndex')) ||
+        '-1',
+    );
+
+    // Prune old caches
+    this.repo.pruneArticleKeyCaches(articleKey);
+
+    return patch;
   }
 
-  private saveRecentArticleKeys(articleKeys: string[]): void {
-    localStorage.setItem(
-      RECENT_ARTICLE_KEYS_STORAGE_KEY,
-      JSON.stringify(articleKeys),
+  /**
+   * Save current state to localStorage.
+   */
+  saveConfig(state: Readonly<AppState>): void {
+    const {
+      articleKey,
+      articleFilterConfig,
+      articleList,
+      isSeriesMode,
+      searchQuery,
+    } = state;
+
+    if (!articleKey) return;
+
+    // Global article filter config
+    this.repo.setJSON(ARTICLE_FILTER_CONFIG_GLOBAL_KEY, articleFilterConfig);
+
+    // Scoped storage
+    this.repo.setJSON(
+      this.repo.scopedKey(articleKey, 'articleList'),
+      articleList,
+    );
+    this.repo.setItem(
+      this.repo.scopedKey(articleKey, 'seriesMode'),
+      isSeriesMode.toString(),
+    );
+    this.repo.setItem(
+      this.repo.scopedKey(articleKey, 'searchQuery'),
+      searchQuery,
+    );
+
+    this.repo.pruneArticleKeyCaches(articleKey);
+  }
+
+  /**
+   * Save last active index (called more frequently than full save).
+   */
+  saveLastActiveIndex(articleKey: string, activeIndex: number): void {
+    if (!articleKey) return;
+    this.repo.setItem(
+      this.repo.scopedKey(articleKey, 'lastActiveIndex'),
+      activeIndex.toString(),
     );
   }
 
-  private pruneArticleKeyCaches(): void {
-    if (!this.articleKey) {
-      return;
-    }
-
-    const recentArticleKeys = this.getRecentArticleKeys();
-    const nextArticleKeys = [
-      this.articleKey,
-      ...recentArticleKeys.filter((key) => key !== this.articleKey),
-    ].slice(0, ARTICLE_KEY_CACHE_LIMIT);
-
-    const expiredArticleKeys = recentArticleKeys.filter(
-      (key) => !nextArticleKeys.includes(key),
+  /**
+   * Copy series storage from source articleKey to target articleKey.
+   */
+  copySeriesStorage(
+    sourceArticleKey: string,
+    targetArticleKey: string,
+    articleList: string[],
+    activeIndex: number,
+    searchQuery: string,
+  ): void {
+    // Copy article filter config if exists
+    const filterConfig = this.repo.getItem(
+      this.repo.scopedKey(sourceArticleKey, 'articleFilterConfig'),
     );
 
-    expiredArticleKeys.forEach((expiredArticleKey) => {
-      const expiredPrefix = `arcaFeed:${expiredArticleKey}:`;
-
-      for (let index = localStorage.length - 1; index >= 0; index -= 1) {
-        const storageKey = localStorage.key(index);
-
-        if (storageKey && storageKey.startsWith(expiredPrefix)) {
-          localStorage.removeItem(storageKey);
-        }
-      }
-    });
-
-    this.saveRecentArticleKeys(nextArticleKeys);
-  }
-
-  resetArticleList() {
-    this.articleList = [];
-  }
-
-  loadConfig(): void {
-    this.articleKey = this.ensureArticleKey();
-
-    if (this.articleKey) {
-      const articleFilterConfigStr =
-        localStorage.getItem(ARTICLE_FILTER_CONFIG_STORAGE_KEY) ||
-        localStorage.getItem(this.getStorageKey('articleFilterConfig'));
-      this.articleFilterConfig = articleFilterConfigStr
-        ? JSON.parse(articleFilterConfigStr)
-        : {};
-
-      const articleListStr = this.getStorageItem('articleList');
-      this.articleList = articleListStr ? JSON.parse(articleListStr) : [];
-
-      this.isSeriesMode = this.getStorageItem('seriesMode') === 'true';
-
-      this.searchQuery = this.getStorageItem('searchQuery') || '';
-      this.lastActiveIndex = parseInt(
-        this.getStorageItem('lastActiveIndex') || '-1',
+    if (filterConfig !== null) {
+      this.repo.setItem(
+        this.repo.scopedKey(targetArticleKey, 'articleFilterConfig'),
+        filterConfig,
       );
     }
 
-    this.pruneArticleKeyCaches();
-  }
-
-  saveConfig(): void {
-    if (!this.articleKey) {
-      return;
-    }
-
-    localStorage.setItem(
-      ARTICLE_FILTER_CONFIG_STORAGE_KEY,
-      JSON.stringify(this.articleFilterConfig),
+    this.repo.setItem(
+      this.repo.scopedKey(targetArticleKey, 'seriesMode'),
+      'true',
     );
 
-    this.setStorageItem('articleList', JSON.stringify(this.articleList));
+    // Normalize article URLs to pathnames
+    const normalizedList = articleList.map((href) => {
+      const url = new URL(href, window.location.origin);
+      return url.pathname;
+    });
 
-    this.setStorageItem('seriesMode', this.isSeriesMode.toString());
-    this.setStorageItem('searchQuery', this.searchQuery);
-    this.pruneArticleKeyCaches();
+    const normalizedSearch = appendSearchParam(
+      searchQuery,
+      'articleKey',
+      targetArticleKey,
+    );
+
+    this.repo.setJSON(
+      this.repo.scopedKey(targetArticleKey, 'articleList'),
+      normalizedList,
+    );
+    this.repo.setItem(
+      this.repo.scopedKey(targetArticleKey, 'searchQuery'),
+      normalizedSearch,
+    );
+    this.repo.setItem(
+      this.repo.scopedKey(targetArticleKey, 'lastActiveIndex'),
+      activeIndex.toString(),
+    );
   }
 }
-
-export { Config };

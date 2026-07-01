@@ -1,15 +1,13 @@
-// vault, promise, page
-
 import $ from 'jquery';
 
 import '@css/swiper.css';
 
 import Swiper from 'swiper';
 
-import { ArcaFeed } from '@/core';
+import { eventBus } from '@/core';
 
 import type { SwiperOptions } from '@swiper/types';
-import type { Vault } from '@/vault';
+import type { VaultAdapter } from '@/vault';
 
 const swiperOptions: SwiperOptions = {
   initialSlide: 1,
@@ -29,7 +27,7 @@ const swiperOptions: SwiperOptions = {
 
 // ===
 
-function initSwiper(p: Vault) {
+function initSwiper(p: VaultAdapter): void {
   if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
 
   const swiper = `<div class="swiper">
@@ -43,13 +41,15 @@ function initSwiper(p: Vault) {
   $('body').append($(swiper));
   $('.root-container').appendTo('.slide-active');
 
-  return initSwiperPage;
+  initSwiperPage(p);
 }
 
-function initSwiperPage(p: Vault) {
+function initSwiperPage(p: VaultAdapter): void {
   if (p.swiper) p.swiper.destroy(true, true);
 
-  const { disableSwiper } = p.articleFilterConfig[p.href.channelId] || { disableSwiper: false };
+  const { disableSwiper } = p.articleFilterConfig[p.href.channelId] || {
+    disableSwiper: false,
+  };
 
   p.swiper = new Swiper(
     '.swiper',
@@ -63,14 +63,10 @@ function initSwiperPage(p: Vault) {
   p.swiper.on(
     'slideNextTransitionEnd',
     p.isCurrentMode('CHANNEL')
-      ? () => ArcaFeed.runEvent('toNextLinkForce')
-      : () => ArcaFeed.runEvent('renderNextPage'),
+      ? () => eventBus.emit('toNextLinkForce')
+      : () => eventBus.emit('renderNextPage'),
   );
-  p.swiper.on('slidePrevTransitionEnd', () =>
-    ArcaFeed.runEvent('renderPrevPage'),
-  );
-
-  return p;
+  p.swiper.on('slidePrevTransitionEnd', () => eventBus.emit('renderPrevPage'));
 }
 
 export { initSwiper, initSwiperPage };

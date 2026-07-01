@@ -1,5 +1,5 @@
 import type { HrefImpl } from '@/types';
-import type { Vault } from '@/vault';
+import type { VaultAdapter } from '@/vault';
 
 import { getRegexMatchByIndex, getRegexMatchByIndexTry } from '@/utils';
 
@@ -17,7 +17,7 @@ const articelIdRegex = /\/b\/[A-Za-z0-9]+\/([0-9]+)(\?.+)?/;
 function getArticleId(href: string): string {
   const articleIdMatch = href.match(articelIdRegex);
 
-  return getRegexMatchByIndex(articleIdMatch, 1); // Changed from 0 to 1 for capturing group
+  return getRegexMatchByIndex(articleIdMatch, 1);
 }
 
 function parseHref(href?: string) {
@@ -34,9 +34,9 @@ function parseHref(href?: string) {
   if (articlePageRegex.test(realHref)) {
     const matchArr = realHref.match(channelAndArticleIdRegex);
 
-    const channelId = getRegexMatchByIndex(matchArr, 1); // Changed from 0 to 1 for capturing group
-    const articleId = getRegexMatchByIndex(matchArr, 2); // Changed from 1 to 2 for capturing group
-    const search = getRegexMatchByIndexTry(matchArr, 3, ''); // Changed from 2 to 3 for capturing group
+    const channelId = getRegexMatchByIndex(matchArr, 1);
+    const articleId = getRegexMatchByIndex(matchArr, 2);
+    const search = getRegexMatchByIndexTry(matchArr, 3, '');
 
     hrefObj = { mode: 'ARTICLE', channelId, articleId, articleKey, search };
   }
@@ -44,8 +44,8 @@ function parseHref(href?: string) {
   else if (channelPageRegex.test(realHref)) {
     const matchArr = realHref.match(channelAndArticleIdRegex);
 
-    const channelId = getRegexMatchByIndex(matchArr, 1); // Changed from 0 to 1 for capturing group
-    const search = getRegexMatchByIndexTry(matchArr, 3, ''); // Changed from 1 to 3 for capturing group
+    const channelId = getRegexMatchByIndex(matchArr, 1);
+    const search = getRegexMatchByIndexTry(matchArr, 3, '');
 
     hrefObj = { mode: 'CHANNEL', channelId, articleId: '', articleKey, search };
   }
@@ -73,7 +73,7 @@ function parseHref(href?: string) {
   return hrefObj;
 }
 
-function checkPageMode(p: Vault): Vault {
+function checkPageMode(p: VaultAdapter): VaultAdapter {
   p.href = parseHref(window.location.href);
 
   return p;

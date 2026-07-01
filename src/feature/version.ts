@@ -1,8 +1,8 @@
 import $ from 'jquery';
 
-import type { Vault } from '@/vault';
+import type { VaultAdapter } from '@/vault';
 
-function addVersionInfo(_: Vault): void {
+function addVersionInfo(_: VaultAdapter): void {
   if (process.env.NODE_ENV !== 'development') return;
 
   const version = process.env.GIT_HASH || 'unknown';

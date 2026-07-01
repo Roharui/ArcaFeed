@@ -1,29 +1,29 @@
 import $ from 'jquery';
 
-import { ArcaFeed } from '@/core';
+import { eventBus } from '@/core';
 
-import type { Vault } from '@/vault';
+import type { VaultAdapter } from '@/vault';
 
-function initDisableInputEvent(_: Vault): void {
+function initDisableInputEvent(_: VaultAdapter): void {
   $('input, textarea').on('keydown', function (e) {
     e.stopPropagation();
   });
 }
 
-function initChannelEvent(_: Vault): void {
+function initChannelEvent(_: VaultAdapter): void {
   $(document).on('keydown', (e) => {
-    if (e.key === 'ArrowRight') ArcaFeed.runEvent('toNextLinkForce');
+    if (e.key === 'ArrowRight') eventBus.emit('toNextLinkForce');
   });
 }
 
-function initArticleEvent(_: Vault): void {
+function initArticleEvent(_: VaultAdapter): void {
   $(document).on('keydown', (e) => {
-    if (e.key === 'ArrowRight') ArcaFeed.runEvent('toNextPage');
-    else if (e.key === 'ArrowLeft') ArcaFeed.runEvent('toPrevPage');
+    if (e.key === 'ArrowRight') eventBus.emit('toNextPage');
+    else if (e.key === 'ArrowLeft') eventBus.emit('toPrevPage');
   });
 }
 
-const initEvent = (p: Vault) => {
+const initEvent = (p: VaultAdapter) => {
   initDisableInputEvent(p);
   if (p.isCurrentMode('CHANNEL')) {
     initChannelEvent(p);

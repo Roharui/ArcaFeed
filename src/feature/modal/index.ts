@@ -4,7 +4,7 @@ import '@css/modal.css';
 
 import { createArticleFilterModal } from './filterUi';
 
-import type { Vault } from '@/vault';
+import type { VaultAdapter } from '@/vault';
 import { createUISettingModal } from './uiTab';
 
 const NEXT_PAGE_MODAL_HTML = `
@@ -18,7 +18,7 @@ const NEXT_PAGE_MODAL_HTML = `
 </div>
 `;
 
-function initModal(p: Vault) {
+function initModal(p: VaultAdapter) {
   const dialog = $(NEXT_PAGE_MODAL_HTML);
   const dialogBody = dialog.find('.helper-modal-body');
 
@@ -28,7 +28,7 @@ function initModal(p: Vault) {
   dialog.appendTo('body');
 }
 
-function initCloseModal(_: Vault): void {
+function initCloseModal(_: VaultAdapter): void {
   $('#dialog').remove();
 }
 

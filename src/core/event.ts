@@ -1,4 +1,4 @@
-import { PromiseManager } from '@/core/promise';
+import { StepRunner } from '@/core/step-runner';
 
 import {
   initLink,
@@ -20,105 +20,108 @@ import {
 } from '@/feature';
 import { checkPageMode } from '@/utils';
 
-import type { Vault } from '@/vault';
+import type { Step } from '@/core/step-runner';
+import type { VaultAdapter } from '@/vault';
 
-class EventManager extends PromiseManager {
+class EventManager {
+  runner: StepRunner;
+
   constructor() {
-    super();
+    this.runner = new StepRunner();
   }
 
   // Init Event
 
-  init() {
-    this.addNextPromise(addVersionInfo, checkPageMode);
-    this.addNextPromise(
-      initLink,
-      initButton,
-      initEvent,
-      initSeriesContent,
-      initUi,
-    );
-    this.addNextPromise(initSwiper);
+  init(): Step[] {
+    return [
+      [addVersionInfo, checkPageMode],
+      [initLink, initButton, initEvent, initSeriesContent, initUi],
+      initSwiper,
+    ];
   }
 
   // Keyboard Events
 
-  toNextPage() {
-    this.addNextPromise((p: Vault) => {
-      p.swiper!.slideNext();
-    });
+  toNextPage(): Step[] {
+    return [
+      (p: VaultAdapter) => {
+        p.swiper!.slideNext();
+      },
+    ];
   }
 
-  toPrevPage() {
-    this.addNextPromise((p: Vault) => {
-      p.swiper!.slidePrev();
-    });
+  toPrevPage(): Step[] {
+    return [
+      (p: VaultAdapter) => {
+        p.swiper!.slidePrev();
+      },
+    ];
   }
 
   // Page Events
 
-  toNextLinkForce() {
-    this.addNextPromise(nextLinkForce);
+  toNextLinkForce(): Step[] {
+    return [nextLinkForce];
   }
 
-  renderNextPage() {
-    this.addNextPromise(toLink('NEXT'));
+  renderNextPage(): Step[] {
+    return [toLink('NEXT')];
   }
 
-  renderPrevPage() {
-    this.addNextPromise(toLink('PREV'));
+  renderPrevPage(): Step[] {
+    return [toLink('PREV')];
   }
 
   // Series Events
 
-  enableSeries() {
-    this.addNextPromise(initEnableSeries);
-    this.addNextPromise(initSeriesBtnCss, initSwiperPage);
+  enableSeries(): Step[] {
+    return [initEnableSeries, [initSeriesBtnCss, initSwiperPage]];
   }
 
-  enableScrapSeries() {
-    this.addNextPromise(initEnableScrapSeries);
+  enableScrapSeries(): Step[] {
+    return [initEnableScrapSeries];
   }
 
   // Modal Events
 
-  showModal() {
-    this.addNextPromise(initModal);
+  showModal(): Step[] {
+    return [initModal];
   }
 
-  checkFilterModal() {
-    this.addNextPromise(initCheckFilterModal, initLink, initCloseModal);
-    this.addNextPromise(initSwiperPage);
+  checkFilterModal(): Step[] {
+    return [[initCheckFilterModal, initLink, initCloseModal], initSwiperPage];
   }
 
-  checkUIModal() {
-    this.addNextPromise(initUi, initCloseModal);
+  checkUIModal(): Step[] {
+    return [[initUi, initCloseModal]];
   }
 
-  closeModal() {
-    this.addNextPromise(initCloseModal);
+  closeModal(): Step[] {
+    return [initCloseModal];
   }
 
   // toggle Swiper
 
-  toggleSwiper() {
-    this.addNextPromise((p: Vault) => {
-      if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
+  toggleSwiper(): Step[] {
+    return [
+      (p: VaultAdapter) => {
+        if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
 
-      const pageFilter = p.articleFilterConfig[p.href.channelId] || {
-        tab: [],
-        title: [],
-        disableSwiper: false,
-      };
+        const pageFilter = p.articleFilterConfig[p.href.channelId] || {
+          tab: [],
+          title: [],
+          disableSwiper: false,
+        };
 
-      pageFilter.disableSwiper = !pageFilter.disableSwiper;
+        pageFilter.disableSwiper = !pageFilter.disableSwiper;
 
-      p.articleFilterConfig[p.href.channelId] = pageFilter;
+        p.articleFilterConfig[p.href.channelId] = pageFilter;
 
-      p.saveConfig();
+        p.flushSave();
 
-      window.location.reload();
-    });
+        window.location.reload();
+      },
+    ];
   }
 }
 

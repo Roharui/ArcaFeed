@@ -1,124 +1,121 @@
-// link
-
 import $ from 'jquery';
 
 import { filterLink } from '@/feature';
 import { fetchUrl } from '@/utils/fetch';
 import { showToast } from '@/utils/toast';
 
-import type { PromiseFunc } from '@/types';
-import type { Vault } from '@/vault';
+import type { VaultAdapter } from '@/vault';
 
-function getInitialFetchPageUrl(p: Vault, articleId: string): string {
-  if (p.isCurrentMode('SCRAP')) {
-    return `/u/scrap_list${p.searchQuery}`;
+// ── Helpers ────────────────────────────────────────────
+
+function buildPageUrl(p: VaultAdapter, articleId: string): string {
+  return p.isCurrentMode('SCRAP')
+    ? `/u/scrap_list${p.searchQuery}`
+    : `${articleId}${p.searchQuery}`;
+}
+
+function normalizeUrl(pageUrl: string): string {
+  if (!pageUrl.startsWith('http')) return pageUrl;
+  const parsed = new URL(pageUrl);
+  return `${parsed.pathname}${parsed.search}`;
+}
+
+// ── Scraper ────────────────────────────────────────────
+
+interface PageResult {
+  nextUrl: string | null;
+  $html: JQuery<HTMLElement>;
+}
+
+async function fetchAndParse(
+  url: string,
+): Promise<{ $html: JQuery<HTMLElement> }> {
+  const res = await fetchUrl(url);
+  return { $html: $(res.responseText) };
+}
+
+function extractNextPageUrl(
+  $html: JQuery<HTMLElement>,
+  basePath: string,
+): string | null {
+  const nextLink = $html
+    .find('.page-item.active')
+    .next()
+    .find('a')
+    .attr('href');
+  if (!nextLink) return null;
+
+  return nextLink.startsWith('?') ? `${basePath}${nextLink}` : nextLink;
+}
+
+// ── Main fetch logic ───────────────────────────────────
+
+const MAX_PAGES = 10;
+
+async function fetchArticle(p: VaultAdapter, articleId: string): Promise<void> {
+  const basePath = p.isCurrentMode('SCRAP') ? '/u/scrap_list' : articleId;
+  const isScrap = p.isCurrentMode('SCRAP');
+  let nextUrl: string | null = buildPageUrl(p, articleId);
+
+  for (let page = 0; page <= MAX_PAGES && nextUrl; page++) {
+    const url = normalizeUrl(nextUrl);
+
+    console.log(`Fetching article page: ${url}`);
+    const { $html } = await fetchAndParse(url);
+
+    const newLinks = filterLink(p, false, $html).filter(
+      (link) => !p.articleList.includes(link),
+    );
+
+    if (newLinks.length > 0) {
+      console.log(`Fetching Complete: ${url}`);
+      p.articleList.push(...newLinks);
+
+      // Non-scrap mode: stop after first successful fetch
+      if (!isScrap) return;
+    }
+
+    nextUrl = extractNextPageUrl($html, basePath);
+
+    if (!nextUrl) {
+      console.log('NO ARTICLE PAGE LINK FOUND');
+      return handleFetchComplete(p, isScrap);
+    }
+
+    console.log(`No articles found, trying next page: ${nextUrl}`);
   }
 
-  return `${articleId}${p.searchQuery}`;
+  handleFetchComplete(p, isScrap);
 }
 
-function getFetchUrl(pageUrl: string): string {
-  if (pageUrl.startsWith('http')) {
-    const parsedUrl = new URL(pageUrl);
-    return `${parsedUrl.pathname}${parsedUrl.search}`;
+function handleFetchComplete(p: VaultAdapter, isScrap: boolean): void {
+  if (!isScrap) {
+    showToast('다음 게시글 탐색에 실패했습니다.');
+    return;
   }
 
-  return pageUrl;
+  if (p.isSeriesMode) {
+    openScrapSeriesArticle(p);
+  }
 }
 
-function initFetchArticle(articleId: string): PromiseFunc {
-  return async function fetchArticle(p: Vault) {
-    let articlePageUrl: string = getInitialFetchPageUrl(p, articleId);
-    const basePagePath = p.isCurrentMode('SCRAP') ? '/u/scrap_list' : articleId;
-    let filteredLinks: string[] = [];
-    let count: number = 0;
+// ── Navigation ─────────────────────────────────────────
 
-    while (count <= 10) {
-      const searchUrl = getFetchUrl(articlePageUrl);
+function openScrapSeriesArticle(p: VaultAdapter): void {
+  const firstUrl = p.articleList[0];
+  if (!firstUrl) return;
 
-      console.log(`Fetching article page: ${searchUrl}`);
+  p.activeIndex = 0;
+  p.flushSave();
 
-      const res = await fetchUrl(`${searchUrl}`);
+  const nextUrl = new URL(firstUrl, window.location.origin);
+  nextUrl.search = p.searchQuery;
 
-      const $html = $(res.responseText);
+  if (p.articleKey) {
+    nextUrl.searchParams.set('articleKey', p.articleKey);
+  }
 
-      filteredLinks = filterLink(p, false, $html).filter((ele: string) => {
-        return !p.articleList.includes(ele);
-      });
-
-      if (filteredLinks.length > 0) {
-        console.log(`Fetching Completearticle page: ${articlePageUrl}`);
-
-        p.articleList.push(...filteredLinks);
-
-        if (!p.isCurrentMode('SCRAP')) {
-          return p;
-        }
-      }
-
-      const articlePage = $html.find('.page-item.active');
-      const articlePageElement = articlePage.next();
-
-      const tempUrl = articlePageElement.find('a').attr('href');
-
-      if (!tempUrl) {
-        console.log('NO ARTICLE PAGE LINK FOUND');
-
-        if (!p.isCurrentMode('SCRAP')) {
-          showToast('다음 게시글 탐색에 실패했습니다.');
-        }
-
-        if (p.isCurrentMode('SCRAP') && p.isSeriesMode) {
-          return initOpenScrapSeriesArticle();
-        }
-
-        return p;
-      }
-
-      articlePageUrl = tempUrl.startsWith('?')
-        ? `${basePagePath}${tempUrl}`
-        : tempUrl;
-
-      console.log(
-        `No articles found on page ${articlePageUrl}, trying page...`,
-      );
-      count += 1;
-    }
-
-    console.log('Counts Over! No more article pages to fetch.');
-
-    if (!p.isCurrentMode('SCRAP')) {
-      showToast('다음 게시글 탐색에 실패했습니다.');
-    }
-
-    if (p.isCurrentMode('SCRAP') && p.isSeriesMode) {
-      return initOpenScrapSeriesArticle();
-    }
-
-    return p;
-  };
+  window.location.replace(nextUrl.toString());
 }
 
-function initOpenScrapSeriesArticle(): PromiseFunc {
-  return (p: Vault) => {
-    const firstArticleUrl = p.articleList[0];
-
-    if (!firstArticleUrl) {
-      return p;
-    }
-
-    p.activeIndex = 0;
-    p.saveConfig();
-
-    const nextUrl = new URL(firstArticleUrl, window.location.origin);
-    nextUrl.search = p.searchQuery;
-
-    if (p.articleKey) {
-      nextUrl.searchParams.set('articleKey', p.articleKey);
-    }
-
-    window.location.replace(nextUrl.toString());
-  };
-}
-
-export { initFetchArticle };
+export { fetchArticle, openScrapSeriesArticle };

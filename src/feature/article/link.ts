@@ -1,111 +1,86 @@
-import { initFetchArticle, filterLink, parseSearchQuery } from '@/feature';
-import { sleep } from '@/utils';
+import { fetchArticle, filterLink, parseSearchQuery } from '@/feature';
+import { createArticleKey } from '@/utils/article-key';
+import { appendSearchParam } from '@/utils/url';
 
-import type { Vault } from '@/vault';
-import type { PromiseFunc, PromiseFuncResult } from '@/types';
+import type { VaultAdapter } from '@/vault';
 
-// ===
+// ── Link Initialization ────────────────────────────────
 
-function initLink(p: Vault): PromiseFuncResult {
+async function initLink(p: VaultAdapter): Promise<void> {
   if (p.isCurrentMode('ARTICLE')) {
     filterLink(p, true);
-
-    return initArticleLinkActive(p.href.articleId);
+    await activateArticleLink(p, p.href.articleId);
+    return;
   }
 
   if (p.isCurrentMode('CHANNEL', 'SCRAP')) {
     p.resetArticleList();
-
-    return [p, parseSearchQuery, initLinkChannel];
+    parseSearchQuery(p);
+    await initLinkChannel(p);
+    return;
   }
 
   p.resetArticleList();
-
-  return p;
 }
 
-async function initLinkChannel(p: Vault): Promise<PromiseFuncResult> {
-  if (p.isCurrentMode('SCRAP')) {
-    return p;
+async function initLinkChannel(p: VaultAdapter): Promise<void> {
+  if (p.isCurrentMode('SCRAP')) return;
+
+  const newLinks = filterLink(p, true);
+  if (newLinks.length > 0) {
+    p.articleList = newLinks;
+  } else {
+    await fetchArticle(p, p.href.articleId);
   }
-
-  const filteredLinks = filterLink(p, true);
-
-  if (filteredLinks.length === 0) {
-    return initFetchArticle(p.href.articleId);
-  }
-
-  p.articleList = filteredLinks;
-
-  return p;
 }
 
-async function initEnableScrapSeries(p: Vault): Promise<PromiseFuncResult> {
+// ── Article Activation ─────────────────────────────────
+
+async function activateArticleLink(
+  p: VaultAdapter,
+  articleId: string,
+): Promise<void> {
+  if (p.articleList.length === 0) {
+    await fetchArticle(p, articleId);
+    return;
+  }
+
+  p.activeIndex = p.articleList.findIndex((link) => link.includes(articleId));
+
+  console.log(`Current Article Id: ${articleId}`);
+  console.log(`Current Article Index: ${p.activeIndex}`);
+
+  if (p.activeIndex === -1) {
+    await fetchArticle(p, articleId);
+    return;
+  }
+
+  // Pre-fetch next page when nearing the end of the list
+  const needsMoreArticles = p.articleList.length - p.activeIndex <= 1;
+  if (needsMoreArticles && !p.isSeriesMode) {
+    await fetchArticle(p, articleId);
+  }
+}
+
+// ── Scrap Series ───────────────────────────────────────
+
+async function initEnableScrapSeries(p: VaultAdapter): Promise<void> {
   if (!p.articleKey) {
-    const nextArticleKey = createArticleKey();
-    p.articleKey = nextArticleKey;
-    p.href.articleKey = nextArticleKey;
+    const newKey = createArticleKey();
+    p.articleKey = newKey;
+    p.href.articleKey = newKey;
   }
 
   parseSearchQuery(p);
-  p.searchQuery = appendArticleKeyToSearchQuery(p.searchQuery, p.articleKey);
+  p.searchQuery = appendSearchParam(p.searchQuery, 'articleKey', p.articleKey);
   p.isSeriesMode = true;
 
-  return initFetchArticle(p.href.articleId);
+  await fetchArticle(p, p.href.articleId);
 }
 
-function createArticleKey(): string {
-  return (
-    window.crypto?.randomUUID?.().replace(/-/g, '').slice(0, 8) ||
-    Math.random().toString(36).slice(2, 10)
-  );
-}
-
-function appendArticleKeyToSearchQuery(searchQuery: string, articleKey: string): string {
-  if (!articleKey) {
-    return searchQuery;
-  }
-
-  const searchParams = new URLSearchParams(
-    searchQuery.startsWith('?') ? searchQuery.slice(1) : searchQuery,
-  );
-
-  searchParams.set('articleKey', articleKey);
-
-  const normalizedSearch = searchParams.toString();
-
-  return normalizedSearch ? `?${normalizedSearch}` : '';
-}
-
-function initArticleLinkActive(articleId: string): PromiseFunc {
-  return function articleLinkActive(p: Vault): PromiseFuncResult {
-    p.activeIndex = 0;
-
-    if (p.articleList.length === 0) {
-      return [p, initFetchArticle(articleId)];
-    }
-
-    p.activeIndex = p.articleList.findIndex((ele: string) =>
-      ele.includes(articleId),
-    );
-
-    console.log(`Current Article Id: ${articleId}`);
-    console.log(`Current Article Index: ${p.activeIndex}`);
-
-    if (p.activeIndex === -1) {
-      return [p, initFetchArticle(articleId)];
-    }
-
-    if (p.articleList.length - p.activeIndex <= 1) {
-      if (p.isSeriesMode) {
-        return p;
-      }
-
-      return [p, initFetchArticle(articleId)];
-    }
-
-    return p;
-  };
-}
-
-export { initLink, initArticleLinkActive, initEnableScrapSeries };
+export {
+  initLink,
+  initLinkChannel,
+  activateArticleLink,
+  initEnableScrapSeries,
+};

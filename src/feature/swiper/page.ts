@@ -1,10 +1,10 @@
 import { getArrayItem } from '@/utils';
 
 import type { PageMode, PromiseFunc } from '@/types';
-import type { Vault } from '@/vault';
+import type { VaultAdapter } from '@/vault';
 
 // For Event
-function nextLinkForce(p: Vault) {
+function nextLinkForce(p: VaultAdapter) {
   window.location.replace(
     getArrayItem(p.articleList, p.activeIndex + 1) + p.searchQuery,
   );
@@ -12,7 +12,7 @@ function nextLinkForce(p: Vault) {
 
 // For Event
 function toLink(mode: PageMode): PromiseFunc {
-  return (p: Vault): void => {
+  return (p: VaultAdapter): void => {
     const { activeIndex, articleList } = p;
 
     const idx = activeIndex;

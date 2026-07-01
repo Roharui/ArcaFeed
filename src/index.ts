@@ -1,7 +1,10 @@
 import '@css/swiper.css';
 import '@css/arcalive.css';
 
-import { ArcaFeed } from '@/core';
+import { ArcaFeed, eventBus } from '@/core';
+
+// Ensure ArcaFeed singleton is created (registers EventBus listeners)
+new ArcaFeed();
 
 (function () {
   if (
@@ -10,5 +13,5 @@ import { ArcaFeed } from '@/core';
   ) {
     import('eruda').then((eruda) => eruda.default.init());
   }
-  ArcaFeed.runEvent('init');
+  eventBus.emit('init');
 })();

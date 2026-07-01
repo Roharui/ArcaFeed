@@ -1,18 +1,20 @@
 import $ from 'jquery';
 
-import { ArcaFeed } from '@/core';
+import { eventBus } from '@/core';
 
-import type { Vault } from '@/vault';
+import type { VaultAdapter } from '@/vault';
 
-const initButton = (p: Vault) => {
+const initButton = (p: VaultAdapter) => {
   if (p.isCurrentMode('SCRAP')) {
     if (p.isSeriesMode) return;
 
     const enableSeries = createArcaFeedBtn('series', 'ion-ios-albums', () =>
-      ArcaFeed.runEvent('enableScrapSeries'),
+      eventBus.emit('enableScrapSeries'),
     );
 
-    $('ul.nav.navbar-nav').last().before(btnWrapper([enableSeries]));
+    $('ul.nav.navbar-nav')
+      .last()
+      .before(btnWrapper([enableSeries]));
 
     return;
   }
@@ -20,14 +22,18 @@ const initButton = (p: Vault) => {
   if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
   if (p.isSeriesMode) return;
 
-  const { disableSwiper } = p.articleFilterConfig[p.href.channelId] || { disableSwiper: false };
+  const { disableSwiper } = p.articleFilterConfig[p.href.channelId] || {
+    disableSwiper: false,
+  };
 
-  const toggleSwiper = createArcaFeedBtn('next', disableSwiper ? 'ion-ios-locked' : 'ion-ios-arrow-forward', () =>
-    ArcaFeed.runEvent('toggleSwiper'),
+  const toggleSwiper = createArcaFeedBtn(
+    'next',
+    disableSwiper ? 'ion-ios-locked' : 'ion-ios-arrow-forward',
+    () => eventBus.emit('toggleSwiper'),
   );
 
   const filterPageBtn = createArcaFeedBtn('filter', 'ion-ios-gear', () =>
-    ArcaFeed.runEvent('showModal'),
+    eventBus.emit('showModal'),
   );
 
   const btns = [];
