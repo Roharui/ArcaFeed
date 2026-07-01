@@ -4,6 +4,8 @@ const ARTICLE_KEY_CACHE_LIMIT = 5;
 const ARTICLE_FILTER_CONFIG_STORAGE_KEY = 'arcaFeed:articleFilterConfig';
 const RECENT_ARTICLE_KEYS_STORAGE_KEY = 'arcaFeed:recentArticleKeys';
 
+const channelOrArticlePageRegex = /^\/b\/[a-zA-Z0-9]+(\/\d+)?\/?$/;
+
 class Config {
   articleKey: string = '';
 
@@ -26,6 +28,10 @@ class Config {
 
     if (existingArticleKey) {
       return existingArticleKey;
+    }
+
+    if (!channelOrArticlePageRegex.test(currentUrl.pathname)) {
+      return '';
     }
 
     const generatedArticleKey =
@@ -76,6 +82,10 @@ class Config {
   }
 
   private pruneArticleKeyCaches(): void {
+    if (!this.articleKey) {
+      return;
+    }
+
     const recentArticleKeys = this.getRecentArticleKeys();
     const nextArticleKeys = [
       this.articleKey,
@@ -108,27 +118,33 @@ class Config {
   loadConfig(): void {
     this.articleKey = this.ensureArticleKey();
 
-    const articleFilterConfigStr =
-      localStorage.getItem(ARTICLE_FILTER_CONFIG_STORAGE_KEY) ||
-      localStorage.getItem(this.getStorageKey('articleFilterConfig'));
-    this.articleFilterConfig = articleFilterConfigStr
-      ? JSON.parse(articleFilterConfigStr)
-      : {};
+    if (this.articleKey) {
+      const articleFilterConfigStr =
+        localStorage.getItem(ARTICLE_FILTER_CONFIG_STORAGE_KEY) ||
+        localStorage.getItem(this.getStorageKey('articleFilterConfig'));
+      this.articleFilterConfig = articleFilterConfigStr
+        ? JSON.parse(articleFilterConfigStr)
+        : {};
 
-    const articleListStr = this.getStorageItem('articleList');
-    this.articleList = articleListStr ? JSON.parse(articleListStr) : [];
+      const articleListStr = this.getStorageItem('articleList');
+      this.articleList = articleListStr ? JSON.parse(articleListStr) : [];
 
-    this.isSeriesMode = this.getStorageItem('seriesMode') === 'true';
+      this.isSeriesMode = this.getStorageItem('seriesMode') === 'true';
 
-    this.searchQuery = this.getStorageItem('searchQuery') || '';
-    this.lastActiveIndex = parseInt(
-      this.getStorageItem('lastActiveIndex') || '-1',
-    );
+      this.searchQuery = this.getStorageItem('searchQuery') || '';
+      this.lastActiveIndex = parseInt(
+        this.getStorageItem('lastActiveIndex') || '-1',
+      );
+    }
 
     this.pruneArticleKeyCaches();
   }
 
   saveConfig(): void {
+    if (!this.articleKey) {
+      return;
+    }
+
     localStorage.setItem(
       ARTICLE_FILTER_CONFIG_STORAGE_KEY,
       JSON.stringify(this.articleFilterConfig),

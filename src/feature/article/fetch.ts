@@ -4,6 +4,7 @@ import $ from 'jquery';
 
 import { filterLink } from '@/feature';
 import { fetchUrl } from '@/utils/fetch';
+import { showToast } from '@/utils/toast';
 
 import type { PromiseFunc } from '@/types';
 import type { Vault } from '@/vault';
@@ -62,6 +63,13 @@ function initFetchArticle(articleId: string): PromiseFunc {
 
       if (!tempUrl) {
         console.log('NO ARTICLE PAGE LINK FOUND');
+
+        showToast('다음 게시글 탐색에 실패했습니다.');
+
+        if (p.isCurrentMode('SCRAP') && p.isSeriesMode) {
+          return initOpenScrapSeriesArticle();
+        }
+
         return p;
       }
 
@@ -77,7 +85,36 @@ function initFetchArticle(articleId: string): PromiseFunc {
 
     console.log('Counts Over! No more article pages to fetch.');
 
+    showToast('다음 게시글 탐색에 실패했습니다.');
+
+    if (p.isCurrentMode('SCRAP') && p.isSeriesMode) {
+      return initOpenScrapSeriesArticle();
+    }
+
     return p;
+  };
+}
+
+function initOpenScrapSeriesArticle(): PromiseFunc {
+  return (p: Vault) => {
+    const firstArticleUrl = p.articleList[0];
+
+    if (!firstArticleUrl) {
+      showToast('다음 게시글 탐색에 실패했습니다.');
+      return p;
+    }
+
+    p.activeIndex = 0;
+    p.saveConfig();
+
+    const nextUrl = new URL(firstArticleUrl, window.location.origin);
+    nextUrl.search = p.searchQuery;
+
+    if (p.articleKey) {
+      nextUrl.searchParams.set('articleKey', p.articleKey);
+    }
+
+    window.location.replace(nextUrl.toString());
   };
 }
 

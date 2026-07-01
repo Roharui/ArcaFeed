@@ -5,6 +5,18 @@ import { ArcaFeed } from '@/core';
 import type { Vault } from '@/vault';
 
 const initButton = (p: Vault) => {
+  if (p.isCurrentMode('SCRAP')) {
+    if (p.isSeriesMode) return;
+
+    const enableSeries = createArcaFeedBtn('series', 'ion-ios-albums', () =>
+      ArcaFeed.runEvent('enableScrapSeries'),
+    );
+
+    $('ul.nav.navbar-nav').last().before(btnWrapper([enableSeries]));
+
+    return;
+  }
+
   if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
   if (p.isSeriesMode) return;
 

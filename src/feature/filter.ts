@@ -4,6 +4,35 @@ import { getArticleId } from '@/utils';
 
 import type { Vault } from '@/vault';
 
+const LEGACY_NO_TAB_CATEGORY = '노탭';
+const NO_TAB_CATEGORY_WITHOUT_IMAGE = '노탭(짤X)';
+const NO_TAB_CATEGORY_WITH_IMAGE = '노탭(짤O)';
+
+const NO_TAB_CATEGORIES = [
+  NO_TAB_CATEGORY_WITHOUT_IMAGE,
+  NO_TAB_CATEGORY_WITH_IMAGE,
+];
+
+function expandTabCategories(tabCategories: string[]): string[] {
+  return [...new Set(
+    tabCategories.flatMap((category) =>
+      category === LEGACY_NO_TAB_CATEGORY ? NO_TAB_CATEGORIES : [category],
+    ),
+  )];
+}
+
+function getTabTypeText($ele: JQuery<HTMLElement>): string {
+  const badgeText = $ele.find('.badge-success').text().trim();
+
+  if (badgeText.length > 0) {
+    return badgeText;
+  }
+
+  return $ele.find('.media-icon.ion-ios-photos-outline').length > 0
+    ? NO_TAB_CATEGORY_WITH_IMAGE
+    : NO_TAB_CATEGORY_WITHOUT_IMAGE;
+}
+
 function filterLink(
   p: Vault,
   css: boolean = false,
@@ -47,22 +76,19 @@ function filterLink(
     tab: [],
     title: [],
   };
+  const expandedTabFilter = new Set(expandTabCategories(tabFilter));
 
   let resultRows: { $ele: JQuery<HTMLElement>; result: boolean }[] = [];
 
   if (!!articleFilter && tabFilter.length + titleFilter.length > 0) {
-    // Cache tab filter set for faster lookups
-    const tabFilterSet = new Set(tabFilter);
-
     resultRows = rowsLocal.toArray().map(function (ele) {
       const $ele = $(ele);
 
-      const _tabTypeText = $ele.find('.badge-success').text();
-      const tabTypeText = _tabTypeText.length === 0 ? '노탭' : _tabTypeText;
+      const tabTypeText = getTabTypeText($ele);
 
       const titleText = $ele.find('.title').text().trim();
 
-      const tabAllow = tabFilterSet.has(tabTypeText);
+      const tabAllow = expandedTabFilter.has(tabTypeText);
       const titleAllow = titleFilter.every(
         (keyword) => !titleText.includes(keyword),
       );
@@ -88,4 +114,12 @@ function filterLink(
     .filter((href) => !articleIdSet.has(getArticleId(href)));
 }
 
-export { filterLink };
+export {
+  expandTabCategories,
+  filterLink,
+  getTabTypeText,
+  LEGACY_NO_TAB_CATEGORY,
+  NO_TAB_CATEGORY_WITH_IMAGE,
+  NO_TAB_CATEGORY_WITHOUT_IMAGE,
+  NO_TAB_CATEGORIES,
+};

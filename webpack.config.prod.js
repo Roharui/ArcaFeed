@@ -35,6 +35,7 @@ export default function (_env, _args) {
       jquery: 'jQuery',
       swiper: 'Swiper',
       eruda: 'eruda',
+      'toastify-js': 'Toastify',
     },
 
     module: {
@@ -71,6 +72,7 @@ export default function (_env, _args) {
           require: [
             'https://code.jquery.com/jquery-3.6.0.min.js',
             'https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js',
+            'https://cdn.jsdelivr.net/npm/toastify-js',
           ],
           'run-at': 'document-end',
         },

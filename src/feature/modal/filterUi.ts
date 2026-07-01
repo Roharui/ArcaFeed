@@ -3,6 +3,7 @@ import $ from 'jquery';
 import '@css/filter.css';
 
 import { ArcaFeed } from '@/core';
+import { NO_TAB_CATEGORIES, expandTabCategories } from '@/feature/filter';
 import { checkNotNull } from '@/utils';
 
 import type { Vault } from '@/vault';
@@ -44,9 +45,9 @@ function createArticleFilterModal(p: Vault) {
     .map((ele) => $(ele).text().trim())
     .filter((text) => text !== '전체');
 
-  category.splice(0, 0, '노탭');
+  category.splice(0, 0, ...NO_TAB_CATEGORIES);
 
-  const tabSet = new Set(tab);
+  const tabSet = new Set(expandTabCategories(tab));
   const $filterCategory = $filterTab.find('#category');
 
   // Add Category Checkboxes
@@ -67,7 +68,7 @@ function createArticleFilterModal(p: Vault) {
   const spanAll = createCategorySpan(
     '전체',
     'ele-category-all',
-    tab.length === category.length,
+    category.every((text) => tabSet.has(text)),
     () =>
       $('.ele-category').prop(
         'checked',

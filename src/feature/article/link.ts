@@ -26,8 +26,7 @@ function initLink(p: Vault): PromiseFuncResult {
 
 async function initLinkChannel(p: Vault): Promise<PromiseFuncResult> {
   if (p.isCurrentMode('SCRAP')) {
-    p.isSeriesMode = true;
-    return initLinkScrap(p);
+    return p;
   }
 
   const filteredLinks = filterLink(p, true);
@@ -41,8 +40,41 @@ async function initLinkChannel(p: Vault): Promise<PromiseFuncResult> {
   return p;
 }
 
-async function initLinkScrap(p: Vault): Promise<PromiseFuncResult> {
+async function initEnableScrapSeries(p: Vault): Promise<PromiseFuncResult> {
+  if (!p.articleKey) {
+    const nextArticleKey = createArticleKey();
+    p.articleKey = nextArticleKey;
+    p.href.articleKey = nextArticleKey;
+  }
+
+  parseSearchQuery(p);
+  p.searchQuery = appendArticleKeyToSearchQuery(p.searchQuery, p.articleKey);
+  p.isSeriesMode = true;
+
   return initFetchArticle(p.href.articleId);
+}
+
+function createArticleKey(): string {
+  return (
+    window.crypto?.randomUUID?.().replace(/-/g, '').slice(0, 8) ||
+    Math.random().toString(36).slice(2, 10)
+  );
+}
+
+function appendArticleKeyToSearchQuery(searchQuery: string, articleKey: string): string {
+  if (!articleKey) {
+    return searchQuery;
+  }
+
+  const searchParams = new URLSearchParams(
+    searchQuery.startsWith('?') ? searchQuery.slice(1) : searchQuery,
+  );
+
+  searchParams.set('articleKey', articleKey);
+
+  const normalizedSearch = searchParams.toString();
+
+  return normalizedSearch ? `?${normalizedSearch}` : '';
 }
 
 function initArticleLinkActive(articleId: string): PromiseFunc {
@@ -76,4 +108,4 @@ function initArticleLinkActive(articleId: string): PromiseFunc {
   };
 }
 
-export { initLink, initArticleLinkActive };
+export { initLink, initArticleLinkActive, initEnableScrapSeries };

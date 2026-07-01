@@ -11,6 +11,7 @@ import {
   initSeriesContent,
   nextLinkForce,
   initEnableSeries,
+  initEnableScrapSeries,
   initSwiperPage,
   initSeriesBtnCss,
   initUi,
@@ -75,6 +76,10 @@ class EventManager extends PromiseManager {
     this.addNextPromise(initSeriesBtnCss, initSwiperPage);
   }
 
+  enableScrapSeries() {
+    this.addNextPromise(initEnableScrapSeries);
+  }
+
   // Modal Events
 
   showModal() {
@@ -83,6 +88,7 @@ class EventManager extends PromiseManager {
 
   checkFilterModal() {
     this.addNextPromise(initCheckFilterModal, initLink, initCloseModal);
+    this.addNextPromise(initSwiperPage);
   }
 
   checkUIModal() {

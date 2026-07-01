@@ -204,6 +204,10 @@ function createShortcutSeriesDiv(shortCutLinks: SeriesLink[]) {
     // article-body에 추가 (맨 앞에 추가)
     articleBody.append(shortcutDiv);
 
+    if (v.isSeriesMode) {
+      return;
+    }
+
     const btns = $('<div>', {
       class: 'series-control-btns',
     });
