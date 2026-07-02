@@ -48,10 +48,6 @@ export class ConfigService {
     const articleKey = this.ensureArticleKey();
     const patch: Partial<AppState> = { articleKey };
 
-    if (!articleKey) {
-      return patch;
-    }
-
     // Load article filter config
     const filterConfigStr =
       this.repo.getItem(ARTICLE_FILTER_CONFIG_GLOBAL_KEY) ||
@@ -106,8 +102,6 @@ export class ConfigService {
       ARTICLE_FILTER_CONFIG_GLOBAL_KEY,
       state.articleFilterConfig,
     );
-
-    if (!articleKey) return;
 
     // Per-articleKey scoped storage
     this.repo.setJSON(
