@@ -6,6 +6,25 @@ import { showToast } from '@/utils/toast';
 
 import type { VaultAdapter } from '@/vault';
 
+// ── Loading indicator ──────────────────────────────────
+
+function getLoader(): JQuery<HTMLElement> {
+  let $loader = $('#arcafeed-fetch-loader');
+  if (!$loader.length) {
+    $loader = $('<div id="arcafeed-fetch-loader" class="fetch-loader"></div>');
+    $('body').append($loader);
+  }
+  return $loader;
+}
+
+function showFetchLoader(): void {
+  getLoader().addClass('active');
+}
+
+function hideFetchLoader(): void {
+  getLoader().removeClass('active');
+}
+
 // ── Helpers ────────────────────────────────────────────
 
 function buildPageUrl(p: VaultAdapter, articleId: string): string {
@@ -57,35 +76,41 @@ async function fetchArticle(p: VaultAdapter, articleId: string): Promise<void> {
   const isScrap = p.isCurrentMode('SCRAP');
   let nextUrl: string | null = buildPageUrl(p, articleId);
 
-  for (let page = 0; page <= MAX_PAGES && nextUrl; page++) {
-    const url = normalizeUrl(nextUrl);
+  showFetchLoader();
 
-    console.log(`Fetching article page: ${url}`);
-    const { $html } = await fetchAndParse(url);
+  try {
+    for (let page = 0; page <= MAX_PAGES && nextUrl; page++) {
+      const url = normalizeUrl(nextUrl);
 
-    const newLinks = filterLink(p, false, $html).filter(
-      (link) => !p.articleList.includes(link),
-    );
+      console.log(`Fetching article page: ${url}`);
+      const { $html } = await fetchAndParse(url);
 
-    if (newLinks.length > 0) {
-      console.log(`Fetching Complete: ${url}`);
-      p.articleList.push(...newLinks);
+      const newLinks = filterLink(p, false, $html).filter(
+        (link) => !p.articleList.includes(link),
+      );
 
-      // Non-scrap mode: stop after first successful fetch
-      if (!isScrap) return;
+      if (newLinks.length > 0) {
+        console.log(`Fetching Complete: ${url}`);
+        p.articleList.push(...newLinks);
+
+        // Non-scrap mode: stop after first successful fetch
+        if (!isScrap) return;
+      }
+
+      nextUrl = extractNextPageUrl($html, basePath);
+
+      if (!nextUrl) {
+        console.log('NO ARTICLE PAGE LINK FOUND');
+        return handleFetchComplete(p, isScrap);
+      }
+
+      console.log(`No articles found, trying next page: ${nextUrl}`);
     }
 
-    nextUrl = extractNextPageUrl($html, basePath);
-
-    if (!nextUrl) {
-      console.log('NO ARTICLE PAGE LINK FOUND');
-      return handleFetchComplete(p, isScrap);
-    }
-
-    console.log(`No articles found, trying next page: ${nextUrl}`);
+    handleFetchComplete(p, isScrap);
+  } finally {
+    hideFetchLoader();
   }
-
-  handleFetchComplete(p, isScrap);
 }
 
 function handleFetchComplete(p: VaultAdapter, isScrap: boolean): void {

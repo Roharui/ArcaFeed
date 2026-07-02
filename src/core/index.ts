@@ -9,11 +9,20 @@ const eventBus = new EventBus();
 
 class ArcaFeed {
   private static instance: ArcaFeed;
-  private events: EventManager;
-  private vault: VaultAdapter;
+  private events!: EventManager;
+  private vault!: VaultAdapter;
   private isRunning = false;
 
   constructor() {
+    // Prevent duplicate instantiation: if an instance already exists,
+    // skip re-registering EventBus handlers to avoid double execution.
+    if (ArcaFeed.instance) {
+      console.warn(
+        '[ArcaFeed] Instance already exists, skipping duplicate construction.',
+      );
+      return;
+    }
+
     ArcaFeed.instance = this;
     this.vault = new VaultAdapter();
     this.events = new EventManager();

@@ -1,9 +1,9 @@
-/* ( 크롬, 사파리, 오페라, 엣지 ) 동작 */
-html::-webkit-scrollbar {
+/* Scrollbar hiding (toggleable via .hide-scrollbar class on <html>) */
+html.hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
 
-html {
+html.hide-scrollbar {
   -ms-overflow-style: none;
   /* 인터넷 익스플로러 */
   scrollbar-width: none;
@@ -20,9 +20,9 @@ body {
   padding: 0;
 }
 
-/* default Page */
+/* default Page (toggleable via body classes) */
 
-.left-sidebar {
+body.hide-left-sidebar .left-sidebar {
   display: none !important;
 }
 
@@ -32,7 +32,7 @@ body {
 
 @media screen and (min-width: 1024px) {
   .body .content-wrapper {
-    max-width: 650px !important;
+    max-width: var(--content-max-width, 650px) !important;
   }
 }
 
@@ -46,18 +46,42 @@ li.userscript-nav-item > a {
   margin-right: 0.5rem;
 }
 
-/* disable */
+/* disable (toggleable via body classes) */
 
 .ui-dialog {
   z-index: 9997 !important;
 }
 
-.blur {
+body.hide-blur .blur {
   filter: none !important;
 }
 
-.spoiler-filter {
+body.hide-blur .spoiler-filter {
   filter: none !important;
+}
+
+body.hide-sidebar .sidebar {
+  display: none !important;
+}
+
+body.hide-nav-control .nav-control {
+  display: none !important;
+}
+
+body.hide-article-title .col-title {
+  display: none !important;
+}
+
+body.hide-article-author .col-author {
+  display: none !important;
+}
+
+body.hide-article-time .col-time {
+  display: none !important;
+}
+
+body.hide-article-view .col-view {
+  display: none !important;
 }
 
 .body .board-article {
@@ -77,7 +101,8 @@ li.userscript-nav-item > a {
 
 /* root container */
 
-.root-container .content-wrapper article {
+.root-container .content-wrapper article,
+.swiper-slide .content-wrapper article {
   width: 100% !important;
   height: fit-content !important;
 }
@@ -92,6 +117,14 @@ iframe.tweet {
   pointer-events: none !important;
 }
 
+/* navbar-wrapper (stays fixed during swiper slide transitions) */
+
+.navbar-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
 /* Test Area */
 
 .table .col-id,
@@ -101,4 +134,4 @@ iframe.tweet {
 
 .article-list.admin .vrow-bottom {
   display: none !important;
-} 
+}

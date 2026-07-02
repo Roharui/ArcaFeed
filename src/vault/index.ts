@@ -10,7 +10,7 @@ import { StorageRepository } from './repository';
 import { ConfigService } from './config';
 
 import type { AppState, StateSubscriber } from './store';
-import type { HrefImpl } from '@/types';
+import type { HrefImpl, UISettings } from '@/types';
 import type { Swiper } from '@swiper/types';
 
 /**
@@ -131,6 +131,13 @@ export class VaultAdapter {
   }
   set lastActiveIndex(v: number) {
     this.store.setState({ lastActiveIndex: v });
+  }
+
+  get uiSettings(): UISettings {
+    return this.store.getState().uiSettings;
+  }
+  set uiSettings(v: UISettings) {
+    this.store.setState({ uiSettings: v });
   }
 
   // State snapshot

@@ -18,4 +18,24 @@ interface ArticleFilterConfigImpl {
   [channelId: string]: ArticleFilterImpl;
 }
 
-export type { HrefImpl, ArticleFilterConfigImpl, ArticleFilterImpl, PageMode };
+interface UISettings {
+  hideLeftSidebar: boolean;
+  hideScrollbar: boolean;
+  hideBlur: boolean;
+  hideSidebar: boolean;
+  hideNavControl: boolean;
+  hideArticleTitle: boolean;
+  hideArticleAuthor: boolean;
+  hideArticleTime: boolean;
+  hideArticleView: boolean;
+  lastModalTab: 'filter' | 'ui';
+  contentWidth: number;
+}
+
+export type {
+  HrefImpl,
+  ArticleFilterConfigImpl,
+  ArticleFilterImpl,
+  PageMode,
+  UISettings,
+};

@@ -38,8 +38,11 @@ function initSwiper(p: VaultAdapter): void {
   </div>
   </div>`;
 
-  $('body').append($(swiper));
-  $('.root-container').appendTo('.slide-active');
+  // Insert swiper inside .root-container before the content area,
+  // so footer/#bottom stay in flow. Then move content into the active slide.
+  const $swiper = $(swiper);
+  $('.content-wrapper').before($swiper);
+  $('.content-wrapper').appendTo('.slide-active');
 
   initSwiperPage(p);
 }

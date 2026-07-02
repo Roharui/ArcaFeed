@@ -79,4 +79,14 @@ function checkPageMode(p: VaultAdapter): VaultAdapter {
   return p;
 }
 
-export { checkPageMode, getArticleId, parseHref };
+function extractChannelId(url: string): string | null {
+  const match = url.match(channelAndArticleIdRegex);
+  if (!match) return null;
+  try {
+    return getRegexMatchByIndex(match, 1);
+  } catch {
+    return null;
+  }
+}
+
+export { checkPageMode, getArticleId, parseHref, extractChannelId };

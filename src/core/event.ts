@@ -17,6 +17,7 @@ import {
   initUi,
   initCloseModal,
   initCheckFilterModal,
+  initCheckUIModal,
 } from '@/feature';
 import { checkPageMode } from '@/utils';
 
@@ -93,7 +94,7 @@ class EventManager {
   }
 
   checkUIModal(): Step[] {
-    return [[initUi, initCloseModal]];
+    return [[initCheckUIModal, initUi, initCloseModal]];
   }
 
   closeModal(): Step[] {

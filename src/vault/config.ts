@@ -8,9 +8,10 @@ import { createArticleKey } from '@/utils/article-key';
 import { appendSearchParam } from '@/utils/url';
 
 import type { AppState } from '@/core/store';
-import type { ArticleFilterConfigImpl } from '@/types';
+import type { ArticleFilterConfigImpl, UISettings } from '@/types';
 
 const ARTICLE_FILTER_CONFIG_GLOBAL_KEY = 'arcaFeed:articleFilterConfig';
+const UI_SETTINGS_KEY = 'arcaFeed:uiSettings';
 
 const CHANNEL_OR_ARTICLE_PAGE_REGEX = /^\/b\/[a-zA-Z0-9]+(\/\d+)?\/?$/;
 
@@ -81,6 +82,16 @@ export class ConfigService {
         '-1',
     );
 
+    // Load UI settings
+    const uiSettingsStr = this.repo.getItem(UI_SETTINGS_KEY);
+    if (uiSettingsStr) {
+      try {
+        patch.uiSettings = JSON.parse(uiSettingsStr) as UISettings;
+      } catch {
+        // keep defaults
+      }
+    }
+
     // Prune old caches
     this.repo.pruneArticleKeyCaches(articleKey);
 
@@ -117,6 +128,9 @@ export class ConfigService {
       this.repo.scopedKey(articleKey, 'searchQuery'),
       searchQuery,
     );
+
+    // UI settings (persisted globally, not per-articleKey)
+    this.repo.setJSON(UI_SETTINGS_KEY, state.uiSettings);
 
     this.repo.pruneArticleKeyCaches(articleKey);
   }
