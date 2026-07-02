@@ -21,9 +21,9 @@ const NEXT_PAGE_MODAL_HTML = `
 // ── Mode-specific modal builders ───────────────────────
 
 function buildSeriesModal(
-  p: VaultAdapter,
+  _p: VaultAdapter,
   dialog: JQuery<HTMLElement>,
-  dialogBody: JQuery<HTMLElement>,
+  _dialogBody: JQuery<HTMLElement>,
 ): void {
   dialog.find('#filter').remove();
   dialog.find('label[for="filter"]').remove();

@@ -60,7 +60,7 @@ const initButton = (p: VaultAdapter) => {
 function createArcaFeedBtn(
   id: string,
   icon: string,
-  callback: Function,
+  callback: () => void,
   display = 'list-item',
 ) {
   const btn =

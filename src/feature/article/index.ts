@@ -1,2 +1,2 @@
-export * from './link'
-export * from './fetch'
+export * from './link';
+export * from './fetch';

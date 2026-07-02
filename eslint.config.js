@@ -1,16 +1,21 @@
-// eslint.config.js
-import { defineConfig } from "eslint/config";
+import tseslint from 'typescript-eslint';
+import eslintConfigPrettier from 'eslint-config-prettier';
 
-import eslintConfigPrettier from "eslint-config-prettier";
-import eslintPluginPrettier from "eslint-plugin-prettier";
-
-export default defineConfig([
+export default tseslint.config(
+  ...tseslint.configs.recommended,
+  eslintConfigPrettier,
   {
-    extends: [eslintConfigPrettier],
-    plugins: { prettier: eslintPluginPrettier },
     rules: {
-      semi: "error",
-      "prefer-const": "error",
+      semi: 'error',
+      'prefer-const': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_' },
+      ],
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
-]);
+  {
+    ignores: ['dist/', 'webpack.config.*.js'],
+  },
+);
