@@ -11,8 +11,8 @@ function parseSearchQuery(p: VaultAdapter): VaultAdapter {
   searchParams.delete('before');
   searchParams.delete('tz');
 
-  p.searchQuery = searchParams.toString();
-  p.searchQuery = p.searchQuery ? `?${p.searchQuery}` : '';
+  const q = searchParams.toString();
+  p.searchQuery = q ? `?${q}` : '';
 
   return p;
 }

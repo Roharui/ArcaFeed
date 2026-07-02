@@ -20,9 +20,13 @@ body {
   padding: 0;
 }
 
-/* default Page (toggleable via body classes) */
+/* Always hide left sidebar */
+.left-sidebar {
+  display: none !important;
+}
 
-body.hide-left-sidebar .left-sidebar {
+/* Always hide right sidebar */
+.sidebar {
   display: none !important;
 }
 
@@ -60,10 +64,6 @@ body.hide-blur .spoiler-filter {
   filter: none !important;
 }
 
-body.hide-sidebar .sidebar {
-  display: none !important;
-}
-
 body.hide-nav-control .nav-control {
   display: none !important;
 }
@@ -99,6 +99,14 @@ body.hide-article-view .col-view {
   margin-top: 0px !important;
 }
 
+body.hide-included-article-list .included-article-list {
+  display: none !important;
+}
+
+body.hide-btns-board .btns-board {
+  display: none !important;
+}
+
 /* root container */
 
 .root-container .content-wrapper article,
@@ -129,9 +137,5 @@ iframe.tweet {
 
 .table .col-id,
 .table .col-rate {
-  display: none !important;
-}
-
-.article-list.admin .vrow-bottom {
   display: none !important;
 }

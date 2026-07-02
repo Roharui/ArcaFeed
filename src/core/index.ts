@@ -34,26 +34,25 @@ class ArcaFeed {
    * Each event maps to a method that returns Step[], which StepRunner executes.
    */
   private wireEventBus(): void {
-    const eventNames = [
-      'init',
-      'toNextPage',
-      'toPrevPage',
-      'toNextLinkForce',
-      'renderNextPage',
-      'renderPrevPage',
-      'enableSeries',
-      'enableScrapSeries',
-      'showModal',
-      'checkFilterModal',
-      'checkUIModal',
-      'closeModal',
-      'toggleSwiper',
-    ] as const;
+    const stepGetters: Record<string, () => Step[]> = {
+      init: () => this.events.init(),
+      toNextPage: () => this.events.toNextPage(),
+      toPrevPage: () => this.events.toPrevPage(),
+      toNextLinkForce: () => this.events.toNextLinkForce(),
+      renderNextPage: () => this.events.renderNextPage(),
+      renderPrevPage: () => this.events.renderPrevPage(),
+      enableSeries: () => this.events.enableSeries(),
+      enableScrapSeries: () => this.events.enableScrapSeries(),
+      showModal: () => this.events.showModal(),
+      checkFilterModal: () => this.events.checkFilterModal(),
+      checkUIModal: () => this.events.checkUIModal(),
+      closeModal: () => this.events.closeModal(),
+      toggleSwiper: () => this.events.toggleSwiper(),
+    };
 
-    for (const eventName of eventNames) {
-      eventBus.on(eventName as string, async () => {
-        const method = (this.events as any)[eventName] as () => Step[];
-        const steps = method.call(this.events);
+    for (const [eventName, getSteps] of Object.entries(stepGetters)) {
+      eventBus.on(eventName, async () => {
+        const steps = getSteps();
 
         if (this.isRunning) return;
         this.isRunning = true;

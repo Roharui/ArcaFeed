@@ -1,4 +1,9 @@
-import { fetchArticle, filterLink, parseSearchQuery } from '@/feature';
+import {
+  fetchFirstBatch,
+  fetchAllBatches,
+  filterLink,
+  parseSearchQuery,
+} from '@/feature';
 import { createArticleKey } from '@/utils/article-key';
 import { appendSearchParam } from '@/utils/url';
 
@@ -6,31 +11,39 @@ import type { VaultAdapter } from '@/vault';
 
 // ── Link Initialization ────────────────────────────────
 
-async function initLink(p: VaultAdapter): Promise<void> {
-  if (p.isCurrentMode('ARTICLE')) {
-    filterLink(p, true);
-    await activateArticleLink(p, p.href.articleId);
-    return;
-  }
-
-  if (p.isCurrentMode('CHANNEL', 'SCRAP')) {
-    p.resetArticleList();
-    parseSearchQuery(p);
-    await initLinkChannel(p);
-    return;
-  }
-
-  p.resetArticleList();
+async function initArticleLink(p: VaultAdapter): Promise<void> {
+  filterLink(p, true);
+  await activateArticleLink(p, p.href.articleId);
 }
 
-async function initLinkChannel(p: VaultAdapter): Promise<void> {
-  if (p.isCurrentMode('SCRAP')) return;
+async function initChannelLink(p: VaultAdapter): Promise<void> {
+  p.resetArticleList();
+  parseSearchQuery(p);
 
   const newLinks = filterLink(p, true);
-  if (newLinks.length > 0) {
-    p.articleList = newLinks;
+  p.articleList = newLinks.length > 0 ? newLinks : [];
+  if (newLinks.length === 0) {
+    await fetchFirstBatch(p, p.href.articleId);
+  }
+}
+
+async function initScrapLink(p: VaultAdapter): Promise<void> {
+  p.resetArticleList();
+  parseSearchQuery(p);
+}
+
+const LINK_HANDLERS: Record<string, (p: VaultAdapter) => Promise<void>> = {
+  ARTICLE: initArticleLink,
+  CHANNEL: initChannelLink,
+  SCRAP: initScrapLink,
+};
+
+async function initLink(p: VaultAdapter): Promise<void> {
+  const handler = LINK_HANDLERS[p.href.mode];
+  if (handler) {
+    await handler(p);
   } else {
-    await fetchArticle(p, p.href.articleId);
+    p.resetArticleList();
   }
 }
 
@@ -41,7 +54,7 @@ async function activateArticleLink(
   articleId: string,
 ): Promise<void> {
   if (p.articleList.length === 0) {
-    await fetchArticle(p, articleId);
+    await fetchFirstBatch(p, articleId);
     return;
   }
 
@@ -51,14 +64,14 @@ async function activateArticleLink(
   console.log(`Current Article Index: ${p.activeIndex}`);
 
   if (p.activeIndex === -1) {
-    await fetchArticle(p, articleId);
+    await fetchFirstBatch(p, articleId);
     return;
   }
 
   // Pre-fetch next page when nearing the end of the list
   const needsMoreArticles = p.articleList.length - p.activeIndex <= 1;
   if (needsMoreArticles && !p.isSeriesMode) {
-    await fetchArticle(p, articleId);
+    await fetchFirstBatch(p, articleId);
   }
 }
 
@@ -75,12 +88,7 @@ async function initEnableScrapSeries(p: VaultAdapter): Promise<void> {
   p.searchQuery = appendSearchParam(p.searchQuery, 'articleKey', p.articleKey);
   p.isSeriesMode = true;
 
-  await fetchArticle(p, p.href.articleId);
+  await fetchAllBatches(p, p.href.articleId);
 }
 
-export {
-  initLink,
-  initLinkChannel,
-  activateArticleLink,
-  initEnableScrapSeries,
-};
+export { initLink, activateArticleLink, initEnableScrapSeries };

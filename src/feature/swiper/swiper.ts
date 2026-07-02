@@ -25,6 +25,13 @@ const swiperOptions: SwiperOptions = {
   touchMoveStopPropagation: true,
 };
 
+// ── Mode-specific slide-next events ────────────────────
+
+const SLIDE_NEXT_EVENT: Record<string, string> = {
+  CHANNEL: 'toNextLinkForce',
+  ARTICLE: 'renderNextPage',
+};
+
 // ===
 
 function initSwiper(p: VaultAdapter): void {
@@ -63,12 +70,8 @@ function initSwiperPage(p: VaultAdapter): void {
     }),
   );
 
-  p.swiper.on(
-    'slideNextTransitionEnd',
-    p.isCurrentMode('CHANNEL')
-      ? () => eventBus.emit('toNextLinkForce')
-      : () => eventBus.emit('renderNextPage'),
-  );
+  const nextEvent = SLIDE_NEXT_EVENT[p.href.mode] || 'renderNextPage';
+  p.swiper.on('slideNextTransitionEnd', () => eventBus.emit(nextEvent));
   p.swiper.on('slidePrevTransitionEnd', () => eventBus.emit('renderPrevPage'));
 }
 

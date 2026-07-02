@@ -30,10 +30,8 @@ const DEFAULT_HREF: HrefImpl = {
 };
 
 const DEFAULT_UI_SETTINGS: UISettings = {
-  hideLeftSidebar: true,
   hideScrollbar: true,
   hideBlur: true,
-  hideSidebar: false,
   hideNavControl: false,
   hideArticleTitle: false,
   hideArticleAuthor: false,

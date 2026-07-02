@@ -1,23 +1,12 @@
 import type { PromiseFuncResult } from '@/types';
 
-function isString(str: string | null | undefined): str is string {
-  return !!str;
-}
-
 function getRegexMatchByIndex(
   match: RegExpMatchArray | null,
   index: number,
 ): string {
-  if (!match) throw Error('Regex Match is null');
-  if (match.length < index) throw Error('Regex Match index is Over');
-
-  const result = match[index];
-
-  if (isString(result)) {
-    return result;
-  }
-
-  throw Error('Regex Metch is Not String');
+  const result = match?.[index];
+  if (typeof result === 'string') return result;
+  throw Error('Regex match failed');
 }
 
 function getRegexMatchByIndexTry(
@@ -25,30 +14,12 @@ function getRegexMatchByIndexTry(
   index: number,
   instade: string,
 ): string {
-  try {
-    if (!match) throw Error('Regex Match is null');
-    if (match.length < index) throw Error('Regex Match index is Over');
-
-    const result = match[index];
-
-    if (isString(result)) {
-      return result;
-    }
-
-    throw Error('Regex Metch is Not String');
-  } catch (e) {
-    return instade;
-  }
-}
-
-function isNotNull<T>(obj: T | null | undefined): obj is T {
-  if (!obj) return false;
-  return true;
+  const result = match?.[index];
+  return typeof result === 'string' ? result : instade;
 }
 
 function checkNotNull<T>(obj: T | null | undefined): T {
-  if (isNotNull(obj)) return obj;
-
+  if (obj != null) return obj;
   throw Error('this Object is Null');
 }
 
@@ -56,31 +27,20 @@ function isPromiseFuncResult(
   r: PromiseFuncResult,
 ): 'Function' | 'Param' | 'void' {
   if (typeof r === 'function') return 'Function';
-
   if (r === undefined || r === null) return 'void';
-
   if (typeof r === 'object') return 'Param';
-
-  throw Error('PromiseFuncResult is Not Availe : ' + r);
+  return 'void';
 }
 
 function getArrayItem<T>(arr: T[], idx: number): T {
-  if (arr.length === 0) {
-    throw Error('Array is Empty');
+  const item = arr.at(idx);
+  if (item === undefined) {
+    throw Error(`Array access failed: idx=${idx}, len=${arr.length}`);
   }
-  if (idx < 0) {
-    throw Error('Index is Negative');
-  }
-  if (arr.length <= idx) {
-    throw Error('Index is Over Array Length');
-  }
-
-  return arr[idx]!;
+  return item;
 }
 
 export {
-  isString,
-  isNotNull,
   checkNotNull,
   isPromiseFuncResult,
   getArrayItem,

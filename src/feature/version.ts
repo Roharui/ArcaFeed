@@ -24,8 +24,6 @@ function addVersionInfo(_: VaultAdapter): void {
         'font-size: 12px; color: var(--color-text); margin-bottom: 10px; background-color: var(--color-bd-inner); padding: 5px;',
     }),
   );
-
-  return;
 }
 
 export { addVersionInfo };

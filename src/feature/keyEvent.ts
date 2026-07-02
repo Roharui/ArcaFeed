@@ -23,13 +23,14 @@ function initArticleEvent(_: VaultAdapter): void {
   });
 }
 
+const MODE_KEY_HANDLERS: Record<string, (p: VaultAdapter) => void> = {
+  CHANNEL: initChannelEvent,
+  ARTICLE: initArticleEvent,
+};
+
 const initEvent = (p: VaultAdapter) => {
   initDisableInputEvent(p);
-  if (p.isCurrentMode('CHANNEL')) {
-    initChannelEvent(p);
-  } else if (p.isCurrentMode('ARTICLE')) {
-    initArticleEvent(p);
-  }
+  MODE_KEY_HANDLERS[p.href.mode]?.(p);
 };
 
 export { initEvent };

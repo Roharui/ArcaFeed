@@ -82,14 +82,10 @@ export class ConfigService {
         '-1',
     );
 
-    // Load UI settings
-    const uiSettingsStr = this.repo.getItem(UI_SETTINGS_KEY);
-    if (uiSettingsStr) {
-      try {
-        patch.uiSettings = JSON.parse(uiSettingsStr) as UISettings;
-      } catch {
-        // keep defaults
-      }
+    // Load UI settings (getJSON handles null / parse errors internally)
+    const uiSettings = this.repo.getJSON<UISettings>(UI_SETTINGS_KEY);
+    if (uiSettings) {
+      patch.uiSettings = uiSettings;
     }
 
     // Prune old caches

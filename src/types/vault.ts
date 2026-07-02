@@ -19,10 +19,8 @@ interface ArticleFilterConfigImpl {
 }
 
 interface UISettings {
-  hideLeftSidebar: boolean;
   hideScrollbar: boolean;
   hideBlur: boolean;
-  hideSidebar: boolean;
   hideNavControl: boolean;
   hideArticleTitle: boolean;
   hideArticleAuthor: boolean;

@@ -7,10 +7,8 @@ import { eventBus } from '@/core';
 import type { VaultAdapter } from '@/vault';
 
 const UI_TOGGLE_ITEMS: { key: string; label: string }[] = [
-  { key: 'hideLeftSidebar', label: '왼쪽 사이드바 숨기기' },
   { key: 'hideScrollbar', label: '스크롤바 숨기기' },
   { key: 'hideBlur', label: '스포일러 블러 제거' },
-  { key: 'hideSidebar', label: '사이드바 숨기기' },
   { key: 'hideNavControl', label: '게시글 내비게이션 숨기기' },
 ];
 
@@ -66,11 +64,15 @@ function createUISettingModal(p: VaultAdapter): JQuery<HTMLElement> {
     $toggleList.append(createToggleRow(item.key, item.label, value));
   }
 
-  // Build article info toggle group
-  const $articleInfoList = $uiTab.find('#ui-article-info-list');
-  for (const item of ARTICLE_INFO_TOGGLES) {
-    const value = uiSettings[item.key as keyof typeof uiSettings] as boolean;
-    $articleInfoList.append(createToggleRow(item.key, item.label, value));
+  // Build article info toggle group (hidden in series mode)
+  if (!p.isSeriesMode) {
+    const $articleInfoList = $uiTab.find('#ui-article-info-list');
+    for (const item of ARTICLE_INFO_TOGGLES) {
+      const value = uiSettings[item.key as keyof typeof uiSettings] as boolean;
+      $articleInfoList.append(createToggleRow(item.key, item.label, value));
+    }
+  } else {
+    $uiTab.find('.ui-article-info-group').remove();
   }
 
   $uiTab.find('#check-btn').on('click', () => eventBus.emit('checkUIModal'));

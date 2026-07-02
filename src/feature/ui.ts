@@ -13,10 +13,12 @@ const MAX_CONTENT_WIDTH = 1400;
 let resizeHandleInstalled = false;
 
 function installResizeHandle(p: VaultAdapter): void {
-  if (resizeHandleInstalled) return;
-  if (!window.matchMedia('(min-width: 1024px)').matches) return;
-  if (window.matchMedia('(pointer: coarse)').matches) return;
-  if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
+  const shouldInstall =
+    !resizeHandleInstalled &&
+    window.matchMedia('(min-width: 1024px)').matches &&
+    !window.matchMedia('(pointer: coarse)').matches &&
+    p.isCurrentMode('CHANNEL', 'ARTICLE');
+  if (!shouldInstall) return;
 
   const $wrapper = $('.body .content-wrapper');
   if (!$wrapper.length) return;
@@ -87,10 +89,8 @@ function applyUISettings(settings: UISettings): void {
   const $html = $('html');
 
   // CSS class-based toggles (sync with arcalive.css rules)
-  $body.toggleClass('hide-left-sidebar', settings.hideLeftSidebar);
   $html.toggleClass('hide-scrollbar', settings.hideScrollbar);
   $body.toggleClass('hide-blur', settings.hideBlur);
-  $body.toggleClass('hide-sidebar', settings.hideSidebar);
   $body.toggleClass('hide-nav-control', settings.hideNavControl);
   $body.toggleClass('hide-article-title', settings.hideArticleTitle);
   $body.toggleClass('hide-article-author', settings.hideArticleAuthor);
@@ -103,6 +103,28 @@ function applyUISettings(settings: UISettings): void {
     `${settings.contentWidth}px`,
   );
 }
+
+// ── Mode-specific UI initializers ──────────────────────
+
+function initArticleModeUI(p: VaultAdapter): void {
+  $('.nav-control').appendTo('body');
+
+  // Open cross-channel article links in a new tab
+  // to avoid disrupting the current slide session.
+  $('.included-article-list a[href]').each((_, el) => {
+    const href = $(el).attr('href');
+    if (!href) return;
+    const targetChannelId = extractChannelId(href);
+    if (targetChannelId && targetChannelId !== p.href.channelId) {
+      $(el).attr('target', '_blank');
+      $(el).attr('rel', 'noopener');
+    }
+  });
+}
+
+const MODE_UI_INIT: Record<string, (p: VaultAdapter) => void> = {
+  ARTICLE: initArticleModeUI,
+};
 
 // ── Init ────────────────────────────────────────────────
 
@@ -122,24 +144,14 @@ function initUi(p: VaultAdapter): void {
   // Apply current UI settings
   applyUISettings(p.uiSettings);
 
+  // In series mode, automatically hide the included article list and btns-board
+  $('body').toggleClass('hide-included-article-list', p.isSeriesMode);
+  $('body').toggleClass('hide-btns-board', p.isSeriesMode);
+
   // Install resize handle (PC only, once)
   installResizeHandle(p);
 
-  if (p.isCurrentMode('ARTICLE')) {
-    $('.nav-control').appendTo('body');
-
-    // Open cross-channel article links in a new tab
-    // to avoid disrupting the current slide session.
-    $('.included-article-list a[href]').each((_, el) => {
-      const href = $(el).attr('href');
-      if (!href) return;
-      const targetChannelId = extractChannelId(href);
-      if (targetChannelId && targetChannelId !== p.href.channelId) {
-        $(el).attr('target', '_blank');
-        $(el).attr('rel', 'noopener');
-      }
-    });
-  }
+  MODE_UI_INIT[p.href.mode]?.(p);
 
   // Reactive: subscribe to state changes to re-apply UI settings
   p.subscribe((state) => {

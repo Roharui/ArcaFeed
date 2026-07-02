@@ -3,9 +3,9 @@ import $ from 'jquery';
 import '@css/modal.css';
 
 import { createArticleFilterModal } from './filterUi';
+import { createUISettingModal } from './uiTab';
 
 import type { VaultAdapter } from '@/vault';
-import { createUISettingModal } from './uiTab';
 
 const NEXT_PAGE_MODAL_HTML = `
 <div id="dialog" class="helper-modal">
@@ -18,15 +18,25 @@ const NEXT_PAGE_MODAL_HTML = `
 </div>
 `;
 
-function initModal(p: VaultAdapter) {
-  const dialog = $(NEXT_PAGE_MODAL_HTML);
-  const dialogBody = dialog.find('.helper-modal-body');
+// ── Mode-specific modal builders ───────────────────────
 
-  // Restore last active tab
-  const lastTab = p.uiSettings.lastModalTab;
-  dialog.find(`#${lastTab}`).prop('checked', true);
+function buildSeriesModal(
+  p: VaultAdapter,
+  dialog: JQuery<HTMLElement>,
+  dialogBody: JQuery<HTMLElement>,
+): void {
+  dialog.find('#filter').remove();
+  dialog.find('label[for="filter"]').remove();
+  dialog.find('#ui').prop('checked', true);
+}
 
-  // Save tab selection on change
+function buildNormalModal(
+  p: VaultAdapter,
+  dialog: JQuery<HTMLElement>,
+  dialogBody: JQuery<HTMLElement>,
+): void {
+  dialog.find(`#${p.uiSettings.lastModalTab}`).prop('checked', true);
+
   dialog.find('.helper-modal-tab-radio').on('change', function () {
     const selectedTab = $(this).attr('id') as 'filter' | 'ui';
     p.uiSettings = { ...p.uiSettings, lastModalTab: selectedTab };
@@ -34,8 +44,16 @@ function initModal(p: VaultAdapter) {
   });
 
   dialogBody.append(createArticleFilterModal(p));
-  dialogBody.append(createUISettingModal(p));
+}
 
+function initModal(p: VaultAdapter) {
+  const dialog = $(NEXT_PAGE_MODAL_HTML);
+  const dialogBody = dialog.find('.helper-modal-body');
+
+  const buildModal = p.isSeriesMode ? buildSeriesModal : buildNormalModal;
+  buildModal(p, dialog, dialogBody);
+
+  dialogBody.append(createUISettingModal(p));
   dialog.appendTo('body');
 }
 

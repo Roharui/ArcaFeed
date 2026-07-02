@@ -154,7 +154,7 @@ function initCheckFilterModal(p: VaultAdapter) {
 
   const pageFilter: ArticleFilterImpl = {
     tab,
-    title: title.length > 0 ? title : [],
+    title,
     disableSwiper: false,
   };
 

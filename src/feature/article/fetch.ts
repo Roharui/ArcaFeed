@@ -35,15 +35,8 @@ function buildPageUrl(p: VaultAdapter, articleId: string): string {
 
 function normalizeUrl(pageUrl: string): string {
   if (!pageUrl.startsWith('http')) return pageUrl;
-  const parsed = new URL(pageUrl);
-  return `${parsed.pathname}${parsed.search}`;
-}
-
-// ── Scraper ────────────────────────────────────────────
-
-interface PageResult {
-  nextUrl: string | null;
-  $html: JQuery<HTMLElement>;
+  const u = new URL(pageUrl);
+  return `${u.pathname}${u.search}`;
 }
 
 async function fetchAndParse(
@@ -62,65 +55,96 @@ function extractNextPageUrl(
     .next()
     .find('a')
     .attr('href');
-  if (!nextLink) return null;
-
-  return nextLink.startsWith('?') ? `${basePath}${nextLink}` : nextLink;
+  return nextLink
+    ? nextLink.startsWith('?')
+      ? `${basePath}${nextLink}`
+      : nextLink
+    : null;
 }
 
-// ── Main fetch logic ───────────────────────────────────
+// ── Async Generator (core) ─────────────────────────────
 
 const MAX_PAGES = 10;
 
-async function fetchArticle(p: VaultAdapter, articleId: string): Promise<void> {
+/**
+ * Yields batches of filtered article links from each paginated listing page.
+ * The consumer decides when to stop by breaking out of the loop.
+ */
+async function* fetchArticlePages(
+  p: VaultAdapter,
+  articleId: string,
+): AsyncGenerator<string[]> {
   const basePath = p.isCurrentMode('SCRAP') ? '/u/scrap_list' : articleId;
-  const isScrap = p.isCurrentMode('SCRAP');
   let nextUrl: string | null = buildPageUrl(p, articleId);
 
-  showFetchLoader();
+  for (let page = 0; page <= MAX_PAGES && nextUrl; page++) {
+    const url = normalizeUrl(nextUrl);
 
-  try {
-    for (let page = 0; page <= MAX_PAGES && nextUrl; page++) {
-      const url = normalizeUrl(nextUrl);
+    console.log(`Fetching article page: ${url}`);
+    const { $html } = await fetchAndParse(url);
 
-      console.log(`Fetching article page: ${url}`);
-      const { $html } = await fetchAndParse(url);
+    const newLinks = filterLink(p, false, $html).filter(
+      (link) => !p.articleList.includes(link),
+    );
 
-      const newLinks = filterLink(p, false, $html).filter(
-        (link) => !p.articleList.includes(link),
-      );
+    yield newLinks;
 
-      if (newLinks.length > 0) {
-        console.log(`Fetching Complete: ${url}`);
-        p.articleList.push(...newLinks);
-
-        // Non-scrap mode: stop after first successful fetch
-        if (!isScrap) return;
-      }
-
-      nextUrl = extractNextPageUrl($html, basePath);
-
-      if (!nextUrl) {
-        console.log('NO ARTICLE PAGE LINK FOUND');
-        return handleFetchComplete(p, isScrap);
-      }
-
-      console.log(`No articles found, trying next page: ${nextUrl}`);
+    nextUrl = extractNextPageUrl($html, basePath);
+    if (!nextUrl) {
+      console.log('NO ARTICLE PAGE LINK FOUND');
+      return;
     }
 
-    handleFetchComplete(p, isScrap);
+    if (newLinks.length === 0) {
+      console.log(`No articles found, trying next page: ${nextUrl}`);
+    }
+  }
+}
+
+// ── Convenience wrappers ───────────────────────────────
+
+/**
+ * Fetch until the first page that yields results, then stop.
+ * Shows a failure toast if no articles are found across all pages.
+ */
+async function fetchFirstBatch(
+  p: VaultAdapter,
+  articleId: string,
+): Promise<void> {
+  showFetchLoader();
+  try {
+    for await (const links of fetchArticlePages(p, articleId)) {
+      if (links.length > 0) {
+        console.log(`Fetching Complete`);
+        p.articleList.push(...links);
+        return;
+      }
+    }
+    showToast('다음 게시글 탐색에 실패했습니다.');
   } finally {
     hideFetchLoader();
   }
 }
 
-function handleFetchComplete(p: VaultAdapter, isScrap: boolean): void {
-  if (!isScrap) {
-    showToast('다음 게시글 탐색에 실패했습니다.');
-    return;
-  }
+/**
+ * Collect all article links across all available pages.
+ * After exhaustion, opens the first scrap series article if in series mode.
+ */
+async function fetchAllBatches(
+  p: VaultAdapter,
+  articleId: string,
+): Promise<void> {
+  showFetchLoader();
+  try {
+    for await (const links of fetchArticlePages(p, articleId)) {
+      p.articleList.push(...links);
+    }
 
-  if (p.isSeriesMode) {
-    openScrapSeriesArticle(p);
+    if (p.isSeriesMode) {
+      openScrapSeriesArticle(p);
+    }
+  } finally {
+    hideFetchLoader();
   }
 }
 
@@ -143,4 +167,9 @@ function openScrapSeriesArticle(p: VaultAdapter): void {
   window.location.replace(nextUrl.toString());
 }
 
-export { fetchArticle, openScrapSeriesArticle };
+export {
+  fetchArticlePages,
+  fetchFirstBatch,
+  fetchAllBatches,
+  openScrapSeriesArticle,
+};
