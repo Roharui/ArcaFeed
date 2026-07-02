@@ -107,15 +107,21 @@ class EventManager {
       (p: VaultAdapter) => {
         if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
 
-        const pageFilter = p.articleFilterConfig[p.href.channelId] || {
+        const existingFilter = p.articleFilterConfig[p.href.channelId] || {
           tab: [],
           title: [],
           disableSwiper: false,
         };
 
-        pageFilter.disableSwiper = !pageFilter.disableSwiper;
+        const pageFilter = {
+          ...existingFilter,
+          disableSwiper: !existingFilter.disableSwiper,
+        };
 
-        p.articleFilterConfig[p.href.channelId] = pageFilter;
+        p.articleFilterConfig = {
+          ...p.articleFilterConfig,
+          [p.href.channelId]: pageFilter,
+        };
 
         p.flushSave();
 

@@ -98,35 +98,30 @@ export class ConfigService {
    * Save current state to localStorage.
    */
   saveConfig(state: Readonly<AppState>): void {
-    const {
-      articleKey,
-      articleFilterConfig,
-      articleList,
-      isSeriesMode,
-      searchQuery,
-    } = state;
+    const { articleKey } = state;
+
+    // Global settings — saved regardless of articleKey
+    this.repo.setJSON(UI_SETTINGS_KEY, state.uiSettings);
+    this.repo.setJSON(
+      ARTICLE_FILTER_CONFIG_GLOBAL_KEY,
+      state.articleFilterConfig,
+    );
 
     if (!articleKey) return;
 
-    // Global article filter config
-    this.repo.setJSON(ARTICLE_FILTER_CONFIG_GLOBAL_KEY, articleFilterConfig);
-
-    // Scoped storage
+    // Per-articleKey scoped storage
     this.repo.setJSON(
       this.repo.scopedKey(articleKey, 'articleList'),
-      articleList,
+      state.articleList,
     );
     this.repo.setItem(
       this.repo.scopedKey(articleKey, 'seriesMode'),
-      isSeriesMode.toString(),
+      state.isSeriesMode.toString(),
     );
     this.repo.setItem(
       this.repo.scopedKey(articleKey, 'searchQuery'),
-      searchQuery,
+      state.searchQuery,
     );
-
-    // UI settings (persisted globally, not per-articleKey)
-    this.repo.setJSON(UI_SETTINGS_KEY, state.uiSettings);
 
     this.repo.pruneArticleKeyCaches(articleKey);
   }

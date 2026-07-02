@@ -79,6 +79,7 @@ export default function (_env, _args) {
             'https://cdn.jsdelivr.net/npm/toastify-js',
           ],
           'run-at': 'document-end',
+          grant: 'none',
         },
       }),
     ],

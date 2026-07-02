@@ -158,7 +158,10 @@ function initCheckFilterModal(p: VaultAdapter) {
     disableSwiper: false,
   };
 
-  p.articleFilterConfig[channelId] = pageFilter;
+  p.articleFilterConfig = {
+    ...p.articleFilterConfig,
+    [channelId]: pageFilter,
+  };
   p.articleList = p.articleList.slice(0, p.activeIndex + 1);
 
   return p;

@@ -32,6 +32,7 @@ export default function (env, _args) {
           : undefined,
       ],
       'run-at': 'document-end',
+      grant: 'none',
     },
   });
 
