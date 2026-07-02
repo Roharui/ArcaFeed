@@ -64,6 +64,10 @@ export default function (_env, _args) {
         headers: {
           name: 'ArcaFeed',
           namespace: 'https://github.com/Roharui/ArcaFeed',
+          downloadURL:
+            'https://github.com/Roharui/ArcaFeed/releases/latest/download/ArcaFeed.user.js',
+          updateURL:
+            'https://github.com/Roharui/ArcaFeed/releases/latest/download/ArcaFeed.user.js',
           version: currentVersion,
           description: 'Use ArcaLive as Shorts',
           author: 'https://github.com/Roharui',
