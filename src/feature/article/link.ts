@@ -12,6 +12,7 @@ import type { VaultAdapter } from '@/vault';
 // ── Link Initialization ────────────────────────────────
 
 async function initArticleLink(p: VaultAdapter): Promise<void> {
+  parseSearchQuery(p);
   filterLink(p, true);
   await activateArticleLink(p, p.href.articleId);
 }
@@ -55,6 +56,7 @@ async function activateArticleLink(
 ): Promise<void> {
   if (p.articleList.length === 0) {
     await fetchFirstBatch(p, articleId);
+    p.activeIndex = p.articleList.findIndex((link) => link.includes(articleId));
     return;
   }
 
@@ -65,6 +67,7 @@ async function activateArticleLink(
 
   if (p.activeIndex === -1) {
     await fetchFirstBatch(p, articleId);
+    p.activeIndex = p.articleList.findIndex((link) => link.includes(articleId));
     return;
   }
 

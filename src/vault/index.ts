@@ -13,6 +13,8 @@ import type { AppState, StateSubscriber } from './store';
 import type { HrefImpl, UISettings } from '@/types';
 import type { Swiper } from '@swiper/types';
 
+import { parseHref } from '@/utils/regex';
+
 /**
  * Compatibility layer that mimics the old Vault interface
  * while delegating to Store and ConfigService internally.
@@ -30,10 +32,18 @@ export class VaultAdapter {
   // Swiper is UI state, kept direct
   swiper: Swiper | null = null;
 
-  constructor(store?: Store, config?: ConfigService) {
+  constructor(store?: Store, config?: ConfigService, initialHref?: HrefImpl) {
     const repo = new StorageRepository();
     this.config = config ?? new ConfigService(repo);
     this.store = store ?? new Store(this.config.loadConfig());
+
+    // Pre-set href from constructor injection (avoids redundant URL re-parse).
+    // Falls back to synchronous URL parse if not provided.
+    if (initialHref) {
+      this.store.setState({ href: initialHref });
+    } else {
+      this.store.setState({ href: parseHref(window.location.href) });
+    }
 
     // Auto-persist state changes with debounce
     this.unsubscribeAutoSave = this.store.subscribe((state) => {

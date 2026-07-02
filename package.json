@@ -1,6 +1,6 @@
 {
   "name": "arcafeed",
-  "version": "2.2.5",
+  "version": "2.2.6",
   "main": "main.js",
   "scripts": {
     "dev": "webpack --config webpack.config.dev.js --env GIT_HASH=$(git rev-parse --short HEAD) --env BUILD_DATE=$(date +%Y-%m-%d_%H-%M-%S)",
@@ -8,7 +8,7 @@
     "prod": "webpack --config webpack.config.prod.js --mode production",
     "lint": "eslint .",
     "agent:check": "tsc --noEmit",
-    "release": "npm run lint && npm run prod && git tag v$npm_package_version && git push origin v$npm_package_version || (git tag -d v$npm_package_version && exit 1)"
+    "release": "(git diff --quiet && git diff --cached --quiet) || (echo 'Error: uncommitted changes exist.'; exit 1); (git status -sb | grep -qv '\\[ahead') || (echo 'Error: unpushed commits exist.'; exit 1); git tag v$npm_package_version && git push origin v$npm_package_version || (git tag -d v$npm_package_version 2>/dev/null; exit 1)"
   },
   "author": "",
   "license": "ISC",

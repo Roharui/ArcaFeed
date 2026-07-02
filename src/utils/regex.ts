@@ -1,5 +1,4 @@
 import type { HrefImpl } from '@/types';
-import type { VaultAdapter } from '@/vault';
 
 import { getRegexMatchByIndex, getRegexMatchByIndexTry } from '@/utils';
 
@@ -73,12 +72,6 @@ function parseHref(href?: string) {
   return hrefObj;
 }
 
-function checkPageMode(p: VaultAdapter): VaultAdapter {
-  p.href = parseHref(window.location.href);
-
-  return p;
-}
-
 function extractChannelId(url: string): string | null {
   const match = url.match(channelAndArticleIdRegex);
   if (!match) return null;
@@ -89,4 +82,4 @@ function extractChannelId(url: string): string | null {
   }
 }
 
-export { checkPageMode, getArticleId, parseHref, extractChannelId };
+export { getArticleId, parseHref, extractChannelId };

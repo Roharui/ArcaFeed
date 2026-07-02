@@ -19,7 +19,6 @@ import {
   initCheckFilterModal,
   initCheckUIModal,
 } from '@/feature';
-import { checkPageMode } from '@/utils';
 
 import type { Step } from '@/core/step-runner';
 import type { VaultAdapter } from '@/vault';
@@ -35,7 +34,7 @@ class EventManager {
 
   init(): Step[] {
     return [
-      [addVersionInfo, checkPageMode],
+      [addVersionInfo],
       [initLink, initButton, initEvent, initSeriesContent, initUi],
       initSwiper,
     ];

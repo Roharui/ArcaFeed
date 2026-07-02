@@ -1,6 +1,3 @@
-import '@css/swiper.css';
-import '@css/arcalive.css';
-
 import { ArcaFeed, eventBus } from '@/core';
 
 // Guard against duplicate execution (userscript may be loaded multiple times

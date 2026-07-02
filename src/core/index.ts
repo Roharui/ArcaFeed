@@ -24,7 +24,27 @@ class ArcaFeed {
     }
 
     ArcaFeed.instance = this;
+
+    // ── Page mode detection ─────────────────────────
+    // Create VaultAdapter first — its constructor runs ConfigService which may
+    // call ensureArticleKey() and modify window.location via history.replaceState.
+    // The VaultAdapter internally calls parseHref() after this, so href is correct.
     this.vault = new VaultAdapter();
+
+    const { mode } = this.vault.href;
+
+    // ArcaFeed only operates on HOME / ARTICLE / CHANNEL / SCRAP pages.
+    // On OTHER pages, exit early without loading CSS or wiring events.
+    if (mode === 'OTHER') {
+      console.log('[ArcaFeed] Unsupported page, exiting.');
+      return;
+    }
+
+    // Load global layout CSS only on supported pages.
+    // Feature-specific CSS (swiper, modal, series, etc.) is loaded via their
+    // respective module imports and only affects ArcaFeed-created elements.
+    import(/* webpackMode: "eager" */ '@css/arcalive.css');
+
     this.events = new EventManager();
     this.wireEventBus();
   }
