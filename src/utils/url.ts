@@ -20,10 +20,3 @@ export function appendSearchParam(
   const normalized = params.toString();
   return normalized ? `?${normalized}` : '';
 }
-
-export function normalizeArticleUrls(articleList: string[]): string[] {
-  return articleList.map((href) => {
-    const url = new URL(href, window.location.origin);
-    return url.pathname;
-  });
-}

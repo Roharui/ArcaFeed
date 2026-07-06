@@ -1,4 +1,3 @@
-export { sleep } from './func';
 export * from './regex';
 export * from './type';
 export * from './fetch';
