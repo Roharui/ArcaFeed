@@ -280,14 +280,7 @@ interface ArticleFilterImpl {
 jQuery, Swiper, Toastify, eruda는 번들에 포함되지 않고 CDN에서 로드됩니다.
 (유저스크립트 메타데이터 `@require` 사용)
 
-### 릴리즈 파이프라인 (`npm run release`)
-
-```
-npm run lint          → 코드 품질 검사
-  └→ npm run prod     → 프로덕션 빌드 (dist/ArcaFeed.user.js)
-       └→ git tag v{version} → package.json 버전으로 태그 생성
-            └→ git push origin v{version} → GitHub Actions 트리거
-```
+### 릴리즈 파이프라인
 
 GitHub Actions (`.github/workflows/release.yml`):
 - `v*` 태그 푸시 시 트리거
