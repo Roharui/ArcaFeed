@@ -48,6 +48,9 @@ export default function (_env, _args) {
           downloadURL: releaseUrl(FILENAME),
           updateURL: releaseUrl(FILENAME),
           'run-at': 'document-end',
+          require: [
+            'https://code.jquery.com/jquery-3.6.0.min.js',
+          ],
           grant: 'none',
         },
       }),
