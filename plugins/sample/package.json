@@ -1,7 +1,7 @@
 {
   "name": "arcafeed-plugin-sample",
-  "version": "1.0.2"
-  "private": true,
+  "version": "1.0.2",
+    "private": true,
   "scripts": {
     "build": "webpack --config webpack.config.prod.js --mode production",
     "lint": "eslint .",

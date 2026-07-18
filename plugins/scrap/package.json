@@ -1,7 +1,7 @@
 {
   "name": "arcafeed-plugin-scrap",
-  "version": "1.0.3"
-  "private": true,
+  "version": "1.0.3",
+    "private": true,
   "scripts": {
     "build": "webpack --config webpack.config.prod.js --mode production",
     "lint": "eslint .",
