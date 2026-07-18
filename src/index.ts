@@ -1,5 +1,8 @@
 import { ArcaFeed, eventBus } from '@/core';
 
+// Expose EventBus globally for plugins to hook into
+window.__arcaFeed = { eventBus };
+
 // Guard against duplicate execution (userscript may be loaded multiple times
 // by the userscript manager on SPA navigations, iframes, etc.)
 const GUARD_KEY = '__arcaFeedInitialized__';

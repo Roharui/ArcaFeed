@@ -3,6 +3,21 @@ declare module '*.css' {
   export default content;
 }
 
+export {}; // Ensure this file is treated as a module
+
+/** Global bridge for ArcaFeed plugins */
+declare global {
+  interface Window {
+    __arcaFeed?: {
+      eventBus: {
+        on(event: string, handler: (...args: any[]) => void | Promise<void>): () => void;
+        emit(event: string, ...args: any[]): Promise<void>;
+        off(event: string, handler?: (...args: any[]) => void | Promise<void>): void;
+      };
+    };
+  }
+}
+
 declare module 'toastify-js' {
   type ToastifyPosition = 'left' | 'center' | 'right';
   type ToastifyGravity = 'top' | 'bottom';
