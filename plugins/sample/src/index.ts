@@ -26,7 +26,6 @@ import { initSamplePlugin } from './plugin';
   }
 
   waitForArcaFeed(() => {
-    console.log('[Sample Plugin] ArcaFeed detected.');
     initSamplePlugin();
   });
 })();

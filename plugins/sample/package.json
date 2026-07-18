@@ -1,6 +1,6 @@
 {
   "name": "arcafeed-plugin-sample",
-  "version": "1.0.2",
+  "version": "1.0.3",
     "private": true,
   "scripts": {
     "build": "webpack --config webpack.config.prod.js --mode production",

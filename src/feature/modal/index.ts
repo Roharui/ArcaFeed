@@ -48,7 +48,7 @@ function buildHomeModal(
 function buildNormalModal(
   p: VaultAdapter,
   dialog: JQuery<HTMLElement>,
-  dialogBody: JQuery<HTMLElement>,
+  _dialogBody: JQuery<HTMLElement>,
 ): void {
   dialog.find(`#${p.uiSettings.lastModalTab}`).prop('checked', true);
 
@@ -57,11 +57,9 @@ function buildNormalModal(
     p.uiSettings = { ...p.uiSettings, lastModalTab: selectedTab };
     p.flushSave();
   });
-
-  dialogBody.append(createArticleFilterModal(p));
 }
 
-function initModal(p: VaultAdapter) {
+ function initModal(p: VaultAdapter) {
   const dialog = $(NEXT_PAGE_MODAL_HTML);
   const dialogBody = dialog.find('.helper-modal-body');
 

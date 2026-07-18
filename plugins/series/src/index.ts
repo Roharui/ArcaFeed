@@ -9,7 +9,6 @@ import { initSeriesPlugin } from './plugin';
 
 (function () {
   const GUARD_KEY = '__arcaFeedSeriesPlugin__';
-  console.log('[Series Plugin] Standalone mode.');
 
   if ((window as any)[GUARD_KEY]) return;
   (window as any)[GUARD_KEY] = true;
@@ -31,7 +30,6 @@ import { initSeriesPlugin } from './plugin';
   }
 
   waitForArcaFeed(() => {
-    console.log('[Series Plugin] ArcaFeed detected.');
     initSeriesPlugin();
   });
 })();
