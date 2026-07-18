@@ -82,7 +82,7 @@ jobs:
               plugin_name=$(basename "$plugin_dir")
               echo "::group::Building plugin: ${plugin_name}"
               cd "$plugin_dir"
-              npm ci
+              npm install
               npm run build
               cd "${{ github.workspace }}"
               echo "::endgroup::"
