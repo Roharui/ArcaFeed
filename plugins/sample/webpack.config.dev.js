@@ -4,8 +4,12 @@ import { fileURLToPath } from 'url';
 import webpack from 'webpack';
 import { UserscriptPlugin } from 'webpack-userscript';
 
+import { releaseUrl } from '../shared/release.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const FILENAME = 'arcafeed-sample.user.js';
 
 export default function (env, _args) {
   const definePlugin = new webpack.DefinePlugin({
@@ -22,7 +26,7 @@ export default function (env, _args) {
 
     output: {
       path: path.resolve(__dirname, 'dist'),
-      filename: 'arcafeed-sample.user.js',
+      filename: FILENAME,
     },
 
     resolve: {
@@ -59,6 +63,8 @@ export default function (env, _args) {
           description: 'ArcaFeed sample plugin - demonstrates plugin API usage',
           author: 'https://github.com/Roharui',
           match: 'https://arca.live/*',
+          downloadURL: releaseUrl(FILENAME),
+          updateURL: releaseUrl(FILENAME),
           'run-at': 'document-end',
           grant: 'none',
         },

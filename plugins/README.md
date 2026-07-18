@@ -7,7 +7,9 @@ ArcaFeed의 보조 기능을 위한 독립형 플러그인 모음입니다.
 
 ```
 plugins/
-├── sample/          # 예제 플러그인 (API 사용법 데모)
+├── shared/           # 공통 유틸리티 (releaseUrl 헬퍼 등)
+│   └── release.ts
+├── sample/           # 예제 플러그인 (API 사용법 데모)
 │   ├── src/
 │   │   └── index.ts
 │   ├── package.json
