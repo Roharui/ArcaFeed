@@ -1,0 +1,23 @@
+{
+  "name": "arcafeed-plugin-sample",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "webpack --config webpack.config.prod.js --mode production",
+    "dev": "webpack --config webpack.config.dev.js --env GIT_HASH=$(git rev-parse --short HEAD) --env BUILD_DATE=$(date +%Y-%m-%d_%H-%M-%S)",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/jquery": "^3.5.30",
+    "@types/node": "^22.18.8",
+    "css-loader": "^7.1.2",
+    "style-loader": "^4.0.0",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.3",
+    "webpack": "^5.93.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-userscript": "^3.2.3"
+  },
+  "type": "module"
+}

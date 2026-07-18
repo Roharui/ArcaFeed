@@ -60,10 +60,27 @@ jobs:
           npm ci
           npm run prod
 
+      - name: Build plugins
+        if: steps.check.outputs.should_release == 'true'
+        run: |
+          for plugin_dir in plugins/*/; do
+            if [ -f "${plugin_dir}package.json" ]; then
+              plugin_name=$(basename "$plugin_dir")
+              echo "::group::Building plugin: ${plugin_name}"
+              cd "$plugin_dir"
+              npm ci
+              npm run build
+              cd "${{ github.workspace }}"
+              echo "::endgroup::"
+            fi
+          done
+
       - name: Create Release
         if: steps.check.outputs.should_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.check.outputs.new_tag }}
-          files: dist/ArcaFeed.user.js
+          files: |
+            dist/ArcaFeed.user.js
+            plugins/*/dist/*.user.js
           generate_release_notes: true
