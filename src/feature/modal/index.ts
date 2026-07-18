@@ -33,6 +33,18 @@ function buildSeriesModal(
   dialog.find('#ui').prop('checked', true);
 }
 
+function buildHomeModal(
+  _p: VaultAdapter,
+  dialog: JQuery<HTMLElement>,
+  _dialogBody: JQuery<HTMLElement>,
+): void {
+  dialog.find('#filter').remove();
+  dialog.find('label[for="filter"]').remove();
+  dialog.find('#ui').remove();
+  dialog.find('label[for="ui"]').remove();
+  dialog.find('#plugins').prop('checked', true);
+}
+
 function buildNormalModal(
   p: VaultAdapter,
   dialog: JQuery<HTMLElement>,
@@ -53,10 +65,17 @@ function initModal(p: VaultAdapter) {
   const dialog = $(NEXT_PAGE_MODAL_HTML);
   const dialogBody = dialog.find('.helper-modal-body');
 
-  const buildModal = p.isSeriesMode ? buildSeriesModal : buildNormalModal;
+  const buildModal = p.isSeriesMode
+    ? buildSeriesModal
+    : p.isCurrentMode('HOME')
+      ? buildHomeModal
+      : buildNormalModal;
   buildModal(p, dialog, dialogBody);
 
-  dialogBody.append(createUISettingModal(p));
+  if (!p.isCurrentMode('HOME')) {
+    dialogBody.append(createArticleFilterModal(p));
+    dialogBody.append(createUISettingModal(p));
+  }
   dialogBody.append(createPluginTab(p));
   dialog.appendTo('body');
 }

@@ -31,7 +31,18 @@ function buildChannelArticleButtons(p: VaultAdapter): void {
   $('ul.nav.navbar-nav').last().before(btnWrapper(btns));
 }
 
+function buildHomeButtons(_p: VaultAdapter): void {
+  const btns: JQuery<HTMLElement>[] = [
+    createArcaFeedBtn('filter', 'ion-ios-gear', () =>
+      eventBus.emit('showModal'),
+    ),
+  ];
+
+  $('ul.nav.navbar-nav').last().before(btnWrapper(btns));
+}
+
 const BUTTON_BUILDERS: Record<string, (p: VaultAdapter) => void> = {
+  HOME: buildHomeButtons,
   CHANNEL: buildChannelArticleButtons,
   ARTICLE: buildChannelArticleButtons,
 };
