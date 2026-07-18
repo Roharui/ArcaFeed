@@ -10,9 +10,6 @@
  */
 
 import { ArcaFeed, eventBus } from '@/core';
-import { initSeriesPlugin } from '@plugins/series/src/plugin';
-import { initScrapPlugin } from '@plugins/scrap/src/plugin';
-import { initSamplePlugin } from '@plugins/sample/src/plugin';
 
 // ── Bridge setup ───────────────────────────────────────
 
@@ -25,9 +22,9 @@ window.__arcaFeed = {
 
 // ── Plugins register their steps ───────────────────────
 
-initSeriesPlugin();
-initScrapPlugin();
-initSamplePlugin();
+// await import(/* webpackMode: "eager" */ "../plugins/series/src");
+// await import(/* webpackMode: "eager" */ "../plugins/scrap/src");
+// await import(/* webpackMode: "eager" */ "../plugins/sample/src");
 
 // ── Core init ──────────────────────────────────────────
 

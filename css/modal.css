@@ -113,3 +113,58 @@ input.helper-modal-tab-radio {
 #plugin-buttons {
   margin-top: 15px;
 }
+
+/* plugin section titles */
+
+.plugin-section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text-muted, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 12px 0 8px 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-bd-btn);
+}
+
+#plugin-loaded-section .plugin-section-title {
+  margin-top: 4px;
+}
+
+/* failed plugin rows */
+
+.plugin-failed-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-bd-btn);
+  gap: 12px;
+}
+
+.plugin-failed-row:last-child {
+  border-bottom: none;
+}
+
+.plugin-failed-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.plugin-failed-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.plugin-failed-desc {
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #888);
+  margin-top: 2px;
+}
+
+.plugin-load-btn {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}

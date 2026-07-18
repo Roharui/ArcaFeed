@@ -81,6 +81,8 @@ export function isScrapPage(): boolean {
   return /\/u\/scrap_list/.test(window.location.pathname);
 }
 
+export { buildScrapButtons };
+
 // ── Plugin Init ────────────────────────────────────────
 
 export function initScrapPlugin(): void {

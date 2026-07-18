@@ -1,7 +1,7 @@
 /**
  * ArcaFeed Scrap Plugin — Standalone Entry
  */
-import { initScrapPlugin, isScrapPage } from './plugin';
+import { initScrapPlugin } from './plugin';
 
 (function () {
   const GUARD_KEY = '__arcaFeedScrapPlugin__';
@@ -9,7 +9,6 @@ import { initScrapPlugin, isScrapPage } from './plugin';
   if ((window as any)[GUARD_KEY]) return;
   (window as any)[GUARD_KEY] = true;
 
-  if (!isScrapPage()) return;
   console.log('[Scrap Plugin] Standalone mode.');
 
   function waitForArcaFeed(cb: () => void, timeoutMs = 10000): void {

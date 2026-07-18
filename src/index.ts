@@ -1,7 +1,12 @@
 import { ArcaFeed, eventBus } from '@/core';
 
 // Expose EventBus and plugin registry globally for plugins to hook into
-window.__arcaFeed = { eventBus, plugins: [] };
+window.__arcaFeed = {
+  eventBus,
+  pluginSteps: [],
+  pluginStepsAfter: [],
+  plugins: [],
+};
 
 // Guard against duplicate execution (userscript may be loaded multiple times
 // by the userscript manager on SPA navigations, iframes, etc.)

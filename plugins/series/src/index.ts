@@ -5,7 +5,7 @@
  * We detect ArcaFeed, run initSeriesPlugin (registers metadata + CSS),
  * then execute the content directly.
  */
-import { initSeriesPlugin, isArticlePage, initSeriesContent } from './plugin';
+import { initSeriesPlugin } from './plugin';
 
 (function () {
   const GUARD_KEY = '__arcaFeedSeriesPlugin__';
@@ -13,7 +13,6 @@ import { initSeriesPlugin, isArticlePage, initSeriesContent } from './plugin';
   if ((window as any)[GUARD_KEY]) return;
   (window as any)[GUARD_KEY] = true;
 
-  if (!isArticlePage()) return;
   console.log('[Series Plugin] Standalone mode.');
 
   function waitForArcaFeed(cb: () => void, timeoutMs = 10000): void {
@@ -33,8 +32,5 @@ import { initSeriesPlugin, isArticlePage, initSeriesContent } from './plugin';
   waitForArcaFeed(() => {
     console.log('[Series Plugin] ArcaFeed detected.');
     initSeriesPlugin();
-    // In standalone mode, the core's init already fired.
-    // Execute series content directly.
-    initSeriesContent();
   });
 })();
