@@ -8,7 +8,6 @@ import {
   initModal,
   addVersionInfo,
   initButton,
-  initSeriesContent,
   nextLinkForce,
   initEnableSeries,
   initEnableScrapSeries,
@@ -18,6 +17,7 @@ import {
   initCloseModal,
   initCheckFilterModal,
   initCheckUIModal,
+  initCheckPluginModal,
 } from '@/feature';
 
 import type { Step } from '@/core/step-runner';
@@ -35,7 +35,7 @@ class EventManager {
   init(): Step[] {
     return [
       [addVersionInfo],
-      [initLink, initButton, initEvent, initSeriesContent, initUi],
+      [initLink, initButton, initEvent, initUi],
       initSwiper,
     ];
   }
@@ -94,6 +94,17 @@ class EventManager {
 
   checkUIModal(): Step[] {
     return [[initCheckUIModal, initUi, initCloseModal]];
+  }
+
+  checkPluginModal(): Step[] {
+    return [
+      initCheckPluginModal,
+      initCloseModal,
+      (p: VaultAdapter) => {
+        p.flushSave();
+        window.location.reload();
+      },
+    ];
   }
 
   closeModal(): Step[] {

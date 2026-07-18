@@ -12,15 +12,13 @@ import type { ArticleFilterConfigImpl, UISettings } from '@/types';
 
 const ARTICLE_FILTER_CONFIG_GLOBAL_KEY = 'arcaFeed:articleFilterConfig';
 const UI_SETTINGS_KEY = 'arcaFeed:uiSettings';
+const PLUGIN_SETTINGS_KEY = 'arcaFeed:pluginSettings';
 
 const CHANNEL_OR_ARTICLE_PAGE_REGEX = /^\/b\/[a-zA-Z0-9]+(\/\d+)?\/?$/;
 
 export class ConfigService {
   constructor(private repo: StorageRepository) {}
 
-  /**
-   * Ensure the current page has an articleKey in its URL query params.
-   */
   ensureArticleKey(): string {
     const currentUrl = new URL(window.location.href);
     const existingKey = currentUrl.searchParams.get('articleKey');
@@ -41,9 +39,6 @@ export class ConfigService {
     return generatedKey;
   }
 
-  /**
-   * Load saved config from localStorage and populate initial state.
-   */
   loadConfig(): Partial<AppState> {
     const articleKey = this.ensureArticleKey();
     const patch: Partial<AppState> = { articleKey };
@@ -78,10 +73,18 @@ export class ConfigService {
         '-1',
     );
 
-    // Load UI settings (getJSON handles null / parse errors internally)
+    // Load UI settings
     const uiSettings = this.repo.getJSON<UISettings>(UI_SETTINGS_KEY);
     if (uiSettings) {
       patch.uiSettings = uiSettings;
+    }
+
+    // Load plugin settings (global)
+    const pluginSettings = this.repo.getJSON<Record<string, boolean>>(
+      PLUGIN_SETTINGS_KEY,
+    );
+    if (pluginSettings) {
+      patch.pluginSettings = pluginSettings;
     }
 
     // Prune old caches
@@ -90,14 +93,12 @@ export class ConfigService {
     return patch;
   }
 
-  /**
-   * Save current state to localStorage.
-   */
   saveConfig(state: Readonly<AppState>): void {
     const { articleKey } = state;
 
     // Global settings — saved regardless of articleKey
     this.repo.setJSON(UI_SETTINGS_KEY, state.uiSettings);
+    this.repo.setJSON(PLUGIN_SETTINGS_KEY, state.pluginSettings);
     this.repo.setJSON(
       ARTICLE_FILTER_CONFIG_GLOBAL_KEY,
       state.articleFilterConfig,
@@ -120,9 +121,6 @@ export class ConfigService {
     this.repo.pruneArticleKeyCaches(articleKey);
   }
 
-  /**
-   * Save last active index (called more frequently than full save).
-   */
   saveLastActiveIndex(articleKey: string, activeIndex: number): void {
     if (!articleKey) return;
     this.repo.setItem(
@@ -131,9 +129,6 @@ export class ConfigService {
     );
   }
 
-  /**
-   * Copy series storage from source articleKey to target articleKey.
-   */
   copySeriesStorage(
     sourceArticleKey: string,
     targetArticleKey: string,
@@ -141,7 +136,6 @@ export class ConfigService {
     activeIndex: number,
     searchQuery: string,
   ): void {
-    // Copy article filter config if exists
     const filterConfig = this.repo.getItem(
       this.repo.scopedKey(sourceArticleKey, 'articleFilterConfig'),
     );
@@ -158,7 +152,6 @@ export class ConfigService {
       'true',
     );
 
-    // Normalize article URLs to pathnames
     const normalizedList = articleList.map((href) => {
       const url = new URL(href, window.location.origin);
       return url.pathname;

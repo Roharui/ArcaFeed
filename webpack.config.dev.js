@@ -20,7 +20,7 @@ export default function (env, _args) {
       name: 'ArcaFeed-dev',
       namespace: 'https://github.com/Roharui/ArcaFeed',
       version: env.BUILD_DATE || 'unknown',
-      description: 'Use ArcaLive as Shorts',
+      description: 'Use ArcaLive as Shorts — Dev build with all plugins bundled',
       author: 'https://github.com/Roharui',
       match: 'https://arca.live/*',
       icon: 'https://www.google.com/s2/favicons?sz=64&domain=arca.live',
@@ -30,26 +30,22 @@ export default function (env, _args) {
         env.DEVICE === 'mobile'
           ? 'https://cdn.jsdelivr.net/npm/eruda'
           : undefined,
-      ],
+      ].filter(Boolean),
       'run-at': 'document-end',
       grant: 'none',
     },
   });
 
-  const plugins =
-    env.DEVICE === 'mobile'
-      ? [definePlugin, webpackUserscriptPlugin]
-      : [definePlugin];
-
-  const config = {
+  return {
     mode: 'development',
-    entry: './src/index.ts',
+    entry: './src/dev.ts',
 
     watch: env.DEVICE !== 'mobile',
 
     output: {
       path: path.resolve(__dirname, 'dist'),
-      filename: 'dist.js',
+      filename: 'ArcaFeed.dev.user.js',
+      clean: true,
     },
 
     resolve: {
@@ -58,6 +54,7 @@ export default function (env, _args) {
         '@': path.resolve(__dirname, 'src'),
         '@css': path.resolve(__dirname, 'css'),
         '@swiper': path.resolve(__dirname, 'node_modules', 'swiper'),
+        '@plugins': path.resolve(__dirname, 'plugins'),
       },
     },
 
@@ -92,8 +89,6 @@ export default function (env, _args) {
       eruda: 'eruda',
     },
 
-    plugins,
+    plugins: [definePlugin, webpackUserscriptPlugin],
   };
-
-  return config;
 }

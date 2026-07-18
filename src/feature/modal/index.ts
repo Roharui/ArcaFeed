@@ -4,6 +4,7 @@ import '@css/modal.css';
 
 import { createArticleFilterModal } from './filterUi';
 import { createUISettingModal } from './uiTab';
+import { createPluginTab } from './pluginTab';
 
 import type { VaultAdapter } from '@/vault';
 
@@ -14,6 +15,8 @@ const NEXT_PAGE_MODAL_HTML = `
     <label class="helper-modal-tab-label" for="filter">🔍</label>
     <input id="ui" class="helper-modal-tab-radio" type="radio" name="helper-modal-tab-group" />
     <label class="helper-modal-tab-label" for="ui">🪟</label>
+    <input id="plugins" class="helper-modal-tab-radio" type="radio" name="helper-modal-tab-group" />
+    <label class="helper-modal-tab-label" for="plugins">🧩</label>
   </div>
 </div>
 `;
@@ -38,7 +41,7 @@ function buildNormalModal(
   dialog.find(`#${p.uiSettings.lastModalTab}`).prop('checked', true);
 
   dialog.find('.helper-modal-tab-radio').on('change', function () {
-    const selectedTab = $(this).attr('id') as 'filter' | 'ui';
+    const selectedTab = $(this).attr('id') as 'filter' | 'ui' | 'plugins';
     p.uiSettings = { ...p.uiSettings, lastModalTab: selectedTab };
     p.flushSave();
   });
@@ -54,6 +57,7 @@ function initModal(p: VaultAdapter) {
   buildModal(p, dialog, dialogBody);
 
   dialogBody.append(createUISettingModal(p));
+  dialogBody.append(createPluginTab(p));
   dialog.appendTo('body');
 }
 
@@ -63,5 +67,6 @@ function initCloseModal(_: VaultAdapter): void {
 
 export * from './filterUi';
 export * from './uiTab';
+export * from './pluginTab';
 
 export { initModal, initCloseModal };

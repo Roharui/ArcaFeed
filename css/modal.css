@@ -49,14 +49,20 @@ input.helper-modal-tab-radio {
   border-radius: 8px 0px 0px 0px;
 }
 
+#plugins + label {
+  border-radius: 0px 8px 0px 0px;
+}
+
 #filter:checked + label.helper-modal-tab-label,
-#ui:checked + label.helper-modal-tab-label {
+#ui:checked + label.helper-modal-tab-label,
+#plugins:checked + label.helper-modal-tab-label {
   background-color: var(--color-bg-main);
   color: var(--color-text);
 }
 
 #filter:checked ~ .helper-modal-filter,
-#ui:checked ~ .helper-modal-ui {
+#ui:checked ~ .helper-modal-ui,
+#plugins:checked ~ .helper-modal-plugins {
   display: block;
 }
 
@@ -66,4 +72,44 @@ input.helper-modal-tab-radio {
 
   display: none;
   background-color: var(--color-bg-main);
+}
+
+/* plugin tab */
+
+.plugin-toggle-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-bd-btn);
+}
+
+.plugin-toggle-row:last-child {
+  border-bottom: none;
+}
+
+.plugin-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.plugin-toggle-label input {
+  cursor: pointer;
+}
+
+.plugin-toggle-desc {
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #888);
+  margin-top: 4px;
+  margin-left: 24px;
+}
+
+.plugin-toggle-empty {
+  text-align: center;
+  color: var(--color-text-muted, #888);
+  padding: 20px 0;
+}
+
+#plugin-buttons {
+  margin-top: 15px;
 }

@@ -1,31 +1,24 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import webpack from 'webpack';
 import { UserscriptPlugin } from 'webpack-userscript';
 
 import { releaseUrl } from '../shared/release.js';
+import config from './package.json' with { type: 'json' };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const FILENAME = 'arcafeed-sample.user.js';
+const FILENAME = 'arcafeed-scrap.user.js';
+const currentVersion = config.version;
 
-export default function (env, _args) {
-  const definePlugin = new webpack.DefinePlugin({
-    'process.env.NODE_ENV': JSON.stringify('development'),
-    'process.env.GIT_HASH': JSON.stringify(env.GIT_HASH || 'unknown'),
-    'process.env.BUILD_DATE': JSON.stringify(env.BUILD_DATE || 'unknown'),
-  });
-
+export default function (_env, _args) {
   return {
-    mode: 'development',
+    mode: 'production',
     entry: './src/index.ts',
 
-    watch: true,
-
     output: {
-      path: path.resolve(__dirname, 'dist'),
+      path: path.resolve(__dirname, '../../dist'),
       filename: FILENAME,
     },
 
@@ -36,10 +29,6 @@ export default function (env, _args) {
     module: {
       rules: [
         {
-          test: /\.css$/,
-          use: ['style-loader', 'css-loader'],
-        },
-        {
           test: /\.ts$/,
           use: 'ts-loader',
           exclude: /node_modules/,
@@ -47,20 +36,13 @@ export default function (env, _args) {
       ],
     },
 
-    externals: {
-      $: 'jQuery',
-      jquery: 'jQuery',
-      swiper: 'Swiper',
-    },
-
     plugins: [
-      definePlugin,
       new UserscriptPlugin({
         headers: {
-          name: 'ArcaFeed Sample Plugin (dev)',
+          name: 'ArcaFeed Scrap Plugin',
           namespace: 'https://github.com/Roharui/ArcaFeed',
-          version: env.BUILD_DATE || 'unknown',
-          description: 'ArcaFeed sample plugin - demonstrates plugin API usage',
+          version: currentVersion,
+          description: 'ArcaFeed scrap plugin - scrap series mode button',
           author: 'https://github.com/Roharui',
           match: 'https://arca.live/*',
           downloadURL: releaseUrl(FILENAME),

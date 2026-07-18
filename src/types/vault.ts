@@ -26,7 +26,7 @@ interface UISettings {
   hideArticleAuthor: boolean;
   hideArticleTime: boolean;
   hideArticleView: boolean;
-  lastModalTab: 'filter' | 'ui';
+  lastModalTab: 'filter' | 'ui' | 'plugins';
   contentWidth: number;
 }
 

@@ -14,7 +14,14 @@ declare global {
         emit(event: string, ...args: any[]): Promise<void>;
         off(event: string, handler?: (...args: any[]) => void | Promise<void>): void;
       };
+      plugins?: PluginInfo[];
     };
+  }
+
+  interface PluginInfo {
+    id: string;
+    name: string;
+    description: string;
   }
 }
 

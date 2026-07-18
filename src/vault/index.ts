@@ -150,6 +150,13 @@ export class VaultAdapter {
     this.store.setState({ uiSettings: v });
   }
 
+  get pluginSettings(): Record<string, boolean> {
+    return this.store.getState().pluginSettings;
+  }
+  set pluginSettings(v: Record<string, boolean>) {
+    this.store.setState({ pluginSettings: v });
+  }
+
   // State snapshot
 
   getState(): Readonly<AppState> {

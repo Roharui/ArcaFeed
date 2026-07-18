@@ -1,8 +1,5 @@
 import $ from 'jquery';
 
-import '@css/series.css';
-
-import { eventBus } from '@/core';
 import { parseSearchQuery } from '@/feature';
 import {
   createArticleKey,
@@ -41,89 +38,12 @@ function parseSeriesEntries(
   });
 }
 
-/**
- * Find the index of the current page within the series list.
- */
-function findCurrentIndex(entries: SeriesEntry[]): number {
-  const currentPath = window.location.pathname;
-  return entries.findIndex(({ url }) => url.includes(currentPath));
-}
-
-// ── Sliding Window ─────────────────────────────────────
-
-const WINDOW_SIZE = 5; // How many series entries to show at once
-
-/**
- * Pick a sliding window of entries centered around currentIndex.
- */
-function pickWindow(
-  entries: SeriesEntry[],
-  currentIndex: number,
-): SeriesEntry[] {
-  const total = entries.length;
-
-  // Clamp window: at most WINDOW_SIZE, don't exceed bounds
-  const end = Math.min(total, currentIndex + 3);
-  const start = Math.max(0, end - WINDOW_SIZE);
-
-  return entries.slice(start, end);
-}
-
-// ── DOM Building ───────────────────────────────────────
-
-function buildShortcutDiv(entries: SeriesEntry[]): JQuery<HTMLElement> {
-  return $('<div>', { class: 'article-series' })
-    .css('max-height', 'max-content')
-    .css('margin-top', '1rem')
-    .append(entries.map(({ element }) => $(element).clone()));
-}
-
-function buildEnableSeriesButton(): JQuery<HTMLElement> {
-  return $('<div>', {
-    text: '시리즈 바로가기 활성화',
-    class: 'series-control-btn enable-series',
-    css: { opacity: '1' },
-  }).on('click', () => eventBus.emit('enableSeries'));
-}
-
 // ── Public API ─────────────────────────────────────────
 
-function initSeriesContent(p: VaultAdapter): void {
-  const $series = $('.article-series');
-  if ($series.length === 0) return;
-
-  // Keep only the first series element, remove duplicates
-  $series.last().remove();
-
-  const $links = $series.first().find('.series-link');
-  $links.css('display', 'block !important');
-
-  // Collapsible toggle
-  $('.series-collapsible').on('click', function () {
-    $(this).parent().toggleClass('extend');
-  });
-
-  const entries = parseSeriesEntries($links, getCurrentArticleKey());
-  const currentIndex = findCurrentIndex(entries);
-  if (currentIndex === -1) return;
-
-  const window_ = pickWindow(entries, currentIndex);
-
-  // In series mode, don't show the bottom post list or enable button
-  if (p.isSeriesMode) return;
-
-  const $articleBody = $('.article-body');
-  if (!$articleBody.length) return;
-
-  $articleBody.append(buildShortcutDiv(window_));
-
-  // Show "Enable Series" button when not in series mode
-  const $btnWrapper = $('<div>', { class: 'series-control-btns' }).append(
-    buildEnableSeriesButton(),
-  );
-  $articleBody.after($btnWrapper);
-}
-
+/**
+ * Re-apply series button CSS when series mode state changes.
+ * (UI elements are rendered by the series plugin.)
+ */
 function initSeriesBtnCss(_v: VaultAdapter): void {
   $('.series-control-btn.enable-series').css('opacity', '1');
 
@@ -163,4 +83,4 @@ function initEnableSeries(p: VaultAdapter): void {
   window.open(nextUrl.toString(), '_blank', 'noopener');
 }
 
-export { initSeriesContent, initEnableSeries, initSeriesBtnCss };
+export { initEnableSeries, initSeriesBtnCss };

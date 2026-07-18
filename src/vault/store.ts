@@ -17,6 +17,7 @@ export interface AppState {
   searchQuery: string;
   lastActiveIndex: number;
   uiSettings: UISettings;
+  pluginSettings: Record<string, boolean>;
 }
 
 export type StateSubscriber = (state: AppState) => void;
@@ -52,6 +53,7 @@ export function createInitialState(): AppState {
     searchQuery: '',
     lastActiveIndex: -1,
     uiSettings: { ...DEFAULT_UI_SETTINGS },
+    pluginSettings: {},
   };
 }
 

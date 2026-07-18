@@ -13,7 +13,8 @@
     "paths": {
       "@/*": ["src/*"],
       "@css/*": ["css/*"],
-      "@swiper/*": ["node_modules/swiper/*"]
+      "@swiper/*": ["node_modules/swiper/*"],
+      "@plugins/*": ["plugins/*"]
     },
 
     // Environment Settings
