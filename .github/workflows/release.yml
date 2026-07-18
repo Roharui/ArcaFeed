@@ -75,7 +75,7 @@ jobs:
           for plugin_dir in plugins/*/; do
             if [ -f "${plugin_dir}package.json" ]; then
               echo "::group::Installing plugin: $(basename "$plugin_dir")"
-              npm --prefix "$plugin_dir" ci
+              npm --prefix "$plugin_dir" install
               echo "::endgroup::"
             fi
           done
