@@ -126,7 +126,8 @@ function filterLink(
     disableSwiper: false,
   };
   const predicate = buildFilterPredicate(filter);
-  const existingIds = new Set(p.articleList);
+  // 기존 articleList에 있는 articleId와 현재 페이지 내 중복을 모두 제외
+  const seenIds = new Set(p.articleList.map((link) => getArticleId(link)));
 
   const result: string[] = [];
 
@@ -141,7 +142,11 @@ function filterLink(
     if (!allowed) return;
 
     const href = extractArticleHref($ele);
-    if (href && !existingIds.has(getArticleId(href))) {
+    if (!href) return;
+
+    const articleId = getArticleId(href);
+    if (!seenIds.has(articleId)) {
+      seenIds.add(articleId);
       result.push(href);
     }
   });

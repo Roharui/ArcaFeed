@@ -83,9 +83,7 @@ async function* fetchArticlePages(
     console.log(`Fetching article page: ${url}`);
     const { $html } = await fetchAndParse(url);
 
-    const newLinks = filterLink(p, false, $html).filter(
-      (link) => !p.articleList.includes(link),
-    );
+    const newLinks = filterLink(p, false, $html);
 
     yield newLinks;
 
