@@ -18,13 +18,14 @@ window.__arcaFeed = {
   pluginSteps: [],
   pluginStepsAfter: [],
   plugins: [],
+  ...window.__arcaFeed || {},
 };
 
 // ── Plugins register their steps ───────────────────────
 
-// await import(/* webpackMode: "eager" */ "../plugins/series/src");
-// await import(/* webpackMode: "eager" */ "../plugins/scrap/src");
-// await import(/* webpackMode: "eager" */ "../plugins/sample/src");
+await import(/* webpackMode: "eager" */ "../plugins/series/src");
+await import(/* webpackMode: "eager" */ "../plugins/scrap/src");
+await import(/* webpackMode: "eager" */ "../plugins/sample/src");
 
 // ── Core init ──────────────────────────────────────────
 
@@ -37,7 +38,7 @@ if ((window as any)[GUARD_KEY]) {
 
   new ArcaFeed();
 
-  if (process.env.NODE_ENV === 'development' && process.env.DEVICE === 'mobile') {
+  if (process.env.DEVICE === 'mobile') {
     import('eruda').then((eruda) => eruda.default.init());
   }
 

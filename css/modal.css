@@ -164,6 +164,7 @@ input.helper-modal-tab-radio {
 
 .plugin-load-btn {
   flex-shrink: 0;
+  width: auto !important;
   padding: 4px 12px;
   font-size: 0.85rem;
   white-space: nowrap;

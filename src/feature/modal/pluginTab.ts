@@ -66,13 +66,17 @@ function createFailedPluginRow(entry: PluginEntry, p: VaultAdapter): JQuery<HTML
   });
   $info.append($name).append($desc);
 
-  const $loadBtn = $('<button>', {
-    class: 'plugin-load-btn button',
-    text: '불러오기',
+  const $loadBtn = $('<input>', {
+    type: 'button',
+    class: 'plugin-load-btn helper-button button',
+    value: '불러오기',
   }).on('click', () => {
-    // Enable the plugin, save, and reload
-    p.pluginSettings = { ...p.pluginSettings, [entry.id]: true };
-    p.flushSave();
+    try {
+      p.pluginSettings = { ...p.pluginSettings, [entry.id]: true };
+      p.flushSave();
+    } catch (err) {
+      console.error('[ArcaFeed] Failed to enable plugin:', entry.id, err);
+    }
     window.location.reload();
   });
 

@@ -5,6 +5,7 @@ import { initScrapPlugin } from './plugin';
 
 (function () {
   const GUARD_KEY = '__arcaFeedScrapPlugin__';
+  console.log('[Scrap Plugin] Standalone mode.');
 
   if ((window as any)[GUARD_KEY]) return;
   (window as any)[GUARD_KEY] = true;
