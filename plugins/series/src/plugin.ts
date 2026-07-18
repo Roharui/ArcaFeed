@@ -2,8 +2,11 @@
  * ArcaFeed Series Plugin — Core Logic
  *
  * Provides series shortcut UI and "Enable Series" button on article pages.
+ * Uses jQuery ($) which is provided by the page (externals).
  * Exported for use in both standalone and bundled builds.
  */
+
+import $ from 'jquery';
 
 // ── CSS ─────────────────────────────────────────────────
 
@@ -29,9 +32,7 @@ const SERIES_CSS = `
 `;
 
 function injectCSS(): void {
-  const style = document.createElement('style');
-  style.textContent = SERIES_CSS;
-  document.head.appendChild(style);
+  $('<style>').text(SERIES_CSS).appendTo('head');
 }
 
 // ── Types ──────────────────────────────────────────────
@@ -79,18 +80,16 @@ function register(): void {
 // ── DOM Parsing ────────────────────────────────────────
 
 function parseSeriesEntries(
-  links: HTMLElement[],
+  $links: JQuery<HTMLElement>,
   articleKey: string,
 ): SeriesEntry[] {
-  return links.map((el) => {
-    const a = el.querySelector('a');
-    const rawHref = a?.getAttribute('href') || '';
+  return $links.toArray().map((el) => {
+    const $a = $(el).find('a');
+    const rawHref = $a.attr('href') || '';
 
-    if (a) {
-      a.setAttribute('target', '');
-      a.setAttribute('rel', '');
-      a.setAttribute('href', withArticleKey(rawHref, articleKey));
-    }
+    $a.attr('target', '');
+    $a.attr('rel', '');
+    $a.attr('href', withArticleKey(rawHref, articleKey));
 
     return { url: withArticleKey(rawHref, articleKey), element: el };
   });
@@ -115,72 +114,65 @@ function pickWindow(
 
 // ── DOM Building ───────────────────────────────────────
 
-function buildShortcutDiv(entries: SeriesEntry[]): HTMLDivElement {
-  const div = document.createElement('div');
-  div.className = 'article-series';
-  div.style.maxHeight = 'max-content';
-  div.style.marginTop = '1rem';
-  entries.forEach(({ element }) => div.appendChild(element.cloneNode(true)));
-  return div;
+function buildShortcutDiv(entries: SeriesEntry[]): JQuery<HTMLElement> {
+  return $('<div>', { class: 'article-series' })
+    .css('max-height', 'max-content')
+    .css('margin-top', '1rem')
+    .append(entries.map(({ element }) => $(element).clone()));
 }
 
-function buildEnableSeriesButton(): HTMLElement {
-  const div = document.createElement('div');
-  div.textContent = '시리즈 바로가기 활성화';
-  div.className = 'series-control-btn enable-series';
-  div.style.opacity = '1';
-  div.addEventListener('click', () => {
+function buildEnableSeriesButton(): JQuery<HTMLElement> {
+  return $('<div>', {
+    text: '시리즈 바로가기 활성화',
+    class: 'series-control-btn enable-series',
+    css: { opacity: '1' },
+  }).on('click', () => {
     const bus = (window as any).__arcaFeed?.eventBus;
     if (bus) bus.emit('enableSeries');
   });
-  return div;
 }
 
 // ── Main Logic ─────────────────────────────────────────
 
-function initSeriesContent(): void {
-  const $series = document.querySelectorAll('.article-series');
+function initSeriesContent(p?: { isSeriesMode?: boolean }): void {
+  const $series = $('.article-series');
   if ($series.length === 0) return;
 
-  if ($series.length > 1) $series[$series.length - 1].remove();
+  // Keep only the first series element, remove duplicates
+  $series.last().remove();
 
-  const firstSeries = $series[0];
-  const $links = firstSeries.querySelectorAll('.series-link');
+  const $links = $series.first().find('.series-link');
+  $links.css('display', 'block !important');
 
-  $links.forEach((link) => {
-    (link as HTMLElement).style.display = 'block';
+  // Collapsible toggle
+  $('.series-collapsible').on('click', function () {
+    $(this).parent().toggleClass('extend');
   });
 
-  firstSeries.querySelectorAll('.series-collapsible').forEach((el) => {
-    el.addEventListener('click', function (this: HTMLElement) {
-      this.parentElement?.classList.toggle('extend');
-    });
-  });
-
-  const articleKey = getArticleKeyFromUrl();
-  const entries = parseSeriesEntries(Array.from($links) as HTMLElement[], articleKey);
+  const entries = parseSeriesEntries($links, getArticleKeyFromUrl());
   const currentIndex = findCurrentIndex(entries);
   if (currentIndex === -1) return;
 
-  if (isSeriesModeActive()) return;
+  // In series mode, don't show the bottom post list or enable button
+  if (p?.isSeriesMode) return;
 
-  const window_ = pickWindow(entries, currentIndex);
-  const $articleBody = document.querySelector('.article-body');
-  if (!$articleBody) return;
+  const windowEntries = pickWindow(entries, currentIndex);
 
-  $articleBody.appendChild(buildShortcutDiv(window_));
+  const $articleBody = $('.article-body');
+  if (!$articleBody.length) return;
 
-  const btnWrapper = document.createElement('div');
-  btnWrapper.className = 'series-control-btns';
-  btnWrapper.appendChild(buildEnableSeriesButton());
-  $articleBody.after(btnWrapper);
-}
+  $articleBody.append(buildShortcutDiv(windowEntries));
 
-function isSeriesModeActive(): boolean {
-  return new URLSearchParams(window.location.search).has('articleKey');
+  // Show "Enable Series" button when not in series mode
+  const $btnWrapper = $('<div>', { class: 'series-control-btns' }).append(
+    buildEnableSeriesButton(),
+  );
+  $articleBody.after($btnWrapper);
 }
 
 // ── Page Mode Detection ────────────────────────────────
+
+export { initSeriesContent };
 
 export function isArticlePage(): boolean {
   return /\/b\/[A-Za-z0-9]+\/[0-9]+/.test(window.location.pathname);
@@ -204,14 +196,16 @@ export function initSeriesPlugin(): void {
   injectCSS();
   console.log('[Series Plugin] Loaded!');
 
-  const bus = (window as any).__arcaFeed?.eventBus;
-  if (!bus) {
-    console.warn('[Series Plugin] ArcaFeed eventBus not available.');
-    return;
+  // Register step function on the global pluginSteps array.
+  // The core will execute these steps in its init pipeline.
+  const bridge = (window as any).__arcaFeed;
+  if (bridge) {
+    bridge.pluginStepsAfter = bridge.pluginStepsAfter || [];
+    bridge.pluginStepsAfter.push((p: any) => {
+      console.log('[Series Plugin] Rendering series content.');
+      initSeriesContent(p);
+    });
+  } else {
+    console.warn('[Series Plugin] ArcaFeed bridge not available.');
   }
-
-  bus.on('init', () => {
-    console.log('[Series Plugin] Rendering series content.');
-    initSeriesContent();
-  });
 }

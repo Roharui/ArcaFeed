@@ -58,8 +58,8 @@ function register(): void {
 
 // ── Main Logic ─────────────────────────────────────────
 
-function buildScrapButtons(): void {
-  if (isSeriesModeActive()) return;
+function buildScrapButtons(p?: { isSeriesMode?: boolean }): void {
+  if (p?.isSeriesMode) return;
 
   const navbarList = document.querySelectorAll('ul.nav.navbar-nav');
   if (navbarList.length === 0) return;
@@ -73,10 +73,6 @@ function buildScrapButtons(): void {
       }),
     ]),
   );
-}
-
-function isSeriesModeActive(): boolean {
-  return new URLSearchParams(window.location.search).has('articleKey');
 }
 
 // ── Page Mode Detection ────────────────────────────────
@@ -102,14 +98,14 @@ export function initScrapPlugin(): void {
 
   console.log('[Scrap Plugin] Loaded!');
 
-  const bus = (window as any).__arcaFeed?.eventBus;
-  if (!bus) {
-    console.warn('[Scrap Plugin] ArcaFeed eventBus not available.');
-    return;
+  const bridge = (window as any).__arcaFeed;
+  if (bridge) {
+    bridge.pluginSteps = bridge.pluginSteps || [];
+    bridge.pluginSteps.push((p: any) => {
+      console.log('[Scrap Plugin] Rendering scrap series button.');
+      buildScrapButtons(p);
+    });
+  } else {
+    console.warn('[Scrap Plugin] ArcaFeed bridge not available.');
   }
-
-  bus.on('init', () => {
-    console.log('[Scrap Plugin] Rendering scrap series button.');
-    buildScrapButtons();
-  });
 }

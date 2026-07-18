@@ -33,10 +33,16 @@ class EventManager {
   // Init Event
 
   init(): Step[] {
+    const pluginSteps: Step[] =
+      (window as any).__arcaFeed?.pluginSteps || [];
+    const pluginStepsAfter: Step[] =
+      (window as any).__arcaFeed?.pluginStepsAfter || [];
+
     return [
       [addVersionInfo],
-      [initLink, initButton, initEvent, initUi],
+      [initLink, initButton, initEvent, initUi, ...pluginSteps],
       initSwiper,
+      ...pluginStepsAfter,
     ];
   }
 

@@ -1,47 +1,40 @@
 /**
  * ArcaFeed Series Plugin — Standalone Entry
  *
- * IIFE wrapper for standalone userscript builds.
- * Uses waitForArcaFeed polling to detect the main ArcaFeed script.
+ * In standalone mode, the plugin loads after the core's init event.
+ * We detect ArcaFeed, run initSeriesPlugin (registers metadata + CSS),
+ * then execute the content directly.
  */
-import { initSeriesPlugin } from './plugin';
+import { initSeriesPlugin, isArticlePage, initSeriesContent } from './plugin';
 
 (function () {
   const GUARD_KEY = '__arcaFeedSeriesPlugin__';
 
-  if ((window as any)[GUARD_KEY]) {
-    console.log('[Series Plugin] Already initialized.');
-    return;
-  }
+  if ((window as any)[GUARD_KEY]) return;
   (window as any)[GUARD_KEY] = true;
 
+  if (!isArticlePage()) return;
   console.log('[Series Plugin] Standalone mode.');
 
-  // ── Helper: wait for ArcaFeed to be ready ────────────
-  function waitForArcaFeed(
-    cb: () => void,
-    timeoutMs: number = 10000,
-  ): void {
+  function waitForArcaFeed(cb: () => void, timeoutMs = 10000): void {
     const start = Date.now();
-
     function check() {
       const bridge = (window as any).__arcaFeed;
-      if (bridge?.eventBus) {
-        cb();
-        return;
-      }
+      if (bridge?.eventBus) { cb(); return; }
       if (Date.now() - start > timeoutMs) {
-        console.warn('[Series Plugin] Timed out waiting for ArcaFeed.');
+        console.warn('[Series Plugin] Timed out.');
         return;
       }
       setTimeout(check, 200);
     }
-
     check();
   }
 
   waitForArcaFeed(() => {
-    console.log('[Series Plugin] ArcaFeed detected, plugin active!');
+    console.log('[Series Plugin] ArcaFeed detected.');
     initSeriesPlugin();
+    // In standalone mode, the core's init already fired.
+    // Execute series content directly.
+    initSeriesContent();
   });
 })();

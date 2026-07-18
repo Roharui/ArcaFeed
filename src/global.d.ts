@@ -15,6 +15,8 @@ declare global {
         off(event: string, handler?: (...args: any[]) => void | Promise<void>): void;
       };
       plugins?: PluginInfo[];
+      pluginSteps?: ((...args: any[]) => void)[];
+      pluginStepsAfter?: ((...args: any[]) => void)[];
     };
   }
 

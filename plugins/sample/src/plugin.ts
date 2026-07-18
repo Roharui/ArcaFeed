@@ -37,29 +37,27 @@ export function initSamplePlugin(): void {
 
   console.log('[Sample Plugin] Loaded!');
 
-  const bus = (window as any).__arcaFeed?.eventBus;
-  if (!bus) {
-    console.warn('[Sample Plugin] ArcaFeed eventBus not available.');
-    return;
+  const bridge = (window as any).__arcaFeed;
+  if (bridge) {
+    bridge.pluginSteps = bridge.pluginSteps || [];
+    bridge.pluginSteps.push(() => {
+      console.log('[Sample Plugin] ArcaFeed init event received!');
+    });
   }
 
-  bus.on('init', () => {
-    console.log('[Sample Plugin] ArcaFeed init event received!');
-  });
-
-  bus.on('renderNextPage', () => {
-    console.log('[Sample Plugin] Next page rendered!');
-  });
-
-  bus.on('enableSeries', () => {
-    console.log('[Sample Plugin] Series mode enabled!');
-  });
-
-  bus.on('showModal', () => {
-    console.log('[Sample Plugin] Modal shown!');
-  });
-
-  bus.on('closeModal', () => {
-    console.log('[Sample Plugin] Modal closed!');
-  });
+  const bus = bridge?.eventBus;
+  if (bus) {
+    bus.on('renderNextPage', () => {
+      console.log('[Sample Plugin] Next page rendered!');
+    });
+    bus.on('enableSeries', () => {
+      console.log('[Sample Plugin] Series mode enabled!');
+    });
+    bus.on('showModal', () => {
+      console.log('[Sample Plugin] Modal shown!');
+    });
+    bus.on('closeModal', () => {
+      console.log('[Sample Plugin] Modal closed!');
+    });
+  }
 }
