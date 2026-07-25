@@ -6,6 +6,18 @@ import type { VaultAdapter } from '@/vault';
 
 // ── Mode-specific button builders ───────────────────────
 
+function buildHomeButtons(_p: VaultAdapter): void {
+  $('ul.nav.navbar-nav')
+    .last()
+    .before(
+      btnWrapper([
+        createArcaFeedBtn('filter', 'ion-ios-gear', () =>
+          eventBus.emit('showModal'),
+        ),
+      ]),
+    );
+}
+
 function buildScrapButtons(p: VaultAdapter): void {
   if (p.isSeriesMode) return;
 
@@ -46,6 +58,7 @@ function buildChannelArticleButtons(p: VaultAdapter): void {
 }
 
 const BUTTON_BUILDERS: Record<string, (p: VaultAdapter) => void> = {
+  HOME: buildHomeButtons,
   SCRAP: buildScrapButtons,
   CHANNEL: buildChannelArticleButtons,
   ARTICLE: buildChannelArticleButtons,

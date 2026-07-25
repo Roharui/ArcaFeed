@@ -50,7 +50,9 @@ function initModal(p: VaultAdapter) {
   const dialog = $(NEXT_PAGE_MODAL_HTML);
   const dialogBody = dialog.find('.helper-modal-body');
 
-  const buildModal = p.isSeriesMode ? buildSeriesModal : buildNormalModal;
+  const buildModal = p.isSeriesMode || p.isCurrentMode('HOME')
+    ? buildSeriesModal
+    : buildNormalModal;
   buildModal(p, dialog, dialogBody);
 
   dialogBody.append(createUISettingModal(p));

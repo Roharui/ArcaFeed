@@ -2,6 +2,7 @@ import $ from 'jquery';
 
 import { filterLink } from '@/feature';
 import { fetchUrl } from '@/utils/fetch';
+import { shuffle } from '@/utils/func';
 import { showToast } from '@/utils/toast';
 
 import type { VaultAdapter } from '@/vault';
@@ -139,6 +140,8 @@ async function fetchAllBatches(
     for await (const links of fetchArticlePages(p, articleId)) {
       p.articleList.push(...links);
     }
+
+    shuffle(p.articleList);
 
     if (p.isSeriesMode) {
       openScrapSeriesArticle(p);

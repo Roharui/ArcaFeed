@@ -49,7 +49,7 @@ export default function (env, _args) {
 
     output: {
       path: path.resolve(__dirname, 'dist'),
-      filename: 'dist.js',
+      filename: 'ArcaFeed.dev.js',
     },
 
     resolve: {
