@@ -6,7 +6,7 @@
   padding: 0px 1px 5px 1px;
 }
 
-.f-right {
+.helper-modal .f-right {
   text-align: right;
 }
 
@@ -27,13 +27,20 @@
   color: var(--color-text);
 }
 
+.helper-modal-btns .button:focus-visible,
+button.exclude-title-tag:focus-visible {
+  outline: 2px solid var(--color-primary-theme);
+  outline-offset: 2px;
+}
+
 /* category-input */
 
-#category {
+.helper-modal-filter #category {
   padding-bottom: 0px;
 }
 
-.category-span {
+.helper-modal-filter .category-span,
+.helper-modal-subscribe .category-span {
   display: inline-block;
 
   margin: 3px;
@@ -45,50 +52,77 @@
   color: var(--color-text-opposite);
 }
 
-input.category-check {
-  display: none;
+.helper-modal input.category-check {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-input.category-check:checked + span {
+.helper-modal input.category-check:checked + span {
   background-color: var(--color-bd-btn-hover);
   color: var(--color-text);
+}
+
+.helper-modal input.category-check:focus-visible + span {
+  outline: 2px solid var(--color-primary-theme);
+  outline-offset: 2px;
 }
 
 /* modal input */
 
 .exclude-title-input-wrapper {
-  display: inline;
+  display: flex;
+  gap: 6px;
 }
 
-#exclude-title {
-  width: 84%;
+#filter-exclude-title {
+  flex: 1 1 auto;
+  min-width: 0;
   outline: none;
 }
 
 /* exclude title tags */
 
-input.ele-exclude {
-  display: none;
-}
-
-span.exclude-title-tag {
+button.exclude-title-tag {
   display: inline-block;
   padding: 5px 8px 5px 8px;
   margin: 3px;
   border-radius: 10px;
+  border: 0;
 
   background-color: var(--color-link-broken);
   color: var(--color-text-opposite);
   cursor: pointer;
+  font: inherit;
 }
 
-span.exclude-title-tag:after {
+button.exclude-title-tag::after {
   display: inline-block;
+  margin-left: 4px;
   content: '\00d7';
 }
 
-div.exclude-title-list:not(:has(> label)) {
+div.exclude-title-list:not(:has(> button.exclude-title-tag)) {
   border-bottom: none;
   margin: 0px;
   padding: 0px;
+}
+
+@media screen and (max-width: 480px) {
+  .helper-modal-btns {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .exclude-title-input-wrapper {
+    width: 100%;
+  }
 }

@@ -16,18 +16,19 @@ import {
   initSeriesBtnCss,
   initUi,
   initCloseModal,
-  initCloseModalContent,
   initCheckFilterModal,
   initCheckUIModal,
   initCheckSubscribeModal,
   initStartHomeSeries,
+  loadMoreHomeSeriesArticles,
 } from '@/feature';
+import { createDefaultArticleFilter } from '@/vault/schema';
 
 import type { Step } from '@/core/step-runner';
 import type { VaultAdapter } from '@/vault';
 
 class EventManager {
-  runner: StepRunner;
+  readonly runner: StepRunner;
 
   constructor() {
     this.runner = new StepRunner();
@@ -37,7 +38,7 @@ class EventManager {
 
   init(): Step[] {
     return [
-      [addVersionInfo],
+      addVersionInfo,
       [initLink, initButton, initEvent, initSeriesContent, initUi],
       initSwiper,
     ];
@@ -48,7 +49,7 @@ class EventManager {
   toNextPage(): Step[] {
     return [
       (p: VaultAdapter) => {
-        p.swiper!.slideNext();
+        p.swiper?.slideNext();
       },
     ];
   }
@@ -56,7 +57,7 @@ class EventManager {
   toPrevPage(): Step[] {
     return [
       (p: VaultAdapter) => {
-        p.swiper!.slidePrev();
+        p.swiper?.slidePrev();
       },
     ];
   }
@@ -68,7 +69,22 @@ class EventManager {
   }
 
   renderNextPage(): Step[] {
-    return [toLink('NEXT')];
+    const navigateNext = toLink('NEXT');
+    return [
+      async (p: VaultAdapter) => {
+        if (p.seriesSource === 'home' && !p.isNextPageActive()) {
+          await loadMoreHomeSeriesArticles(p);
+        }
+
+        if (!p.isNextPageActive()) {
+          navigateNext(p);
+          initSwiperPage(p);
+          return;
+        }
+
+        await navigateNext(p);
+      },
+    ];
   }
 
   renderPrevPage(): Step[] {
@@ -92,15 +108,15 @@ class EventManager {
   }
 
   checkFilterModal(): Step[] {
-    return [[initCheckFilterModal, initLink, initCloseModal], initSwiperPage];
+    return [initCheckFilterModal, [initLink, initCloseModal], initSwiperPage];
   }
 
   checkUIModal(): Step[] {
-    return [[initCheckUIModal, initUi, initCloseModal]];
+    return [initCheckUIModal, [initUi, initCloseModal]];
   }
 
   checkSubscribeModal(): Step[] {
-    return [initCheckSubscribeModal, initCloseModalContent, initStartHomeSeries];
+    return [initCheckSubscribeModal, initCloseModal, initStartHomeSeries];
   }
 
   closeModal(): Step[] {
@@ -114,12 +130,9 @@ class EventManager {
       (p: VaultAdapter) => {
         if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
 
-        const existingFilter = p.articleFilterConfig[p.href.channelId] || {
-          tab: [],
-          title: [],
-          disableSwiper: false,
-          onlyBest: false,
-        };
+        const existingFilter =
+          p.articleFilterConfig[p.href.channelId] ??
+          createDefaultArticleFilter();
 
         const pageFilter = {
           ...existingFilter,

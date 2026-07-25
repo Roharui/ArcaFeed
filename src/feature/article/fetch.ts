@@ -5,165 +5,218 @@ import {
   extractArticleHref,
   extractArticleRows,
   filterLink,
-} from '@/feature';
+} from '@/feature/filter';
 import { fetchUrl } from '@/utils/fetch';
 import { shuffle } from '@/utils/func';
-import { appendSearchParam } from '@/utils/url';
+import { getArticleId } from '@/utils/regex';
+import { mergeSearchQuery } from '@/utils/url';
 import { showToast } from '@/utils/toast';
 
 import type { ArticleFilterImpl } from '@/types';
 import type { VaultAdapter } from '@/vault';
 
-// ── Loading indicator ──────────────────────────────────
+const MAX_PAGES = 10;
+const HOME_SERIES_PAGES_PER_BATCH = 1;
+
+interface ChannelArticleBatch {
+  links: string[];
+  cursor: number;
+  exhausted: boolean;
+}
+
+let activeLoaderRequests = 0;
 
 function getLoader(): JQuery<HTMLElement> {
   let $loader = $('#arcafeed-fetch-loader');
-  if (!$loader.length) {
-    $loader = $('<div id="arcafeed-fetch-loader" class="fetch-loader"></div>');
+  if ($loader.length === 0) {
+    $loader = $('<div>', {
+      id: 'arcafeed-fetch-loader',
+      class: 'arcafeed-fetch-loader',
+      role: 'status',
+      'aria-label': '게시글을 불러오는 중',
+      'aria-live': 'polite',
+      'aria-hidden': 'true',
+    });
     $('body').append($loader);
   }
   return $loader;
 }
 
 function showFetchLoader(): void {
-  getLoader().addClass('active');
+  activeLoaderRequests += 1;
+  getLoader().addClass('active').attr('aria-hidden', 'false');
 }
 
 function hideFetchLoader(): void {
-  getLoader().removeClass('active');
+  activeLoaderRequests = Math.max(0, activeLoaderRequests - 1);
+  if (activeLoaderRequests === 0) {
+    getLoader().removeClass('active').attr('aria-hidden', 'true');
+  }
 }
 
-// ── Helpers ────────────────────────────────────────────
+function debug(message: string): void {
+  if (process.env.NODE_ENV === 'development') {
+    console.debug(`[ArcaFeed] ${message}`);
+  }
+}
 
 function buildPageUrl(p: VaultAdapter, articleId: string): string {
-  return p.isCurrentMode('SCRAP')
-    ? `/u/scrap_list${p.searchQuery}`
-    : `${articleId}${p.searchQuery}`;
+  if (p.isCurrentMode('SCRAP')) {
+    return `/u/scrap_list${p.searchQuery}`;
+  }
+
+  const channelPath = `/b/${p.href.channelId}`;
+  const path = articleId ? `${channelPath}/${articleId}` : channelPath;
+  return mergeSearchQuery(path, p.searchQuery);
 }
 
-function normalizeUrl(pageUrl: string): string {
-  if (!pageUrl.startsWith('http')) return pageUrl;
-  const u = new URL(pageUrl);
-  return `${u.pathname}${u.search}`;
+function normalizePageUrl(pageUrl: string): string {
+  const url = new URL(pageUrl, window.location.origin);
+  return `${url.pathname}${url.search}`;
 }
 
-async function fetchAndParse(
-  url: string,
-): Promise<{ $html: JQuery<HTMLElement> }> {
-  const res = await fetchUrl(url);
-  return { $html: $(res.responseText) };
+async function fetchAndParse(url: string): Promise<JQuery<HTMLElement>> {
+  const { responseText } = await fetchUrl(url);
+  return $(responseText);
 }
 
 function extractNextPageUrl(
   $html: JQuery<HTMLElement>,
   basePath: string,
 ): string | null {
-  const nextLink = $html
+  const $articleList = $html.find('div.article-list').first();
+  const href = $articleList
     .find('.page-item.active')
+    .first()
     .next()
     .find('a')
     .attr('href');
-  return nextLink
-    ? nextLink.startsWith('?')
-      ? `${basePath}${nextLink}`
-      : nextLink
-    : null;
+  if (!href) return null;
+  return normalizePageUrl(href.startsWith('?') ? `${basePath}${href}` : href);
 }
 
-// ── Async Generator (core) ─────────────────────────────
+function extractChannelPage(
+  $html: JQuery<HTMLElement>,
+  filter: ArticleFilterImpl | undefined,
+  seen: Set<string>,
+): { links: string[]; oldestArticleId: number } {
+  const predicate = filter ? buildFilterPredicate(filter) : () => true;
+  const links: string[] = [];
+  let oldestArticleId = 0;
 
-const MAX_PAGES = 10;
+  extractArticleRows($html).each((_, element) => {
+    const href = extractArticleHref($(element));
+    if (!href) return;
+
+    const articleId = Number.parseInt(getArticleId(href), 10);
+    if (Number.isSafeInteger(articleId)) {
+      oldestArticleId =
+        oldestArticleId === 0
+          ? articleId
+          : Math.min(oldestArticleId, articleId);
+    }
+
+    if (!predicate(element) || seen.has(href)) return;
+    seen.add(href);
+    links.push(href);
+  });
+
+  return { links, oldestArticleId };
+}
 
 /**
- * Yields batches of filtered article links from each paginated listing page.
- * The consumer decides when to stop by breaking out of the loop.
+ * Yield a deduplicated batch for each listing page. Visited URLs are tracked so
+ * malformed pagination cannot loop until the request limit.
  */
 async function* fetchArticlePages(
   p: VaultAdapter,
   articleId: string,
 ): AsyncGenerator<string[]> {
-  const basePath = p.isCurrentMode('SCRAP') ? '/u/scrap_list' : articleId;
+  const basePath = p.isCurrentMode('SCRAP')
+    ? '/u/scrap_list'
+    : `/b/${p.href.channelId}`;
+  const seenLinks = new Set(p.articleList);
+  const visitedUrls = new Set<string>();
   let nextUrl: string | null = buildPageUrl(p, articleId);
 
   const channelFilter = p.articleFilterConfig[p.href.channelId];
   if (channelFilter?.onlyBest && nextUrl) {
-    nextUrl = appendSearchParam(nextUrl, 'mode', 'best');
+    nextUrl = mergeSearchQuery(nextUrl, '?mode=best');
   }
 
-  for (let page = 0; page <= MAX_PAGES && nextUrl; page++) {
-    const url = normalizeUrl(nextUrl);
-
-    console.log(`Fetching article page: ${url}`);
-    const { $html } = await fetchAndParse(url);
-
-    const newLinks = filterLink(p, false, $html).filter(
-      (link) => !p.articleList.includes(link),
-    );
-
-    yield newLinks;
-
-    nextUrl = extractNextPageUrl($html, basePath);
-    if (!nextUrl) {
-      console.log('NO ARTICLE PAGE LINK FOUND');
+  for (let page = 0; page < MAX_PAGES && nextUrl; page += 1) {
+    const url = normalizePageUrl(nextUrl);
+    if (visitedUrls.has(url)) {
+      debug(`Pagination cycle stopped at ${url}`);
       return;
     }
+    visitedUrls.add(url);
 
-    if (newLinks.length === 0) {
-      console.log(`No articles found, trying next page: ${nextUrl}`);
-    }
+    debug(`Fetching article page: ${url}`);
+    const $html = await fetchAndParse(url);
+    const links = filterLink(p, false, $html).filter((link) => {
+      if (seenLinks.has(link)) return false;
+      seenLinks.add(link);
+      return true;
+    });
+
+    yield links;
+    nextUrl = extractNextPageUrl($html, basePath);
   }
 }
 
-// ── Convenience wrappers ───────────────────────────────
-
-/**
- * Fetch until the first page that yields results, then stop.
- * Shows a failure toast if no articles are found across all pages.
- */
 async function fetchFirstBatch(
   p: VaultAdapter,
   articleId: string,
-): Promise<void> {
+): Promise<number> {
   showFetchLoader();
   try {
     for await (const links of fetchArticlePages(p, articleId)) {
       if (links.length > 0) {
-        console.log(`Fetching Complete`);
-        p.articleList.push(...links);
-        return;
+        return p.appendArticleLinks(links);
       }
     }
-    showToast('다음 게시글 탐색에 실패했습니다.');
+    showToast('다음 게시글을 찾지 못했습니다.');
+    return 0;
+  } catch (error) {
+    console.error('[ArcaFeed] Failed to fetch articles.', error);
+    showToast('게시글을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    return 0;
   } finally {
     hideFetchLoader();
   }
 }
 
-/**
- * Collect all article links across all available pages.
- * After exhaustion, opens the first scrap series article if in series mode.
- */
 async function fetchAllBatches(
   p: VaultAdapter,
   articleId: string,
-): Promise<void> {
+): Promise<number> {
   showFetchLoader();
+  let added = 0;
   try {
     for await (const links of fetchArticlePages(p, articleId)) {
-      p.articleList.push(...links);
+      added += p.appendArticleLinks(links);
     }
 
-    shuffle(p.articleList);
-
-    if (p.isSeriesMode) {
-      openScrapSeriesArticle(p);
+    if (p.articleList.length > 1) {
+      p.articleList = shuffle([...p.articleList]);
     }
+    if (added === 0) {
+      showToast('시리즈로 열 게시글을 찾지 못했습니다.');
+    }
+    return added;
+  } catch (error) {
+    console.error('[ArcaFeed] Failed to fetch the article series.', error);
+    showToast(
+      added > 0
+        ? `${added}개 게시글만 불러왔습니다. 나머지는 다시 시도해 주세요.`
+        : '시리즈 게시글을 불러오지 못했습니다.',
+    );
+    return added;
   } finally {
     hideFetchLoader();
   }
 }
-
-// ── Navigation ─────────────────────────────────────────
 
 function openScrapSeriesArticle(p: VaultAdapter): void {
   const firstUrl = p.articleList[0];
@@ -171,123 +224,65 @@ function openScrapSeriesArticle(p: VaultAdapter): void {
 
   p.activeIndex = 0;
   p.flushSave();
-
-  const nextUrl = new URL(firstUrl, window.location.origin);
-  nextUrl.search = p.searchQuery;
-
-  if (p.articleKey) {
-    nextUrl.searchParams.set('articleKey', p.articleKey);
-  }
-
-  window.location.replace(nextUrl.toString());
+  window.location.replace(
+    mergeSearchQuery(firstUrl, p.searchQuery, window.location.origin),
+  );
 }
 
-// ── Multi-channel fetch ─────────────────────────────────
-
-async function fetchChannelFirstPage(
+async function fetchChannelArticleBatch(
   channelId: string,
+  beforeArticleId = 0,
   filter?: ArticleFilterImpl,
-): Promise<string[]> {
-  const modeParam = filter?.onlyBest ? '?mode=best' : '';
-  const url = `/b/${channelId}${modeParam}`;
-  console.log(`Fetching channel first page: ${url}`);
-
-  const res = await fetchUrl(url);
-  const $html = $(res.responseText);
-
-  const $rows = extractArticleRows($html);
-  const predicate = filter
-    ? buildFilterPredicate(filter)
-    : () => true;
-
-  return $rows
-    .toArray()
-    .filter((ele) => predicate(ele))
-    .map((ele) => extractArticleHref($(ele)) ?? '')
-    .filter((href) => href.length > 0);
-}
-
-async function fetchChannelArticles(
-  channelId: string,
-  filter?: ArticleFilterImpl,
-  existingUrls?: Set<string>,
-): Promise<string[]> {
+  existingUrls: Set<string> = new Set(),
+): Promise<ChannelArticleBatch> {
   const modeParam = filter?.onlyBest ? '?mode=best' : '';
   const basePath = `/b/${channelId}`;
-  let nextUrl: string | null = `/b/${channelId}${modeParam}`;
-  const results: string[] = [];
+  let nextUrl: string | null =
+    beforeArticleId > 0
+      ? `${basePath}/${beforeArticleId}${modeParam}`
+      : `${basePath}${modeParam}`;
+  const links: string[] = [];
+  const seen = new Set(existingUrls);
+  const visitedUrls = new Set<string>();
+  let cursor = beforeArticleId;
+  let exhausted = false;
 
-  for (let page = 0; page <= MAX_PAGES && nextUrl; page++) {
-    console.log(`Fetching channel page: ${nextUrl}`);
+  for (let page = 0; page < HOME_SERIES_PAGES_PER_BATCH && nextUrl; page += 1) {
+    const url = normalizePageUrl(nextUrl);
+    if (visitedUrls.has(url)) break;
+    visitedUrls.add(url);
 
-    const res = await fetchUrl(nextUrl);
-    const $html = $(res.responseText);
-
-    const $rows = extractArticleRows($html);
-    const predicate = filter
-      ? buildFilterPredicate(filter)
-      : () => true;
-
-    const links = $rows
-      .toArray()
-      .filter((ele) => predicate(ele))
-      .map((ele) => extractArticleHref($(ele)) ?? '')
-      .filter((href) => href.length > 0 && !existingUrls?.has(href));
-
-    results.push(...links);
-
-    nextUrl = extractNextPageUrl($html, basePath);
-  }
-
-  return results;
-}
-
-async function fetchChannelArticlesBefore(
-  channelId: string,
-  beforeArticleId: number,
-  filter?: ArticleFilterImpl,
-  existingUrls?: Set<string>,
-): Promise<string[]> {
-  const modeParam = filter?.onlyBest ? '?mode=best' : '';
-  const basePath = `/b/${channelId}`;
-  let nextUrl: string | null = `/b/${channelId}/${beforeArticleId}${modeParam}`;
-  const results: string[] = [];
-
-  for (let page = 0; page <= MAX_PAGES && nextUrl; page++) {
-    console.log(`Fetching article page: ${nextUrl}`);
-
-    const res = await fetchUrl(nextUrl);
-    const $html = $(res.responseText);
-
-    const $rows = extractArticleRows($html);
-    const predicate = filter
-      ? buildFilterPredicate(filter)
-      : () => true;
-
-    const links = $rows
-      .toArray()
-      .filter((ele) => predicate(ele))
-      .map((ele) => extractArticleHref($(ele)) ?? '')
-      .filter((href) => href.length > 0 && !existingUrls?.has(href));
-
-    results.push(...links);
+    debug(`Fetching channel page: ${url}`);
+    const $html = await fetchAndParse(url);
+    const pageResult = extractChannelPage($html, filter, seen);
+    links.push(...pageResult.links);
+    if (
+      pageResult.oldestArticleId > 0 &&
+      (cursor === 0 || pageResult.oldestArticleId < cursor)
+    ) {
+      cursor = pageResult.oldestArticleId;
+    }
 
     nextUrl = extractNextPageUrl($html, basePath);
-
-    if (links.length > 0) break;
+    exhausted = nextUrl === null;
   }
 
-  return results;
+  if (cursor === beforeArticleId || cursor === 0) {
+    exhausted = true;
+  }
+
+  return { links, cursor, exhausted };
 }
 
 export {
+  HOME_SERIES_PAGES_PER_BATCH,
+  MAX_PAGES,
   fetchArticlePages,
-  fetchChannelArticlesBefore,
+  fetchChannelArticleBatch,
   fetchFirstBatch,
   fetchAllBatches,
-  fetchChannelArticles,
-  fetchChannelFirstPage,
   hideFetchLoader,
   openScrapSeriesArticle,
   showFetchLoader,
 };
+export type { ChannelArticleBatch };

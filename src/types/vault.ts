@@ -1,4 +1,5 @@
 type PageMode = 'NEXT' | 'PREV';
+type SeriesSource = 'none' | 'article' | 'scrap' | 'home';
 
 interface HrefImpl {
   mode: 'HOME' | 'CHANNEL' | 'ARTICLE' | 'SCRAP' | 'OTHER' | 'NOT_CHECKED';
@@ -19,6 +20,12 @@ interface ArticleFilterConfigImpl {
   [channelId: string]: ArticleFilterImpl;
 }
 
+interface HomeSeriesState {
+  channels: string[];
+  cursors: Record<string, number>;
+  exhaustedChannels: string[];
+}
+
 interface UISettings {
   hideScrollbar: boolean;
   hideBlur: boolean;
@@ -29,7 +36,6 @@ interface UISettings {
   hideArticleView: boolean;
   lastModalTab: 'filter' | 'ui' | 'subscribe';
   hiddenChannels: string[];
-  homeSeriesChannels: string[];
   contentWidth: number;
 }
 
@@ -37,6 +43,8 @@ export type {
   HrefImpl,
   ArticleFilterConfigImpl,
   ArticleFilterImpl,
+  HomeSeriesState,
   PageMode,
+  SeriesSource,
   UISettings,
 };

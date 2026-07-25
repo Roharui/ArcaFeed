@@ -2,8 +2,15 @@ import $ from 'jquery';
 
 import { eventBus } from '@/core';
 import { createArticleKey } from '@/utils/article-key';
+import { mapWithConcurrency } from '@/utils/async';
 import { getArticleId } from '@/utils/regex';
-import { fetchChannelFirstPage } from '@/feature/article/fetch';
+import { appendSearchParam } from '@/utils/url';
+import { showToast } from '@/utils/toast';
+import {
+  fetchChannelArticleBatch,
+  hideFetchLoader,
+  showFetchLoader,
+} from '@/feature/article/fetch';
 
 import type { VaultAdapter } from '@/vault';
 
@@ -24,7 +31,7 @@ const MODAL_SUBSCRIBE_TAB = `
 `;
 
 function parseSubscribedChannels(): ChannelInfo[] {
-  return $('.my-subscribe-channels > .vrow > a.channel')
+  const channels = $('.my-subscribe-channels > .vrow > a.channel')
     .toArray()
     .map((el) => {
       const href = $(el).attr('href') || '';
@@ -33,6 +40,10 @@ function parseSubscribedChannels(): ChannelInfo[] {
       return { id: channelId, name };
     })
     .filter((c) => c.id !== '');
+
+  return [
+    ...new Map(channels.map((channel) => [channel.id, channel])).values(),
+  ];
 }
 
 function createSubscribeToggleRow(
@@ -65,12 +76,12 @@ function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
     $list.append(createSubscribeToggleRow(channel, !hiddenSet.has(channel.id)));
   }
 
-  $tab.find('#subscribe-check-btn').on('click', () =>
-    eventBus.emit('checkSubscribeModal'),
-  );
-  $tab.find('#subscribe-cancel-btn').on('click', () =>
-    eventBus.emit('closeModal'),
-  );
+  $tab
+    .find('#subscribe-check-btn')
+    .on('click', () => void eventBus.emit('checkSubscribeModal'));
+  $tab
+    .find('#subscribe-cancel-btn')
+    .on('click', () => void eventBus.emit('closeModal'));
 
   return $tab;
 }
@@ -78,7 +89,7 @@ function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
 function readSubscribeSettingsFromModal(): string[] {
   const hidden: string[] = [];
 
-  $('.subscribe-channel-checkbox').each((_, el) => {
+  $('#arcafeed-dialog .subscribe-channel-checkbox').each((_, el) => {
     const $el = $(el);
     const channelId = $el.attr('data-channel-id');
     if (channelId && !$el.prop('checked')) {
@@ -89,84 +100,105 @@ function readSubscribeSettingsFromModal(): string[] {
   return hidden;
 }
 
-function initCheckSubscribeModal(p: VaultAdapter): VaultAdapter {
+function initCheckSubscribeModal(p: VaultAdapter): void {
   const hiddenChannels = readSubscribeSettingsFromModal();
   p.uiSettings = { ...p.uiSettings, hiddenChannels };
-  return p;
-}
-
-// ── Loading indicator ──────────────────────────────────
-
-function getLoader(): JQuery<HTMLElement> {
-  let $loader = $('#arcafeed-fetch-loader');
-  if (!$loader.length) {
-    $loader = $('<div id="arcafeed-fetch-loader" class="fetch-loader"></div>');
-    $('body').append($loader);
-  }
-  return $loader;
-}
-
-function showFetchLoader(): void {
-  getLoader().addClass('active');
-}
-
-function hideFetchLoader(): void {
-  getLoader().removeClass('active');
 }
 
 // ── Home Series ─────────────────────────────────────────
 
-async function initStartHomeSeries(p: VaultAdapter): Promise<VaultAdapter> {
+async function initStartHomeSeries(p: VaultAdapter): Promise<void> {
   const channels = parseSubscribedChannels();
   const hiddenSet = new Set(p.uiSettings.hiddenChannels);
   const selectedChannels = channels.filter((c) => !hiddenSet.has(c.id));
 
-  if (selectedChannels.length === 0) return p;
+  if (selectedChannels.length === 0) {
+    showToast('선택한 채널이 없습니다.');
+    return;
+  }
 
   showFetchLoader();
 
   try {
-    p.uiSettings = {
-      ...p.uiSettings,
-      homeSeriesChannels: selectedChannels.map((c) => c.id),
-    };
+    let failedChannels = 0;
+    const batches = await mapWithConcurrency(
+      selectedChannels,
+      4,
+      async (channel) => {
+        try {
+          const channelFilter = p.articleFilterConfig[channel.id];
+          return {
+            channelId: channel.id,
+            batch: await fetchChannelArticleBatch(channel.id, 0, channelFilter),
+          };
+        } catch (error) {
+          failedChannels += 1;
+          console.warn(
+            `[ArcaFeed] Failed to fetch channel "${channel.id}".`,
+            error,
+          );
+          return null;
+        }
+      },
+    );
+
+    const successfulBatches = batches.filter(
+      (result): result is NonNullable<typeof result> => result !== null,
+    );
+    const allArticles = [
+      ...new Set(successfulBatches.flatMap(({ batch }) => batch.links)),
+    ]
+      .map((url) => ({
+        url,
+        articleId: Number.parseInt(getArticleId(url), 10),
+      }))
+      .filter(({ articleId }) => Number.isSafeInteger(articleId))
+      .sort((a, b) => b.articleId - a.articleId);
+
+    if (allArticles.length === 0) {
+      showToast(
+        failedChannels > 0
+          ? '채널 게시글을 불러오지 못했습니다.'
+          : '시리즈로 열 게시글이 없습니다.',
+      );
+      return;
+    }
 
     const articleKey = createArticleKey();
-    const allArticles: { url: string; articleId: number }[] = [];
-
-    for (const channel of selectedChannels) {
-      const channelFilter = p.articleFilterConfig[channel.id];
-      const articles = await fetchChannelFirstPage(channel.id, channelFilter);
-
-      for (const url of articles) {
-        const articleIdNum = parseInt(getArticleId(url));
-        if (!isNaN(articleIdNum)) {
-          allArticles.push({ url, articleId: articleIdNum });
-        }
-      }
-    }
-
-    allArticles.sort((a, b) => b.articleId - a.articleId);
-
     p.articleKey = articleKey;
-    p.href.articleKey = articleKey;
     p.articleList = allArticles.map((a) => a.url);
-    p.isSeriesMode = true;
+    p.seriesSource = 'home';
+    p.homeSeriesState = {
+      channels: selectedChannels.map((channel) => channel.id),
+      cursors: Object.fromEntries(
+        successfulBatches
+          .filter(({ batch }) => batch.cursor > 0)
+          .map(({ channelId, batch }) => [channelId, batch.cursor]),
+      ),
+      exhaustedChannels: successfulBatches
+        .filter(({ batch }) => batch.exhausted)
+        .map(({ channelId }) => channelId),
+    };
     p.activeIndex = 0;
-    p.searchQuery = `?articleKey=${articleKey}`;
+    p.searchQuery = appendSearchParam('', 'articleKey', articleKey);
     p.flushSave();
 
-    if (allArticles.length > 0) {
-      const firstArticle = allArticles[0] as { url: string; articleId: number };
-      const nextUrl = new URL(firstArticle.url, window.location.origin);
-      nextUrl.searchParams.set('articleKey', articleKey);
-      window.location.replace(nextUrl.toString());
+    if (failedChannels > 0) {
+      showToast(`${failedChannels}개 채널을 제외하고 시작합니다.`);
     }
+
+    const [firstArticle] = allArticles;
+    if (!firstArticle) return;
+    const nextUrl = new URL(firstArticle.url, window.location.origin);
+    nextUrl.searchParams.set('articleKey', articleKey);
+    window.location.replace(nextUrl.toString());
   } finally {
     hideFetchLoader();
   }
-
-  return p;
 }
 
-export { createSubscribeSettingModal, initCheckSubscribeModal, initStartHomeSeries };
+export {
+  createSubscribeSettingModal,
+  initCheckSubscribeModal,
+  initStartHomeSeries,
+};

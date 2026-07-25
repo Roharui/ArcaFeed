@@ -5,7 +5,19 @@
  * Moved to vault/ to avoid circular dependency (core ↔ vault).
  */
 
-import type { HrefImpl, ArticleFilterConfigImpl, UISettings } from '@/types';
+import type {
+  ArticleFilterConfigImpl,
+  HomeSeriesState,
+  HrefImpl,
+  SeriesSource,
+  UISettings,
+} from '@/types';
+import {
+  createDefaultHomeSeriesState,
+  createDefaultUISettings,
+  normalizeHomeSeriesState,
+  normalizeUISettings,
+} from './schema';
 
 export interface AppState {
   href: HrefImpl;
@@ -13,7 +25,8 @@ export interface AppState {
   articleKey: string;
   articleList: string[];
   articleFilterConfig: ArticleFilterConfigImpl;
-  isSeriesMode: boolean;
+  seriesSource: SeriesSource;
+  homeSeriesState: HomeSeriesState;
   searchQuery: string;
   lastActiveIndex: number;
   uiSettings: UISettings;
@@ -29,20 +42,6 @@ const DEFAULT_HREF: HrefImpl = {
   search: '',
 };
 
-const DEFAULT_UI_SETTINGS: UISettings = {
-  hideScrollbar: true,
-  hideBlur: true,
-  hideNavControl: false,
-  hideArticleTitle: false,
-  hideArticleAuthor: false,
-  hideArticleTime: false,
-  hideArticleView: false,
-  lastModalTab: 'filter',
-  hiddenChannels: [],
-  homeSeriesChannels: [],
-  contentWidth: 700,
-};
-
 export function createInitialState(): AppState {
   return {
     href: { ...DEFAULT_HREF },
@@ -50,10 +49,11 @@ export function createInitialState(): AppState {
     articleKey: '',
     articleList: [],
     articleFilterConfig: {},
-    isSeriesMode: false,
+    seriesSource: 'none',
+    homeSeriesState: createDefaultHomeSeriesState(),
     searchQuery: '',
     lastActiveIndex: -1,
-    uiSettings: { ...DEFAULT_UI_SETTINGS },
+    uiSettings: createDefaultUISettings(),
   };
 }
 
@@ -64,12 +64,16 @@ export class Store {
   constructor(initialState?: Partial<AppState>) {
     const base = createInitialState();
 
-    // Deep-merge uiSettings so newly added fields get default values
-    // even when old localStorage data is missing them.
     if (initialState?.uiSettings) {
       initialState = {
         ...initialState,
-        uiSettings: { ...base.uiSettings, ...initialState.uiSettings },
+        uiSettings: normalizeUISettings(initialState.uiSettings),
+      };
+    }
+    if (initialState?.homeSeriesState) {
+      initialState = {
+        ...initialState,
+        homeSeriesState: normalizeHomeSeriesState(initialState.homeSeriesState),
       };
     }
 
@@ -81,12 +85,12 @@ export class Store {
   }
 
   setState(patch: Partial<AppState>): void {
-    this.state = { ...this.state, ...patch };
-    this.notify();
-  }
+    const hasChanges = Object.entries(patch).some(
+      ([key, value]) => this.state[key as keyof AppState] !== value,
+    );
+    if (!hasChanges) return;
 
-  replaceState(newState: AppState): void {
-    this.state = newState;
+    this.state = { ...this.state, ...patch };
     this.notify();
   }
 

@@ -1,6 +1,6 @@
-export { sleep } from './func';
+export { shuffle } from './func';
+export * from './async';
 export * from './regex';
-export * from './type';
 export * from './fetch';
 export * from './toast';
 export * from './article-key';

@@ -10,11 +10,15 @@ import type { UISettings } from '@/types';
 const MIN_CONTENT_WIDTH = 700;
 const MAX_CONTENT_WIDTH = 1400;
 
-let resizeHandleInstalled = false;
+function clampContentWidth(width: number): number {
+  return Math.min(
+    MAX_CONTENT_WIDTH,
+    Math.max(MIN_CONTENT_WIDTH, Math.round(width)),
+  );
+}
 
 function installResizeHandle(p: VaultAdapter): void {
   const shouldInstall =
-    !resizeHandleInstalled &&
     window.matchMedia('(min-width: 1024px)').matches &&
     !window.matchMedia('(pointer: coarse)').matches &&
     p.isCurrentMode('CHANNEL', 'ARTICLE');
@@ -22,12 +26,38 @@ function installResizeHandle(p: VaultAdapter): void {
 
   const $wrapper = $('.body .content-wrapper');
   if (!$wrapper.length) return;
+  if ($wrapper.find('.arcafeed-resize-handle').length > 0) return;
 
   $wrapper.css('position', 'relative');
 
   // Shared drag state
   let dragging: 'left' | 'right' | null = null;
   let currentWidth = 0;
+  let pendingClientX = 0;
+  let resizeFrame: number | null = null;
+
+  function applyPendingResize(): void {
+    resizeFrame = null;
+    if (!dragging) return;
+
+    const rect = $wrapper[0]!.getBoundingClientRect();
+    const newWidth =
+      dragging === 'right'
+        ? pendingClientX - rect.left
+        : rect.right - pendingClientX;
+
+    currentWidth = clampContentWidth(newWidth);
+    $wrapper.css('--content-max-width', `${currentWidth}px`);
+    $wrapper
+      .find('.arcafeed-resize-handle')
+      .attr('aria-valuenow', currentWidth.toString());
+  }
+
+  function scheduleResize(clientX: number): void {
+    pendingClientX = clientX;
+    if (resizeFrame !== null) return;
+    resizeFrame = window.requestAnimationFrame(applyPendingResize);
+  }
 
   function onMouseDown(side: 'left' | 'right') {
     return (e: JQuery.MouseDownEvent) => {
@@ -37,49 +67,60 @@ function installResizeHandle(p: VaultAdapter): void {
 
       dragging = side;
       currentWidth = p.uiSettings.contentWidth;
+      pendingClientX = e.clientX;
       $(`.arca-resize-handle-${side}`).addClass('dragging');
     };
   }
 
-  $(document).on('mousemove.arcafeed-resize', (e) => {
-    if (!dragging) return;
+  // Rebinding is safe if the host replaces the content wrapper without a
+  // full navigation.
+  $(document)
+    .off('.arcafeed-resize')
+    .on('mousemove.arcafeed-resize', (event) => {
+      if (dragging) scheduleResize(event.clientX);
+    })
+    .on('mouseup.arcafeed-resize', () => {
+      if (!dragging) return;
+      if (resizeFrame !== null) {
+        window.cancelAnimationFrame(resizeFrame);
+        applyPendingResize();
+      }
 
-    const rect = $wrapper[0]!.getBoundingClientRect();
-
-    // Width = distance from cursor to opposite edge of wrapper
-    const newWidth =
-      dragging === 'right'
-        ? e.clientX - rect.left // right handle → distance from left edge
-        : rect.right - e.clientX; // left handle  → distance from right edge
-
-    currentWidth = Math.min(
-      MAX_CONTENT_WIDTH,
-      Math.max(MIN_CONTENT_WIDTH, Math.round(newWidth)),
-    );
-
-    $wrapper.css('--content-max-width', `${currentWidth}px`);
-  });
-
-  $(document).on('mouseup.arcafeed-resize', () => {
-    if (!dragging) return;
-
-    $(`.arca-resize-handle-${dragging}`).removeClass('dragging');
-    dragging = null;
-
-    p.uiSettings = { ...p.uiSettings, contentWidth: currentWidth };
-    p.flushSave();
-  });
+      $(`.arca-resize-handle-${dragging}`).removeClass('dragging');
+      dragging = null;
+      p.uiSettings = { ...p.uiSettings, contentWidth: currentWidth };
+      p.flushSave();
+    });
 
   // Create both handles
   for (const side of ['left', 'right'] as const) {
     const $handle = $('<div>', {
       class: `arcafeed-resize-handle arca-resize-handle-${side} swiper-no-swiping`,
+      role: 'separator',
+      tabindex: '0',
+      'aria-label': '콘텐츠 너비 조절',
+      'aria-orientation': 'vertical',
+      'aria-valuemin': MIN_CONTENT_WIDTH.toString(),
+      'aria-valuemax': MAX_CONTENT_WIDTH.toString(),
+      'aria-valuenow': p.uiSettings.contentWidth.toString(),
     });
-    $handle.on('mousedown', onMouseDown(side));
+    $handle
+      .on('mousedown.arcafeed-resize', onMouseDown(side))
+      .on('keydown.arcafeed-resize', (event) => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+
+        event.preventDefault();
+        const delta = event.key === 'ArrowRight' ? 20 : -20;
+        const nextWidth = clampContentWidth(p.uiSettings.contentWidth + delta);
+        p.uiSettings = { ...p.uiSettings, contentWidth: nextWidth };
+        $wrapper.css('--content-max-width', `${nextWidth}px`);
+        $wrapper
+          .find('.arcafeed-resize-handle')
+          .attr('aria-valuenow', nextWidth.toString());
+        p.flushSave();
+      });
     $wrapper.append($handle);
   }
-
-  resizeHandleInstalled = true;
 }
 
 // ── UI Settings ─────────────────────────────────────────
@@ -152,11 +193,6 @@ function initUi(p: VaultAdapter): void {
   installResizeHandle(p);
 
   MODE_UI_INIT[p.href.mode]?.(p);
-
-  // Reactive: subscribe to state changes to re-apply UI settings
-  p.subscribe((state) => {
-    applyUISettings(state.uiSettings);
-  });
 }
 
 export { initUi };

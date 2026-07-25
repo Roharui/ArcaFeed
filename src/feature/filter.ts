@@ -1,6 +1,11 @@
 import $ from 'jquery';
 
 import { getArticleId } from '@/utils';
+import {
+  createArticleFilterRule,
+  matchesArticleFilter,
+  normalizeFilterTokens,
+} from './filter-rules';
 
 import type { VaultAdapter } from '@/vault';
 import type { ArticleFilterImpl } from '@/types';
@@ -41,11 +46,15 @@ function injectArticleKeys(
     const href = $el.attr('href');
     if (!href) return;
 
-    const url = new URL(href, window.location.origin);
-    if (url.searchParams.get('articleKey') === articleKey) return;
+    try {
+      const url = new URL(href, window.location.origin);
+      if (url.searchParams.get('articleKey') === articleKey) return;
 
-    url.searchParams.set('articleKey', articleKey);
-    $el.attr('href', `${url.pathname}${url.search}`);
+      url.searchParams.set('articleKey', articleKey);
+      $el.attr('href', `${url.pathname}${url.search}`);
+    } catch {
+      // Ignore malformed links injected by the host or another extension.
+    }
   });
 }
 
@@ -54,7 +63,7 @@ function injectArticleKeys(
 function expandTabCategories(tabCategories: string[]): string[] {
   return [
     ...new Set(
-      tabCategories.flatMap((cat) =>
+      normalizeFilterTokens(tabCategories).flatMap((cat) =>
         cat === LEGACY_NO_TAB_CATEGORY ? NO_TAB_CATEGORIES : [cat],
       ),
     ),
@@ -70,25 +79,26 @@ function getTabTypeText($ele: JQuery<HTMLElement>): string {
     : NO_TAB_CATEGORY_WITHOUT_IMAGE;
 }
 
+function getArticleTitleText($ele: JQuery<HTMLElement>): string {
+  return $ele.find('.title').addBack('.title').text().trim();
+}
+
 function buildFilterPredicate(
   filter: ArticleFilterImpl,
 ): (ele: HTMLElement) => boolean {
   const { tab: tabFilter, title: titleFilter } = filter;
-
-  // No active filters → allow all
-  if (tabFilter.length === 0 && titleFilter.length === 0) {
-    return () => true;
-  }
-
-  const allowedTabs = new Set(expandTabCategories(tabFilter));
+  const rule = createArticleFilterRule(
+    expandTabCategories(tabFilter),
+    titleFilter,
+  );
 
   return (ele: HTMLElement) => {
     const $ele = $(ele);
-    const tabOk = allowedTabs.has(getTabTypeText($ele));
-    const titleOk = titleFilter.every(
-      (keyword) => !$ele.find('.title').text().trim().includes(keyword),
+    return matchesArticleFilter(
+      rule,
+      getTabTypeText($ele),
+      getArticleTitleText($ele),
     );
-    return tabOk && titleOk;
   };
 }
 
@@ -98,8 +108,17 @@ function extractArticleHref($ele: JQuery<HTMLElement>): string | null {
   const href = $ele.attr('href');
   if (!href) return null;
 
-  // Normalize: strip origin and query string → "/b/channel/12345"
-  return href.replace('https://arca.live', '').replace(/\?.+$/, '');
+  try {
+    const url = new URL(href, window.location.origin);
+    const isArcaLive =
+      url.hostname === 'arca.live' || url.hostname.endsWith('.arca.live');
+    if (!isArcaLive) return null;
+
+    const normalizedPath = url.pathname.replace(/\/+$/, '');
+    return getArticleId(normalizedPath) ? normalizedPath : null;
+  } catch {
+    return null;
+  }
 }
 
 // ── Public API ─────────────────────────────────────────
@@ -113,8 +132,6 @@ function filterLink(
   applyCss: boolean = false,
   $html?: JQuery<HTMLElement>,
 ): string[] {
-  console.log('Filtering links based on article list and filter config...');
-
   const $scope = $html ?? $('.root-container');
   const $rows = extractArticleRows($scope);
 
@@ -127,7 +144,7 @@ function filterLink(
     onlyBest: false,
   };
   const predicate = buildFilterPredicate(filter);
-  const existingIds = new Set(p.articleList);
+  const seenUrls = new Set(p.articleList);
 
   const result: string[] = [];
 
@@ -142,7 +159,8 @@ function filterLink(
     if (!allowed) return;
 
     const href = extractArticleHref($ele);
-    if (href && !existingIds.has(getArticleId(href))) {
+    if (href && !seenUrls.has(href)) {
+      seenUrls.add(href);
       result.push(href);
     }
   });
@@ -156,6 +174,7 @@ export {
   extractArticleHref,
   extractArticleRows,
   filterLink,
+  getArticleTitleText,
   getTabTypeText,
   LEGACY_NO_TAB_CATEGORY,
   NO_TAB_CATEGORY_WITH_IMAGE,

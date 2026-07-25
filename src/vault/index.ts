@@ -9,9 +9,14 @@ import { Store } from './store';
 import { StorageRepository } from './repository';
 import { ConfigService } from './config';
 
-import type { AppState, StateSubscriber } from './store';
-import type { HrefImpl, UISettings } from '@/types';
-import type { Swiper } from '@swiper/types';
+import type { AppState } from './store';
+import type {
+  HomeSeriesState,
+  HrefImpl,
+  SeriesSource,
+  UISettings,
+} from '@/types';
+import type { Swiper } from 'swiper/types';
 
 import { parseHref } from '@/utils/regex';
 
@@ -33,8 +38,7 @@ export class VaultAdapter {
   swiper: Swiper | null = null;
 
   constructor(store?: Store, config?: ConfigService, initialHref?: HrefImpl) {
-    const repo = new StorageRepository();
-    this.config = config ?? new ConfigService(repo);
+    this.config = config ?? new ConfigService(new StorageRepository());
     this.store = store ?? new Store(this.config.loadConfig());
 
     // Pre-set href from constructor injection (avoids redundant URL re-parse).
@@ -60,8 +64,7 @@ export class VaultAdapter {
     }
 
     this.saveDebounceTimer = setTimeout(() => {
-      this.config.saveConfig(state);
-      this.config.saveLastActiveIndex(state.articleKey, state.activeIndex);
+      this.persist(state);
       this.saveDebounceTimer = null;
     }, 300);
   }
@@ -74,7 +77,12 @@ export class VaultAdapter {
       clearTimeout(this.saveDebounceTimer);
       this.saveDebounceTimer = null;
     }
-    this.config.saveConfig(this.store.getState());
+    this.persist(this.store.getState());
+  }
+
+  private persist(state: Readonly<AppState>): void {
+    this.config.saveConfig(state);
+    this.config.saveLastActiveIndex(state.articleKey, state.activeIndex);
   }
 
   /**
@@ -91,7 +99,7 @@ export class VaultAdapter {
     return this.store.getState().href;
   }
   set href(v: HrefImpl) {
-    this.store.setState({ href: v });
+    this.store.setState({ href: { ...v } });
   }
 
   get activeIndex(): number {
@@ -105,14 +113,17 @@ export class VaultAdapter {
     return this.store.getState().articleKey;
   }
   set articleKey(v: string) {
-    this.store.setState({ articleKey: v });
+    this.store.setState({
+      articleKey: v,
+      href: { ...this.href, articleKey: v },
+    });
   }
 
   get articleList(): string[] {
     return this.store.getState().articleList;
   }
   set articleList(v: string[]) {
-    this.store.setState({ articleList: v });
+    this.store.setState({ articleList: [...new Set(v)] });
   }
 
   get articleFilterConfig() {
@@ -123,10 +134,27 @@ export class VaultAdapter {
   }
 
   get isSeriesMode(): boolean {
-    return this.store.getState().isSeriesMode;
+    return this.seriesSource !== 'none';
   }
-  set isSeriesMode(v: boolean) {
-    this.store.setState({ isSeriesMode: v });
+
+  get seriesSource(): SeriesSource {
+    return this.store.getState().seriesSource;
+  }
+  set seriesSource(v: SeriesSource) {
+    this.store.setState({ seriesSource: v });
+  }
+
+  get homeSeriesState(): HomeSeriesState {
+    return this.store.getState().homeSeriesState;
+  }
+  set homeSeriesState(v: HomeSeriesState) {
+    this.store.setState({
+      homeSeriesState: {
+        channels: [...new Set(v.channels)],
+        cursors: { ...v.cursors },
+        exhaustedChannels: [...new Set(v.exhaustedChannels)],
+      },
+    });
   }
 
   get searchQuery(): string {
@@ -150,20 +178,6 @@ export class VaultAdapter {
     this.store.setState({ uiSettings: v });
   }
 
-  // State snapshot
-
-  getState(): Readonly<AppState> {
-    return this.store.getState();
-  }
-
-  // Store subscription (for reactive features)
-
-  subscribe(subscriber: StateSubscriber): () => void {
-    return this.store.subscribe(subscriber);
-  }
-
-  // Compatibility methods
-
   isCurrentMode(...mode: HrefImpl['mode'][]): boolean {
     return mode.includes(this.href.mode);
   }
@@ -177,19 +191,15 @@ export class VaultAdapter {
   }
 
   resetArticleList(): void {
-    this.store.setState({ articleList: [] });
+    this.store.setState({ articleList: [], activeIndex: -1 });
   }
 
-  /**
-   * @deprecated State is now auto-persisted via Store subscription.
-   * Kept for backward compatibility.
-   */
-  saveConfig(): void {
-    this.flushSave();
-  }
-
-  saveLastActiveIndex(): void {
-    this.config.saveLastActiveIndex(this.articleKey, this.activeIndex);
+  appendArticleLinks(links: Iterable<string>): number {
+    const current = this.articleList;
+    const next = [...new Set([...current, ...links])];
+    if (next.length === current.length) return 0;
+    this.articleList = next;
+    return next.length - current.length;
   }
 
   /**

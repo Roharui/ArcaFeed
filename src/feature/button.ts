@@ -11,8 +11,10 @@ function buildHomeButtons(_p: VaultAdapter): void {
     .last()
     .before(
       btnWrapper([
-        createArcaFeedBtn('filter', 'ion-ios-gear', () =>
-          eventBus.emit('showModal'),
+        createArcaFeedBtn(
+          'filter',
+          'ion-ios-gear',
+          () => void eventBus.emit('showModal'),
         ),
       ]),
     );
@@ -25,8 +27,10 @@ function buildScrapButtons(p: VaultAdapter): void {
     .last()
     .before(
       btnWrapper([
-        createArcaFeedBtn('series', 'ion-ios-albums', () =>
-          eventBus.emit('enableScrapSeries'),
+        createArcaFeedBtn(
+          'series',
+          'ion-ios-albums',
+          () => void eventBus.emit('enableScrapSeries'),
         ),
       ]),
     );
@@ -40,18 +44,20 @@ function buildChannelArticleButtons(p: VaultAdapter): void {
       disableSwiper: false,
       onlyBest: false,
     };
-    btns.push(
-      createArcaFeedBtn(
-        'next',
-        disableSwiper ? 'ion-ios-locked' : 'ion-ios-arrow-forward',
-        () => eventBus.emit('toggleSwiper'),
-      ),
+    const $toggle = createArcaFeedBtn(
+      'next',
+      disableSwiper ? 'ion-ios-locked' : 'ion-ios-arrow-forward',
+      () => void eventBus.emit('toggleSwiper'),
     );
+    $toggle.find('button').attr('aria-pressed', (!disableSwiper).toString());
+    btns.push($toggle);
   }
 
   btns.push(
-    createArcaFeedBtn('filter', 'ion-ios-gear', () =>
-      eventBus.emit('showModal'),
+    createArcaFeedBtn(
+      'filter',
+      'ion-ios-gear',
+      () => void eventBus.emit('showModal'),
     ),
   );
 
@@ -66,6 +72,8 @@ const BUTTON_BUILDERS: Record<string, (p: VaultAdapter) => void> = {
 };
 
 const initButton = (p: VaultAdapter) => {
+  // Keep initialization idempotent when a page pipeline is re-run.
+  $('ul.userscript-nav').remove();
   BUTTON_BUILDERS[p.href.mode]?.(p);
 };
 
@@ -77,17 +85,38 @@ function createArcaFeedBtn(
   callback: () => void,
   display = 'list-item',
 ) {
-  const btn =
-    $(`<li class="nav-item dropdown userscript-nav-item ${id}" style="display: ${display};">
-  <a class="nav-link">
-    <span class="d-none d-sm-inline navbar-top-margin"></span>
-    <span class="${icon} h5"></span>
-  </a>
-  </li>`);
+  const accessibleNames: Record<string, string> = {
+    filter: 'ArcaFeed 설정 열기',
+    next: 'Swiper 활성화 상태 전환',
+    series: '스크랩 시리즈 시작',
+  };
+  const accessibleName = accessibleNames[id] ?? 'ArcaFeed 동작 실행';
+  const $button = $('<button>', {
+    type: 'button',
+    class: 'nav-link arcafeed-nav-button',
+    'aria-label': accessibleName,
+    title: accessibleName,
+  })
+    .append(
+      $('<span>', {
+        class: 'd-none d-sm-inline navbar-top-margin',
+        'aria-hidden': 'true',
+      }),
+    )
+    .append(
+      $('<span>', {
+        class: `${icon} h5`,
+        'aria-hidden': 'true',
+      }),
+    )
+    .on('click.arcafeed-button', () => callback());
 
-  btn.on('click', () => callback());
+  const $item = $('<li>', {
+    class: `nav-item dropdown userscript-nav-item ${id}`,
+    css: { display },
+  }).append($button);
 
-  return btn;
+  return $item;
 }
 
 function btnWrapper(btn: JQuery<HTMLElement>[]): JQuery<HTMLElement> {

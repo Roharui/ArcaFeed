@@ -75,8 +75,12 @@ function createUISettingModal(p: VaultAdapter): JQuery<HTMLElement> {
     $uiTab.find('.ui-article-info-group').remove();
   }
 
-  $uiTab.find('#check-btn').on('click', () => eventBus.emit('checkUIModal'));
-  $uiTab.find('#cancel-btn').on('click', () => eventBus.emit('closeModal'));
+  $uiTab
+    .find('#check-btn')
+    .on('click', () => void eventBus.emit('checkUIModal'));
+  $uiTab
+    .find('#cancel-btn')
+    .on('click', () => void eventBus.emit('closeModal'));
 
   return $uiTab;
 }
@@ -88,7 +92,7 @@ function createUISettingModal(p: VaultAdapter): JQuery<HTMLElement> {
 function readUISettingsFromModal(): Record<string, boolean> {
   const settings: Record<string, boolean> = {};
 
-  $('.ui-toggle-checkbox').each((_, el) => {
+  $('#arcafeed-dialog .helper-modal-ui .ui-toggle-checkbox').each((_, el) => {
     const $el = $(el);
     const key = $el.attr('data-key');
     if (key) {
@@ -103,10 +107,9 @@ function readUISettingsFromModal(): Record<string, boolean> {
  * Save UI settings from the modal into VaultAdapter state.
  * Called as part of the checkUIModal event pipeline.
  */
-function initCheckUIModal(p: VaultAdapter): VaultAdapter {
+function initCheckUIModal(p: VaultAdapter): void {
   const formSettings = readUISettingsFromModal();
   p.uiSettings = { ...p.uiSettings, ...formSettings };
-  return p;
 }
 
 export { createUISettingModal, initCheckUIModal };
