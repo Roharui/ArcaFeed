@@ -1,14 +1,15 @@
 import {
   fetchFirstBatch,
   fetchAllBatches,
-  fetchChannelArticles,
+  fetchChannelArticlesBefore,
+  fetchChannelFirstPage,
   filterLink,
   parseSearchQuery,
   showFetchLoader,
   hideFetchLoader,
 } from '@/feature';
 import { createArticleKey } from '@/utils/article-key';
-import { getArticleId } from '@/utils/regex';
+import { extractChannelId, getArticleId } from '@/utils/regex';
 import { appendSearchParam } from '@/utils/url';
 
 import type { VaultAdapter } from '@/vault';
@@ -113,28 +114,59 @@ async function loadMoreHomeSeriesArticles(p: VaultAdapter): Promise<void> {
   const { homeSeriesChannels } = p.uiSettings;
   if (homeSeriesChannels.length === 0) return;
 
+  const channelCounts = new Map<string, { minId: number; count: number }>();
+
+  for (const url of p.articleList) {
+    const chId = extractChannelId(url);
+    const artId = parseInt(getArticleId(url));
+    if (!chId || isNaN(artId)) continue;
+
+    const entry = channelCounts.get(chId);
+    if (!entry) {
+      channelCounts.set(chId, { minId: artId, count: 1 });
+    } else {
+      if (artId < entry.minId) entry.minId = artId;
+      entry.count++;
+    }
+  }
+
+  for (const channelId of homeSeriesChannels) {
+    const entry = channelCounts.get(channelId);
+    if (!entry || entry.count <= 3) {
+      const minId = entry?.minId ?? 0;
+      await fetchMoreFromChannel(p, channelId, minId);
+    }
+  }
+}
+
+async function fetchMoreFromChannel(
+  p: VaultAdapter,
+  channelId: string,
+  afterId: number,
+): Promise<void> {
+  const channelFilter = p.articleFilterConfig[channelId];
+  const existingUrls = new Set(p.articleList);
+
   showFetchLoader();
   try {
-    const existingUrls = new Set(p.articleList);
-    const allArticles: { url: string; articleId: number }[] = [];
+    const articles = afterId > 0
+      ? await fetchChannelArticlesBefore(channelId, afterId, channelFilter, existingUrls)
+      : await fetchChannelFirstPage(channelId, channelFilter);
 
-    for (const channelId of homeSeriesChannels) {
-      const channelFilter = p.articleFilterConfig[channelId];
-      const articles = await fetchChannelArticles(channelId, channelFilter, existingUrls);
+    if (articles.length === 0) return;
 
-      for (const url of articles) {
-        const articleIdNum = parseInt(getArticleId(url));
-        if (!isNaN(articleIdNum)) {
-          allArticles.push({ url, articleId: articleIdNum });
-          existingUrls.add(url);
-        }
-      }
-    }
-
-    if (allArticles.length === 0) return;
-
-    allArticles.sort((a, b) => b.articleId - a.articleId);
-    p.articleList = [...p.articleList, ...allArticles.map((a) => a.url)];
+    const combined = [
+      ...p.articleList.map((url) => ({
+        url,
+        articleId: parseInt(getArticleId(url)) || 0,
+      })),
+      ...articles.map((url) => ({
+        url,
+        articleId: parseInt(getArticleId(url)) || 0,
+      })),
+    ];
+    combined.sort((a, b) => b.articleId - a.articleId);
+    p.articleList = combined.map((a) => a.url);
     p.flushSave();
   } finally {
     hideFetchLoader();

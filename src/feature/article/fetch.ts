@@ -242,8 +242,47 @@ async function fetchChannelArticles(
   return results;
 }
 
+async function fetchChannelArticlesBefore(
+  channelId: string,
+  beforeArticleId: number,
+  filter?: ArticleFilterImpl,
+  existingUrls?: Set<string>,
+): Promise<string[]> {
+  const modeParam = filter?.onlyBest ? '?mode=best' : '';
+  const basePath = `/b/${channelId}`;
+  let nextUrl: string | null = `/b/${channelId}/${beforeArticleId}${modeParam}`;
+  const results: string[] = [];
+
+  for (let page = 0; page <= MAX_PAGES && nextUrl; page++) {
+    console.log(`Fetching article page: ${nextUrl}`);
+
+    const res = await fetchUrl(nextUrl);
+    const $html = $(res.responseText);
+
+    const $rows = extractArticleRows($html);
+    const predicate = filter
+      ? buildFilterPredicate(filter)
+      : () => true;
+
+    const links = $rows
+      .toArray()
+      .filter((ele) => predicate(ele))
+      .map((ele) => extractArticleHref($(ele)) ?? '')
+      .filter((href) => href.length > 0 && !existingUrls?.has(href));
+
+    results.push(...links);
+
+    nextUrl = extractNextPageUrl($html, basePath);
+
+    if (links.length > 0) break;
+  }
+
+  return results;
+}
+
 export {
   fetchArticlePages,
+  fetchChannelArticlesBefore,
   fetchFirstBatch,
   fetchAllBatches,
   fetchChannelArticles,

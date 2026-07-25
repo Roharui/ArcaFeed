@@ -3,7 +3,7 @@ import $ from 'jquery';
 import { eventBus } from '@/core';
 import { createArticleKey } from '@/utils/article-key';
 import { getArticleId } from '@/utils/regex';
-import { fetchChannelArticles } from '@/feature/article/fetch';
+import { fetchChannelFirstPage } from '@/feature/article/fetch';
 
 import type { VaultAdapter } from '@/vault';
 
@@ -136,7 +136,7 @@ async function initStartHomeSeries(p: VaultAdapter): Promise<VaultAdapter> {
 
     for (const channel of selectedChannels) {
       const channelFilter = p.articleFilterConfig[channel.id];
-      const articles = await fetchChannelArticles(channel.id, channelFilter);
+      const articles = await fetchChannelFirstPage(channel.id, channelFilter);
 
       for (const url of articles) {
         const articleIdNum = parseInt(getArticleId(url));
