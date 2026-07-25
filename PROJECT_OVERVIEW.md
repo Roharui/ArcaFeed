@@ -1,479 +1,366 @@
-# ArcaFeed — 프로젝트 총정리 문서
+# ArcaFeed 프로젝트 가이드
 
-> **⚠️ 중요: 이 문서는 프로젝트의 "살아있는 지식 베이스"입니다.**
->
-> 코드를 수정할 때마다 이 문서의 해당 섹션을 반드시 업데이트하세요.
-> 구조 변경, 새 기능 추가, 의존성 변경, 아키텍처 결정 등 모든 변경사항을 여기에 기록합니다.
-> 이 문서는 AI 에이전트(및 새로운 기여자)가 프로젝트를 빠르게 이해할 수 있도록 하는 것이 목적입니다.
+> 이 문서는 현재 코드 구조와 유지보수 규칙을 설명하는 살아있는 문서입니다.
+> 구조, 상태 스키마, 이벤트, 빌드 또는 의존성이 바뀌면 함께 갱신합니다.
 
----
+최종 갱신: 2026-07-25
 
 ## 1. 프로젝트 개요
 
-**ArcaFeed**는 아카라이브(arca.live) 커뮤니티 사이트를 TikTok/Shorts처럼 스와이프로 게시글을 넘겨볼 수 있게 해주는 **TamperMonkey / ViolentMonkey 유저스크립트**입니다.
+ArcaFeed는 아카라이브(`arca.live`) 게시글을 Shorts 형태로 연속 탐색할 수 있게
+하는 TamperMonkey/ViolentMonkey 유저스크립트입니다.
 
-- **저장소**: `github.com/Roharui/ArcaFeed`
-- **버전**: `2.2.1`
-- **대상 사이트**: `https://arca.live/*`
-- **기술 스택**: TypeScript + Webpack → 유저스크립트 번들
+- 패키지 버전: `2.5.0`
+- 런타임: 브라우저 유저스크립트
+- 개발 환경: Node.js 22.13+, npm 10.9+, TypeScript 5.9, Webpack 5
+- 주요 런타임 의존성: jQuery, Swiper, Toastify
+- 빌드 출력: `dist/ArcaFeed.user.js`
 
-### 핵심 기능
+핵심 기능은 채널·게시글·스크랩·홈 페이지 감지, 게시글 목록 필터링, Swiper
+탐색, 시리즈/스크랩 시리즈, 여러 채널을 합친 홈 시리즈, UI 설정 및 상태
+복원입니다.
 
-| 기능 | 설명 |
-|------|------|
-| 🎬 **슬라이드 게시글** | Swiper.js 기반 스와이프 내비게이션 (좌/우) |
-| 🔍 **게시글 필터링** | 탭(카테고리) 필터, 제목 차단 필터 (채널별 설정 저장) |
-| ⌨️ **키보드 이벤트** | 좌우 화살표 키로 게시글 이동 |
-| 📚 **시리즈 등록** | 게시글 시리즈를 새 탭으로 열어 연속 탐색 |
-| 📦 **스크랩 시리즈** | 스크랩 목록에서도 시리즈 모드 지원 |
-| ⚙️ **모달 설정** | 필터/UI 설정을 위한 모달 UI |
-| 📌 **Navbar 고정** | Swiper 슬라이드 전환 시 navbar가 움직이지 않도록 `.navbar-wrapper`로 분리 |
-| 🖥️ **PC 리사이즈** | 콘텐츠 영역 드래그로 너비 조절 (1024px 이상, 포인터 장치 only) |
+## 2. 디렉터리 구조
 
----
-
-## 2. 디렉토리 구조
-
-```
+```text
 ArcaFeed/
+├── .github/workflows/
+│   ├── ci.yml                    # PR/main 전체 품질 검사
+│   └── release.yml               # v* 태그 검증 후 GitHub Release
+├── css/                          # 기능별 스타일
+├── scripts/
+│   └── release.mjs              # 크로스플랫폼 수동 태그 릴리즈
 ├── src/
-│   ├── index.ts                    # 진입점 (중복 실행 방지, 초기화)
-│   ├── global.d.ts                 # CSS 모듈, Toastify 타입 선언
-│   ├── core/                       # 핵심 인프라 (이벤트 시스템, 스텝 실행기)
-│   │   ├── index.ts                # ArcaFeed 싱글톤 + EventBus 바인딩
-│   │   ├── event-bus.ts            # Pub/Sub 이벤트 버스
-│   │   ├── event.ts                # EventManager: 이벤트 → Step[] 매핑
-│   │   ├── step-runner.ts          # StepRunner: 순차/병렬 함수 실행기
-│   │   └── store.ts                # Store re-export (from vault/)
-│   ├── feature/                    # 기능 모듈
-│   │   ├── index.ts                # barrel export
-│   │   ├── button.ts               # 내비게이션 바 버튼 (모드별 빌더 → BUTTON_BUILDERS 디스패치)
-│   │   ├── filter.ts               # 게시글 필터링 로직
-│   │   ├── keyEvent.ts             # 키보드 이벤트 (MODE_KEY_HANDLERS 디스패치)
-│   │   ├── search.ts               # 검색 쿼리 파싱
-│   │   ├── series.ts               # 시리즈 모드 관련
-│   │   ├── ui.ts                   # UI 조정 (MODE_UI_INIT 디스패치, toggleClass)
-│   │   ├── version.ts              # 개발 버전 정보 표시
-│   │   ├── article/                # 게시글 관련
-│   │   │   ├── fetch.ts            # AsyncGenerator 기반 페칭 + fetchFirstBatch/fetchAllBatches
-│   │   │   └── link.ts             # 링크 초기화 (LINK_HANDLERS 디스패치), 활성화, 페이지 전환
-│   │   ├── modal/                  # 모달 UI
-│   │   │   ├── index.ts            # 모달 생성/제거 (series/normal 모드별 빌더)
-│   │   │   ├── filterUi.ts         # 필터 탭 UI
-│   │   │   └── uiTab.ts            # UI 설정 탭
-│   │   └── swiper/                 # Swiper 관련
-│   │       ├── swiper.ts           # Swiper 인스턴스 생성/제어 (SLIDE_NEXT_EVENT 디스패치)
-│   │       └── page.ts             # 페이지 이동 로직
-│   ├── types/                      # 공통 타입 정의
-│   │   ├── func.ts                 # PromiseFunc, Condition 등 함수 타입
-│   │   └── vault.ts                # HrefImpl, ArticleFilter, UISettings 등 도메인 타입
-│   ├── utils/                      # 유틸리티 함수
-│   │   ├── article-key.ts          # articleKey 생성/파싱
-│   │   ├── fetch.ts                # 네트워크 요청 (fetch + 타임아웃)
-│   │   ├── func.ts                 # sleep 등 함수 유틸
-│   │   ├── regex.ts                # URL 파싱 (모드 감지, ID 추출)
-│   │   ├── toast.ts                # Toast 팝업
-│   │   ├── type.ts                 # 타입 가드 (checkNotNull, isPromiseFuncResult, getArrayItem, getRegexMatchByIndex)
-│   │   └── url.ts                  # URL 파라미터 조작
-│   └── vault/                      # 상태 저장소 (Store 패턴 + localStorage)
-│       ├── vault.ts                # Vault → VaultAdapter re-export
-│       ├── index.ts                # VaultAdapter: 호환성 레이어
-│       ├── store.ts                # Store: 불변 상태 관리 (Flux-like)
-│       ├── config.ts               # ConfigService: 설정 로드/저장 (getJSON 사용)
-│       └── repository.ts           # StorageRepository: localStorage 추상화
-├── css/                            # 스타일시트
-│   ├── arcalive.css                # 아카라이브 기본 UI 오버라이드
-│   ├── swiper.css                  # Swiper 컨테이너 + 로딩 인디케이터
-│   ├── filter.css                  # 필터 모달 UI
-│   ├── modal.css                   # 모달 공통 스타일
-│   ├── series.css                  # 시리즈 버튼 스타일
-│   └── ui.css                      # UI 설정 탭 스타일
-├── dist/                           # 빌드 출력 (gitignore)
-├── package.json                    # 의존성 및 스크립트
-├── tsconfig.json                   # TypeScript 설정
-├── webpack.config.dev.js           # 개발 빌드 설정
-├── webpack.config.prod.js          # 프로덕션 빌드 설정
-├── eslint.config.js                # ESLint 설정
-├── prettier.config.js              # Prettier 설정
-├── README.md                       # 사용자용 설명서
+│   ├── index.ts                 # 브라우저 진입점
+│   ├── core/
+│   │   ├── events.ts            # 전체 이벤트 이름의 단일 소스
+│   │   ├── event-bus.ts         # 타입 안전 Pub/Sub
+│   │   ├── event.ts             # 이벤트별 Step 파이프라인
+│   │   ├── step-runner.ts       # 순차/병렬 단계 실행기
+│   │   └── index.ts             # ArcaFeed, 직렬 이벤트 큐
+│   ├── feature/
+│   │   ├── article/             # 목록 요청·링크·페이지 이동
+│   │   ├── modal/               # 필터/UI/구독 설정 모달
+│   │   ├── swiper/              # Swiper 생성과 이동
+│   │   ├── filter-rules.ts      # DOM 비의존 필터 규칙
+│   │   ├── filter.ts            # DOM 목록 추출과 필터 적용
+│   │   ├── keyEvent.ts          # 키보드 입력
+│   │   ├── series.ts            # 시리즈 DOM 처리
+│   │   └── ui.ts                # 레이아웃/UI 설정
+│   ├── types/                   # 도메인 타입
+│   ├── utils/
+│   │   ├── async.ts             # 제한 동시성 매핑
+│   │   ├── fetch.ts             # 타임아웃·HTTP 오류 처리
+│   │   ├── regex.ts             # URL 기반 라우트/ID 파서
+│   │   └── url.ts               # 쿼리 병합
+│   └── vault/
+│       ├── schema.ts            # 저장 데이터 기본값·정규화
+│       ├── repository.ts        # 안전한 localStorage 접근
+│       ├── config.ts            # 직렬화·역직렬화
+│       ├── store.ts             # 불변 AppState 저장소
+│       └── index.ts             # 기능 계층용 VaultAdapter
+├── tests/                        # Node 내장 test runner 단위 테스트
+├── CHANGELOG.md                  # 사용자 관점 변경 기록
+├── tsconfig.json                 # 제품 코드 타입 검사
+├── tsconfig.test.json            # 테스트 타입 검사
+└── webpack.config.*.js           # 개발/프로덕션 번들 설정
 ```
 
----
+## 3. 실행 아키텍처
 
-## 3. 아키텍처
+### 3.1 초기화
 
-### 3.1 전체 흐름
-
-```
-index.ts (진입점)
-  └→ ArcaFeed 싱글톤 생성
-       ├→ VaultAdapter 생성 (Store + ConfigService)
-       ├→ EventManager 생성 (StepRunner 포함)
-       └→ wireEventBus(): Record<string, () => Step[]>로 이벤트명 → Step[] 매핑
-            └→ eventBus.emit('init') 호출
+```text
+src/index.ts
+  → ArcaFeed 생성
+  → VaultAdapter가 URL과 저장 상태 로드
+  → 지원 라우트인지 판별
+  → EventManager와 이벤트 핸들러 연결
+  → init 이벤트 발행
 ```
 
-### 3.2 이벤트 드리븐 아키텍처
+`OTHER` 라우트에서는 기능 CSS와 이벤트를 초기화하지 않습니다. 생성자가 두 번
+호출되어도 이벤트 핸들러를 중복 등록하지 않습니다.
 
-모든 기능은 **EventBus**를 통해 발행/구독 방식으로 동작합니다.
+### 3.2 이벤트 처리
 
-```
-EventBus.emit('이벤트명')
-  └→ ArcaFeed.wireEventBus() 에서 등록된 핸들러 실행
-       └→ stepGetters[이벤트명]() → Step[] 반환
-            └→ StepRunner.run(p, steps)
-                 ├→ Step 1: [fn1, fn2]  (병렬 실행)
-                 ├→ Step 2: fn3         (순차 실행)
-                 └→ Step 3: [fn4, fn5]  (병렬 실행)
-```
+`src/core/events.ts`의 `APP_EVENT_NAMES`가 이벤트 이름의 단일 소스입니다.
+`AppEventName` 타입, `EventBus`, 이벤트-파이프라인 매핑이 이 목록을 공유하므로
+오타나 누락을 타입 검사에서 잡습니다.
 
-**이벤트 목록:**
+주요 이벤트:
 
-| 이벤트명 | 발행 주체 | 설명 |
-|----------|-----------|------|
-| `init` | `index.ts` | 초기 실행 |
-| `toNextPage` | 키보드 (→) | 다음 게시글로 Swiper 슬라이드 |
-| `toPrevPage` | 키보드 (←) | 이전 게시글로 Swiper 슬라이드 |
-| `toNextLinkForce` | 키보드 (→) in CHANNEL | 채널에서 강제 다음 페이지 |
-| `renderNextPage` | Swiper 전환 완료 | 다음 게시글 렌더링 |
-| `renderPrevPage` | Swiper 전환 완료 | 이전 게시글 렌더링 |
-| `enableSeries` | 시리즈 버튼 클릭 | 시리즈 모드 활성화 |
-| `enableScrapSeries` | 스크랩 시리즈 버튼 | 스크랩 시리즈 모드 활성화 |
-| `showModal` | 필터 버튼 클릭 | 설정 모달 표시 |
-| `checkFilterModal` | 모달 확인 버튼 | 필터 설정 저장 |
-| `checkUIModal` | UI 모달 확인 버튼 | UI 설정 저장 |
-| `closeModal` | 모달 취소/외부 클릭 | 모달 닫기 |
-| `toggleSwiper` | 토글 버튼 클릭 | Swiper 활성화/비활성화 |
+| 이벤트                              | 역할                                  |
+| ----------------------------------- | ------------------------------------- |
+| `init`                              | 링크, 버튼, 키보드, UI, Swiper 초기화 |
+| `toNextPage`, `toPrevPage`          | Swiper 이동                           |
+| `renderNextPage`, `renderPrevPage`  | 선택된 게시글 URL로 이동              |
+| `enableSeries`, `enableScrapSeries` | 시리즈 세션 생성                      |
+| `showModal`, `closeModal`           | 설정 모달 수명 주기                   |
+| `checkFilterModal`, `checkUIModal`  | 설정 저장·재적용                      |
+| `checkSubscribeModal`               | 홈 시리즈 채널 저장·첫 피드 생성      |
+| `toggleSwiper`                      | 채널별 Swiper 활성 상태 전환          |
 
-### 3.3 StepRunner — 순차/병렬 실행기
+모든 이벤트는 `ArcaFeed.eventQueue`에서 직렬 처리합니다. 실행 중 들어온 키 입력을
+버리지 않으며, 한 이벤트가 실패해도 다음 이벤트를 계속 처리합니다.
 
-`StepRunner`는 이전 `PromiseManager`의 복잡성을 제거한 간소화된 실행기입니다.
+### 3.3 StepRunner
 
-- **`Step` 타입**: `PromiseFunc` (단일 함수) 또는 `PromiseFunc[]` (병렬 함수 배열)
-- 각 Step은 순차적으로 실행되고, 배열 내 함수들은 `Promise.all()`로 병렬 실행됨
-- 각 함수의 반환값에서 follow-up 함수를 추출하여 추가 실행 (하위 호환성)
+`Step`은 단일 함수 또는 함수 배열입니다.
 
-### 3.4 상태 관리 (Store 패턴)
+- Step 사이: 선언 순서대로 실행
+- 같은 배열 안: `Promise.allSettled`로 모든 형제 작업 종료까지 대기
+- 오류: 남은 Step을 중단하고 이벤트 큐에 전달
+- 저장: 성공/실패와 관계없이 `finally`에서 `flushSave()`
 
-**Flux-like** 단방향 데이터 흐름을 사용합니다.
+서로 의존하는 작업은 반드시 별도 Step으로 나눕니다. 같은 배열에는 독립 작업만
+넣습니다.
 
-```
-Store (불변 상태)
-  ├→ VaultAdapter (getter/setter 제공, 호환성 레이어)
-  │    ├→ 상태 변경 시 자동 debounce 저장 (300ms)
-  │    └→ 명시적 flushSave() 지원
-  ├→ ConfigService (localStorage 로드/저장)
-  │    └→ StorageRepository (localStorage 추상화, 캐시 정리)
-  └→ 구독 시스템: subscribe() 로 상태 변경 리액티브 처리
-```
+## 4. 상태와 영속화
 
-**AppState 구조:**
+`Store`는 읽기 전용 상태 스냅샷과 부분 패치를 사용합니다. `VaultAdapter`는
+기능 코드가 사용하는 getter/setter와 배열 추가 같은 의도 기반 메서드를
+제공합니다.
 
 ```typescript
 interface AppState {
-  href: HrefImpl;              // URL 파싱 결과 (모드, 채널ID, 게시글ID 등)
-  activeIndex: number;          // 현재 게시글 인덱스
-  articleKey: string;           // 세션 식별 키 (UUID 기반)
-  articleList: string[];        // 게시글 URL 목록
-  articleFilterConfig: ArticleFilterConfigImpl;  // 채널별 필터 설정
-  isSeriesMode: boolean;        // 시리즈 모드 여부
-  searchQuery: string;          // 검색 쿼리
-  lastActiveIndex: number;      // 마지막 활동 인덱스
-  uiSettings: UISettings;       // UI 표시/숨김 설정
+  href: HrefImpl;
+  activeIndex: number;
+  articleKey: string;
+  articleList: string[];
+  articleFilterConfig: ArticleFilterConfigImpl;
+  seriesSource: 'none' | 'article' | 'scrap' | 'home';
+  homeSeriesState: HomeSeriesState;
+  searchQuery: string;
+  lastActiveIndex: number;
+  uiSettings: UISettings;
 }
 ```
 
-**UISettings 구조:**
+`VaultAdapter`는 빠른 연속 변경을 300ms 디바운스로 묶습니다. 페이지 이동이나
+Step 완료 시에는 `flushSave()`로 즉시 기록하며 `activeIndex`도 별도 복원 키에
+저장합니다. 동일한 상태 패치는 생략하고 배열은 복사·중복 제거 후 저장합니다.
 
-```typescript
-interface UISettings {
-  hideScrollbar: boolean;            // 스크롤바 숨기기
-  hideBlur: boolean;                 // 스포일러 블러 제거
-  hideNavControl: boolean;           // 게시글 내비게이션 숨기기
-  hideArticleTitle: boolean;         // 게시글 목록에서 제목 숨기기
-  hideArticleAuthor: boolean;        // 게시글 목록에서 작성자 숨기기
-  hideArticleTime: boolean;          // 게시글 목록에서 작성일 숨기기
-  hideArticleView: boolean;          // 게시글 목록에서 조회수 숨기기
-  lastModalTab: 'filter' | 'ui';     // 마지막으로 열었던 모달 탭
-  contentWidth: number;              // 콘텐츠 너비 (px, 기본 700)
-}
-```
+### 4.1 저장 스키마
 
-**HrefImpl (URL 파싱 결과):**
+전역 키:
 
-```typescript
-interface HrefImpl {
-  mode: 'HOME' | 'CHANNEL' | 'ARTICLE' | 'SCRAP' | 'OTHER' | 'NOT_CHECKED';
-  channelId: string;    // 채널 ID (예: "bluearchive")
-  articleId: string;    // 게시글 ID (예: "149927310")
-  articleKey: string;   // URL의 articleKey 파라미터
-  search: string;       // URL 쿼리스트링
-}
-```
+| 키                             | 내용                |
+| ------------------------------ | ------------------- |
+| `arcaFeed:articleFilterConfig` | 채널별 필터         |
+| `arcaFeed:uiSettings`          | 전역 UI 설정        |
+| `arcaFeed:recentArticleKeys`   | 최근 세션 캐시 목록 |
 
-**ArticleFilterImpl (채널별 필터):**
+세션 키:
+
+| 패턴                                    | 내용                   |
+| --------------------------------------- | ---------------------- |
+| `arcaFeed:{articleKey}:articleList`     | 탐색할 게시글 URL      |
+| `arcaFeed:{articleKey}:seriesMode`      | 레거시 시리즈 호환 값  |
+| `arcaFeed:{articleKey}:seriesSource`    | 시리즈 유형            |
+| `arcaFeed:{articleKey}:homeSeriesState` | 홈 채널·커서·소진 상태 |
+| `arcaFeed:{articleKey}:searchQuery`     | 전달할 검색 파라미터   |
+| `arcaFeed:{articleKey}:lastActiveIndex` | 마지막 위치            |
+| `arcaFeed:{articleKey}:lastAccess`      | 캐시 최근 접근 시각    |
+
+`schema.ts`는 외부 입력인 localStorage를 `unknown`으로 취급합니다. 누락/손상된
+JSON, 잘못된 불리언·배열·인덱스를 기본값으로 복구하고 문자열 배열을
+trim/dedupe하며 콘텐츠 너비를 700~1400px로 제한합니다. 저장소 접근 실패는 기능
+초기화를 중단시키지 않습니다.
+
+### 4.2 도메인 설정
 
 ```typescript
 interface ArticleFilterImpl {
-  tab: string[];           // 허용할 탭 카테고리
-  title: string[];         // 차단할 제목 키워드
-  disableSwiper: boolean;  // Swiper 비활성화 여부
+  tab: string[];
+  title: string[];
+  disableSwiper: boolean;
+  onlyBest: boolean;
+}
+
+interface UISettings {
+  hideScrollbar: boolean;
+  hideBlur: boolean;
+  hideNavControl: boolean;
+  hideArticleTitle: boolean;
+  hideArticleAuthor: boolean;
+  hideArticleTime: boolean;
+  hideArticleView: boolean;
+  lastModalTab: 'filter' | 'ui' | 'subscribe';
+  hiddenChannels: string[];
+  contentWidth: number;
+}
+
+interface HomeSeriesState {
+  channels: string[];
+  cursors: Record<string, number>;
+  exhaustedChannels: string[];
 }
 ```
 
-### 3.5 localStorage 키 구조
+## 5. URL과 게시글 목록
 
-| 키 | 용도 |
-|----|------|
-| `arcaFeed:articleFilterConfig` | 글로벌 필터 설정 |
-| `arcaFeed:uiSettings` | UI 설정 |
-| `arcaFeed:{articleKey}:articleList` | 게시글 목록 |
-| `arcaFeed:{articleKey}:seriesMode` | 시리즈 모드 여부 |
-| `arcaFeed:{articleKey}:searchQuery` | 검색 쿼리 |
-| `arcaFeed:{articleKey}:lastActiveIndex` | 마지막 인덱스 |
-| `arcaFeed:{articleKey}:articleFilterConfig` | (레거시) 필터 설정 |
-| `arcaFeed:recentArticleKeys` | 최근 articleKey 목록 (캐시 정리용) |
+### 5.1 라우트 판별
 
----
+라우트는 문자열 포함 여부가 아니라 `URL.pathname` 세그먼트로 판별합니다.
+외부 호스트는 항상 `OTHER`입니다.
 
-## 4. URL 파싱 (페이지 모드 감지)
+| 모드      | 경로                                |
+| --------- | ----------------------------------- |
+| `HOME`    | `/`                                 |
+| `CHANNEL` | `/b/{channelId}`                    |
+| `ARTICLE` | `/b/{channelId}/{numericArticleId}` |
+| `SCRAP`   | `/u/scrap_list`                     |
+| `OTHER`   | 나머지 경로/외부 호스트             |
 
-`src/utils/regex.ts`의 정규식으로 현재 페이지 모드를 판단합니다.
+게시글 비교에는 숫자 ID의 정확한 일치를 사용합니다. 쿼리는
+`URLSearchParams`로 병합해 `?` 중복과 기존 파라미터 손실을 막습니다.
 
-| 모드 | URL 패턴 | 예시 |
-|------|---------|------|
-| `ARTICLE` | `/b/{channelId}/{articleId}` | `/b/bluearchive/149927310` |
-| `CHANNEL` | `/b/{channelId}` | `/b/bluearchive` |
-| `SCRAP` | `/u/scrap_list` | `/u/scrap_list` |
-| `HOME` | `arca.live` (루트) | `arca.live` |
-| `OTHER` | 기타 | 로그인, 설정 등 |
+### 5.2 필터링
 
-정규식:
-- `channelPageRegex`: `b\/[a-zA-Z0-9]+(\?|\?.+)?$`
-- `articlePageRegex`: `b\/([A-Za-z0-9])+\/[0-9]+(\?|\?.+)?$`
-- `scrapPageRegex`: `\/u\/scrap_list(?:\/?|\?.+)?$`
-- `channelAndArticleIdRegex`: `/\/b\/([A-Za-z0-9]+)(?:\/([0-9]+))?(\?.+)?`
+`filter-rules.ts`는 DOM과 분리된 순수 규칙 계층입니다.
 
----
+- 탭 필터가 비어 있으면 모든 탭 허용
+- 제목 필터가 비어 있으면 어떤 제목도 차단하지 않음
+- 탭 필터와 제목 차단을 독립적으로 결합
+- 공백 토큰 제거, 중복 제거
+- 레거시 `노탭` 값을 이미지 유무 두 범주로 확장
+- 일반/하이브리드/스크랩 목록에서 동일한 링크 정규화 적용
 
-## 5. 빌드 시스템
+### 5.3 네트워크
 
-### 개발 빌드 (`npm run dev`)
+`fetchUrl()`은 기본 8초 타임아웃, same-origin 자격 증명, HTTP `ok` 확인,
+구조화된 `FetchUrlError`를 제공합니다.
 
-- `webpack.config.dev.js` 사용
-- `mode: 'development'`
-- `GIT_HASH`, `BUILD_DATE`, `DEVICE` 환경 변수 주입
-- `dist/dist.js` 출력
-- `DEVICE=mobile` 일 때 `eruda` 디버거 포함 + `UserscriptPlugin` 사용
-- 워치 모드 활성화 (mobile 제외)
+목록 페이징은 다음 안전장치를 둡니다.
 
-### 프로덕션 빌드 (`npm run prod`)
+- 한 작업당 최대 10페이지
+- 이미 방문한 페이지 URL 재방문 중단
+- 기존 목록과 현재 배치의 URL 중복 제거
+- 요청이 겹쳐도 정확히 유지되는 로더 참조 카운트
+- 오류 시 사용자 토스트와 다음 동작 가능 상태 유지
 
-- `webpack.config.prod.js` 사용
-- `mode: 'production'`
-- `dist/ArcaFeed.user.js` 출력 (`clean: true`로 이전 빌드 제거)
-- `package.json`의 `version` 필드 사용
-- UserscriptPlugin으로 TamperMonkey 헤더 생성
+홈 시리즈는 채널 요청을 최대 4개씩 병렬 처리합니다. 채널 하나가 실패해도 다른
+결과를 유지하고, 병합 후 정확한 숫자 ID 기준으로 정렬·중복 제거합니다. 각
+채널의 가장 오래 확인한 ID와 소진 여부는 세션에 저장합니다. 한 번의 연장에서는
+채널당 한 페이지만 읽고, 필터 결과가 비어도 다음 스와이프에서 저장한 커서부터
+이어가므로 긴 순차 요청으로 초기화를 막지 않습니다.
 
-### Externals (외부 의존성)
+## 6. UI 수명 주기
 
-jQuery, Swiper, Toastify, eruda는 번들에 포함되지 않고 CDN에서 로드됩니다.
-(유저스크립트 메타데이터 `@require` 사용)
+동적 UI 초기화는 여러 번 호출되어도 결과가 하나만 남도록 설계합니다.
 
-### 릴리즈 파이프라인 (`npm run release`)
+- 이벤트 핸들러는 네임스페이스로 기존 핸들러를 제거한 뒤 등록
+- 버튼/모달/로더/리사이즈 핸들은 고유 ID 또는 클래스 사용
+- 입력/버튼/링크, modifier, contenteditable, IME 조합, 키 반복 중에는 방향키
+  탐색 무시
+- 모달은 `role="dialog"`, 접근성 레이블, 포커스 트랩, Escape/배경 닫기,
+  포커스 복원 제공
+- 동적 시리즈 버튼은 실제 `button` 요소와 키보드 접근성 제공
+- 드래그 리사이즈는 animation frame당 한 번만 레이아웃을 갱신
+- 시리즈에서는 채널별 `disableSwiper`와 관계없이 탐색을 유지
+- ArcaFeed CSS 선택자와 애니메이션 이름은 기능 범위로 한정
 
-```
-npm run lint          → 코드 품질 검사
-  └→ npm run prod     → 프로덕션 빌드 (dist/ArcaFeed.user.js)
-       └→ git tag v{version} → package.json 버전으로 태그 생성
-            └→ git push origin v{version} → GitHub Actions 트리거
-```
+## 7. 빌드와 검증
 
-GitHub Actions (`.github/workflows/release.yml`):
-- `v*` 태그 푸시 시 트리거
-- `npm ci` → `npm run prod` → `softprops/action-gh-release`로 `ArcaFeed.user.js` 첨부
-- `generate_release_notes: true`로 자동 릴리즈 노트 생성
+### 7.1 명령
 
-### 에이전트 검증 (`npm run agent:check`)
-
-- `tsc --noEmit`: JS 출력 없이 타입 체크만 수행, 리팩토링 후 빠른 검증용
-
----
-
-## 6. 주요 의존성
-
-### Runtime (CDN)
-
-| 패키지 | 용도 |
-|--------|------|
-| **jQuery** `^3.7.1` | DOM 조작, 이벤트 핸들링 |
-| **Swiper** `^12.0.2` | 터치/스와이프 슬라이더 |
-| **Toastify** `^1.12.0` | 토스트 알림 |
-| **Eruda** `^3.4.3` | 모바일 개발자 콘솔 (dev only) |
-
-### Dev
-
-| 패키지 | 용도 |
-|--------|------|
-| **TypeScript** `^5.9.3` | 타입 시스템 |
-| **Webpack** `^5.93.0` | 번들링 |
-| **ts-loader** | TypeScript → JS |
-| **css-loader + style-loader** | CSS → JS 인라인 스타일 |
-| **webpack-userscript** `^3.2.3` | 유저스크립트 헤더 생성 |
-| **ESLint + Prettier** | 코드 품질 |
-| **@types/jquery, @types/swiper** | 타입 정의 |
-
----
-
-## 7. 코딩 컨벤션
-
-- **Prettier**: single quote, semicolons, trailing comma `all`, tab width 2
-- **ESLint**: semicolons required, `prefer-const`
-- **모듈 시스템**: ESM (`"type": "module"`)
-- **경로 별칭**:
-  - `@/` → `src/`
-  - `@css/` → `css/`
-  - `@swiper/` → `node_modules/swiper/`
-- **barrel export**: 각 디렉토리의 `index.ts`에서 re-export
-- **전략 패턴 (Strategy Pattern)**: 페이지 모드 기반 분기는 `Record<mode, handler>` 매핑 테이블을 사용하고, if/else-if 체인을 피함
-- **AsyncGenerator**: 페이징 등 반복 페칭은 `yield` 기반 제너레이터로 분리하여 소비자가 제어 흐름을 결정
-
----
-
-## 8. 주요 동작 흐름
-
-### 8.1 초기화 (`init` 이벤트)
-
-```
-1. addVersionInfo       — 개발 버전 표시 (DEV only)
-2. checkPageMode        — URL 파싱, 상태 설정
-3. [initLink, initButton, initEvent, initSeriesContent, initUi] (병렬)
-   ├→ initLink: LINK_HANDLERS[mode] 디스패치 → 게시글 목록 로드 / 필터링
-   ├→ initButton: BUTTON_BUILDERS[mode] 디스패치 → 내비게이션 바 버튼 추가
-   ├→ initEvent: MODE_KEY_HANDLERS[mode] 디스패치 → 키보드 이벤트 등록
-   ├→ initSeriesContent: 시리즈 콘텐츠 파싱
-   └→ initUi: MODE_UI_INIT[mode] 디스패치, toggleClass, navbar wrapping
-4. initSwiper           — Swiper 인스턴스 생성 (.root-container 내부에 삽입, .content-wrapper만 슬라이드로 이동)
+```bash
+npm ci
+npm run dev          # 개발 유저스크립트 1회 빌드
+npm run dev:watch    # 개발 빌드 감시
+npm run dev:mobile   # Eruda를 포함한 모바일 개발 빌드
+npm run build        # dist/ArcaFeed.user.js
+npm run check        # 아래 전체 품질 게이트
 ```
 
-### 8.2 게시글 내비게이션 (`renderNextPage`)
+`npm run check` 순서:
 
-```
-1. Swiper slideNextTransitionEnd → SLIDE_NEXT_EVENT[mode] 디스패치
-2. toLink('NEXT') 또는 nextLinkForce 실행
-   └→ p.activeIndex + 1 게시글 URL로 window.location.replace()
-   └→ 신규 페이지에서 다시 init() 실행
-```
+1. Prettier 검사
+2. ESLint
+3. 제품 TypeScript 검사
+4. 테스트 TypeScript 검사
+5. Node 단위 테스트
+6. 프로덕션 Webpack 빌드
 
-**Swiper DOM 구조:**
-```
-.root-container
-  .navbar-wrapper > nav.navbar   ← Swiper 외부 → 슬라이드 시 움직이지 않음
-  .swiper                         ← .root-container 안, .content-wrapper 자리에 삽입
-    .swiper-wrapper
-      .swiper-slide.slide-active
-        .content-wrapper           ← 게시글 콘텐츠만 슬라이드
-  footer / #bottom                ← 정상 흐름 유지
-```
+CI는 Ubuntu 24.04 + Node.js 22.13에서 `npm ci`와 `npm run check`를
+수행합니다. 개발 Webpack 설정은 Git 해시와 UTC 빌드 시간을 Node API로
+계산하므로 셸 종류에 의존하지 않습니다. 기본 개발 빌드는 종료되며 감시는
+명시적으로 선택합니다.
 
-### 8.3 필터링 적용 (`checkFilterModal`)
+### 7.2 유저스크립트 외부 의존성
 
-```
-1. initCheckFilterModal — 모달에서 선택된 탭/제목을 articleFilterConfig에 저장
-2. initLink             — 필터 재적용
-3. initCloseModal       — 모달 제거
-4. initSwiperPage       — Swiper 재생성
-```
+프로덕션 번들은 아래 고정 버전을 `@require`로 로드합니다.
 
-### 8.4 시리즈 모드 (`enableSeries`)
+| 라이브러리 | URL 버전                     |
+| ---------- | ---------------------------- |
+| jQuery     | `3.7.1`                      |
+| Swiper     | `12.2.0`                     |
+| Toastify   | `1.12.0`                     |
+| Eruda      | `3.4.3` (모바일 개발 빌드만) |
 
-```
-1. initEnableSeries     — 시리즈 링크 파싱, articleKey 복사
-   └→ 새 탭에서 시리즈 전용 세션 열기
-2. [initSeriesBtnCss, initSwiperPage] (병렬)
-```
+### 7.3 릴리즈
 
-### 8.5 게시글 페칭 (AsyncGenerator)
+`npm run release`는 다음을 확인한 뒤 `package.json` 버전의 태그를 원격에
+푸시합니다.
 
-```
-fetchArticlePages(p, articleId)    ← AsyncGenerator, 페이지마다 yield newLinks
-  ├→ fetchFirstBatch(p, id)        ← 소비자: 첫 배치에서 break (채널/게시글 모드)
-  └→ fetchAllBatches(p, id)        ← 소비자: 모든 페이지 수집 (스크랩 시리즈 모드)
-```
+1. 작업 트리가 깨끗한가
+2. 현재 브랜치가 `main`인가
+3. 현재 브랜치에 원격 upstream이 있는가
+4. `fetch` 후 upstream과 ahead/behind가 모두 0인가
+5. 같은 버전 태그가 로컬/원격에 없는가
+6. `npm run check`가 통과하는가
 
----
+`release.yml`은 `v*` 태그 푸시에서 실행됩니다. 태그 이름과 패키지 버전이
+같고 태그 커밋이 `origin/main`에 포함되는지 확인한 뒤 `npm ci`와
+`npm run check`를 다시 수행합니다. 이후 `dist/ArcaFeed.user.js`가 포함된
+GitHub Release를 생성하거나 실패한 기존 실행을 재시도합니다.
 
-## 9. 알려진 이슈 / TODO
+## 8. 테스트 범위
 
-- **게시글 스킵 버그**: 게시물이 종종 스킵되는 현상
-- **검색 쿼리 표시**: 게시글 상단에 검색 쿼리 아이콘화
-- **시리즈 새 탭**: 시리즈 URL을 base64 인코딩하여 전달
-- **동적 Pre-Rendering**: 성능 개선을 위한 실시간 기능 강화
-- **함수 병렬 실행**: 데코레이터 패턴으로 조건부 병렬 실행
-- **새로고침 렉 방지**: Swiper 래퍼로 컨텐츠 깜빡임 방지
-- **로딩 페이지**: Swiper 초기화 전 클릭 방지
-- **리사이즈 핸들 모바일**: 1024px 미만 + 터치 장치에서 CSS/JS로 차단됨
+현재 단위 테스트는 다음 핵심 계약을 검증합니다.
 
----
+- 제목 전용/탭 전용/빈 토큰 필터 규칙
+- 지원/비지원 URL과 정확한 게시글·채널 ID
+- 쿼리 파라미터 병합
+- 저장 스키마 기본값, 정규화, 범위 제한
+- 레거시 다중 채널 홈 시리즈 마이그레이션
+- 제한 동시성의 순서와 최대 동시 실행 수
+- EventBus 구독 해제와 StepRunner 실행/실패/flush
+- localStorage 오류 격리, 중복 쓰기 방지, 최근 캐시 정리
+- 네트워크 성공, HTTP 오류, 타임아웃
 
-## 10. 변경 기록
+실제 아카라이브 DOM과 유저스크립트 관리자까지 연결하는 브라우저 E2E는 아직
+없으므로 호스트 마크업 변경은 라이브 페이지에서 별도 확인해야 합니다.
 
-> **이 섹션은 코드 수정 시마다 업데이트하세요.**
+## 9. 유지보수 규칙
 
-| 날짜 | 변경 내용 | 관련 파일 |
-|------|-----------|-----------|
-| 2026-07-02 | 프로젝트 총정리 문서 최초 작성 | `PROJECT_OVERVIEW.md` |
-| 2026-07-02 | GitHub Actions 릴리즈 워크플로우 추가 (`npm run release` → git tag → Actions → GitHub Release), `agent:check` 명령어 추가 | `.github/workflows/release.yml`, `package.json` |
-| 2026-07-02 | UI 설정 토글 기능 추가 (사이드바, 스크롤바, 블러, 게시글 목록, 게시판 버튼) | `types/vault.ts`, `vault/store.ts`, `vault/index.ts`, `vault/config.ts`, `feature/ui.ts`, `feature/modal/uiTab.ts`, `core/event.ts`, `css/arcalive.css`, `css/ui.css` |
-| 2026-07-02 | 모달 마지막 탭 기억 기능 추가 (`lastModalTab`) | `types/vault.ts`, `vault/store.ts`, `feature/modal/index.ts` |
-| 2026-07-02 | PC에서 content-wrapper 드래그 리사이즈 기능 추가 (`contentWidth`) | `types/vault.ts`, `vault/store.ts`, `feature/ui.ts`, `css/arcalive.css`, `css/ui.css` |
-| 2026-07-02 | 리사이즈 핸들 좌측 추가, 위치 기반 계산으로 변경, 글로우 제거 (보더 라인), 최소 너비 650 제한 | `feature/ui.ts`, `css/ui.css` |
-| 2026-07-02 | Store uiSettings 깊은 병합 (기존 localStorage 호환성) | `vault/store.ts` |
-| 2026-07-02 | Swiper 구조 변경: `.root-container` 전체 대신 `.content-wrapper`만 슬라이드로 이동, `.swiper`를 `.root-container` 내부에 삽입 | `feature/swiper/swiper.ts` |
-| 2026-07-02 | `.navbar-wrapper` 추가: navbar를 Swiper 외부에 고정 (sticky) | `feature/ui.ts`, `css/arcalive.css` |
-| 2026-07-02 | UI 토글: `hideIncludedArticleList`, `hideBtnsBoard` 제거, `hideSidebar`, `hideAd` 추가 | `types/vault.ts`, `vault/store.ts`, `feature/modal/uiTab.ts`, `feature/ui.ts`, `css/arcalive.css` |
-| 2026-07-02 | 리사이즈 핸들 모바일 차단: `max-width: 1023px` + `pointer: coarse` CSS/JS 가드 | `feature/ui.ts`, `css/ui.css` |
-| 2026-07-02 | **대규모 리팩토링**: if 분기 → 전략 패턴 (Record 매핑 테이블) | 아래 상세 |
-| 2026-07-02 | `keyEvent.ts`: `if (CHANNEL) ... else if (ARTICLE)` → `MODE_KEY_HANDLERS[mode]` | `feature/keyEvent.ts` |
-| 2026-07-02 | `button.ts`: 다중 if 체인 → `BUTTON_BUILDERS` (SCRAP/CHANNEL/ARTICLE별 빌더) | `feature/button.ts` |
-| 2026-07-02 | `link.ts`: `initLink` if 체인 → `LINK_HANDLERS` 디스패치, `initLinkChannel` 제거 | `feature/article/link.ts` |
-| 2026-07-02 | `swiper.ts`: 삼항 연산자 → `SLIDE_NEXT_EVENT[mode]` 매핑 | `feature/swiper/swiper.ts` |
-| 2026-07-02 | `modal/index.ts`: `if (isSeriesMode)` → `buildModal` 함수 선택 패턴 | `feature/modal/index.ts` |
-| 2026-07-02 | `ui.ts`: `if (isSeriesMode)` → `toggleClass()`, `if (ARTICLE)` → `MODE_UI_INIT[mode]`, resizeHandle 가드 조건 결합 | `feature/ui.ts` |
-| 2026-07-02 | `core/index.ts`: `as any` 배열 → `Record<string, () => Step[]>` 타입 안전 매핑 | `core/index.ts` |
-| 2026-07-02 | `utils/type.ts`: `isString`, `isNotNull` 제거, `getRegexMatchByIndex` 옵셔널 체이닝, `getArrayItem` `arr.at()`, `isPromiseFuncResult` throw 제거 | `utils/type.ts` |
-| 2026-07-02 | `fetch.ts`: `isScrap` → `endless` → AsyncGenerator (`fetchArticlePages` + `fetchFirstBatch`/`fetchAllBatches`) | `feature/article/fetch.ts`, `feature/article/link.ts` |
-| 2026-07-02 | `vault/config.ts`: 수동 try-catch(JSON.parse) → `getJSON()` 사용 | `vault/config.ts` |
-| 2026-07-02 | `version.ts`: 불필요한 `return;`, `search.ts`: 이중 할당, `filterUi.ts`: 불필요한 삼항, `series.ts`: 불필요한 삼항, `index.ts`: 중복 `typeof window` 제거 | 각 파일 |
-| 2026-07-02 | UISettings 업데이트: `hideSidebar/hideAd/hideLeftSidebar` → `hideNavControl/hideArticleTitle/hideArticleAuthor/hideArticleTime/hideArticleView` | `types/vault.ts`, `vault/store.ts`, `feature/modal/uiTab.ts` |
-| 2026-07-02 | PROJECT_OVERVIEW.md 최신 코드베이스 반영 업데이트 | `PROJECT_OVERVIEW.md` |
+- 새 이벤트는 `APP_EVENT_NAMES`, `EventManager`, `wireEventBus()`를 함께
+  갱신합니다.
+- 독립 작업만 같은 Step 배열에 배치합니다.
+- localStorage 필드를 추가하면 타입, 기본값, 정규화, 로드/저장, 테스트를 함께
+  추가합니다.
+- 사용자 입력, URL, 저장 데이터는 신뢰하지 말고 파싱 경계에서 정규화합니다.
+- DOM 핸들러는 재초기화를 고려해 멱등적으로 작성합니다.
+- 목록 비교는 URL 부분 문자열이 아니라 정규화된 경로나 정확한 ID를 사용합니다.
+- 병렬 요청에는 상한, 부분 실패 처리, 결과 중복 제거를 둡니다.
+- 변경 후 `npm run check`를 통과시키고 `CHANGELOG.md`를 갱신합니다.
 
----
+## 10. 알려진 제한
 
-## 11. 개발 가이드라인
+- 실제 사이트 DOM 선택자는 아카라이브 마크업 변경의 영향을 받습니다.
+- 일반/스크랩 목록 작업은 무한 요청을 막기 위해 최대 10페이지까지만
+  탐색합니다. 홈 시리즈는 지연을 제한하기 위해 한 번에 채널당 한 페이지씩
+  확장합니다.
+- 라이브 사이트를 대상으로 하는 자동 브라우저 E2E/유저스크립트 설치 테스트는
+  아직 없습니다.
+- Swiper 초기화 직전의 원본 콘텐츠 재배치에서 짧은 시각적 깜빡임이 발생할 수
+  있습니다.
 
-### 새 기능 추가 방법
+## 11. 변경 이력
 
-1. `src/feature/{기능명}.ts` 또는 `src/feature/{기능명}/` 디렉토리 생성
-2. 새로운 이벤트가 필요하면:
-   - `EventBus` 이벤트명 결정
-   - `EventManager`에 메서드 추가 (`Step[]` 반환)
-   - `ArcaFeed.wireEventBus()`의 `stepGetters` Record에 추가
-3. 페이지 모드별로 다른 동작이 필요하면 `Record<mode, handler>` 매핑 테이블 사용 (if 체인 대신)
-4. 반복 페칭이 필요하면 `AsyncGenerator` 사용 (소비자가 `break`로 제어)
-5. `src/feature/index.ts`에서 export 추가
-6. `PROJECT_OVERVIEW.md` 업데이트
-
-### 상태 추가 방법
-
-1. `src/vault/store.ts`의 `AppState`에 필드 추가
-2. `createInitialState()`에 기본값 추가
-3. `VaultAdapter`에 getter/setter 추가
-4. `ConfigService`의 `loadConfig()` / `saveConfig()`에 직렬화/역직렬화 추가
-5. `PROJECT_OVERVIEW.md`의 AppState 구조 업데이트
-
-### 디버깅
-
-- 개발 빌드 시 `process.env.NODE_ENV === 'development'` 조건 사용
-- 모바일 디버깅: `npm run dev:mobile` → Eruda 콘솔 활성화
-- footer에 버전 정보 표시 (dev 모드)
+- 2026-07-25: 이벤트·상태·URL·네트워크·필터·홈 시리즈·UI·빌드/CI를 전면
+  리팩터링하고 회귀 테스트를 추가했습니다. 자세한 내용은
+  [CHANGELOG.md](./CHANGELOG.md)를 참고하세요.
+- 2026-07-02: 프로젝트 구조 문서, UI 설정, 시리즈/Swiper 구조와 초기
+  릴리즈 자동화를 정리했습니다.

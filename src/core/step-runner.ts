@@ -1,6 +1,5 @@
 import type { VaultAdapter } from '@/vault';
-import type { PromiseFunc, PromiseFuncResult } from '@/types';
-import { isPromiseFuncResult } from '@/utils';
+import type { PromiseFunc } from '@/types';
 
 /**
  * A Step is either a single function (run sequentially) or an array
@@ -22,62 +21,32 @@ export type Step = PromiseFunc | PromiseFunc[];
 export class StepRunner {
   /**
    * Execute steps sequentially. Arrays within steps run in parallel.
-   * Dynamic follow-ups (functions returning functions) are supported
-   * for backward compatibility during migration.
+   * A failure aborts the remaining steps and is reported by the event queue.
+   * State is flushed in a finally block so completed updates are not lost.
    */
   async run(p: VaultAdapter, steps: Step[]): Promise<void> {
-    for (const step of steps) {
-      const fns = Array.isArray(step) ? step : [step];
+    try {
+      for (const step of steps) {
+        const functions = Array.isArray(step) ? step : [step];
+        const results = await Promise.allSettled(
+          functions.map((fn) => Promise.resolve().then(() => fn(p))),
+        );
+        const failures = results.flatMap((result, index) => {
+          if (result.status === 'fulfilled') return [];
+          const fn = functions[index];
+          console.error(
+            `[StepRunner] Error in ${fn?.name || 'anonymous'}:`,
+            result.reason,
+          );
+          return [result.reason];
+        });
 
-      const results: PromiseFuncResult[] = await Promise.all(
-        fns.map((fn) => {
-          try {
-            return fn(p);
-          } catch (err) {
-            console.error(`[StepRunner] Error in ${fn.name || 'anonymous'}:`, err);
-            if (process.env.NODE_ENV === 'development') throw err;
-            return undefined;
-          }
-        }),
-      );
-
-      // Process dynamic follow-ups from results
-      const followUps = this.collectFollowUps(results);
-      for (const followUp of followUps) {
-        try {
-          await followUp(p);
-        } catch (err) {
-          console.error(`[StepRunner] Error in follow-up:`, err);
-          if (process.env.NODE_ENV === 'development') throw err;
+        if (failures.length > 0) {
+          throw failures[0];
         }
       }
+    } finally {
+      p.flushSave();
     }
-
-    p.flushSave();
-  }
-
-  /**
-   * Extract follow-up functions from step results.
-   * Maintains compatibility with existing functions that return
-   * `[p, nextFn]` or bare functions.
-   */
-  private collectFollowUps(results: PromiseFuncResult[]): PromiseFunc[] {
-    const followUps: PromiseFunc[] = [];
-
-    for (const r of results.flat()) {
-      const resultType = isPromiseFuncResult(r);
-      switch (resultType) {
-        case 'Function':
-          followUps.push(r as PromiseFunc);
-          break;
-        case 'Param':
-          // State updates are handled by VaultAdapter setters
-          break;
-        case 'void':
-          break;
-      }
-    }
-
-    return followUps;
   }
 }

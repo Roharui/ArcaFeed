@@ -4,34 +4,45 @@
  */
 
 import { StorageRepository } from './repository';
+import {
+  createDefaultHomeSeriesState,
+  inferLegacyHomeSeriesState,
+  normalizeArticleFilterConfig,
+  normalizeArticleList,
+  normalizeHomeSeriesState,
+  normalizeSeriesSource,
+  normalizeStoredIndex,
+  normalizeUISettings,
+  readLegacyHomeSeriesChannels,
+} from './schema';
 import { createArticleKey } from '@/utils/article-key';
 import { appendSearchParam } from '@/utils/url';
+import { parseHref } from '@/utils/regex';
 
-import type { AppState } from '@/core/store';
-import type { ArticleFilterConfigImpl, UISettings } from '@/types';
+import type { AppState } from './store';
 
 const ARTICLE_FILTER_CONFIG_GLOBAL_KEY = 'arcaFeed:articleFilterConfig';
 const UI_SETTINGS_KEY = 'arcaFeed:uiSettings';
 
-const CHANNEL_OR_ARTICLE_PAGE_REGEX = /^\/b\/[a-zA-Z0-9]+(\/\d+)?\/?$/;
-
 export class ConfigService {
-  constructor(private repo: StorageRepository) {}
+  private repo: StorageRepository;
+
+  constructor(repo: StorageRepository) {
+    this.repo = repo;
+  }
 
   /**
    * Ensure the current page has an articleKey in its URL query params.
    */
   ensureArticleKey(): string {
     const currentUrl = new URL(window.location.href);
-    const existingKey = currentUrl.searchParams.get('articleKey');
-
-    if (existingKey) {
-      return existingKey;
-    }
-
-    if (!CHANNEL_OR_ARTICLE_PAGE_REGEX.test(currentUrl.pathname)) {
+    const mode = parseHref(currentUrl.toString()).mode;
+    if (mode !== 'CHANNEL' && mode !== 'ARTICLE') {
       return '';
     }
+
+    const existingKey = currentUrl.searchParams.get('articleKey');
+    if (existingKey) return existingKey;
 
     const generatedKey = createArticleKey();
 
@@ -47,45 +58,62 @@ export class ConfigService {
   loadConfig(): Partial<AppState> {
     const articleKey = this.ensureArticleKey();
     const patch: Partial<AppState> = { articleKey };
-
-    // Load article filter config
-    const filterConfigStr =
-      this.repo.getItem(ARTICLE_FILTER_CONFIG_GLOBAL_KEY) ||
-      this.repo.getItem(this.repo.scopedKey(articleKey, 'articleFilterConfig'));
-
-    patch.articleFilterConfig = filterConfigStr
-      ? (JSON.parse(filterConfigStr) as ArticleFilterConfigImpl)
-      : {};
-
-    // Load article list
-    const articleListStr = this.repo.getItem(
-      this.repo.scopedKey(articleKey, 'articleList'),
-    );
-    patch.articleList = articleListStr ? JSON.parse(articleListStr) : [];
-
-    // Load series mode
-    patch.isSeriesMode =
-      this.repo.getItem(this.repo.scopedKey(articleKey, 'seriesMode')) ===
-      'true';
-
-    // Load search query
-    patch.searchQuery =
-      this.repo.getItem(this.repo.scopedKey(articleKey, 'searchQuery')) || '';
-
-    // Load last active index
-    patch.lastActiveIndex = parseInt(
-      this.repo.getItem(this.repo.scopedKey(articleKey, 'lastActiveIndex')) ||
-        '-1',
-    );
-
-    // Load UI settings (getJSON handles null / parse errors internally)
-    const uiSettings = this.repo.getJSON<UISettings>(UI_SETTINGS_KEY);
-    if (uiSettings) {
-      patch.uiSettings = uiSettings;
+    const rawUISettings = this.repo.getJSON<unknown>(UI_SETTINGS_KEY);
+    const legacyHomeSeriesChannels =
+      readLegacyHomeSeriesChannels(rawUISettings);
+    if (rawUISettings !== null) {
+      patch.uiSettings = normalizeUISettings(rawUISettings);
     }
 
-    // Prune old caches
-    this.repo.pruneArticleKeyCaches(articleKey);
+    // Load article filter config
+    const filterConfig =
+      this.repo.getJSON<unknown>(ARTICLE_FILTER_CONFIG_GLOBAL_KEY) ??
+      (articleKey
+        ? this.repo.getJSON<unknown>(
+            this.repo.scopedKey(articleKey, 'articleFilterConfig'),
+          )
+        : null);
+    patch.articleFilterConfig = normalizeArticleFilterConfig(filterConfig);
+
+    if (articleKey) {
+      const articleList = normalizeArticleList(
+        this.repo.getJSON<unknown>(
+          this.repo.scopedKey(articleKey, 'articleList'),
+        ),
+      );
+      patch.articleList = articleList;
+      const legacySeriesMode =
+        this.repo.getItem(this.repo.scopedKey(articleKey, 'seriesMode')) ===
+        'true';
+      const storedSeriesSource = this.repo.getItem(
+        this.repo.scopedKey(articleKey, 'seriesSource'),
+      );
+      patch.seriesSource = normalizeSeriesSource(
+        storedSeriesSource,
+        legacySeriesMode,
+      );
+      patch.homeSeriesState = normalizeHomeSeriesState(
+        this.repo.getJSON<unknown>(
+          this.repo.scopedKey(articleKey, 'homeSeriesState'),
+        ),
+      );
+      if (storedSeriesSource === null && legacySeriesMode) {
+        const legacyHomeSeriesState = inferLegacyHomeSeriesState(
+          articleList,
+          legacyHomeSeriesChannels,
+        );
+        if (legacyHomeSeriesState) {
+          patch.seriesSource = 'home';
+          patch.homeSeriesState = legacyHomeSeriesState;
+        }
+      }
+      patch.searchQuery =
+        this.repo.getItem(this.repo.scopedKey(articleKey, 'searchQuery')) ?? '';
+      patch.lastActiveIndex = normalizeStoredIndex(
+        this.repo.getItem(this.repo.scopedKey(articleKey, 'lastActiveIndex')),
+      );
+      this.repo.pruneArticleKeyCaches(articleKey);
+    }
 
     return patch;
   }
@@ -96,28 +124,33 @@ export class ConfigService {
   saveConfig(state: Readonly<AppState>): void {
     const { articleKey } = state;
 
-    // Global settings — saved regardless of articleKey
     this.repo.setJSON(UI_SETTINGS_KEY, state.uiSettings);
     this.repo.setJSON(
       ARTICLE_FILTER_CONFIG_GLOBAL_KEY,
       state.articleFilterConfig,
     );
+    if (!articleKey) return;
 
-    // Per-articleKey scoped storage
     this.repo.setJSON(
       this.repo.scopedKey(articleKey, 'articleList'),
       state.articleList,
     );
     this.repo.setItem(
       this.repo.scopedKey(articleKey, 'seriesMode'),
-      state.isSeriesMode.toString(),
+      (state.seriesSource !== 'none').toString(),
+    );
+    this.repo.setItem(
+      this.repo.scopedKey(articleKey, 'seriesSource'),
+      state.seriesSource,
+    );
+    this.repo.setJSON(
+      this.repo.scopedKey(articleKey, 'homeSeriesState'),
+      state.homeSeriesState,
     );
     this.repo.setItem(
       this.repo.scopedKey(articleKey, 'searchQuery'),
       state.searchQuery,
     );
-
-    this.repo.pruneArticleKeyCaches(articleKey);
   }
 
   /**
@@ -156,6 +189,14 @@ export class ConfigService {
     this.repo.setItem(
       this.repo.scopedKey(targetArticleKey, 'seriesMode'),
       'true',
+    );
+    this.repo.setItem(
+      this.repo.scopedKey(targetArticleKey, 'seriesSource'),
+      'article',
+    );
+    this.repo.setJSON(
+      this.repo.scopedKey(targetArticleKey, 'homeSeriesState'),
+      createDefaultHomeSeriesState(),
     );
 
     // Normalize article URLs to pathnames

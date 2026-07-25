@@ -26,7 +26,6 @@ export default function (_env, _args) {
       alias: {
         '@': path.resolve(__dirname, 'src'),
         '@css': path.resolve(__dirname, 'css'),
-        '@swiper': path.resolve(__dirname, 'node_modules', 'swiper'),
       },
     },
 
@@ -74,9 +73,9 @@ export default function (_env, _args) {
           match: 'https://arca.live/*',
           icon: 'https://www.google.com/s2/favicons?sz=64&domain=arca.live',
           require: [
-            'https://code.jquery.com/jquery-3.6.0.min.js',
-            'https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js',
-            'https://cdn.jsdelivr.net/npm/toastify-js',
+            'https://code.jquery.com/jquery-3.7.1.min.js',
+            'https://cdn.jsdelivr.net/npm/swiper@12.2.0/swiper-bundle.min.js',
+            'https://cdn.jsdelivr.net/npm/toastify-js@1.12.0',
           ],
           'run-at': 'document-end',
           grant: 'none',

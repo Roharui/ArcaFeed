@@ -8,8 +8,16 @@
 .series-control-btn {
   cursor: pointer;
   border-radius: 5px;
+  border: 0;
 
   padding: 5px;
+  color: inherit;
+  font: inherit;
+}
+
+.series-control-btn:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
 }
 
 .series-control-btn.enable-series {

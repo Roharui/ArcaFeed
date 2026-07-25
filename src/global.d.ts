@@ -3,6 +3,10 @@ declare module '*.css' {
   export default content;
 }
 
+interface Window {
+  __arcaFeedInitialized__?: boolean;
+}
+
 declare module 'toastify-js' {
   type ToastifyPosition = 'left' | 'center' | 'right';
   type ToastifyGravity = 'top' | 'bottom';

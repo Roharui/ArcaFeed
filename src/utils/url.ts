@@ -21,9 +21,19 @@ export function appendSearchParam(
   return normalized ? `?${normalized}` : '';
 }
 
-export function normalizeArticleUrls(articleList: string[]): string[] {
-  return articleList.map((href) => {
-    const url = new URL(href, window.location.origin);
-    return url.pathname;
-  });
+export function mergeSearchQuery(
+  href: string,
+  searchQuery: string,
+  baseOrigin = 'https://arca.live',
+): string {
+  const url = new URL(href, baseOrigin);
+  const searchParams = new URLSearchParams(
+    searchQuery.startsWith('?') ? searchQuery.slice(1) : searchQuery,
+  );
+
+  const replacementKeys = new Set(searchParams.keys());
+  replacementKeys.forEach((key) => url.searchParams.delete(key));
+  searchParams.forEach((value, key) => url.searchParams.append(key, value));
+
+  return `${url.pathname}${url.search}${url.hash}`;
 }

@@ -1,6 +1,6 @@
 import type { VaultAdapter } from '@/vault';
 
-function parseSearchQuery(p: VaultAdapter): VaultAdapter {
+function parseSearchQuery(p: VaultAdapter): void {
   const { search } = p.href;
 
   const searchParams = new URLSearchParams(search);
@@ -13,8 +13,6 @@ function parseSearchQuery(p: VaultAdapter): VaultAdapter {
 
   const q = searchParams.toString();
   p.searchQuery = q ? `?${q}` : '';
-
-  return p;
 }
 
 export { parseSearchQuery };

@@ -1,41 +1,38 @@
+type EventHandler = () => void | Promise<void>;
+
 /**
- * Lightweight Event Bus (pub/sub) to decouple feature modules.
- * Replaces static ArcaFeed.runEvent() calls with injected dependencies.
+ * Minimal typed pub/sub bus.
+ *
+ * ArcaFeed events do not carry payloads. Restricting the event name at the
+ * type level prevents silent failures caused by misspelled string literals.
  */
+export class EventBus<EventName extends string = string> {
+  private handlers = new Map<EventName, Set<EventHandler>>();
 
-type EventHandler = (...args: any[]) => void | Promise<void>;
+  on(event: EventName, handler: EventHandler): () => void {
+    const eventHandlers = this.handlers.get(event) ?? new Set<EventHandler>();
+    eventHandlers.add(handler);
+    this.handlers.set(event, eventHandlers);
 
-export class EventBus {
-  private handlers = new Map<string, Set<EventHandler>>();
-
-  on(event: string, handler: EventHandler): () => void {
-    if (!this.handlers.has(event)) {
-      this.handlers.set(event, new Set());
-    }
-    this.handlers.get(event)!.add(handler);
-
-    // Return unsubscribe function
     return () => {
-      this.handlers.get(event)?.delete(handler);
+      const handlers = this.handlers.get(event);
+      handlers?.delete(handler);
+      if (handlers?.size === 0) this.handlers.delete(event);
     };
   }
 
-  async emit(event: string, ...args: any[]): Promise<void> {
+  async emit(event: EventName): Promise<void> {
     const handlers = this.handlers.get(event);
     if (!handlers) return;
 
-    const promises = Array.from(handlers).map((handler) =>
-      Promise.resolve(handler(...args)).catch((err) => {
-        console.error(`[EventBus] Error in handler for "${event}":`, err);
-      }),
-    );
-
-    await Promise.all(promises);
+    await Promise.all([...handlers].map((handler) => handler()));
   }
 
-  off(event: string, handler?: EventHandler): void {
+  off(event: EventName, handler?: EventHandler): void {
     if (handler) {
-      this.handlers.get(event)?.delete(handler);
+      const handlers = this.handlers.get(event);
+      handlers?.delete(handler);
+      if (handlers?.size === 0) this.handlers.delete(event);
     } else {
       this.handlers.delete(event);
     }

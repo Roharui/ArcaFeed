@@ -1,85 +1,92 @@
 import type { HrefImpl } from '@/types';
 
-import { getRegexMatchByIndex, getRegexMatchByIndexTry } from '@/utils';
+const ARCA_ORIGIN = 'https://arca.live';
 
-const homePageRegex = /arca\.live\/?$/;
-const channelPageRegex = /b\/[a-zA-Z0-9]+(\?|\?.+)?$/;
-const articlePageRegex = /b\/([A-Za-z0-9])+\/[0-9]+(\?|\?.+)?$/;
-const scrapPageRegex = /\/u\/scrap_list(?:\/?|\?.+)?$/i;
-
-// Optimized: Use capturing groups instead of lookbehind/lookahead for better performance
-const channelAndArticleIdRegex = /\/b\/([A-Za-z0-9]+)(?:\/([0-9]+))?(\?.+)?/;
-const articelIdRegex = /\/b\/[A-Za-z0-9]+\/([0-9]+)(\?.+)?/;
-
-// == FUNCTION ==
-//
-function getArticleId(href: string): string {
-  const articleIdMatch = href.match(articelIdRegex);
-
-  return getRegexMatchByIndex(articleIdMatch, 1);
-}
-
-function parseHref(href?: string) {
-  const realHref = href || window.location.href;
-  const realUrl = new URL(realHref);
-  const search = realUrl.search;
-  const articleKey = new URLSearchParams(search).get('articleKey') || '';
-
-  console.log('Checking page mode for href:', realHref);
-
-  let hrefObj: HrefImpl;
-
-  // ARTICLE : /b/{channelId}/{articleId}
-  if (articlePageRegex.test(realHref)) {
-    const matchArr = realHref.match(channelAndArticleIdRegex);
-
-    const channelId = getRegexMatchByIndex(matchArr, 1);
-    const articleId = getRegexMatchByIndex(matchArr, 2);
-    const search = getRegexMatchByIndexTry(matchArr, 3, '');
-
-    hrefObj = { mode: 'ARTICLE', channelId, articleId, articleKey, search };
-  }
-  // CHANNEL: /b/{channelId}
-  else if (channelPageRegex.test(realHref)) {
-    const matchArr = realHref.match(channelAndArticleIdRegex);
-
-    const channelId = getRegexMatchByIndex(matchArr, 1);
-    const search = getRegexMatchByIndexTry(matchArr, 3, '');
-
-    hrefObj = { mode: 'CHANNEL', channelId, articleId: '', articleKey, search };
-  }
-  // SCRAP: /scrap or related scrap list pages
-  else if (scrapPageRegex.test(realUrl.pathname)) {
-    hrefObj = {
-      mode: 'SCRAP',
-      channelId: '',
-      articleId: '',
-      articleKey,
-      search,
-    };
-  }
-  // HOME: arca.live or arca.live?...
-  // OTHER: other pages
-  else
-    hrefObj = {
-      mode: homePageRegex.test(realHref) ? 'HOME' : 'OTHER',
-      channelId: '',
-      articleId: '',
-      articleKey,
-      search: '',
-    };
-
-  return hrefObj;
-}
-
-function extractChannelId(url: string): string | null {
-  const match = url.match(channelAndArticleIdRegex);
-  if (!match) return null;
+function parseUrl(href: string): URL | null {
   try {
-    return getRegexMatchByIndex(match, 1);
+    return new URL(href, ARCA_ORIGIN);
   } catch {
     return null;
   }
+}
+
+function getPathParts(url: URL): string[] {
+  return url.pathname.split('/').filter(Boolean);
+}
+
+function getArticleId(href: string): string {
+  const url = parseUrl(href);
+  if (!url) return '';
+  const [section, , articleId, ...rest] = getPathParts(url);
+  return section === 'b' && rest.length === 0 && /^\d+$/.test(articleId ?? '')
+    ? (articleId ?? '')
+    : '';
+}
+
+function parseHref(href: string = window.location.href): HrefImpl {
+  const url = parseUrl(href);
+  if (
+    !url ||
+    (url.hostname !== 'arca.live' && !url.hostname.endsWith('.arca.live'))
+  ) {
+    return {
+      mode: 'OTHER',
+      channelId: '',
+      articleId: '',
+      articleKey: '',
+      search: '',
+    };
+  }
+
+  const parts = getPathParts(url);
+  const articleKey = url.searchParams.get('articleKey') ?? '';
+  const common = { articleKey, search: url.search };
+
+  if (
+    parts.length === 3 &&
+    parts[0] === 'b' &&
+    parts[1] &&
+    /^\d+$/.test(parts[2] ?? '')
+  ) {
+    return {
+      mode: 'ARTICLE',
+      channelId: parts[1],
+      articleId: parts[2] ?? '',
+      ...common,
+    };
+  }
+
+  if (parts.length === 2 && parts[0] === 'b' && parts[1]) {
+    return {
+      mode: 'CHANNEL',
+      channelId: parts[1],
+      articleId: '',
+      ...common,
+    };
+  }
+
+  if (parts.length === 2 && parts[0] === 'u' && parts[1] === 'scrap_list') {
+    return {
+      mode: 'SCRAP',
+      channelId: '',
+      articleId: '',
+      ...common,
+    };
+  }
+
+  return {
+    mode: parts.length === 0 ? 'HOME' : 'OTHER',
+    channelId: '',
+    articleId: '',
+    ...common,
+  };
+}
+
+function extractChannelId(url: string): string | null {
+  const parsed = parseUrl(url);
+  if (!parsed) return null;
+  const [section, channelId] = getPathParts(parsed);
+  return section === 'b' && channelId ? channelId : null;
 }
 
 export { getArticleId, parseHref, extractChannelId };

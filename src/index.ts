@@ -2,12 +2,10 @@ import { ArcaFeed, eventBus } from '@/core';
 
 // Guard against duplicate execution (userscript may be loaded multiple times
 // by the userscript manager on SPA navigations, iframes, etc.)
-const GUARD_KEY = '__arcaFeedInitialized__';
-
-if ((window as any)[GUARD_KEY]) {
+if (window.__arcaFeedInitialized__) {
   console.log('[ArcaFeed] Already initialized, skipping duplicate execution.');
 } else {
-  (window as any)[GUARD_KEY] = true;
+  window.__arcaFeedInitialized__ = true;
 
   // Ensure ArcaFeed singleton is created (registers EventBus listeners)
   new ArcaFeed();

@@ -67,6 +67,21 @@
   float: right;
 }
 
+/* Navbar controls */
+
+.arcafeed-nav-button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.arcafeed-nav-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
 /* Resize handle (PC only) */
 
 .arcafeed-resize-handle {
@@ -104,4 +119,9 @@
 .arca-resize-handle-left:hover,
 .arca-resize-handle-left.dragging {
   border-right-color: var(--color-bd-btn);
+}
+
+.arcafeed-resize-handle:focus-visible {
+  outline: 2px solid var(--color-primary-theme);
+  outline-offset: 2px;
 }

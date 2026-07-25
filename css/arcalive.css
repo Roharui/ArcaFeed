@@ -46,7 +46,7 @@ ul.userscript-nav {
   border-right: 1px solid white;
 }
 
-li.userscript-nav-item > a {
+li.userscript-nav-item > .arcafeed-nav-button {
   margin-right: 0.5rem;
 }
 
@@ -110,7 +110,7 @@ body.hide-btns-board .btns-board {
 /* root container */
 
 .root-container .content-wrapper article,
-.swiper-slide .content-wrapper article {
+.arcafeed-swiper .swiper-slide .content-wrapper article {
   width: 100% !important;
   height: fit-content !important;
 }

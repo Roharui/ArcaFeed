@@ -1,17 +1,19 @@
 import { EventManager } from './event';
 import { EventBus } from './event-bus';
+import { APP_EVENT_NAMES } from './events';
 import { VaultAdapter } from '@/vault';
 
+import type { AppEventName } from './events';
 /**
  * Central Event Bus instance - decouples feature modules from ArcaFeed.
  */
-const eventBus = new EventBus();
+const eventBus = new EventBus<AppEventName>();
 
 class ArcaFeed {
   private static instance: ArcaFeed;
   private events!: EventManager;
   private vault!: VaultAdapter;
-  private isRunning = false;
+  private eventQueue: Promise<void> = Promise.resolve();
 
   constructor() {
     // Prevent duplicate instantiation: if an instance already exists,
@@ -54,7 +56,7 @@ class ArcaFeed {
    * Each event maps to a method that returns Step[], which StepRunner executes.
    */
   private wireEventBus(): void {
-    const stepGetters: Record<string, () => Step[]> = {
+    const stepGetters: Record<AppEventName, () => Step[]> = {
       init: () => this.events.init(),
       toNextPage: () => this.events.toNextPage(),
       toPrevPage: () => this.events.toPrevPage(),
@@ -71,33 +73,37 @@ class ArcaFeed {
       toggleSwiper: () => this.events.toggleSwiper(),
     };
 
-    for (const [eventName, getSteps] of Object.entries(stepGetters)) {
-      eventBus.on(eventName, async () => {
-        const steps = getSteps();
-
-        if (this.isRunning) return;
-        this.isRunning = true;
-
-        try {
-          await this.events.runner.run(this.vault, steps);
-        } catch (err) {
-          console.error(`[ArcaFeed] Error running event "${eventName}":`, err);
-        } finally {
-          this.isRunning = false;
-        }
-      });
+    for (const eventName of APP_EVENT_NAMES) {
+      eventBus.on(eventName, () =>
+        this.enqueueEvent(eventName, stepGetters[eventName]),
+      );
     }
   }
 
   /**
-   * @deprecated Use eventBus.emit() directly.
+   * Serialize events instead of dropping input received while another event is
+   * running. Keeping the queue alive after failures also prevents a single
+   * rejected task from disabling every later interaction.
    */
-  static async runEvent(eventName: string) {
-    eventBus.emit(eventName);
+  private enqueueEvent(
+    eventName: AppEventName,
+    getSteps: () => Step[],
+  ): Promise<void> {
+    const run = async () => {
+      try {
+        await this.events.runner.run(this.vault, getSteps());
+      } catch (err) {
+        console.error(`[ArcaFeed] Error running event "${eventName}":`, err);
+      }
+    };
+
+    this.eventQueue = this.eventQueue.then(run, run);
+    return this.eventQueue;
   }
 }
 
 export { ArcaFeed, EventBus, eventBus };
+export type { AppEventName } from './events';
 
 // Re-export Step type
 import type { Step } from './step-runner';
