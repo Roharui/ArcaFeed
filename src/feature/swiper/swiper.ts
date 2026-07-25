@@ -59,6 +59,7 @@ function initSwiperPage(p: VaultAdapter): void {
 
   const { disableSwiper } = p.articleFilterConfig[p.href.channelId] || {
     disableSwiper: false,
+    onlyBest: false,
   };
 
   p.swiper = new Swiper(

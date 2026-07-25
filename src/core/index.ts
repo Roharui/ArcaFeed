@@ -66,6 +66,7 @@ class ArcaFeed {
       showModal: () => this.events.showModal(),
       checkFilterModal: () => this.events.checkFilterModal(),
       checkUIModal: () => this.events.checkUIModal(),
+      checkSubscribeModal: () => this.events.checkSubscribeModal(),
       closeModal: () => this.events.closeModal(),
       toggleSwiper: () => this.events.toggleSwiper(),
     };

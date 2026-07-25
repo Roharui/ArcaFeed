@@ -38,6 +38,7 @@ function buildChannelArticleButtons(p: VaultAdapter): void {
   if (!p.isSeriesMode) {
     const { disableSwiper } = p.articleFilterConfig[p.href.channelId] || {
       disableSwiper: false,
+      onlyBest: false,
     };
     btns.push(
       createArcaFeedBtn(

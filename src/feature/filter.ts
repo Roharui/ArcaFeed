@@ -124,6 +124,7 @@ function filterLink(
     tab: [],
     title: [],
     disableSwiper: false,
+    onlyBest: false,
   };
   const predicate = buildFilterPredicate(filter);
   const existingIds = new Set(p.articleList);
@@ -150,7 +151,10 @@ function filterLink(
 }
 
 export {
+  buildFilterPredicate,
   expandTabCategories,
+  extractArticleHref,
+  extractArticleRows,
   filterLink,
   getTabTypeText,
   LEGACY_NO_TAB_CATEGORY,

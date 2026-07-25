@@ -50,13 +50,15 @@ input.helper-modal-tab-radio {
 }
 
 #filter:checked + label.helper-modal-tab-label,
-#ui:checked + label.helper-modal-tab-label {
+#ui:checked + label.helper-modal-tab-label,
+#subscribe:checked + label.helper-modal-tab-label {
   background-color: var(--color-bg-main);
   color: var(--color-text);
 }
 
 #filter:checked ~ .helper-modal-filter,
-#ui:checked ~ .helper-modal-ui {
+#ui:checked ~ .helper-modal-ui,
+#subscribe:checked ~ .helper-modal-subscribe {
   display: block;
 }
 

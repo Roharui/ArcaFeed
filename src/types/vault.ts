@@ -12,6 +12,7 @@ interface ArticleFilterImpl {
   tab: string[];
   title: string[];
   disableSwiper: boolean;
+  onlyBest: boolean;
 }
 
 interface ArticleFilterConfigImpl {
@@ -26,7 +27,9 @@ interface UISettings {
   hideArticleAuthor: boolean;
   hideArticleTime: boolean;
   hideArticleView: boolean;
-  lastModalTab: 'filter' | 'ui';
+  lastModalTab: 'filter' | 'ui' | 'subscribe';
+  hiddenChannels: string[];
+  homeSeriesChannels: string[];
   contentWidth: number;
 }
 

@@ -1,10 +1,17 @@
 import $ from 'jquery';
 
-import { filterLink } from '@/feature';
+import {
+  buildFilterPredicate,
+  extractArticleHref,
+  extractArticleRows,
+  filterLink,
+} from '@/feature';
 import { fetchUrl } from '@/utils/fetch';
 import { shuffle } from '@/utils/func';
+import { appendSearchParam } from '@/utils/url';
 import { showToast } from '@/utils/toast';
 
+import type { ArticleFilterImpl } from '@/types';
 import type { VaultAdapter } from '@/vault';
 
 // ── Loading indicator ──────────────────────────────────
@@ -77,6 +84,11 @@ async function* fetchArticlePages(
 ): AsyncGenerator<string[]> {
   const basePath = p.isCurrentMode('SCRAP') ? '/u/scrap_list' : articleId;
   let nextUrl: string | null = buildPageUrl(p, articleId);
+
+  const channelFilter = p.articleFilterConfig[p.href.channelId];
+  if (channelFilter?.onlyBest && nextUrl) {
+    nextUrl = appendSearchParam(nextUrl, 'mode', 'best');
+  }
 
   for (let page = 0; page <= MAX_PAGES && nextUrl; page++) {
     const url = normalizeUrl(nextUrl);
@@ -170,9 +182,73 @@ function openScrapSeriesArticle(p: VaultAdapter): void {
   window.location.replace(nextUrl.toString());
 }
 
+// ── Multi-channel fetch ─────────────────────────────────
+
+async function fetchChannelFirstPage(
+  channelId: string,
+  filter?: ArticleFilterImpl,
+): Promise<string[]> {
+  const modeParam = filter?.onlyBest ? '?mode=best' : '';
+  const url = `/b/${channelId}${modeParam}`;
+  console.log(`Fetching channel first page: ${url}`);
+
+  const res = await fetchUrl(url);
+  const $html = $(res.responseText);
+
+  const $rows = extractArticleRows($html);
+  const predicate = filter
+    ? buildFilterPredicate(filter)
+    : () => true;
+
+  return $rows
+    .toArray()
+    .filter((ele) => predicate(ele))
+    .map((ele) => extractArticleHref($(ele)) ?? '')
+    .filter((href) => href.length > 0);
+}
+
+async function fetchChannelArticles(
+  channelId: string,
+  filter?: ArticleFilterImpl,
+  existingUrls?: Set<string>,
+): Promise<string[]> {
+  const modeParam = filter?.onlyBest ? '?mode=best' : '';
+  const basePath = `/b/${channelId}`;
+  let nextUrl: string | null = `/b/${channelId}${modeParam}`;
+  const results: string[] = [];
+
+  for (let page = 0; page <= MAX_PAGES && nextUrl; page++) {
+    console.log(`Fetching channel page: ${nextUrl}`);
+
+    const res = await fetchUrl(nextUrl);
+    const $html = $(res.responseText);
+
+    const $rows = extractArticleRows($html);
+    const predicate = filter
+      ? buildFilterPredicate(filter)
+      : () => true;
+
+    const links = $rows
+      .toArray()
+      .filter((ele) => predicate(ele))
+      .map((ele) => extractArticleHref($(ele)) ?? '')
+      .filter((href) => href.length > 0 && !existingUrls?.has(href));
+
+    results.push(...links);
+
+    nextUrl = extractNextPageUrl($html, basePath);
+  }
+
+  return results;
+}
+
 export {
   fetchArticlePages,
   fetchFirstBatch,
   fetchAllBatches,
+  fetchChannelArticles,
+  fetchChannelFirstPage,
+  hideFetchLoader,
   openScrapSeriesArticle,
+  showFetchLoader,
 };

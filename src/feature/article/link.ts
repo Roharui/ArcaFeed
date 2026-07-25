@@ -1,10 +1,14 @@
 import {
   fetchFirstBatch,
   fetchAllBatches,
+  fetchChannelArticles,
   filterLink,
   parseSearchQuery,
+  showFetchLoader,
+  hideFetchLoader,
 } from '@/feature';
 import { createArticleKey } from '@/utils/article-key';
+import { getArticleId } from '@/utils/regex';
 import { appendSearchParam } from '@/utils/url';
 
 import type { VaultAdapter } from '@/vault';
@@ -20,6 +24,13 @@ async function initArticleLink(p: VaultAdapter): Promise<void> {
 async function initChannelLink(p: VaultAdapter): Promise<void> {
   p.resetArticleList();
   parseSearchQuery(p);
+
+  const channelFilter = p.articleFilterConfig[p.href.channelId];
+
+  if (channelFilter?.onlyBest) {
+    await fetchFirstBatch(p, p.href.articleId);
+    return;
+  }
 
   const newLinks = filterLink(p, true);
   p.articleList = newLinks.length > 0 ? newLinks : [];
@@ -72,9 +83,11 @@ async function activateArticleLink(
   }
 
   // Pre-fetch next page when nearing the end of the list
-  const needsMoreArticles = p.articleList.length - p.activeIndex <= 1;
+  const needsMoreArticles = p.articleList.length - p.activeIndex <= 3;
   if (needsMoreArticles && !p.isSeriesMode) {
     await fetchFirstBatch(p, articleId);
+  } else if (needsMoreArticles && p.isSeriesMode) {
+    await loadMoreHomeSeriesArticles(p);
   }
 }
 
@@ -92,6 +105,40 @@ async function initEnableScrapSeries(p: VaultAdapter): Promise<void> {
   p.isSeriesMode = true;
 
   await fetchAllBatches(p, p.href.articleId);
+}
+
+// ── Home Series ─────────────────────────────────────────
+
+async function loadMoreHomeSeriesArticles(p: VaultAdapter): Promise<void> {
+  const { homeSeriesChannels } = p.uiSettings;
+  if (homeSeriesChannels.length === 0) return;
+
+  showFetchLoader();
+  try {
+    const existingUrls = new Set(p.articleList);
+    const allArticles: { url: string; articleId: number }[] = [];
+
+    for (const channelId of homeSeriesChannels) {
+      const channelFilter = p.articleFilterConfig[channelId];
+      const articles = await fetchChannelArticles(channelId, channelFilter, existingUrls);
+
+      for (const url of articles) {
+        const articleIdNum = parseInt(getArticleId(url));
+        if (!isNaN(articleIdNum)) {
+          allArticles.push({ url, articleId: articleIdNum });
+          existingUrls.add(url);
+        }
+      }
+    }
+
+    if (allArticles.length === 0) return;
+
+    allArticles.sort((a, b) => b.articleId - a.articleId);
+    p.articleList = [...p.articleList, ...allArticles.map((a) => a.url)];
+    p.flushSave();
+  } finally {
+    hideFetchLoader();
+  }
 }
 
 export { initLink, activateArticleLink, initEnableScrapSeries };

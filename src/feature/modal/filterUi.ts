@@ -13,6 +13,12 @@ const MODAL_FILTER_TAB = `
 <div class="helper-modal-tab helper-modal-filter">
   <div id="category-all"></div>
   <div id="category"></div>
+  <div class="filter-best-row">
+    <label>
+      <input id="filter-best-checkbox" class="category-check" type="checkbox" />
+      <span class="category-span">베스트만</span>
+    </label>
+  </div>
   <div class="exclude-title-list"></div>
   <div class="exclude-title-wrapper">
     <span class="helper-modal-btns exclude-title-input-wrapper">
@@ -32,10 +38,14 @@ function createArticleFilterModal(p: VaultAdapter) {
 
   const { href, articleFilterConfig } = p;
 
-  const { tab, title } = articleFilterConfig[href.channelId] || {
+  const { tab, title, onlyBest } = articleFilterConfig[href.channelId] || {
     tab: [],
     title: [],
+    onlyBest: false,
   };
+
+  // Set best checkbox
+  $filterTab.find('#filter-best-checkbox').prop('checked', onlyBest);
 
   // get Categories
   const $rootContainer = $('.root-container').first();
@@ -156,6 +166,7 @@ function initCheckFilterModal(p: VaultAdapter) {
     tab,
     title,
     disableSwiper: false,
+    onlyBest: $('#filter-best-checkbox').prop('checked') as boolean,
   };
 
   p.articleFilterConfig = {

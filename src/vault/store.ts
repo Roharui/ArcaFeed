@@ -38,6 +38,8 @@ const DEFAULT_UI_SETTINGS: UISettings = {
   hideArticleTime: false,
   hideArticleView: false,
   lastModalTab: 'filter',
+  hiddenChannels: [],
+  homeSeriesChannels: [],
   contentWidth: 700,
 };
 

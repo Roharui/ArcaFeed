@@ -16,8 +16,11 @@ import {
   initSeriesBtnCss,
   initUi,
   initCloseModal,
+  initCloseModalContent,
   initCheckFilterModal,
   initCheckUIModal,
+  initCheckSubscribeModal,
+  initStartHomeSeries,
 } from '@/feature';
 
 import type { Step } from '@/core/step-runner';
@@ -96,6 +99,10 @@ class EventManager {
     return [[initCheckUIModal, initUi, initCloseModal]];
   }
 
+  checkSubscribeModal(): Step[] {
+    return [initCheckSubscribeModal, initCloseModalContent, initStartHomeSeries];
+  }
+
   closeModal(): Step[] {
     return [initCloseModal];
   }
@@ -111,6 +118,7 @@ class EventManager {
           tab: [],
           title: [],
           disableSwiper: false,
+          onlyBest: false,
         };
 
         const pageFilter = {
