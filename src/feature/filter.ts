@@ -125,6 +125,7 @@ function filterLink(
     title: [],
     disableSwiper: false,
     onlyBest: false,
+    channelName: ""
   };
   const predicate = buildFilterPredicate(filter);
   const existingIds = new Set(p.articleList);

@@ -167,6 +167,7 @@ function initCheckFilterModal(p: VaultAdapter) {
     title,
     disableSwiper: false,
     onlyBest: $('#filter-best-checkbox').prop('checked') as boolean,
+    channelName: $("a.title").attr("data-channel-name")?.replace(" 채널", "") as string,
   };
 
   p.articleFilterConfig = {

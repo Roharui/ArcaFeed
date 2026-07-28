@@ -70,6 +70,10 @@ function extractNextPageUrl(
     : null;
 }
 
+function channelBasePath(channelId: string): string {
+  return `/b/${channelId}`;
+}
+
 // ── Async Generator (core) ─────────────────────────────
 
 const MAX_PAGES = 10;
@@ -86,8 +90,8 @@ async function* fetchArticlePages(
   let nextUrl: string | null = buildPageUrl(p, articleId);
 
   const channelFilter = p.articleFilterConfig[p.href.channelId];
-  if (channelFilter?.onlyBest && nextUrl) {
-    nextUrl = appendSearchParam(nextUrl, 'mode', 'best');
+  if (nextUrl) {
+    nextUrl = withBestMode(nextUrl, channelFilter);
   }
 
   for (let page = 0; page <= MAX_PAGES && nextUrl; page++) {
@@ -182,19 +186,25 @@ function openScrapSeriesArticle(p: VaultAdapter): void {
   window.location.replace(nextUrl.toString());
 }
 
-// ── Multi-channel fetch ─────────────────────────────────
+// ── Multi-channel fetch helpers ─────────────────────────
 
-async function fetchChannelFirstPage(
-  channelId: string,
+/**
+ * Append ?mode=best if the filter has onlyBest enabled.
+ * Safe to call on URLs that already have query params.
+ */
+export function withBestMode(url: string, filter?: ArticleFilterImpl): string {
+  return filter?.onlyBest ? appendSearchParam(url, 'mode', 'best') : url;
+}
+
+/**
+ * Extract filtered article hrefs from parsed HTML.
+ * Shared by default channel fetch and reusable by special channel handlers.
+ */
+export function extractLinks(
+  $html: JQuery<HTMLElement>,
   filter?: ArticleFilterImpl,
-): Promise<string[]> {
-  const modeParam = filter?.onlyBest ? '?mode=best' : '';
-  const url = `/b/${channelId}${modeParam}`;
-  console.log(`Fetching channel first page: ${url}`);
-
-  const res = await fetchUrl(url);
-  const $html = $(res.responseText);
-
+  existingUrls?: Set<string>,
+): string[] {
   const $rows = extractArticleRows($html);
   const predicate = filter
     ? buildFilterPredicate(filter)
@@ -204,7 +214,22 @@ async function fetchChannelFirstPage(
     .toArray()
     .filter((ele) => predicate(ele))
     .map((ele) => extractArticleHref($(ele)) ?? '')
-    .filter((href) => href.length > 0);
+    .filter((href) => href.length > 0 && !existingUrls?.has(href));
+}
+
+// ── Standard channel fetch (default /b/{channelId} pattern) ──
+
+async function fetchChannelFirstPage(
+  channelId: string,
+  filter?: ArticleFilterImpl,
+): Promise<string[]> {
+  const url = withBestMode(channelBasePath(channelId), filter);
+  console.log(`Fetching channel first page: ${url}`);
+
+  const res = await fetchUrl(url);
+  const $html = $(res.responseText);
+
+  return extractLinks($html, filter);
 }
 
 async function fetchChannelArticles(
@@ -212,9 +237,8 @@ async function fetchChannelArticles(
   filter?: ArticleFilterImpl,
   existingUrls?: Set<string>,
 ): Promise<string[]> {
-  const modeParam = filter?.onlyBest ? '?mode=best' : '';
-  const basePath = `/b/${channelId}`;
-  let nextUrl: string | null = `/b/${channelId}${modeParam}`;
+  const basePath = channelBasePath(channelId);
+  let nextUrl: string | null = withBestMode(basePath, filter);
   const results: string[] = [];
 
   for (let page = 0; page <= MAX_PAGES && nextUrl; page++) {
@@ -223,17 +247,7 @@ async function fetchChannelArticles(
     const res = await fetchUrl(nextUrl);
     const $html = $(res.responseText);
 
-    const $rows = extractArticleRows($html);
-    const predicate = filter
-      ? buildFilterPredicate(filter)
-      : () => true;
-
-    const links = $rows
-      .toArray()
-      .filter((ele) => predicate(ele))
-      .map((ele) => extractArticleHref($(ele)) ?? '')
-      .filter((href) => href.length > 0 && !existingUrls?.has(href));
-
+    const links = extractLinks($html, filter, existingUrls);
     results.push(...links);
 
     nextUrl = extractNextPageUrl($html, basePath);
@@ -248,9 +262,8 @@ async function fetchChannelArticlesBefore(
   filter?: ArticleFilterImpl,
   existingUrls?: Set<string>,
 ): Promise<string[]> {
-  const modeParam = filter?.onlyBest ? '?mode=best' : '';
-  const basePath = `/b/${channelId}`;
-  let nextUrl: string | null = `/b/${channelId}/${beforeArticleId}${modeParam}`;
+  const basePath = channelBasePath(channelId);
+  let nextUrl: string | null = withBestMode(`${basePath}/${beforeArticleId}`, filter);
   const results: string[] = [];
 
   for (let page = 0; page <= MAX_PAGES && nextUrl; page++) {
@@ -259,17 +272,7 @@ async function fetchChannelArticlesBefore(
     const res = await fetchUrl(nextUrl);
     const $html = $(res.responseText);
 
-    const $rows = extractArticleRows($html);
-    const predicate = filter
-      ? buildFilterPredicate(filter)
-      : () => true;
-
-    const links = $rows
-      .toArray()
-      .filter((ele) => predicate(ele))
-      .map((ele) => extractArticleHref($(ele)) ?? '')
-      .filter((href) => href.length > 0 && !existingUrls?.has(href));
-
+    const links = extractLinks($html, filter, existingUrls);
     results.push(...links);
 
     nextUrl = extractNextPageUrl($html, basePath);

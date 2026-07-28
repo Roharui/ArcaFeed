@@ -109,19 +109,16 @@ function initSeriesContent(p: VaultAdapter): void {
 
   const window_ = pickWindow(entries, currentIndex);
 
+  $('.article-body')!.append(buildShortcutDiv(window_));
+
   // In series mode, don't show the bottom post list or enable button
   if (p.isSeriesMode) return;
-
-  const $articleBody = $('.article-body');
-  if (!$articleBody.length) return;
-
-  $articleBody.append(buildShortcutDiv(window_));
 
   // Show "Enable Series" button when not in series mode
   const $btnWrapper = $('<div>', { class: 'series-control-btns' }).append(
     buildEnableSeriesButton(),
   );
-  $articleBody.after($btnWrapper);
+  $('.article-body')!.after($btnWrapper);
 }
 
 function initSeriesBtnCss(_v: VaultAdapter): void {

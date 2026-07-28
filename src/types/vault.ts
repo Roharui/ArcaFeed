@@ -13,6 +13,7 @@ interface ArticleFilterImpl {
   title: string[];
   disableSwiper: boolean;
   onlyBest: boolean;
+  channelName?: string;
 }
 
 interface ArticleFilterConfigImpl {
