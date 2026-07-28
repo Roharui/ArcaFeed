@@ -43,7 +43,7 @@ function buildChannelArticleButtons(p: VaultAdapter): void {
     btns.push(
       createArcaFeedBtn(
         'next',
-        disableSwiper ? 'bi-locked-fill' : 'bi-forward-fill',
+        disableSwiper ? 'bi-lock-fill' : 'bi-forward-fill',
         () => eventBus.emit('toggleSwiper'),
       ),
     );
