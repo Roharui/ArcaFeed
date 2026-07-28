@@ -2,19 +2,14 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
-
-concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: false
-
-permissions:
-  contents: write
+    branches:
+      - main
 
 jobs:
   release:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -23,32 +18,52 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22.13.0'
-          cache: npm
+          node-version: '22'
 
-      - name: Verify tag matches package version
-        shell: bash
+      - name: Read package.json version
+        id: version
         run: |
-          PACKAGE_TAG="v$(node -p "require('./package.json').version")"
-          if [ "${GITHUB_REF_NAME}" != "${PACKAGE_TAG}" ]; then
-            echo "Tag ${GITHUB_REF_NAME} does not match ${PACKAGE_TAG}." >&2
-            exit 1
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "pkg_version=${PKG_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Compare tag with package.json version
+        id: check
+        run: |
+          PKG_VERSION="v${{ steps.version.outputs.pkg_version }}"
+
+          # Get latest tag (if any)
+          LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
+
+          echo "Latest tag : ${LATEST_TAG:-none}"
+          echo "Package ver : ${PKG_VERSION}"
+
+          if [ "${LATEST_TAG}" = "${PKG_VERSION}" ]; then
+            echo "Version already released, skipping."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "New version detected, will release ${PKG_VERSION}."
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "new_tag=${PKG_VERSION}" >> "$GITHUB_OUTPUT"
           fi
 
-          git fetch --no-tags origin main
-          if ! git merge-base --is-ancestor "${GITHUB_SHA}^{commit}" origin/main; then
-            echo "Release tag must point to a commit on origin/main." >&2
-            exit 1
-          fi
+      - name: Create tag
+        if: steps.check.outputs.should_release == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.check.outputs.new_tag }}"
+          git push origin "${{ steps.check.outputs.new_tag }}"
 
-      - name: Install and verify
+      - name: Build
+        if: steps.check.outputs.should_release == 'true'
         run: |
           npm ci
-          npm run check
+          npm run prod
 
-      - name: Create or update GitHub Release
+      - name: Create Release
+        if: steps.check.outputs.should_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.check.outputs.new_tag }}
           files: dist/ArcaFeed.user.js
-          fail_on_unmatched_files: true
           generate_release_notes: true
