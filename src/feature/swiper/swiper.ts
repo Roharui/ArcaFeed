@@ -82,7 +82,9 @@ function initSwiperPage(p: VaultAdapter): void {
     ...SWIPER_OPTIONS,
     allowSlideNext: p.seriesSource === 'home' || p.isNextPageActive(),
     allowSlidePrev: p.isPrevPageActive(),
-    enabled: p.isSeriesMode || !disableSwiper,
+    enabled:
+      (p.isSeriesMode || !disableSwiper) &&
+      (p.isSeriesMode || p.articleList.length > 0),
   });
 
   const nextEvent = SLIDE_NEXT_EVENT[p.href.mode] ?? 'renderNextPage';

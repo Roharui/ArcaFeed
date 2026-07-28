@@ -84,7 +84,7 @@ function extractNextPageUrl(
   $html: JQuery<HTMLElement>,
   basePath: string,
 ): string | null {
-  const $articleList = $html.find('div.article-list').first();
+  const $articleList = $html.find('div.article-list, div.included-article-list').first();
   const href = $articleList
     .find('.page-item.active')
     .first()
@@ -162,6 +162,12 @@ async function* fetchArticlePages(
 
     yield links;
     nextUrl = extractNextPageUrl($html, basePath);
+    if (page === 0 && !nextUrl) {
+      nextUrl = mergeSearchQuery(basePath, p.searchQuery);
+      if (channelFilter?.onlyBest) {
+        nextUrl = mergeSearchQuery(nextUrl, '?mode=best');
+      }
+    }
   }
 }
 
@@ -171,7 +177,8 @@ async function fetchFirstBatch(
 ): Promise<number> {
   showFetchLoader();
   try {
-    for await (const links of fetchArticlePages(p, articleId)) {
+      for await (const links of fetchArticlePages(p, articleId)) {
+      if (!links) continue;
       if (links.length > 0) {
         return p.appendArticleLinks(links);
       }
