@@ -84,7 +84,9 @@ function extractNextPageUrl(
   $html: JQuery<HTMLElement>,
   basePath: string,
 ): string | null {
-  const $articleList = $html.find('div.article-list, div.included-article-list').first();
+  const $articleList = $html
+    .find('div.article-list, div.included-article-list')
+    .first();
   const href = $articleList
     .find('.page-item.active')
     .first()
@@ -177,7 +179,7 @@ async function fetchFirstBatch(
 ): Promise<number> {
   showFetchLoader();
   try {
-      for await (const links of fetchArticlePages(p, articleId)) {
+    for await (const links of fetchArticlePages(p, articleId)) {
       if (!links) continue;
       if (links.length > 0) {
         return p.appendArticleLinks(links);
