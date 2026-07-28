@@ -9,9 +9,10 @@ import { Store } from './store';
 import { StorageRepository } from './repository';
 import { ConfigService } from './config';
 
+import type { Swiper } from 'swiper/types';
+
 import type { AppState, StateSubscriber } from './store';
 import type { HrefImpl, UISettings } from '@/types';
-import type { Swiper } from '@swiper/types';
 
 import { parseHref } from '@/utils/regex';
 

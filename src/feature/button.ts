@@ -11,7 +11,7 @@ function buildHomeButtons(_p: VaultAdapter): void {
     .last()
     .before(
       btnWrapper([
-        createArcaFeedBtn('filter', 'ion-ios-gear', () =>
+        createArcaFeedBtn('filter', 'bi-gear-fill', () =>
           eventBus.emit('showModal'),
         ),
       ]),
@@ -25,7 +25,7 @@ function buildScrapButtons(p: VaultAdapter): void {
     .last()
     .before(
       btnWrapper([
-        createArcaFeedBtn('series', 'ion-ios-albums', () =>
+        createArcaFeedBtn('series', 'bi-archive-fill', () =>
           eventBus.emit('enableScrapSeries'),
         ),
       ]),
@@ -43,14 +43,14 @@ function buildChannelArticleButtons(p: VaultAdapter): void {
     btns.push(
       createArcaFeedBtn(
         'next',
-        disableSwiper ? 'ion-ios-locked' : 'ion-ios-arrow-forward',
+        disableSwiper ? 'bi-locked-fill' : 'bi-forward-fill',
         () => eventBus.emit('toggleSwiper'),
       ),
     );
   }
 
   btns.push(
-    createArcaFeedBtn('filter', 'ion-ios-gear', () =>
+    createArcaFeedBtn('filter', 'bi-gear-fill', () =>
       eventBus.emit('showModal'),
     ),
   );

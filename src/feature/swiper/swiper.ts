@@ -6,7 +6,7 @@ import Swiper from 'swiper';
 
 import { eventBus } from '@/core';
 
-import type { SwiperOptions } from '@swiper/types';
+import type { SwiperOptions } from 'swiper/types';
 import type { VaultAdapter } from '@/vault';
 
 const swiperOptions: SwiperOptions = {
