@@ -14,6 +14,7 @@ export interface AppState {
   articleList: string[];
   articleFilterConfig: ArticleFilterConfigImpl;
   isSeriesMode: boolean;
+  isShuffleMode: boolean;
   searchQuery: string;
   lastActiveIndex: number;
   uiSettings: UISettings;
@@ -51,6 +52,7 @@ export function createInitialState(): AppState {
     articleList: [],
     articleFilterConfig: {},
     isSeriesMode: false,
+    isShuffleMode: false,
     searchQuery: '',
     lastActiveIndex: -1,
     uiSettings: { ...DEFAULT_UI_SETTINGS },

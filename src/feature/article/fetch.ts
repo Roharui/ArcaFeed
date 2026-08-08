@@ -157,7 +157,9 @@ async function fetchAllBatches(
       p.articleList.push(...links);
     }
 
-    shuffle(p.articleList);
+    if (p.isShuffleMode) {
+      shuffle(p.articleList);
+    }
 
     if (p.isSeriesMode) {
       openScrapSeriesArticle(p);

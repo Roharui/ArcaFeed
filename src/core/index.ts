@@ -63,6 +63,7 @@ class ArcaFeed {
       renderPrevPage: () => this.events.renderPrevPage(),
       enableSeries: () => this.events.enableSeries(),
       enableScrapSeries: () => this.events.enableScrapSeries(),
+      toggleShuffle: () => this.events.toggleShuffle(),
       showModal: () => this.events.showModal(),
       checkFilterModal: () => this.events.checkFilterModal(),
       checkUIModal: () => this.events.checkUIModal(),

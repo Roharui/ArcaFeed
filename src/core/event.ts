@@ -107,6 +107,21 @@ class EventManager {
     return [initCloseModal];
   }
 
+  // toggle Shuffle
+
+  toggleShuffle(): Step[] {
+    return [
+      (p: VaultAdapter) => {
+        if (!p.isCurrentMode('SCRAP')) return;
+
+        p.isShuffleMode = !p.isShuffleMode;
+        p.flushSave();
+
+        window.location.reload();
+      },
+    ];
+  }
+
   // toggle Swiper
 
   toggleSwiper(): Step[] {

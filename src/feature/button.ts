@@ -21,10 +21,15 @@ function buildHomeButtons(_p: VaultAdapter): void {
 function buildScrapButtons(p: VaultAdapter): void {
   if (p.isSeriesMode) return;
 
+  const shuffleIcon = p.isShuffleMode ? 'bi-shuffle' : 'bi-arrow-down-up';
+
   $('ul.nav.navbar-nav')
     .last()
     .before(
       btnWrapper([
+        createArcaFeedBtn('shuffle', shuffleIcon, () =>
+          eventBus.emit('toggleShuffle'),
+        ),
         createArcaFeedBtn('series', 'bi-archive-fill', () =>
           eventBus.emit('enableScrapSeries'),
         ),

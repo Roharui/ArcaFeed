@@ -130,6 +130,13 @@ export class VaultAdapter {
     this.store.setState({ isSeriesMode: v });
   }
 
+  get isShuffleMode(): boolean {
+    return this.store.getState().isShuffleMode;
+  }
+  set isShuffleMode(v: boolean) {
+    this.store.setState({ isShuffleMode: v });
+  }
+
   get searchQuery(): string {
     return this.store.getState().searchQuery;
   }
