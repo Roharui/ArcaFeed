@@ -7,11 +7,12 @@ import { StorageRepository } from './repository';
 import { createArticleKey } from '@/utils/article-key';
 import { appendSearchParam } from '@/utils/url';
 
-import type { AppState } from '@/core/store';
+import type { AppState } from '@/vault/store';
 import type { ArticleFilterConfigImpl, UISettings } from '@/types';
 
 const ARTICLE_FILTER_CONFIG_GLOBAL_KEY = 'arcaFeed:articleFilterConfig';
 const UI_SETTINGS_KEY = 'arcaFeed:uiSettings';
+const SHUFFLE_MODE_KEY = 'arcaFeed:isShuffleMode';
 
 const CHANNEL_OR_ARTICLE_PAGE_REGEX = /^\/b\/[a-zA-Z0-9]+(\/\d+)?\/?$/;
 
@@ -78,6 +79,10 @@ export class ConfigService {
         '-1',
     );
 
+    // Load shuffle mode (global setting)
+    patch.isShuffleMode =
+      this.repo.getItem(SHUFFLE_MODE_KEY) === 'true';
+
     // Load UI settings (getJSON handles null / parse errors internally)
     const uiSettings = this.repo.getJSON<UISettings>(UI_SETTINGS_KEY);
     if (uiSettings) {
@@ -102,6 +107,7 @@ export class ConfigService {
       ARTICLE_FILTER_CONFIG_GLOBAL_KEY,
       state.articleFilterConfig,
     );
+    this.repo.setItem(SHUFFLE_MODE_KEY, state.isShuffleMode.toString());
 
     // Per-articleKey scoped storage
     this.repo.setJSON(
