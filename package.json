@@ -1,6 +1,6 @@
 {
   "name": "arcafeed",
-  "version": "2.6.1",
+  "version": "2.6.2",
   "main": "main.js",
   "scripts": {
     "dev": "webpack --config webpack.config.dev.js",

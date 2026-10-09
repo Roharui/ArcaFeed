@@ -10,7 +10,7 @@ import type { SwiperOptions } from 'swiper/types';
 import type { VaultAdapter } from '@/vault';
 
 const swiperOptions: SwiperOptions = {
-  speed: 120,
+  speed: 300,
   initialSlide: 1,
   slidesPerView: 1,
   loop: false,

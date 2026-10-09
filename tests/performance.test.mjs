@@ -433,7 +433,7 @@ test('Swiper is reused and background list changes unlock navigation', () => {
     },
   })('src/feature/swiper/swiper.ts');
   initSwiperPage(p);
-  assert.equal(p.swiper.speed, 120);
+  assert.equal(p.swiper.speed, 300);
   assert.equal(p.swiper.allowSlideNext, false);
   p.articleList = [...p.articleList, '/b/test/99'];
   subscriber({ href: p.href, articleFilterConfig: p.articleFilterConfig });

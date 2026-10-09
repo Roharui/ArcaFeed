@@ -13,7 +13,7 @@
 **ArcaFeed**는 아카라이브(arca.live) 커뮤니티 사이트를 TikTok/Shorts처럼 스와이프로 게시글을 넘겨볼 수 있게 해주는 **TamperMonkey / ViolentMonkey 유저스크립트**입니다.
 
 - **저장소**: `github.com/Roharui/ArcaFeed`
-- **버전**: `2.6.1` (`package.json` 기준)
+- **버전**: `2.6.2` (`package.json` 기준)
 - **대상 사이트**: `https://arca.live/*`
 - **기술 스택**: TypeScript + Webpack → 유저스크립트 번들
 
@@ -373,7 +373,7 @@ GitHub Actions (`.github/workflows/release.yml`):
    └→ 신규 페이지에서 다시 init() 실행
 ```
 
-전환 시간은 120ms입니다. 설정 적용 시 기존 Swiper 인스턴스를 재사용하며, 이동 전에 대상 인덱스를 저장합니다. 보이지 않는 빈 슬라이드의 로더 애니메이션은 실행하지 않습니다.
+전환 시간은 기존과 같은 300ms입니다. 설정 적용 시 기존 Swiper 인스턴스를 재사용하며, 이동 전에 대상 인덱스를 저장합니다. 보이지 않는 빈 슬라이드의 로더 애니메이션은 실행하지 않습니다.
 
 **Swiper DOM 구조:**
 
