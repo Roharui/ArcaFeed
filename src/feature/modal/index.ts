@@ -8,11 +8,10 @@ import { createSubscribeSettingModal } from './subscribeTab';
 
 import type { VaultAdapter } from '@/vault';
 
-function resolveModalTab(
-  lastTab: string,
-  availableTabs: string[],
-): string {
-  return availableTabs.includes(lastTab) ? lastTab : (availableTabs[0] ?? 'filter');
+function resolveModalTab(lastTab: string, availableTabs: string[]): string {
+  return availableTabs.includes(lastTab)
+    ? lastTab
+    : (availableTabs[0] ?? 'filter');
 }
 
 function initModal(p: VaultAdapter) {
@@ -21,17 +20,21 @@ function initModal(p: VaultAdapter) {
   const dialog = $(`
     <div id="dialog" class="helper-modal">
       <div class="helper-modal-body">
-        ${isHome ? `
+        ${
+          isHome
+            ? `
           <input id="subscribe" class="helper-modal-tab-radio" type="radio" name="helper-modal-tab-group" />
           <label class="helper-modal-tab-label" for="subscribe">📡</label>
           <input id="ui" class="helper-modal-tab-radio" type="radio" name="helper-modal-tab-group" />
           <label class="helper-modal-tab-label" for="ui">🪟</label>
-        ` : `
+        `
+            : `
           <input id="filter" class="helper-modal-tab-radio" type="radio" name="helper-modal-tab-group" />
           <label class="helper-modal-tab-label" for="filter">🔍</label>
           <input id="ui" class="helper-modal-tab-radio" type="radio" name="helper-modal-tab-group" />
           <label class="helper-modal-tab-label" for="ui">🪟</label>
-        `}
+        `
+        }
       </div>
     </div>
   `);
@@ -42,20 +45,30 @@ function initModal(p: VaultAdapter) {
     dialog.find('label[for="filter"]').remove();
     dialog.find('#ui').prop('checked', true);
   } else if (isHome) {
-    const initialTab = resolveModalTab(p.uiSettings.lastModalTab, ['subscribe', 'ui']);
+    const initialTab = resolveModalTab(p.uiSettings.lastModalTab, [
+      'subscribe',
+      'ui',
+    ]);
     dialog.find(`#${initialTab}`).prop('checked', true);
 
     dialog.find('.helper-modal-tab-radio').on('change', function () {
-      const selectedTab = $(this).attr('id') as typeof p.uiSettings.lastModalTab;
+      const selectedTab = $(this).attr(
+        'id',
+      ) as typeof p.uiSettings.lastModalTab;
       p.uiSettings = { ...p.uiSettings, lastModalTab: selectedTab };
       p.flushSave();
     });
   } else {
-    const initialTab = resolveModalTab(p.uiSettings.lastModalTab, ['filter', 'ui']);
+    const initialTab = resolveModalTab(p.uiSettings.lastModalTab, [
+      'filter',
+      'ui',
+    ]);
     dialog.find(`#${initialTab}`).prop('checked', true);
 
     dialog.find('.helper-modal-tab-radio').on('change', function () {
-      const selectedTab = $(this).attr('id') as typeof p.uiSettings.lastModalTab;
+      const selectedTab = $(this).attr(
+        'id',
+      ) as typeof p.uiSettings.lastModalTab;
       p.uiSettings = { ...p.uiSettings, lastModalTab: selectedTab };
       p.flushSave();
     });

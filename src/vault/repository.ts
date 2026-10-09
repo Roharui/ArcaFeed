@@ -60,14 +60,21 @@ export class StorageRepository {
       ...recentKeys.filter((key) => key !== currentArticleKey),
     ].slice(0, ARTICLE_KEY_CACHE_LIMIT);
 
+    if (
+      recentKeys.length === nextKeys.length &&
+      recentKeys.every((key, index) => key === nextKeys[index])
+    )
+      return;
+
     const expiredKeys = recentKeys.filter((key) => !nextKeys.includes(key));
 
-    for (const expiredKey of expiredKeys) {
-      const prefix = `arcaFeed:${expiredKey}:`;
-
+    if (expiredKeys.length > 0) {
+      const expired = new Set(expiredKeys);
       for (let i = this.storage.length - 1; i >= 0; i--) {
         const key = this.storage.key(i);
-        if (key && key.startsWith(prefix)) {
+        if (!key?.startsWith('arcaFeed:')) continue;
+        const separator = key.indexOf(':', 9);
+        if (separator !== -1 && expired.has(key.slice(9, separator))) {
           this.storage.removeItem(key);
         }
       }

@@ -57,6 +57,10 @@ export default function (env = {}, _args) {
 
   const config = {
     mode: 'development',
+    cache: {
+      type: 'filesystem',
+      buildDependencies: { config: [__filename] },
+    },
     entry: './src/index.ts',
 
     watch: env.WATCH === 'true',

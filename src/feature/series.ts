@@ -32,12 +32,13 @@ function parseSeriesEntries(
   return $links.toArray().map((el) => {
     const $a = $(el).find('a');
     const rawHref = $a.attr('href') || '';
+    const url = withArticleKey(rawHref, articleKey);
 
     $a.attr('target', '');
     $a.attr('rel', '');
-    $a.attr('href', withArticleKey(rawHref, articleKey));
+    $a.attr('href', url);
 
-    return { url: withArticleKey(rawHref, articleKey), element: el };
+    return { url, element: el };
   });
 }
 
@@ -93,7 +94,7 @@ function initSeriesContent(p: VaultAdapter): void {
   if ($series.length === 0) return;
 
   // Keep only the first series element, remove duplicates
-  $series.last().remove();
+  $series.slice(1).remove();
 
   const $links = $series.first().find('.series-link');
   $links.css('display', 'block !important');
@@ -123,13 +124,6 @@ function initSeriesContent(p: VaultAdapter): void {
 
 function initSeriesBtnCss(_v: VaultAdapter): void {
   $('.series-control-btn.enable-series').css('opacity', '1');
-
-  // Reactive: re-apply when series mode activates
-  _v.subscribe((state) => {
-    if (state.isSeriesMode) {
-      $('.series-control-btn.enable-series').css('opacity', '1');
-    }
-  });
 }
 
 function initEnableSeries(p: VaultAdapter): void {

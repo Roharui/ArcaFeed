@@ -1,4 +1,5 @@
 import { StepRunner } from '@/core/step-runner';
+import { initArticlePrefetch } from '@/feature/article/prefetch';
 
 import {
   initLink,
@@ -40,6 +41,7 @@ class EventManager {
       [addVersionInfo],
       [initLink, initButton, initEvent, initSeriesContent, initUi],
       initSwiper,
+      initArticlePrefetch,
     ];
   }
 
@@ -92,15 +94,19 @@ class EventManager {
   }
 
   checkFilterModal(): Step[] {
-    return [[initCheckFilterModal, initLink, initCloseModal], initSwiperPage];
+    return [initCheckFilterModal, [initLink, initCloseModal], initSwiperPage];
   }
 
   checkUIModal(): Step[] {
-    return [[initCheckUIModal, initUi, initCloseModal]];
+    return [initCheckUIModal, initCloseModal];
   }
 
   checkSubscribeModal(): Step[] {
-    return [initCheckSubscribeModal, initCloseModalContent, initStartHomeSeries];
+    return [
+      initCheckSubscribeModal,
+      initCloseModalContent,
+      initStartHomeSeries,
+    ];
   }
 
   closeModal(): Step[] {

@@ -17,6 +17,8 @@ const SHUFFLE_MODE_KEY = 'arcaFeed:isShuffleMode';
 const CHANNEL_OR_ARTICLE_PAGE_REGEX = /^\/b\/[a-zA-Z0-9]+(\/\d+)?\/?$/;
 
 export class ConfigService {
+  private lastSavedState: Readonly<AppState> | undefined;
+
   constructor(private repo: StorageRepository) {}
 
   /**
@@ -50,19 +52,20 @@ export class ConfigService {
     const patch: Partial<AppState> = { articleKey };
 
     // Load article filter config
-    const filterConfigStr =
-      this.repo.getItem(ARTICLE_FILTER_CONFIG_GLOBAL_KEY) ||
-      this.repo.getItem(this.repo.scopedKey(articleKey, 'articleFilterConfig'));
-
-    patch.articleFilterConfig = filterConfigStr
-      ? (JSON.parse(filterConfigStr) as ArticleFilterConfigImpl)
-      : {};
+    patch.articleFilterConfig =
+      this.repo.getJSON<ArticleFilterConfigImpl>(
+        ARTICLE_FILTER_CONFIG_GLOBAL_KEY,
+      ) ??
+      this.repo.getJSON<ArticleFilterConfigImpl>(
+        this.repo.scopedKey(articleKey, 'articleFilterConfig'),
+      ) ??
+      {};
 
     // Load article list
-    const articleListStr = this.repo.getItem(
-      this.repo.scopedKey(articleKey, 'articleList'),
-    );
-    patch.articleList = articleListStr ? JSON.parse(articleListStr) : [];
+    patch.articleList =
+      this.repo.getJSON<string[]>(
+        this.repo.scopedKey(articleKey, 'articleList'),
+      ) ?? [];
 
     // Load series mode
     patch.isSeriesMode =
@@ -80,8 +83,7 @@ export class ConfigService {
     );
 
     // Load shuffle mode (global setting)
-    patch.isShuffleMode =
-      this.repo.getItem(SHUFFLE_MODE_KEY) === 'true';
+    patch.isShuffleMode = this.repo.getItem(SHUFFLE_MODE_KEY) === 'true';
 
     // Load UI settings (getJSON handles null / parse errors internally)
     const uiSettings = this.repo.getJSON<UISettings>(UI_SETTINGS_KEY);
@@ -100,30 +102,49 @@ export class ConfigService {
    */
   saveConfig(state: Readonly<AppState>): void {
     const { articleKey } = state;
+    const previous = this.lastSavedState;
+    const newSession = !previous || previous.articleKey !== articleKey;
 
     // Global settings — saved regardless of articleKey
-    this.repo.setJSON(UI_SETTINGS_KEY, state.uiSettings);
-    this.repo.setJSON(
-      ARTICLE_FILTER_CONFIG_GLOBAL_KEY,
-      state.articleFilterConfig,
-    );
-    this.repo.setItem(SHUFFLE_MODE_KEY, state.isShuffleMode.toString());
+    if (previous?.uiSettings !== state.uiSettings) {
+      this.repo.setJSON(UI_SETTINGS_KEY, state.uiSettings);
+    }
+    if (previous?.articleFilterConfig !== state.articleFilterConfig) {
+      this.repo.setJSON(
+        ARTICLE_FILTER_CONFIG_GLOBAL_KEY,
+        state.articleFilterConfig,
+      );
+    }
+    if (previous?.isShuffleMode !== state.isShuffleMode) {
+      this.repo.setItem(SHUFFLE_MODE_KEY, state.isShuffleMode.toString());
+    }
 
     // Per-articleKey scoped storage
-    this.repo.setJSON(
-      this.repo.scopedKey(articleKey, 'articleList'),
-      state.articleList,
-    );
-    this.repo.setItem(
-      this.repo.scopedKey(articleKey, 'seriesMode'),
-      state.isSeriesMode.toString(),
-    );
-    this.repo.setItem(
-      this.repo.scopedKey(articleKey, 'searchQuery'),
-      state.searchQuery,
-    );
-
-    this.repo.pruneArticleKeyCaches(articleKey);
+    if (articleKey) {
+      if (newSession || previous?.articleList !== state.articleList) {
+        this.repo.setJSON(
+          this.repo.scopedKey(articleKey, 'articleList'),
+          state.articleList,
+        );
+      }
+      if (newSession || previous?.isSeriesMode !== state.isSeriesMode) {
+        this.repo.setItem(
+          this.repo.scopedKey(articleKey, 'seriesMode'),
+          state.isSeriesMode.toString(),
+        );
+      }
+      if (newSession || previous?.searchQuery !== state.searchQuery) {
+        this.repo.setItem(
+          this.repo.scopedKey(articleKey, 'searchQuery'),
+          state.searchQuery,
+        );
+      }
+      if (newSession || previous?.activeIndex !== state.activeIndex) {
+        this.saveLastActiveIndex(articleKey, state.activeIndex);
+      }
+      if (newSession) this.repo.pruneArticleKeyCaches(articleKey);
+    }
+    this.lastSavedState = state;
   }
 
   /**

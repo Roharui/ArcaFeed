@@ -16,6 +16,7 @@
 - ⚙️ **UI 설정** — 스크롤바, 스포일러 블러, 게시글 목록 정보, 내비게이션 등 표시/숨김 토글
 
 > 현재 개발 중
+
 - 🏠 **홈 시리즈** — 선택한 여러 채널의 글을 하나의 피드로 탐색
 
 ## 설치
@@ -54,9 +55,11 @@ Node.js 22.13 이상과 npm 10.9 이상이 필요합니다.
 npm ci
 npm run dev        # 1회 개발 빌드
 npm run dev:watch  # 변경 감시
-npm run check      # 포맷, 린트, 타입, 테스트, 프로덕션 빌드
+npm run check      # 포맷, 린트, 타입, 프로덕션 빌드
+npm run test:performance  # 네트워크·저장·초기화 성능 회귀 검증
+npm run bench:performance # 재현 가능한 합성 벤치마크
 ```
 
-프로덕션 유저스크립트는 `dist/ArcaFeed.user.js`에 생성됩니다. 주요 변경
-내역은 [CHANGELOG.md](./CHANGELOG.md), 내부 구조와 유지보수 규칙은
-[PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md)를 참고하세요.
+프로덕션 유저스크립트는 `dist/ArcaFeed.user.js`에 생성됩니다. 내부 구조와
+유지보수 규칙은 [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md)를 참고하세요.
+성능 개선 내용과 측정 조건은 [docs/PERFORMANCE.md](./docs/PERFORMANCE.md)에 정리되어 있습니다.

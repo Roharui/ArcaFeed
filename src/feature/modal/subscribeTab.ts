@@ -3,7 +3,12 @@ import $ from 'jquery';
 import { eventBus } from '@/core';
 import { createArticleKey } from '@/utils/article-key';
 import { getArticleId } from '@/utils/regex';
-import { fetchChannelFirstPage } from '@/feature/article/fetch';
+import {
+  fetchChannelFirstPage,
+  showFetchLoader,
+  hideFetchLoader,
+} from '@/feature/article/fetch';
+import { mapConcurrent } from '@/utils/func';
 
 import type { VaultAdapter } from '@/vault';
 
@@ -65,12 +70,12 @@ function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
     $list.append(createSubscribeToggleRow(channel, !hiddenSet.has(channel.id)));
   }
 
-  $tab.find('#subscribe-check-btn').on('click', () =>
-    eventBus.emit('checkSubscribeModal'),
-  );
-  $tab.find('#subscribe-cancel-btn').on('click', () =>
-    eventBus.emit('closeModal'),
-  );
+  $tab
+    .find('#subscribe-check-btn')
+    .on('click', () => eventBus.emit('checkSubscribeModal'));
+  $tab
+    .find('#subscribe-cancel-btn')
+    .on('click', () => eventBus.emit('closeModal'));
 
   return $tab;
 }
@@ -95,25 +100,6 @@ function initCheckSubscribeModal(p: VaultAdapter): VaultAdapter {
   return p;
 }
 
-// ── Loading indicator ──────────────────────────────────
-
-function getLoader(): JQuery<HTMLElement> {
-  let $loader = $('#arcafeed-fetch-loader');
-  if (!$loader.length) {
-    $loader = $('<div id="arcafeed-fetch-loader" class="fetch-loader"></div>');
-    $('body').append($loader);
-  }
-  return $loader;
-}
-
-function showFetchLoader(): void {
-  getLoader().addClass('active');
-}
-
-function hideFetchLoader(): void {
-  getLoader().removeClass('active');
-}
-
 // ── Home Series ─────────────────────────────────────────
 
 async function initStartHomeSeries(p: VaultAdapter): Promise<VaultAdapter> {
@@ -134,13 +120,17 @@ async function initStartHomeSeries(p: VaultAdapter): Promise<VaultAdapter> {
     const articleKey = createArticleKey();
     const allArticles: { url: string; articleId: number }[] = [];
 
-    for (const channel of selectedChannels) {
+    const batches = await mapConcurrent(selectedChannels, async (channel) => {
       const channelFilter = p.articleFilterConfig[channel.id];
-      const articles = await fetchChannelFirstPage(channel.id, channelFilter);
+      return fetchChannelFirstPage(channel.id, channelFilter);
+    });
 
+    const seen = new Set<string>();
+    for (const articles of batches) {
       for (const url of articles) {
         const articleIdNum = parseInt(getArticleId(url));
-        if (!isNaN(articleIdNum)) {
+        if (!isNaN(articleIdNum) && !seen.has(url)) {
+          seen.add(url);
           allArticles.push({ url, articleId: articleIdNum });
         }
       }
@@ -149,7 +139,7 @@ async function initStartHomeSeries(p: VaultAdapter): Promise<VaultAdapter> {
     allArticles.sort((a, b) => b.articleId - a.articleId);
 
     p.articleKey = articleKey;
-    p.href.articleKey = articleKey;
+    p.href = { ...p.href, articleKey };
     p.articleList = allArticles.map((a) => a.url);
     p.isSeriesMode = true;
     p.activeIndex = 0;
@@ -169,4 +159,8 @@ async function initStartHomeSeries(p: VaultAdapter): Promise<VaultAdapter> {
   return p;
 }
 
-export { createSubscribeSettingModal, initCheckSubscribeModal, initStartHomeSeries };
+export {
+  createSubscribeSettingModal,
+  initCheckSubscribeModal,
+  initStartHomeSeries,
+};

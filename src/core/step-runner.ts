@@ -1,6 +1,5 @@
 import type { VaultAdapter } from '@/vault';
 import type { PromiseFunc, PromiseFuncResult } from '@/types';
-import { isPromiseFuncResult } from '@/utils';
 
 /**
  * A Step is either a single function (run sequentially) or an array
@@ -27,19 +26,9 @@ export class StepRunner {
    */
   async run(p: VaultAdapter, steps: Step[]): Promise<void> {
     for (const step of steps) {
-      const fns = Array.isArray(step) ? step : [step];
-
-      const results: PromiseFuncResult[] = await Promise.all(
-        fns.map((fn) => {
-          try {
-            return fn(p);
-          } catch (err) {
-            console.error(`[StepRunner] Error in ${fn.name || 'anonymous'}:`, err);
-            if (process.env.NODE_ENV === 'development') throw err;
-            return undefined;
-          }
-        }),
-      );
+      const results: PromiseFuncResult[] = Array.isArray(step)
+        ? await Promise.all(step.map((fn) => this.invoke(p, fn)))
+        : [await this.invoke(p, step)];
 
       // Process dynamic follow-ups from results
       const followUps = this.collectFollowUps(results);
@@ -56,6 +45,16 @@ export class StepRunner {
     p.flushSave();
   }
 
+  private invoke(p: VaultAdapter, fn: PromiseFunc): ReturnType<PromiseFunc> {
+    try {
+      return fn(p);
+    } catch (error) {
+      console.error(`[StepRunner] Error in ${fn.name || 'anonymous'}:`, error);
+      if (process.env.NODE_ENV === 'development') throw error;
+      return undefined;
+    }
+  }
+
   /**
    * Extract follow-up functions from step results.
    * Maintains compatibility with existing functions that return
@@ -64,17 +63,13 @@ export class StepRunner {
   private collectFollowUps(results: PromiseFuncResult[]): PromiseFunc[] {
     const followUps: PromiseFunc[] = [];
 
-    for (const r of results.flat()) {
-      const resultType = isPromiseFuncResult(r);
-      switch (resultType) {
-        case 'Function':
-          followUps.push(r as PromiseFunc);
-          break;
-        case 'Param':
-          // State updates are handled by VaultAdapter setters
-          break;
-        case 'void':
-          break;
+    for (const result of results) {
+      if (typeof result === 'function') {
+        followUps.push(result);
+      } else if (Array.isArray(result)) {
+        for (const item of result) {
+          if (typeof item === 'function') followUps.push(item);
+        }
       }
     }
 

@@ -1,36 +1,43 @@
-import $ from 'jquery';
-
 import { eventBus } from '@/core';
 
 import type { VaultAdapter } from '@/vault';
 
-function initDisableInputEvent(_: VaultAdapter): void {
-  $('input, textarea').on('keydown', function (e) {
-    e.stopPropagation();
-  });
-}
-
-function initChannelEvent(_: VaultAdapter): void {
-  $(document).on('keydown', (e) => {
-    if (e.key === 'ArrowRight') eventBus.emit('toNextLinkForce');
-  });
-}
-
-function initArticleEvent(_: VaultAdapter): void {
-  $(document).on('keydown', (e) => {
-    if (e.key === 'ArrowRight') eventBus.emit('toNextPage');
-    else if (e.key === 'ArrowLeft') eventBus.emit('toPrevPage');
-  });
-}
-
-const MODE_KEY_HANDLERS: Record<string, (p: VaultAdapter) => void> = {
-  CHANNEL: initChannelEvent,
-  ARTICLE: initArticleEvent,
+const MODE_KEY_EVENTS: Record<string, Record<string, string>> = {
+  CHANNEL: { ArrowRight: 'toNextLinkForce' },
+  ARTICLE: { ArrowRight: 'toNextPage', ArrowLeft: 'toPrevPage' },
 };
 
+const initializedVaults = new WeakSet<VaultAdapter>();
+
 const initEvent = (p: VaultAdapter) => {
-  initDisableInputEvent(p);
-  MODE_KEY_HANDLERS[p.href.mode]?.(p);
+  const events = MODE_KEY_EVENTS[p.href.mode];
+  if (!events || initializedVaults.has(p)) return;
+  initializedVaults.add(p);
+  document.addEventListener('keydown', (event) => {
+    if (
+      event.defaultPrevented ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey
+    )
+      return;
+    const target = event.target;
+    if (
+      target instanceof HTMLElement &&
+      (target.isContentEditable || target.closest('input, textarea, select'))
+    )
+      return;
+    const nextEvent = events[event.key];
+    if (!nextEvent) return;
+    if (p.isCurrentMode('CHANNEL') && !p.isNextPageActive()) return;
+    if (
+      p.isCurrentMode('ARTICLE') &&
+      (!p.swiper?.enabled || p.swiper.animating)
+    )
+      return;
+    event.preventDefault();
+    void eventBus.emit(nextEvent);
+  });
 };
 
 export { initEvent };

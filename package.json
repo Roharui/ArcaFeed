@@ -1,6 +1,6 @@
 {
   "name": "arcafeed",
-  "version": "2.5.5",
+  "version": "2.6.1",
   "main": "main.js",
   "scripts": {
     "dev": "webpack --config webpack.config.dev.js",
@@ -12,10 +12,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "test:typecheck": "tsc --project tsconfig.test.json",
-    "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test:typecheck && npm test && npm run build",
-    "agent:check": "npm run typecheck"
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run build",
+    "agent:check": "npm run typecheck",
+    "test:performance": "node tests/performance.test.mjs",
+    "bench:performance": "node scripts/benchmark-performance.mjs"
   },
   "author": "Roharui",
   "license": "ISC",

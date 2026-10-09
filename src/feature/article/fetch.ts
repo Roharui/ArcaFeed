@@ -4,8 +4,7 @@ import {
   buildFilterPredicate,
   extractArticleHref,
   extractArticleRows,
-  filterLink,
-} from '@/feature';
+} from '@/feature/filter';
 import { fetchUrl } from '@/utils/fetch';
 import { shuffle } from '@/utils/func';
 import { appendSearchParam } from '@/utils/url';
@@ -25,12 +24,15 @@ function getLoader(): JQuery<HTMLElement> {
   return $loader;
 }
 
+let activeLoads = 0;
+
 function showFetchLoader(): void {
-  getLoader().addClass('active');
+  if (activeLoads++ === 0) getLoader().addClass('active');
 }
 
 function hideFetchLoader(): void {
-  getLoader().removeClass('active');
+  activeLoads = Math.max(0, activeLoads - 1);
+  if (activeLoads === 0) getLoader().removeClass('active');
 }
 
 // ── Helpers ────────────────────────────────────────────
@@ -51,7 +53,12 @@ async function fetchAndParse(
   url: string,
 ): Promise<{ $html: JQuery<HTMLElement> }> {
   const res = await fetchUrl(url);
-  return { $html: $(res.responseText) };
+  return {
+    $html: $(
+      new DOMParser().parseFromString(res.responseText, 'text/html')
+        .documentElement,
+    ),
+  };
 }
 
 function extractNextPageUrl(
@@ -90,31 +97,25 @@ async function* fetchArticlePages(
   let nextUrl: string | null = buildPageUrl(p, articleId);
 
   const channelFilter = p.articleFilterConfig[p.href.channelId];
+  const existingUrls = new Set(p.articleList);
+  const visitedPages = new Set<string>();
   if (nextUrl) {
     nextUrl = withBestMode(nextUrl, channelFilter);
   }
 
-  for (let page = 0; page <= MAX_PAGES && nextUrl; page++) {
+  for (let page = 0; page < MAX_PAGES && nextUrl; page++) {
     const url = normalizeUrl(nextUrl);
-
-    console.log(`Fetching article page: ${url}`);
+    if (visitedPages.has(url)) return;
+    visitedPages.add(url);
     const { $html } = await fetchAndParse(url);
 
-    const newLinks = filterLink(p, false, $html).filter(
-      (link) => !p.articleList.includes(link),
-    );
+    const newLinks = extractLinks($html, channelFilter, existingUrls);
+    for (const link of newLinks) existingUrls.add(link);
 
     yield newLinks;
 
     nextUrl = extractNextPageUrl($html, basePath);
-    if (!nextUrl) {
-      console.log('NO ARTICLE PAGE LINK FOUND');
-      return;
-    }
-
-    if (newLinks.length === 0) {
-      console.log(`No articles found, trying next page: ${nextUrl}`);
-    }
+    if (!nextUrl) return;
   }
 }
 
@@ -129,11 +130,14 @@ async function fetchFirstBatch(
   articleId: string,
 ): Promise<void> {
   showFetchLoader();
+  const articleKey = p.articleKey;
+  const filterConfig = p.articleFilterConfig;
   try {
     for await (const links of fetchArticlePages(p, articleId)) {
+      if (p.articleKey !== articleKey || p.articleFilterConfig !== filterConfig)
+        return;
       if (links.length > 0) {
-        console.log(`Fetching Complete`);
-        p.articleList.push(...links);
+        p.articleList = [...p.articleList, ...links];
         return;
       }
     }
@@ -153,13 +157,15 @@ async function fetchAllBatches(
 ): Promise<void> {
   showFetchLoader();
   try {
+    const articles = [...p.articleList];
     for await (const links of fetchArticlePages(p, articleId)) {
-      p.articleList.push(...links);
+      articles.push(...links);
     }
 
     if (p.isShuffleMode) {
-      shuffle(p.articleList);
+      shuffle(articles);
     }
+    p.articleList = articles;
 
     if (p.isSeriesMode) {
       openScrapSeriesArticle(p);
@@ -208,15 +214,18 @@ export function extractLinks(
   existingUrls?: Set<string>,
 ): string[] {
   const $rows = extractArticleRows($html);
-  const predicate = filter
-    ? buildFilterPredicate(filter)
-    : () => true;
+  const predicate = filter ? buildFilterPredicate(filter) : () => true;
 
-  return $rows
-    .toArray()
-    .filter((ele) => predicate(ele))
-    .map((ele) => extractArticleHref($(ele)) ?? '')
-    .filter((href) => href.length > 0 && !existingUrls?.has(href));
+  const seen = new Set<string>();
+  const links: string[] = [];
+  $rows.each((_, ele) => {
+    if (!predicate(ele)) return;
+    const href = extractArticleHref($(ele));
+    if (!href || existingUrls?.has(href) || seen.has(href)) return;
+    seen.add(href);
+    links.push(href);
+  });
+  return links;
 }
 
 // ── Standard channel fetch (default /b/{channelId} pattern) ──
@@ -226,10 +235,7 @@ async function fetchChannelFirstPage(
   filter?: ArticleFilterImpl,
 ): Promise<string[]> {
   const url = withBestMode(channelBasePath(channelId), filter);
-  console.log(`Fetching channel first page: ${url}`);
-
-  const res = await fetchUrl(url);
-  const $html = $(res.responseText);
+  const { $html } = await fetchAndParse(url);
 
   return extractLinks($html, filter);
 }
@@ -242,15 +248,18 @@ async function fetchChannelArticles(
   const basePath = channelBasePath(channelId);
   let nextUrl: string | null = withBestMode(basePath, filter);
   const results: string[] = [];
+  const seen = new Set(existingUrls);
+  const visitedPages = new Set<string>();
 
-  for (let page = 0; page <= MAX_PAGES && nextUrl; page++) {
-    console.log(`Fetching channel page: ${nextUrl}`);
+  for (let page = 0; page < MAX_PAGES && nextUrl; page++) {
+    const url = normalizeUrl(nextUrl);
+    if (visitedPages.has(url)) break;
+    visitedPages.add(url);
+    const { $html } = await fetchAndParse(url);
 
-    const res = await fetchUrl(nextUrl);
-    const $html = $(res.responseText);
-
-    const links = extractLinks($html, filter, existingUrls);
+    const links = extractLinks($html, filter, seen);
     results.push(...links);
+    for (const link of links) seen.add(link);
 
     nextUrl = extractNextPageUrl($html, basePath);
   }
@@ -265,14 +274,18 @@ async function fetchChannelArticlesBefore(
   existingUrls?: Set<string>,
 ): Promise<string[]> {
   const basePath = channelBasePath(channelId);
-  let nextUrl: string | null = withBestMode(`${basePath}/${beforeArticleId}`, filter);
+  let nextUrl: string | null = withBestMode(
+    `${basePath}/${beforeArticleId}`,
+    filter,
+  );
   const results: string[] = [];
+  const visitedPages = new Set<string>();
 
-  for (let page = 0; page <= MAX_PAGES && nextUrl; page++) {
-    console.log(`Fetching article page: ${nextUrl}`);
-
-    const res = await fetchUrl(nextUrl);
-    const $html = $(res.responseText);
+  for (let page = 0; page < MAX_PAGES && nextUrl; page++) {
+    const url = normalizeUrl(nextUrl);
+    if (visitedPages.has(url)) break;
+    visitedPages.add(url);
+    const { $html } = await fetchAndParse(url);
 
     const links = extractLinks($html, filter, existingUrls);
     results.push(...links);

@@ -28,6 +28,23 @@ function installResizeHandle(p: VaultAdapter): void {
   // Shared drag state
   let dragging: 'left' | 'right' | null = null;
   let currentWidth = 0;
+  let pointerX = 0;
+  let resizeFrame: number | null = null;
+
+  function applyResize(): void {
+    resizeFrame = null;
+    if (!dragging) return;
+    const rect = $wrapper[0]!.getBoundingClientRect();
+    const newWidth =
+      dragging === 'right' ? pointerX - rect.left : rect.right - pointerX;
+    const width = Math.min(
+      MAX_CONTENT_WIDTH,
+      Math.max(MIN_CONTENT_WIDTH, Math.round(newWidth)),
+    );
+    if (width === currentWidth) return;
+    currentWidth = width;
+    $wrapper[0]!.style.setProperty('--content-max-width', `${currentWidth}px`);
+  }
 
   function onMouseDown(side: 'left' | 'right') {
     return (e: JQuery.MouseDownEvent) => {
@@ -37,6 +54,7 @@ function installResizeHandle(p: VaultAdapter): void {
 
       dragging = side;
       currentWidth = p.uiSettings.contentWidth;
+      pointerX = e.clientX;
       $(`.arca-resize-handle-${side}`).addClass('dragging');
     };
   }
@@ -44,24 +62,16 @@ function installResizeHandle(p: VaultAdapter): void {
   $(document).on('mousemove.arcafeed-resize', (e) => {
     if (!dragging) return;
 
-    const rect = $wrapper[0]!.getBoundingClientRect();
-
-    // Width = distance from cursor to opposite edge of wrapper
-    const newWidth =
-      dragging === 'right'
-        ? e.clientX - rect.left // right handle → distance from left edge
-        : rect.right - e.clientX; // left handle  → distance from right edge
-
-    currentWidth = Math.min(
-      MAX_CONTENT_WIDTH,
-      Math.max(MIN_CONTENT_WIDTH, Math.round(newWidth)),
-    );
-
-    $wrapper.css('--content-max-width', `${currentWidth}px`);
+    pointerX = e.clientX;
+    if (resizeFrame === null) resizeFrame = requestAnimationFrame(applyResize);
   });
 
   $(document).on('mouseup.arcafeed-resize', () => {
     if (!dragging) return;
+    if (resizeFrame !== null) {
+      cancelAnimationFrame(resizeFrame);
+      applyResize();
+    }
 
     $(`.arca-resize-handle-${dragging}`).removeClass('dragging');
     dragging = null;
@@ -126,9 +136,13 @@ const MODE_UI_INIT: Record<string, (p: VaultAdapter) => void> = {
   ARTICLE: initArticleModeUI,
 };
 
+const initializedVaults = new WeakSet<VaultAdapter>();
+
 // ── Init ────────────────────────────────────────────────
 
 function initUi(p: VaultAdapter): void {
+  if (initializedVaults.has(p)) return;
+  initializedVaults.add(p);
   $('body').addClass('arcafeed');
 
   // Wrap navbar for styling (stays in .root-container outside the swiper)
@@ -154,8 +168,20 @@ function initUi(p: VaultAdapter): void {
   MODE_UI_INIT[p.href.mode]?.(p);
 
   // Reactive: subscribe to state changes to re-apply UI settings
+  let lastSettings = p.uiSettings;
+  let lastSeriesMode = p.isSeriesMode;
   p.subscribe((state) => {
-    applyUISettings(state.uiSettings);
+    if (state.uiSettings !== lastSettings) {
+      lastSettings = state.uiSettings;
+      applyUISettings(state.uiSettings);
+    }
+    if (state.isSeriesMode !== lastSeriesMode) {
+      lastSeriesMode = state.isSeriesMode;
+      $('body').toggleClass(
+        'hide-included-article-list hide-btns-board',
+        lastSeriesMode,
+      );
+    }
   });
 }
 

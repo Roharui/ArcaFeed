@@ -13,6 +13,12 @@ export default function (_env, _args) {
 
   return {
     mode: 'production',
+    cache: {
+      type: 'filesystem',
+      buildDependencies: {
+        config: [__filename, path.resolve(__dirname, 'package.json')],
+      },
+    },
     entry: './src/index.ts',
 
     output: {

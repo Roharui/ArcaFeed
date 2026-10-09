@@ -55,7 +55,11 @@ export function createInitialState(): AppState {
     isShuffleMode: false,
     searchQuery: '',
     lastActiveIndex: -1,
-    uiSettings: { ...DEFAULT_UI_SETTINGS },
+    uiSettings: {
+      ...DEFAULT_UI_SETTINGS,
+      hiddenChannels: [],
+      homeSeriesChannels: [],
+    },
   };
 }
 
@@ -83,11 +87,16 @@ export class Store {
   }
 
   setState(patch: Partial<AppState>): void {
+    const changed = (Object.keys(patch) as (keyof AppState)[]).some(
+      (key) => !Object.is(this.state[key], patch[key]),
+    );
+    if (!changed) return;
     this.state = { ...this.state, ...patch };
     this.notify();
   }
 
   replaceState(newState: AppState): void {
+    if (newState === this.state) return;
     this.state = newState;
     this.notify();
   }

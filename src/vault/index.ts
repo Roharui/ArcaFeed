@@ -47,22 +47,21 @@ export class VaultAdapter {
     }
 
     // Auto-persist state changes with debounce
-    this.unsubscribeAutoSave = this.store.subscribe((state) => {
-      this.scheduleSave(state);
+    this.unsubscribeAutoSave = this.store.subscribe(() => {
+      this.scheduleSave();
     });
   }
 
   /**
    * Debounced auto-save: batches rapid state changes into a single localStorage write.
    */
-  private scheduleSave(state: AppState): void {
+  private scheduleSave(): void {
     if (this.saveDebounceTimer) {
       clearTimeout(this.saveDebounceTimer);
     }
 
     this.saveDebounceTimer = setTimeout(() => {
-      this.config.saveConfig(state);
-      this.config.saveLastActiveIndex(state.articleKey, state.activeIndex);
+      this.config.saveConfig(this.store.getState());
       this.saveDebounceTimer = null;
     }, 300);
   }

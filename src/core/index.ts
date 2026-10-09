@@ -74,12 +74,11 @@ class ArcaFeed {
 
     for (const [eventName, getSteps] of Object.entries(stepGetters)) {
       eventBus.on(eventName, async () => {
-        const steps = getSteps();
-
         if (this.isRunning) return;
         this.isRunning = true;
 
         try {
+          const steps = getSteps();
           await this.events.runner.run(this.vault, steps);
         } catch (err) {
           console.error(`[ArcaFeed] Error running event "${eventName}":`, err);

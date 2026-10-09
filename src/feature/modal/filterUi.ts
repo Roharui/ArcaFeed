@@ -153,10 +153,7 @@ function initCheckFilterModal(p: VaultAdapter) {
 
   const tab = $('.ele-category:checked')
     .toArray()
-    .reduce((prev: string[], cur: HTMLElement): string[] => {
-      const r = checkNotNull($(cur).val()) as string;
-      return [...prev, r];
-    }, []);
+    .map((element) => checkNotNull($(element).val()) as string);
 
   const title = $('label.exclude-title-tag')
     .toArray()
@@ -167,7 +164,9 @@ function initCheckFilterModal(p: VaultAdapter) {
     title,
     disableSwiper: false,
     onlyBest: $('#filter-best-checkbox').prop('checked') as boolean,
-    channelName: $("a.title").attr("data-channel-name")?.replace(" 채널", "") as string,
+    channelName: $('a.title')
+      .attr('data-channel-name')
+      ?.replace(' 채널', '') as string,
   };
 
   p.articleFilterConfig = {

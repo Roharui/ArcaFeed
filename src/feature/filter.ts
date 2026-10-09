@@ -1,7 +1,5 @@
 import $ from 'jquery';
 
-import { getArticleId } from '@/utils';
-
 import type { VaultAdapter } from '@/vault';
 import type { ArticleFilterImpl } from '@/types';
 
@@ -83,12 +81,24 @@ function buildFilterPredicate(
   const allowedTabs = new Set(expandTabCategories(tabFilter));
 
   return (ele: HTMLElement) => {
-    const $ele = $(ele);
-    const tabOk = allowedTabs.has(getTabTypeText($ele));
-    const titleOk = titleFilter.every(
-      (keyword) => !$ele.find('.title').text().trim().includes(keyword),
-    );
-    return tabOk && titleOk;
+    if (allowedTabs.size > 0) {
+      const badgeText = ele
+        .querySelector('.text-bg-success')
+        ?.textContent?.trim();
+      const tab =
+        badgeText ||
+        (ele.querySelector('.media-icon.bi-images')
+          ? NO_TAB_CATEGORY_WITH_IMAGE
+          : NO_TAB_CATEGORY_WITHOUT_IMAGE);
+      if (!allowedTabs.has(tab)) return false;
+    }
+    if (titleFilter.length === 0) return true;
+    const title =
+      (ele.matches('.title')
+        ? ele
+        : ele.querySelector('.title')
+      )?.textContent?.trim() ?? '';
+    return !titleFilter.some((keyword) => title.includes(keyword));
   };
 }
 
@@ -113,22 +123,20 @@ function filterLink(
   applyCss: boolean = false,
   $html?: JQuery<HTMLElement>,
 ): string[] {
-  console.log('Filtering links based on article list and filter config...');
-
   const $scope = $html ?? $('.root-container');
   const $rows = extractArticleRows($scope);
 
-  injectArticleKeys($rows, p.href.articleKey);
+  if (applyCss) injectArticleKeys($rows, p.href.articleKey);
 
   const filter = p.articleFilterConfig[p.href.channelId] || {
     tab: [],
     title: [],
     disableSwiper: false,
     onlyBest: false,
-    channelName: ""
+    channelName: '',
   };
   const predicate = buildFilterPredicate(filter);
-  const existingIds = new Set(p.articleList);
+  const existingUrls = new Set(p.articleList);
 
   const result: string[] = [];
 
@@ -143,7 +151,8 @@ function filterLink(
     if (!allowed) return;
 
     const href = extractArticleHref($ele);
-    if (href && !existingIds.has(getArticleId(href))) {
+    if (href && !existingUrls.has(href)) {
+      existingUrls.add(href);
       result.push(href);
     }
   });

@@ -5,9 +5,10 @@ import type { VaultAdapter } from '@/vault';
 
 // For Event
 function nextLinkForce(p: VaultAdapter) {
-  window.location.replace(
-    getArrayItem(p.articleList, p.activeIndex + 1) + p.searchQuery,
-  );
+  const url = getArrayItem(p.articleList, p.activeIndex + 1);
+  p.activeIndex += 1;
+  p.flushSave();
+  window.location.replace(url + p.searchQuery);
 }
 
 // For Event
@@ -20,7 +21,8 @@ function toLink(mode: PageMode): PromiseFunc {
 
     const nextIdx = idx + (mode === 'NEXT' ? 1 : -1);
     const url = getArrayItem(list, nextIdx);
-
+    p.activeIndex = nextIdx;
+    p.flushSave();
     window.location.replace(`${url}${p.searchQuery}`);
   };
 }

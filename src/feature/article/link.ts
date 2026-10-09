@@ -3,11 +3,12 @@ import {
   fetchAllBatches,
   fetchChannelArticlesBefore,
   fetchChannelFirstPage,
-  filterLink,
-  parseSearchQuery,
   showFetchLoader,
   hideFetchLoader,
-} from '@/feature';
+} from './fetch';
+import { filterLink } from '@/feature/filter';
+import { parseSearchQuery } from '@/feature/search';
+import { mapConcurrent } from '@/utils/func';
 import { createArticleKey } from '@/utils/article-key';
 import { extractChannelId, getArticleId } from '@/utils/regex';
 import { appendSearchParam } from '@/utils/url';
@@ -18,7 +19,15 @@ import type { VaultAdapter } from '@/vault';
 
 async function initArticleLink(p: VaultAdapter): Promise<void> {
   parseSearchQuery(p);
-  filterLink(p, true);
+  const links = filterLink(p, true);
+  if (
+    !p.isSeriesMode &&
+    p.articleList.length === 0 &&
+    links.length > 0 &&
+    !p.articleFilterConfig[p.href.channelId]?.onlyBest
+  ) {
+    p.articleList = links;
+  }
   await activateArticleLink(p, p.href.articleId);
 }
 
@@ -29,14 +38,14 @@ async function initChannelLink(p: VaultAdapter): Promise<void> {
   const channelFilter = p.articleFilterConfig[p.href.channelId];
 
   if (channelFilter?.onlyBest) {
-    await fetchFirstBatch(p, p.href.articleId);
+    startBackgroundLoad(p, () => fetchFirstBatch(p, p.href.articleId));
     return;
   }
 
   const newLinks = filterLink(p, true);
   p.articleList = newLinks.length > 0 ? newLinks : [];
   if (newLinks.length === 0) {
-    await fetchFirstBatch(p, p.href.articleId);
+    startBackgroundLoad(p, () => fetchFirstBatch(p, p.href.articleId));
   }
 }
 
@@ -66,30 +75,65 @@ async function activateArticleLink(
   p: VaultAdapter,
   articleId: string,
 ): Promise<void> {
+  const currentPath = `/b/${p.href.channelId}/${articleId}`;
+  const findCurrentIndex = () => p.articleList.indexOf(currentPath);
+  p.activeIndex = findCurrentIndex();
   if (p.articleList.length === 0) {
-    await fetchFirstBatch(p, articleId);
-    p.activeIndex = p.articleList.findIndex((link) => link.includes(articleId));
-    return;
-  }
-
-  p.activeIndex = p.articleList.findIndex((link) => link.includes(articleId));
-
-  console.log(`Current Article Id: ${articleId}`);
-  console.log(`Current Article Index: ${p.activeIndex}`);
-
-  if (p.activeIndex === -1) {
-    await fetchFirstBatch(p, articleId);
-    p.activeIndex = p.articleList.findIndex((link) => link.includes(articleId));
+    startBackgroundLoad(p, async () => {
+      await fetchFirstBatch(p, articleId);
+      p.activeIndex = findCurrentIndex();
+    });
     return;
   }
 
   // Pre-fetch next page when nearing the end of the list
   const needsMoreArticles = p.articleList.length - p.activeIndex <= 3;
-  if (needsMoreArticles && !p.isSeriesMode) {
-    await fetchFirstBatch(p, articleId);
-  } else if (needsMoreArticles && p.isSeriesMode) {
-    await loadMoreHomeSeriesArticles(p);
+  if (needsMoreArticles) {
+    const loadMore = () =>
+      p.isSeriesMode
+        ? loadMoreHomeSeriesArticles(p)
+        : fetchFirstBatch(p, articleId);
+    // Navigation is unlocked by the Swiper subscription when links arrive.
+    startBackgroundLoad(p, loadMore);
   }
+}
+
+const backgroundLoads = new WeakMap<
+  VaultAdapter,
+  {
+    articleKey: string;
+    filterConfig: VaultAdapter['articleFilterConfig'];
+    request: Promise<void>;
+  }
+>();
+
+function startBackgroundLoad(p: VaultAdapter, load: () => Promise<void>): void {
+  void getArticleLoad(p, load).catch((error) => {
+    console.error('[ArcaFeed] Background article load failed:', error);
+  });
+}
+
+function getArticleLoad(
+  p: VaultAdapter,
+  load: () => Promise<void>,
+): Promise<void> {
+  const pending = backgroundLoads.get(p);
+  if (
+    pending?.articleKey === p.articleKey &&
+    pending.filterConfig === p.articleFilterConfig
+  ) {
+    return pending.request;
+  }
+  const request = load().finally(() => {
+    if (backgroundLoads.get(p)?.request === request) backgroundLoads.delete(p);
+    p.flushSave();
+  });
+  backgroundLoads.set(p, {
+    articleKey: p.articleKey,
+    filterConfig: p.articleFilterConfig,
+    request,
+  });
+  return request;
 }
 
 // ── Scrap Series ───────────────────────────────────────
@@ -98,7 +142,7 @@ async function initEnableScrapSeries(p: VaultAdapter): Promise<void> {
   if (!p.articleKey) {
     const newKey = createArticleKey();
     p.articleKey = newKey;
-    p.href.articleKey = newKey;
+    p.href = { ...p.href, articleKey: newKey };
   }
 
   parseSearchQuery(p);
@@ -116,58 +160,55 @@ async function loadMoreHomeSeriesArticles(p: VaultAdapter): Promise<void> {
 
   const channelCounts = new Map<string, { minId: number; count: number }>();
 
-  for (const url of p.articleList) {
+  for (const [index, url] of p.articleList.entries()) {
     const chId = extractChannelId(url);
     const artId = parseInt(getArticleId(url));
     if (!chId || isNaN(artId)) continue;
 
     const entry = channelCounts.get(chId);
     if (!entry) {
-      channelCounts.set(chId, { minId: artId, count: 1 });
+      channelCounts.set(chId, {
+        minId: artId,
+        count: index > p.activeIndex ? 1 : 0,
+      });
     } else {
       if (artId < entry.minId) entry.minId = artId;
-      entry.count++;
+      if (index > p.activeIndex) entry.count++;
     }
   }
 
-  for (const channelId of homeSeriesChannels) {
-    const entry = channelCounts.get(channelId);
-    if (!entry || entry.count <= 3) {
-      const minId = entry?.minId ?? 0;
-      await fetchMoreFromChannel(p, channelId, minId);
-    }
-  }
-}
-
-async function fetchMoreFromChannel(
-  p: VaultAdapter,
-  channelId: string,
-  afterId: number,
-): Promise<void> {
-  const channelFilter = p.articleFilterConfig[channelId];
+  const channels = [...new Set(homeSeriesChannels)].filter(
+    (channelId) => (channelCounts.get(channelId)?.count ?? 0) <= 3,
+  );
+  if (channels.length === 0) return;
   const existingUrls = new Set(p.articleList);
+  const articleKey = p.articleKey;
+  const filterConfig = p.articleFilterConfig;
 
   showFetchLoader();
   try {
-    const articles = afterId > 0
-      ? await fetchChannelArticlesBefore(channelId, afterId, channelFilter, existingUrls)
-      : await fetchChannelFirstPage(channelId, channelFilter);
-
-    if (articles.length === 0) return;
-
-    const combined = [
-      ...p.articleList.map((url) => ({
-        url,
-        articleId: parseInt(getArticleId(url)) || 0,
-      })),
-      ...articles.map((url) => ({
-        url,
-        articleId: parseInt(getArticleId(url)) || 0,
-      })),
-    ];
-    combined.sort((a, b) => b.articleId - a.articleId);
-    p.articleList = combined.map((a) => a.url);
-    p.flushSave();
+    const batches = await mapConcurrent(channels, async (channelId) => {
+      const minId = channelCounts.get(channelId)?.minId ?? 0;
+      const filter = filterConfig[channelId];
+      return minId > 0
+        ? fetchChannelArticlesBefore(channelId, minId, filter, existingUrls)
+        : fetchChannelFirstPage(channelId, filter);
+    });
+    if (p.articleKey !== articleKey || p.articleFilterConfig !== filterConfig)
+      return;
+    const seen = new Set(p.articleList);
+    const additions = batches.flat().filter((url) => {
+      if (seen.has(url)) return false;
+      seen.add(url);
+      return true;
+    });
+    if (additions.length === 0) return;
+    // Preserve the visited prefix and the current index when channels are merged.
+    const prefix = p.articleList.slice(0, p.activeIndex + 1);
+    const tail = [...p.articleList.slice(p.activeIndex + 1), ...additions]
+      .map((url) => ({ url, articleId: Number(getArticleId(url)) }))
+      .sort((a, b) => b.articleId - a.articleId);
+    p.articleList = [...prefix, ...tail.map((article) => article.url)];
   } finally {
     hideFetchLoader();
   }
