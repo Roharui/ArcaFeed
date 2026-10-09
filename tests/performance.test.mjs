@@ -429,7 +429,7 @@ test('Swiper is reused and background list changes unlock navigation', () => {
     mocks: {
       jquery: {},
       swiper: { default: FakeSwiper },
-      '@/core': { eventBus: {} },
+      '@/core/app-events': { eventBus: {} },
     },
   })('src/feature/swiper/swiper.ts');
   initSwiperPage(p);

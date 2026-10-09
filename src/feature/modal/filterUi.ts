@@ -2,7 +2,7 @@ import $ from 'jquery';
 
 import '@css/filter.css';
 
-import { eventBus } from '@/core';
+import { eventBus } from '@/core/app-events';
 import { NO_TAB_CATEGORIES, expandTabCategories } from '@/feature/filter';
 import { checkNotNull } from '@/utils';
 
@@ -169,11 +169,13 @@ function initCheckFilterModal(p: VaultAdapter) {
       ?.replace(' 채널', '') as string,
   };
 
-  p.articleFilterConfig = {
-    ...p.articleFilterConfig,
-    [channelId]: pageFilter,
-  };
-  p.articleList = p.articleList.slice(0, p.activeIndex + 1);
+  p.updateState({
+    articleFilterConfig: {
+      ...p.articleFilterConfig,
+      [channelId]: pageFilter,
+    },
+    articleList: p.articleList.slice(0, p.activeIndex + 1),
+  });
 
   return p;
 }

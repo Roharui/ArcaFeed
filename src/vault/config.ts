@@ -6,9 +6,13 @@
 import { StorageRepository } from './repository';
 import { createArticleKey } from '@/utils/article-key';
 import { appendSearchParam } from '@/utils/url';
+import {
+  normalizeArticles,
+  normalizeFilters,
+  normalizeUISettings,
+} from './config-schema';
 
 import type { AppState } from '@/vault/store';
-import type { ArticleFilterConfigImpl, UISettings } from '@/types';
 
 const ARTICLE_FILTER_CONFIG_GLOBAL_KEY = 'arcaFeed:articleFilterConfig';
 const UI_SETTINGS_KEY = 'arcaFeed:uiSettings';
@@ -52,20 +56,21 @@ export class ConfigService {
     const patch: Partial<AppState> = { articleKey };
 
     // Load article filter config
-    patch.articleFilterConfig =
-      this.repo.getJSON<ArticleFilterConfigImpl>(
-        ARTICLE_FILTER_CONFIG_GLOBAL_KEY,
-      ) ??
-      this.repo.getJSON<ArticleFilterConfigImpl>(
-        this.repo.scopedKey(articleKey, 'articleFilterConfig'),
-      ) ??
-      {};
+    patch.articleFilterConfig = normalizeFilters(
+      this.repo.getJSON<unknown>(ARTICLE_FILTER_CONFIG_GLOBAL_KEY) ??
+        this.repo.getJSON<unknown>(
+          this.repo.scopedKey(articleKey, 'articleFilterConfig'),
+        ) ??
+        {},
+    );
 
     // Load article list
-    patch.articleList =
-      this.repo.getJSON<string[]>(
+    patch.articleList = normalizeArticles(
+      this.repo.getJSON<unknown>(
         this.repo.scopedKey(articleKey, 'articleList'),
-      ) ?? [];
+      ),
+      window.location.origin,
+    );
 
     // Load series mode
     patch.isSeriesMode =
@@ -77,19 +82,20 @@ export class ConfigService {
       this.repo.getItem(this.repo.scopedKey(articleKey, 'searchQuery')) || '';
 
     // Load last active index
-    patch.lastActiveIndex = parseInt(
-      this.repo.getItem(this.repo.scopedKey(articleKey, 'lastActiveIndex')) ||
-        '-1',
+    const savedIndex = this.repo.getItem(
+      this.repo.scopedKey(articleKey, 'lastActiveIndex'),
     );
+    const index = savedIndex === null ? -1 : Number(savedIndex);
+    patch.lastActiveIndex =
+      Number.isSafeInteger(index) && index >= -1 ? index : -1;
 
     // Load shuffle mode (global setting)
     patch.isShuffleMode = this.repo.getItem(SHUFFLE_MODE_KEY) === 'true';
 
     // Load UI settings (getJSON handles null / parse errors internally)
-    const uiSettings = this.repo.getJSON<UISettings>(UI_SETTINGS_KEY);
-    if (uiSettings) {
-      patch.uiSettings = uiSettings;
-    }
+    patch.uiSettings = normalizeUISettings(
+      this.repo.getJSON<unknown>(UI_SETTINGS_KEY),
+    );
 
     // Prune old caches
     this.repo.pruneArticleKeyCaches(articleKey);

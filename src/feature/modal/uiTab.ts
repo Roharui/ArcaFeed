@@ -2,7 +2,7 @@ import $ from 'jquery';
 
 import '@css/ui.css';
 
-import { eventBus } from '@/core';
+import { eventBus } from '@/core/app-events';
 
 import type { VaultAdapter } from '@/vault';
 

@@ -4,7 +4,8 @@ import '@css/swiper.css';
 
 import Swiper from 'swiper';
 
-import { eventBus } from '@/core';
+import { eventBus } from '@/core/app-events';
+import type { AppEvent } from '@/core/app-events';
 
 import type { SwiperOptions } from 'swiper/types';
 import type { VaultAdapter } from '@/vault';
@@ -28,7 +29,7 @@ const swiperOptions: SwiperOptions = {
 
 // ── Mode-specific slide-next events ────────────────────
 
-const SLIDE_NEXT_EVENT: Record<string, string> = {
+const SLIDE_NEXT_EVENT: Record<string, AppEvent> = {
   CHANNEL: 'toNextLinkForce',
   ARTICLE: 'renderNextPage',
 };

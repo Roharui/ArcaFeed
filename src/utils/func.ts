@@ -14,7 +14,7 @@ export async function mapConcurrent<T, R>(
   const results = new Array<R>(items.length);
   let nextIndex = 0;
   let failed = false;
-  await Promise.all(
+  const settled = await Promise.allSettled(
     Array.from({ length: Math.min(concurrency, items.length) }, async () => {
       while (!failed && nextIndex < items.length) {
         const index = nextIndex++;
@@ -27,6 +27,9 @@ export async function mapConcurrent<T, R>(
       }
     }),
   );
+  for (const result of settled) {
+    if (result.status === 'rejected') throw result.reason;
+  }
   return results;
 }
 

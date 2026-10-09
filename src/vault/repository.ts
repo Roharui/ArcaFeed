@@ -53,7 +53,16 @@ export class StorageRepository {
   pruneArticleKeyCaches(currentArticleKey: string): void {
     if (!currentArticleKey) return;
 
-    const recentKeys = this.getJSON<string[]>(RECENT_ARTICLE_KEYS_KEY) || [];
+    const storedKeys = this.getJSON<unknown>(RECENT_ARTICLE_KEYS_KEY);
+    const recentKeys = Array.isArray(storedKeys)
+      ? [
+          ...new Set(
+            storedKeys.filter(
+              (key): key is string => typeof key === 'string' && key.length > 0,
+            ),
+          ),
+        ]
+      : [];
 
     const nextKeys = [
       currentArticleKey,

@@ -1,6 +1,6 @@
 import $ from 'jquery';
 
-import { eventBus } from '@/core';
+import { eventBus } from '@/core/app-events';
 
 import type { VaultAdapter } from '@/vault';
 

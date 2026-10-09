@@ -1,6 +1,6 @@
 import $ from 'jquery';
 
-import { eventBus } from '@/core';
+import { eventBus } from '@/core/app-events';
 import { createArticleKey } from '@/utils/article-key';
 import { getArticleId } from '@/utils/regex';
 import {
@@ -9,6 +9,7 @@ import {
   hideFetchLoader,
 } from '@/feature/article/fetch';
 import { mapConcurrent } from '@/utils/func';
+import { captureArticleSession } from '@/vault/article-session';
 
 import type { VaultAdapter } from '@/vault';
 
@@ -118,12 +119,16 @@ async function initStartHomeSeries(p: VaultAdapter): Promise<VaultAdapter> {
     };
 
     const articleKey = createArticleKey();
+    const isCurrent = captureArticleSession(p);
+    const filterConfig = p.articleFilterConfig;
     const allArticles: { url: string; articleId: number }[] = [];
 
     const batches = await mapConcurrent(selectedChannels, async (channel) => {
-      const channelFilter = p.articleFilterConfig[channel.id];
+      if (!isCurrent()) return [];
+      const channelFilter = filterConfig[channel.id];
       return fetchChannelFirstPage(channel.id, channelFilter);
     });
+    if (!isCurrent()) return p;
 
     const seen = new Set<string>();
     for (const articles of batches) {
@@ -138,12 +143,15 @@ async function initStartHomeSeries(p: VaultAdapter): Promise<VaultAdapter> {
 
     allArticles.sort((a, b) => b.articleId - a.articleId);
 
-    p.articleKey = articleKey;
-    p.href = { ...p.href, articleKey };
-    p.articleList = allArticles.map((a) => a.url);
-    p.isSeriesMode = true;
-    p.activeIndex = 0;
-    p.searchQuery = `?articleKey=${articleKey}`;
+    if (allArticles.length === 0) return p;
+    p.updateState({
+      articleKey,
+      href: { ...p.href, articleKey },
+      articleList: allArticles.map((a) => a.url),
+      isSeriesMode: true,
+      activeIndex: 0,
+      searchQuery: `?articleKey=${articleKey}`,
+    });
     p.flushSave();
 
     if (allArticles.length > 0) {

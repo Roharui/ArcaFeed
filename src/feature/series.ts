@@ -2,8 +2,8 @@ import $ from 'jquery';
 
 import '@css/series.css';
 
-import { eventBus } from '@/core';
-import { parseSearchQuery } from '@/feature';
+import { eventBus } from '@/core/app-events';
+import { parseSearchQuery } from './search';
 import {
   createArticleKey,
   getCurrentArticleKey,

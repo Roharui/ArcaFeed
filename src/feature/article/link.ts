@@ -12,6 +12,7 @@ import { mapConcurrent } from '@/utils/func';
 import { createArticleKey } from '@/utils/article-key';
 import { extractChannelId, getArticleId } from '@/utils/regex';
 import { appendSearchParam } from '@/utils/url';
+import { captureArticleSession } from '@/vault/article-session';
 
 import type { VaultAdapter } from '@/vault';
 
@@ -79,9 +80,10 @@ async function activateArticleLink(
   const findCurrentIndex = () => p.articleList.indexOf(currentPath);
   p.activeIndex = findCurrentIndex();
   if (p.articleList.length === 0) {
+    const isCurrent = captureArticleSession(p);
     startBackgroundLoad(p, async () => {
       await fetchFirstBatch(p, articleId);
-      p.activeIndex = findCurrentIndex();
+      if (isCurrent()) p.activeIndex = findCurrentIndex();
     });
     return;
   }
@@ -101,8 +103,7 @@ async function activateArticleLink(
 const backgroundLoads = new WeakMap<
   VaultAdapter,
   {
-    articleKey: string;
-    filterConfig: VaultAdapter['articleFilterConfig'];
+    isCurrent: () => boolean;
     request: Promise<void>;
   }
 >();
@@ -118,19 +119,16 @@ function getArticleLoad(
   load: () => Promise<void>,
 ): Promise<void> {
   const pending = backgroundLoads.get(p);
-  if (
-    pending?.articleKey === p.articleKey &&
-    pending.filterConfig === p.articleFilterConfig
-  ) {
+  if (pending?.isCurrent()) {
     return pending.request;
   }
+  const isCurrent = captureArticleSession(p);
   const request = load().finally(() => {
     if (backgroundLoads.get(p)?.request === request) backgroundLoads.delete(p);
-    p.flushSave();
+    if (isCurrent()) p.flushSave();
   });
   backgroundLoads.set(p, {
-    articleKey: p.articleKey,
-    filterConfig: p.articleFilterConfig,
+    isCurrent,
     request,
   });
   return request;
@@ -139,15 +137,14 @@ function getArticleLoad(
 // ── Scrap Series ───────────────────────────────────────
 
 async function initEnableScrapSeries(p: VaultAdapter): Promise<void> {
-  if (!p.articleKey) {
-    const newKey = createArticleKey();
-    p.articleKey = newKey;
-    p.href = { ...p.href, articleKey: newKey };
-  }
-
   parseSearchQuery(p);
-  p.searchQuery = appendSearchParam(p.searchQuery, 'articleKey', p.articleKey);
-  p.isSeriesMode = true;
+  const articleKey = p.articleKey || createArticleKey();
+  p.updateState({
+    articleKey,
+    href: { ...p.href, articleKey },
+    searchQuery: appendSearchParam(p.searchQuery, 'articleKey', articleKey),
+    isSeriesMode: true,
+  });
 
   await fetchAllBatches(p, p.href.articleId);
 }
@@ -182,20 +179,20 @@ async function loadMoreHomeSeriesArticles(p: VaultAdapter): Promise<void> {
   );
   if (channels.length === 0) return;
   const existingUrls = new Set(p.articleList);
-  const articleKey = p.articleKey;
+  const isCurrent = captureArticleSession(p);
   const filterConfig = p.articleFilterConfig;
 
   showFetchLoader();
   try {
     const batches = await mapConcurrent(channels, async (channelId) => {
+      if (!isCurrent()) return [];
       const minId = channelCounts.get(channelId)?.minId ?? 0;
       const filter = filterConfig[channelId];
       return minId > 0
         ? fetchChannelArticlesBefore(channelId, minId, filter, existingUrls)
         : fetchChannelFirstPage(channelId, filter);
     });
-    if (p.articleKey !== articleKey || p.articleFilterConfig !== filterConfig)
-      return;
+    if (!isCurrent()) return;
     const seen = new Set(p.articleList);
     const additions = batches.flat().filter((url) => {
       if (seen.has(url)) return false;

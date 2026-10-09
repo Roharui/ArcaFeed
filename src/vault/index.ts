@@ -29,13 +29,13 @@ export class VaultAdapter {
   private config: ConfigService;
   private saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private unsubscribeAutoSave: (() => void) | null = null;
+  private loadRevision = 0;
 
   // Swiper is UI state, kept direct
   swiper: Swiper | null = null;
 
   constructor(store?: Store, config?: ConfigService, initialHref?: HrefImpl) {
-    const repo = new StorageRepository();
-    this.config = config ?? new ConfigService(repo);
+    this.config = config ?? new ConfigService(new StorageRepository());
     this.store = store ?? new Store(this.config.loadConfig());
 
     // Pre-set href from constructor injection (avoids redundant URL re-parse).
@@ -81,6 +81,7 @@ export class VaultAdapter {
    * Clean up subscriptions. Call before destroying.
    */
   destroy(): void {
+    this.loadRevision++;
     this.unsubscribeAutoSave?.();
     this.flushSave();
   }
@@ -163,6 +164,15 @@ export class VaultAdapter {
     return this.store.getState();
   }
 
+  /** Commit related state changes together so subscribers see a complete session. */
+  updateState(patch: Partial<AppState>): void {
+    this.store.setState(patch);
+  }
+
+  get articleLoadRevision(): number {
+    return this.loadRevision;
+  }
+
   // Store subscription (for reactive features)
 
   subscribe(subscriber: StateSubscriber): () => void {
@@ -184,7 +194,8 @@ export class VaultAdapter {
   }
 
   resetArticleList(): void {
-    this.store.setState({ articleList: [] });
+    this.loadRevision++;
+    this.store.setState({ articleList: [], activeIndex: -1 });
   }
 
   /**

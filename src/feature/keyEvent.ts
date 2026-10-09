@@ -1,8 +1,9 @@
-import { eventBus } from '@/core';
+import { eventBus } from '@/core/app-events';
+import type { AppEvent } from '@/core/app-events';
 
 import type { VaultAdapter } from '@/vault';
 
-const MODE_KEY_EVENTS: Record<string, Record<string, string>> = {
+const MODE_KEY_EVENTS: Record<string, Record<string, AppEvent>> = {
   CHANNEL: { ArrowRight: 'toNextLinkForce' },
   ARTICLE: { ArrowRight: 'toNextPage', ArrowLeft: 'toPrevPage' },
 };

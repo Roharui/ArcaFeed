@@ -1,17 +1,15 @@
 import { EventManager } from './event';
 import { EventBus } from './event-bus';
+import { eventBus } from './app-events';
+import { EventQueue } from './event-queue';
+import type { AppEvent } from './app-events';
 import { VaultAdapter } from '@/vault';
-
-/**
- * Central Event Bus instance - decouples feature modules from ArcaFeed.
- */
-const eventBus = new EventBus();
 
 class ArcaFeed {
   private static instance: ArcaFeed;
   private events!: EventManager;
   private vault!: VaultAdapter;
-  private isRunning = false;
+  private queue = new EventQueue();
 
   constructor() {
     // Prevent duplicate instantiation: if an instance already exists,
@@ -20,10 +18,8 @@ class ArcaFeed {
       console.warn(
         '[ArcaFeed] Instance already exists, skipping duplicate construction.',
       );
-      return;
+      return ArcaFeed.instance;
     }
-
-    ArcaFeed.instance = this;
 
     // ── Page mode detection ─────────────────────────
     // Create VaultAdapter first — its constructor runs ConfigService which may
@@ -36,6 +32,7 @@ class ArcaFeed {
     // ArcaFeed only operates on HOME / ARTICLE / CHANNEL / SCRAP pages.
     // On OTHER pages, exit early without loading CSS or wiring events.
     if (mode === 'OTHER') {
+      ArcaFeed.instance = this;
       console.log('[ArcaFeed] Unsupported page, exiting.');
       return;
     }
@@ -47,6 +44,7 @@ class ArcaFeed {
 
     this.events = new EventManager();
     this.wireEventBus();
+    ArcaFeed.instance = this;
   }
 
   /**
@@ -54,7 +52,7 @@ class ArcaFeed {
    * Each event maps to a method that returns Step[], which StepRunner executes.
    */
   private wireEventBus(): void {
-    const stepGetters: Record<string, () => Step[]> = {
+    const stepGetters: Record<AppEvent, () => Step[]> = {
       init: () => this.events.init(),
       toNextPage: () => this.events.toNextPage(),
       toPrevPage: () => this.events.toPrevPage(),
@@ -72,28 +70,27 @@ class ArcaFeed {
       toggleSwiper: () => this.events.toggleSwiper(),
     };
 
-    for (const [eventName, getSteps] of Object.entries(stepGetters)) {
-      eventBus.on(eventName, async () => {
-        if (this.isRunning) return;
-        this.isRunning = true;
-
-        try {
-          const steps = getSteps();
-          await this.events.runner.run(this.vault, steps);
-        } catch (err) {
-          console.error(`[ArcaFeed] Error running event "${eventName}":`, err);
-        } finally {
-          this.isRunning = false;
-        }
-      });
+    for (const eventName of Object.keys(stepGetters) as AppEvent[]) {
+      eventBus.on(eventName, () =>
+        this.queue.run(async () => {
+          try {
+            await this.events.runner.run(this.vault, stepGetters[eventName]());
+          } catch (err) {
+            console.error(
+              `[ArcaFeed] Error running event "${eventName}":`,
+              err,
+            );
+          }
+        }, eventName),
+      );
     }
   }
 
   /**
    * @deprecated Use eventBus.emit() directly.
    */
-  static async runEvent(eventName: string) {
-    eventBus.emit(eventName);
+  static async runEvent(eventName: AppEvent): Promise<void> {
+    await eventBus.emit(eventName);
   }
 }
 

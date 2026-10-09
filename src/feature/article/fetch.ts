@@ -9,6 +9,7 @@ import { fetchUrl } from '@/utils/fetch';
 import { shuffle } from '@/utils/func';
 import { appendSearchParam } from '@/utils/url';
 import { showToast } from '@/utils/toast';
+import { captureArticleSession } from '@/vault/article-session';
 
 import type { ArticleFilterImpl } from '@/types';
 import type { VaultAdapter } from '@/vault';
@@ -93,6 +94,7 @@ async function* fetchArticlePages(
   p: VaultAdapter,
   articleId: string,
 ): AsyncGenerator<string[]> {
+  const isCurrent = captureArticleSession(p);
   const basePath = p.isCurrentMode('SCRAP') ? '/u/scrap_list' : articleId;
   let nextUrl: string | null = buildPageUrl(p, articleId);
 
@@ -104,10 +106,12 @@ async function* fetchArticlePages(
   }
 
   for (let page = 0; page < MAX_PAGES && nextUrl; page++) {
+    if (!isCurrent()) return;
     const url = normalizeUrl(nextUrl);
     if (visitedPages.has(url)) return;
     visitedPages.add(url);
     const { $html } = await fetchAndParse(url);
+    if (!isCurrent()) return;
 
     const newLinks = extractLinks($html, channelFilter, existingUrls);
     for (const link of newLinks) existingUrls.add(link);
@@ -130,18 +134,16 @@ async function fetchFirstBatch(
   articleId: string,
 ): Promise<void> {
   showFetchLoader();
-  const articleKey = p.articleKey;
-  const filterConfig = p.articleFilterConfig;
+  const isCurrent = captureArticleSession(p);
   try {
     for await (const links of fetchArticlePages(p, articleId)) {
-      if (p.articleKey !== articleKey || p.articleFilterConfig !== filterConfig)
-        return;
+      if (!isCurrent()) return;
       if (links.length > 0) {
-        p.articleList = [...p.articleList, ...links];
+        p.articleList = [...new Set([...p.articleList, ...links])];
         return;
       }
     }
-    showToast('다음 게시글 탐색에 실패했습니다.');
+    if (isCurrent()) showToast('다음 게시글 탐색에 실패했습니다.');
   } finally {
     hideFetchLoader();
   }
@@ -156,11 +158,15 @@ async function fetchAllBatches(
   articleId: string,
 ): Promise<void> {
   showFetchLoader();
+  const isCurrent = captureArticleSession(p);
   try {
-    const articles = [...p.articleList];
+    const additions: string[] = [];
     for await (const links of fetchArticlePages(p, articleId)) {
-      articles.push(...links);
+      if (!isCurrent()) return;
+      additions.push(...links);
     }
+    if (!isCurrent()) return;
+    const articles = [...new Set([...p.articleList, ...additions])];
 
     if (p.isShuffleMode) {
       shuffle(articles);

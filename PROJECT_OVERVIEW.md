@@ -42,6 +42,8 @@ ArcaFeed/
 │   ├── core/                       # 핵심 인프라 (이벤트 시스템, 스텝 실행기)
 │   │   ├── index.ts                # ArcaFeed 싱글톤 + EventBus 바인딩
 │   │   ├── event-bus.ts            # Pub/Sub 이벤트 버스
+│   │   ├── app-events.ts           # 타입이 지정된 이벤트 계약/공용 버스 (기능 모듈의 의존 대상)
+│   │   ├── event-queue.ts          # 명령 순차 실행 + 대기/실행 중 같은 이벤트 중복 제거
 │   │   ├── event.ts                # EventManager: 이벤트 → Step[] 매핑
 │   │   ├── step-runner.ts          # StepRunner: 순차/병렬 함수 실행기
 │   │   └── store.ts                # Store re-export (from vault/)
@@ -82,6 +84,8 @@ ArcaFeed/
 │       ├── index.ts                # VaultAdapter: 호환성 레이어
 │       ├── store.ts                # Store: 불변 상태 관리 (Flux-like)
 │       ├── config.ts               # ConfigService: 설정 로드/저장 (getJSON 사용)
+│       ├── config-schema.ts        # 저장 데이터 형식 검증과 기본값/게시글 URL 정규화
+│       ├── article-session.ts      # 비동기 조회가 현재 세션에 속하는지 확인
 │       └── repository.ts           # StorageRepository: localStorage 추상화
 ├── css/                            # 스타일시트
 │   ├── arcalive.css                # 아카라이브 기본 UI 오버라이드
@@ -116,13 +120,14 @@ index.ts (진입점)
 
 ### 3.2 이벤트 드리븐 아키텍처
 
-모든 기능은 **EventBus**를 통해 발행/구독 방식으로 동작합니다.
+모든 기능은 **EventBus**를 통해 발행/구독 방식으로 동작합니다. 기능 모듈은 조립 모듈인 `@/core` 대신 `@/core/app-events`에 의존하여 순환 참조를 피합니다. 이벤트 이름은 `AppEvent` 타입으로 제한합니다.
 
 ```
 EventBus.emit('이벤트명')
   └→ ArcaFeed.wireEventBus() 에서 등록된 핸들러 실행
-       └→ stepGetters[이벤트명]() → Step[] 반환
-            └→ StepRunner.run(p, steps)
+       └→ EventQueue에서 명령을 순서대로 실행 (같은 대기/실행 중 이벤트는 실행 공유)
+            └→ stepGetters[이벤트명]() → Step[] 반환
+                 └→ StepRunner.run(p, steps)
                  ├→ Step 1: [fn1, fn2]  (병렬 실행)
                  ├→ Step 2: fn3         (순차 실행)
                  └→ Step 3: [fn4, fn5]  (병렬 실행)
@@ -151,8 +156,9 @@ EventBus.emit('이벤트명')
 `StepRunner`는 이전 `PromiseManager`의 복잡성을 제거한 간소화된 실행기입니다.
 
 - **`Step` 타입**: `PromiseFunc` (단일 함수) 또는 `PromiseFunc[]` (병렬 함수 배열)
-- 각 Step은 순차적으로 실행되고, 배열 내 함수들은 `Promise.all()`로 병렬 실행됨
+- 각 Step은 순차적으로 실행되고, 배열 내 함수들은 `Promise.allSettled()`로 병렬 실행됨
 - 각 함수의 반환값에서 follow-up 함수를 추출하여 추가 실행 (하위 호환성)
+- 동기/비동기 오류 모두 실행 중인 병렬 작업의 완료를 기다린 뒤 전달하며, 실패한 단계의 follow-up과 다음 단계는 실행하지 않음. 개발/프로덕션에 같은 오류 정책 적용
 
 ### 3.4 상태 관리 (Store 패턴)
 
@@ -169,6 +175,8 @@ Store (불변 상태)
 ```
 
 동일 값의 `Store.setState()`는 알림을 생략합니다. `articleList`, `href`, 설정 객체는 새 참조로 갱신해야 저장 변경 감지가 동작합니다. UI 설정 구독은 한 번만 설치하며, 게시글 목록/인덱스 변경에는 UI 전체를 다시 적용하지 않습니다. 이동 직전에는 다음 인덱스를 포함해 `flushSave()`합니다.
+
+여러 필드가 함께 바뀌는 시리즈/필터 설정은 `VaultAdapter.updateState()`로 한 번에 반영합니다. 목록 초기화는 활성 인덱스를 함께 초기화하고 조회 revision을 증가시킵니다. `captureArticleSession()`은 revision과 세션/페이지/필터/검색/모드/홈 시리즈 채널 목록을 캡처하여 이전 조회의 목록·인덱스·페이지 이동 반영을 막습니다. 저장 데이터는 `config-schema.ts`에서 타입을 검증하고 기본값을 채웁니다. 상세한 실행 보장과 한계는 [아키텍처 문서](docs/ARCHITECTURE.md)에 기록합니다.
 
 **AppState 구조:**
 

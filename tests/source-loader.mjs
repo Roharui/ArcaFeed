@@ -122,6 +122,7 @@ export function vaultFixture(overrides = {}) {
     articleList: ['/b/test/100', '/b/test/99'],
     articleFilterConfig: {},
     activeIndex: -1,
+    articleLoadRevision: 0,
     isSeriesMode: false,
     uiSettings: { homeSeriesChannels: [] },
     searchQuery: '',
@@ -130,7 +131,12 @@ export function vaultFixture(overrides = {}) {
       this.saves++;
     },
     resetArticleList() {
+      this.articleLoadRevision++;
       this.articleList = [];
+      this.activeIndex = -1;
+    },
+    updateState(patch) {
+      Object.assign(this, patch);
     },
     isCurrentMode(...modes) {
       return modes.includes(this.href.mode);

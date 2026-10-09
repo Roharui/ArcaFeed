@@ -26,32 +26,35 @@ export class StepRunner {
    */
   async run(p: VaultAdapter, steps: Step[]): Promise<void> {
     for (const step of steps) {
-      const results: PromiseFuncResult[] = Array.isArray(step)
-        ? await Promise.all(step.map((fn) => this.invoke(p, fn)))
-        : [await this.invoke(p, step)];
+      // Wait for every parallel task even on failure. Otherwise the next command
+      // could mutate state while a task from the failed command is still running.
+      const settled = await Promise.allSettled(
+        (Array.isArray(step) ? step : [step]).map((fn) => this.invoke(p, fn)),
+      );
+      const results: PromiseFuncResult[] = settled.map((result) => {
+        if (result.status === 'rejected') throw result.reason;
+        return result.value;
+      });
 
       // Process dynamic follow-ups from results
       const followUps = this.collectFollowUps(results);
       for (const followUp of followUps) {
-        try {
-          await followUp(p);
-        } catch (err) {
-          console.error(`[StepRunner] Error in follow-up:`, err);
-          if (process.env.NODE_ENV === 'development') throw err;
-        }
+        await this.invoke(p, followUp);
       }
     }
 
     p.flushSave();
   }
 
-  private invoke(p: VaultAdapter, fn: PromiseFunc): ReturnType<PromiseFunc> {
+  private async invoke(
+    p: VaultAdapter,
+    fn: PromiseFunc,
+  ): Promise<PromiseFuncResult> {
     try {
-      return fn(p);
+      return await fn(p);
     } catch (error) {
       console.error(`[StepRunner] Error in ${fn.name || 'anonymous'}:`, error);
-      if (process.env.NODE_ENV === 'development') throw error;
-      return undefined;
+      throw error;
     }
   }
 

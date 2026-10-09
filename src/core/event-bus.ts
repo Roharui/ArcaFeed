@@ -3,45 +3,63 @@
  * Replaces static ArcaFeed.runEvent() calls with injected dependencies.
  */
 
-type EventHandler = (...args: any[]) => void | Promise<void>;
+type EventHandler<Args extends unknown[]> = (
+  ...args: Args
+) => void | Promise<void>;
 
-export class EventBus {
-  private handlers = new Map<string, Set<EventHandler>>();
+export class EventBus<
+  Events extends { [K in keyof Events]: unknown[] } = Record<string, any[]>,
+> {
+  private handlers: {
+    [K in keyof Events]?: Set<EventHandler<Events[K]>>;
+  } = Object.create(null);
 
-  on(event: string, handler: EventHandler): () => void {
-    if (!this.handlers.has(event)) {
-      this.handlers.set(event, new Set());
-    }
-    this.handlers.get(event)!.add(handler);
+  on<K extends keyof Events>(
+    event: K,
+    handler: EventHandler<Events[K]>,
+  ): () => void {
+    const handlers = (this.handlers[event] ??= new Set());
+    handlers.add(handler);
 
     // Return unsubscribe function
     return () => {
-      this.handlers.get(event)?.delete(handler);
+      handlers.delete(handler);
     };
   }
 
-  async emit(event: string, ...args: any[]): Promise<void> {
-    const handlers = this.handlers.get(event);
+  async emit<K extends keyof Events>(
+    event: K,
+    ...args: Events[K]
+  ): Promise<void> {
+    const handlers = this.handlers[event];
     if (!handlers) return;
 
-    const promises = Array.from(handlers).map((handler) =>
-      Promise.resolve(handler(...args)).catch((err) => {
-        console.error(`[EventBus] Error in handler for "${event}":`, err);
-      }),
-    );
+    const promises = Array.from(handlers).map(async (handler) => {
+      try {
+        await handler(...args);
+      } catch (err) {
+        console.error(
+          `[EventBus] Error in handler for "${String(event)}":`,
+          err,
+        );
+      }
+    });
 
     await Promise.all(promises);
   }
 
-  off(event: string, handler?: EventHandler): void {
+  off<K extends keyof Events>(
+    event: K,
+    handler?: EventHandler<Events[K]>,
+  ): void {
     if (handler) {
-      this.handlers.get(event)?.delete(handler);
+      this.handlers[event]?.delete(handler);
     } else {
-      this.handlers.delete(event);
+      delete this.handlers[event];
     }
   }
 
   clear(): void {
-    this.handlers.clear();
+    this.handlers = Object.create(null);
   }
 }
