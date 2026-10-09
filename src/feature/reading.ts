@@ -7,6 +7,7 @@ import { createArticleKey } from '@/utils/article-key';
 import { READING_HISTORY_KEY } from '@/vault/reading-history';
 import type { ReadingSession } from '@/vault/reading-history';
 import type { VaultAdapter } from '@/vault';
+import { readingContextLabel } from '@/vault/reading-context';
 
 const RESUME_SCROLL_KEY = 'arcaFeed:resumeScroll';
 const ARTICLE_TITLE_SELECTOR =
@@ -64,12 +65,13 @@ function updateVisitedIndicators(p: VaultAdapter): void {
       })
       .toggle(show);
   });
-  const skip = p.uiSettings.skipVisitedArticles;
+  const skip = p.skipVisitedArticles;
   $('#arcafeed-skip-visited')
     .toggleClass('is-active', skip)
     .attr({
       'aria-pressed': String(skip),
-      title: `본 글 건너뛰기: ${skip ? '켜짐 · 클릭하여 끄기' : '꺼짐 · 클릭하여 켜기'}`,
+      'aria-label': `${readingContextLabel(p)}에서 본 글 건너뛰기`,
+      title: `${readingContextLabel(p)} · 본 글 건너뛰기: ${skip ? '켜짐 · 클릭하여 끄기' : '꺼짐 · 클릭하여 켜기'}`,
     });
 }
 
@@ -96,11 +98,13 @@ function saveCheckpoint(p: VaultAdapter): void {
   params.delete('articleKey');
   const query = params.size ? `?${params}` : '';
   const channel = channelName(p);
-  const label = p.isSeriesMode
-    ? p.seriesChannels.length > 0
-      ? `홈 피드 · ${p.seriesChannels.length}개 채널`
-      : `시리즈 · ${channel}`
-    : `${channel}${params.get('q') ? ` · ${params.get('q')}` : ''}${params.get('mode') === 'best' ? ' · 인기글' : ''}`;
+  const label = p.isScrapMode
+    ? '스크랩'
+    : p.isSeriesMode
+      ? p.seriesChannels.length > 0
+        ? `홈 피드 · ${p.seriesChannels.length}개 채널`
+        : `시리즈 · ${channel}`
+      : `${channel}${params.get('q') ? ` · ${params.get('q')}` : ''}${params.get('mode') === 'best' ? ' · 인기글' : ''}`;
   p.reading.saveSession({
     id: contextId(p),
     label,
@@ -108,6 +112,7 @@ function saveCheckpoint(p: VaultAdapter): void {
     searchQuery: query,
     articleList,
     isSeriesMode: p.isSeriesMode,
+    isScrapMode: p.isScrapMode,
     seriesChannels: [...p.seriesChannels],
     scrollY: window.scrollY,
     updatedAt: Date.now(),
@@ -190,7 +195,7 @@ export function initReading(p: VaultAdapter): void {
     if (event.key === READING_HISTORY_KEY || event.key === null)
       p.reading.reload();
   });
-  let previousSkip = p.uiSettings.skipVisitedArticles;
+  let previousSkip = p.skipVisitedArticles;
   let previousHasNext = p.isNextPageActive();
   let previousReadingRevision = p.getState().readingRevision;
   p.subscribe((state) => {
@@ -200,8 +205,8 @@ export function initReading(p: VaultAdapter): void {
     const hasNext = p.isNextPageActive();
     const lostNext = previousHasNext && !hasNext;
     previousHasNext = hasNext;
-    if (previousSkip !== p.uiSettings.skipVisitedArticles) {
-      previousSkip = p.uiSettings.skipVisitedArticles;
+    if (previousSkip !== p.skipVisitedArticles) {
+      previousSkip = p.skipVisitedArticles;
       if (previousSkip) refreshUnvisitedNavigation(p);
     } else if (
       lostNext &&
@@ -213,7 +218,7 @@ export function initReading(p: VaultAdapter): void {
     }
   });
   updateVisitedIndicators(p);
-  if (p.uiSettings.skipVisitedArticles && !p.isNextPageActive())
+  if (p.skipVisitedArticles && !p.isNextPageActive())
     refreshUnvisitedNavigation(p);
 
   if (!p.isCurrentMode('ARTICLE')) return;
@@ -228,6 +233,7 @@ export function initReading(p: VaultAdapter): void {
   recordVisit();
   let checkpointTimer: ReturnType<typeof setTimeout> | undefined;
   let historyCleared = false;
+  let checkpointRemoved = false;
 
   const skipButton = $('<button>', {
     id: 'arcafeed-skip-visited',
@@ -236,10 +242,7 @@ export function initReading(p: VaultAdapter): void {
     'aria-label': '본 글 건너뛰기',
   });
   skipButton.on('click', () => {
-    p.uiSettings = {
-      ...p.uiSettings,
-      skipVisitedArticles: !p.uiSettings.skipVisitedArticles,
-    };
+    p.skipVisitedArticles = !p.skipVisitedArticles;
     p.flushSave();
   });
   const heading = $(ARTICLE_TITLE_SELECTOR).first();
@@ -253,7 +256,7 @@ export function initReading(p: VaultAdapter): void {
 
   const checkpoint = () => {
     clearTimeout(checkpointTimer);
-    if (!historyCleared) saveCheckpoint(p);
+    if (!historyCleared && !checkpointRemoved) saveCheckpoint(p);
   };
   const scheduleCheckpoint = () => {
     clearTimeout(checkpointTimer);
@@ -262,6 +265,10 @@ export function initReading(p: VaultAdapter): void {
   p.reading.subscribe(() => {
     if (!p.reading.hasVisited(path)) {
       historyCleared = true;
+      clearTimeout(checkpointTimer);
+    }
+    if (!p.reading.sessions.some((session) => session.id === contextId(p))) {
+      checkpointRemoved = true;
       clearTimeout(checkpointTimer);
     }
   });

@@ -127,7 +127,7 @@ async function initStartHomeSeries(p: VaultAdapter): Promise<VaultAdapter> {
     const articleKey = createArticleKey();
     const isCurrent = captureArticleSession(p);
     const filterConfig = p.articleFilterConfig;
-    const visitedPaths = p.uiSettings.skipVisitedArticles
+    const visitedPaths = p.skipVisitedArticles
       ? p.reading.getVisitedPaths()
       : undefined;
     const allArticles: { url: string; articleId: number }[] = [];
@@ -176,6 +176,7 @@ async function initStartHomeSeries(p: VaultAdapter): Promise<VaultAdapter> {
       href: { ...p.href, articleKey },
       articleList: allArticles.map((a) => a.url),
       isSeriesMode: true,
+      isScrapMode: false,
       seriesChannels: selectedChannels.map((channel) => channel.id),
       activeIndex: firstIndex,
       searchQuery: `?articleKey=${articleKey}`,

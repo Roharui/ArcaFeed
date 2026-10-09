@@ -120,7 +120,7 @@ export function readingDateLabel(timestamp: number): string {
 export function readingHeader(
   title: string,
   description: string,
-  count: JQuery<HTMLElement>,
+  count?: JQuery<HTMLElement>,
 ): JQuery<HTMLElement> {
   const close = readingButton('×', () => {
     void eventBus.emit('closeModal');
@@ -131,7 +131,7 @@ export function readingHeader(
     $('<div>').append(
       $('<div>', { class: 'arcafeed-reading-heading' }).append(
         $('<h2>', { text: title }),
-        count,
+        count ?? [],
       ),
       $('<p>', { class: 'arcafeed-history-description', text: description }),
     ),

@@ -93,11 +93,13 @@ export function createResumeModal(p: VaultAdapter): JQuery<HTMLElement> {
       );
     for (const session of checkpoints) {
       const entry = entriesByPath.get(session.path);
-      const type = session.isSeriesMode
-        ? session.seriesChannels.length
-          ? '홈 피드'
-          : '시리즈'
-        : '채널';
+      const type = session.isScrapMode
+        ? '스크랩'
+        : session.isSeriesMode
+          ? session.seriesChannels.length
+            ? '홈 피드'
+            : '시리즈'
+          : '채널';
       const title = entry?.title || `게시글 ${session.path.split('/').pop()}`;
       const resume = readingButton('이어보기', () => resumeReading(p, session))
         .addClass('arcafeed-resume-action')
@@ -105,6 +107,14 @@ export function createResumeModal(p: VaultAdapter): JQuery<HTMLElement> {
         .append(
           $('<span>', { class: 'bi-arrow-right', 'aria-hidden': 'true' }),
         );
+      const remove = readingButton('삭제', () => {
+        p.reading.removeSession(session.id);
+      })
+        .addClass('arcafeed-resume-delete')
+        .attr({
+          'aria-label': `${session.label} · ${title} 이어보기 삭제`,
+          title: '이 이어보기 삭제',
+        });
       sessions.append(
         $('<div>', { class: 'arcafeed-resume-card' }).append(
           $('<div>', { class: 'arcafeed-resume-context' }).append(
@@ -118,7 +128,10 @@ export function createResumeModal(p: VaultAdapter): JQuery<HTMLElement> {
           $('<div>', { class: 'arcafeed-resume-title', text: title, title }),
           $('<div>', { class: 'arcafeed-resume-bottom' }).append(
             readingTime(session.updatedAt),
-            resume,
+            $('<div>', { class: 'arcafeed-resume-actions' }).append(
+              remove,
+              resume,
+            ),
           ),
         ),
       );

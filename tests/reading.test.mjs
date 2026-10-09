@@ -30,6 +30,7 @@ const session = (id, patch = {}) => ({
   searchQuery: '?q=검색&articleKey=old',
   articleList: ['/b/test/101', '/b/test/100', '/b/test/99'],
   isSeriesMode: true,
+  isScrapMode: false,
   seriesChannels: ['test', 'other'],
   scrollY: 340,
   updatedAt: 1,
@@ -181,7 +182,7 @@ test('next navigation skips seen articles while previous navigation remains avai
     vault.reading.visit(entry('/b/test/99'));
     vault.reading.visit(entry('/b/test/98'));
     assert.equal(vault.getAdjacentArticleIndex('NEXT'), 1);
-    vault.uiSettings = { ...vault.uiSettings, skipVisitedArticles: true };
+    vault.skipVisitedArticles = true;
     assert.equal(vault.getAdjacentArticleIndex('NEXT'), 3);
     assert.equal(vault.isNextPageActive(), true);
     vault.activeIndex = 2;
@@ -304,4 +305,218 @@ test('history search waits for Korean composition and clear resets the query and
   assert.equal(input.val(), '');
   assert.equal(input.lastEvent, 'focus');
   assert.equal(changes, 2);
+});
+
+test('skip preferences stay independent for channels, home, scraps and individual series after reload', () => {
+  const { load, storage, window } = readingFixture();
+  const { VaultAdapter, ConfigService, StorageRepository } =
+    load('src/vault/index.ts');
+  const { Store } = load('src/vault/store.ts');
+  const config = new ConfigService(new StorageRepository(storage));
+  const vault = new VaultAdapter(
+    new Store({ articleKey: 'session' }),
+    config,
+    vaultFixture().href,
+  );
+  try {
+    vault.skipVisitedArticles = true;
+    vault.href = { ...vault.href, channelId: 'other' };
+    assert.equal(vault.skipVisitedArticles, false);
+    vault.skipVisitedArticles = false;
+    vault.href = { ...vault.href, channelId: 'test' };
+    assert.equal(vault.skipVisitedArticles, true);
+    vault.updateState({
+      isSeriesMode: true,
+      seriesChannels: ['test', 'other'],
+    });
+    assert.equal(vault.skipVisitedArticles, false);
+    vault.skipVisitedArticles = true;
+    vault.href = { ...vault.href, channelId: 'other' };
+    assert.equal(vault.skipVisitedArticles, true);
+    vault.updateState({ isScrapMode: true, seriesChannels: [] });
+    assert.equal(vault.skipVisitedArticles, false);
+    vault.skipVisitedArticles = true;
+    vault.updateState({ isScrapMode: false });
+    assert.equal(vault.skipVisitedArticles, false);
+    vault.skipVisitedArticles = true;
+    vault.articleKey = 'another-series';
+    assert.equal(vault.skipVisitedArticles, false);
+    vault.articleKey = 'session';
+    assert.equal(vault.skipVisitedArticles, true);
+    vault.flushSave();
+    window.location.href = 'https://arca.live/b/test/100?articleKey=session';
+    const reloaded = new VaultAdapter(
+      new Store(config.loadConfig()),
+      config,
+      vaultFixture().href,
+    );
+    try {
+      assert.equal(reloaded.skipVisitedArticles, true);
+      reloaded.updateState({ isScrapMode: true });
+      assert.equal(reloaded.skipVisitedArticles, true);
+      reloaded.skipVisitedArticles = false;
+      reloaded.updateState({ isScrapMode: false, seriesChannels: ['test'] });
+      assert.equal(reloaded.skipVisitedArticles, true);
+      reloaded.updateState({ isSeriesMode: false, seriesChannels: [] });
+      assert.equal(reloaded.skipVisitedArticles, true);
+    } finally {
+      reloaded.destroy();
+    }
+  } finally {
+    vault.destroy();
+  }
+});
+
+test('legacy global skip flags cannot enable unrelated contexts and malformed preferences are ignored', () => {
+  const { load } = readingFixture();
+  const { normalizeUISettings } = load('src/vault/config-schema.ts');
+  const legacy = normalizeUISettings({
+    skipVisitedArticles: true,
+    skipReadArticles: true,
+  });
+  assert.deepEqual(legacy.skipVisitedContexts, {});
+  const settings = normalizeUISettings({
+    skipVisitedContexts: {
+      'channel:test': true,
+      home: false,
+      scrap: 'true',
+      'series:abc123': true,
+      invalid: true,
+    },
+  });
+  assert.deepEqual(settings.skipVisitedContexts, {
+    'channel:test': true,
+    home: false,
+    'series:abc123': true,
+  });
+});
+
+test('scrap checkpoints preserve their mode through history and navigation-cache restoration', () => {
+  const { ReadingHistory, load, storage, window } = readingFixture();
+  const history = new ReadingHistory();
+  history.saveSession(
+    session('series:scraps', {
+      isScrapMode: true,
+      seriesChannels: [],
+      label: '스크랩',
+    }),
+  );
+  const saved = new ReadingHistory().sessions[0];
+  assert.equal(saved.isScrapMode, true);
+  const { ConfigService, StorageRepository } = load('src/vault/index.ts');
+  const config = new ConfigService(new StorageRepository(storage));
+  config.restoreReadingSession(saved, 'restored');
+  window.location.href = 'https://arca.live/b/test/100?articleKey=restored';
+  const restored = config.loadConfig();
+  assert.equal(restored.isSeriesMode, true);
+  assert.equal(restored.isScrapMode, true);
+  assert.deepEqual(restored.seriesChannels, []);
+  assert.deepEqual(restored.articleList, saved.articleList);
+});
+
+test('deleting one checkpoint keeps visits and other checkpoints in older tabs', () => {
+  const { ReadingHistory } = readingFixture();
+  const first = new ReadingHistory();
+  const second = new ReadingHistory();
+  first.visit(entry('/b/test/100'));
+  first.saveSession(session('first'));
+  second.saveSession(session('second'));
+  first.removeSession('first');
+  second.reload();
+  assert.deepEqual(
+    second.sessions.map((item) => item.id),
+    ['second'],
+  );
+  assert.equal(second.hasVisited('/b/test/100'), true);
+  assert.deepEqual(
+    new ReadingHistory().sessions.map((item) => item.id),
+    ['second'],
+  );
+});
+
+test('deleting the current checkpoint prevents scroll and pagehide from recreating it', () => {
+  const storage = memoryStorage();
+  const listeners = new Map();
+  const timers = new Map();
+  let timerId = 0;
+  const window = {
+    location: {
+      origin: 'https://arca.live',
+      href: 'https://arca.live/b/test/100?articleKey=session',
+    },
+    scrollY: 120,
+    addEventListener: (name, handler) => listeners.set(name, handler),
+  };
+  const chain = {
+    length: 0,
+    first() {
+      return this;
+    },
+    text() {
+      return '';
+    },
+    find() {
+      return this;
+    },
+    each() {
+      return this;
+    },
+    toggleClass() {
+      return this;
+    },
+    attr() {
+      return this;
+    },
+    on() {
+      return this;
+    },
+  };
+  const load = sourceLoader({
+    globals: {
+      window,
+      localStorage: storage,
+      sessionStorage: { getItem: () => null },
+      document: {
+        title: '스크랩한 게시글',
+        addEventListener: (name, handler) => listeners.set(name, handler),
+      },
+      setTimeout: (handler, delay) => {
+        timers.set(++timerId, { handler, delay });
+        return timerId;
+      },
+      clearTimeout: (id) => timers.delete(id),
+    },
+    mocks: {
+      jquery: { default: () => chain },
+      './filter': { extractArticleRows: () => chain },
+      './article/link': { refreshUnvisitedNavigation() {} },
+    },
+  });
+  const { VaultAdapter } = load('src/vault/index.ts');
+  const { Store } = load('src/vault/store.ts');
+  const { initReading } = load('src/feature/reading.ts');
+  const vault = new VaultAdapter(
+    new Store({
+      articleKey: 'session',
+      isSeriesMode: true,
+      isScrapMode: true,
+      articleList: ['/b/test/100'],
+    }),
+    { saveConfig() {} },
+    vaultFixture().href,
+  );
+  try {
+    initReading(vault);
+    assert.equal(vault.reading.sessions[0].isScrapMode, true);
+    assert.equal(vault.reading.sessions[0].label, '스크랩');
+    vault.reading.removeSession('series:session');
+    listeners.get('scroll')();
+    for (const timer of [...timers.values()])
+      if (timer.delay === 700) timer.handler();
+    listeners.get('pagehide')();
+    assert.deepEqual(vault.reading.sessions, []);
+    assert.equal(vault.reading.hasVisited('/b/test/100'), true);
+  } finally {
+    vault.destroy();
+  }
 });

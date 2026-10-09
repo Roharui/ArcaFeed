@@ -142,7 +142,7 @@ async function fetchFirstBatch(
         p.articleList = [...new Set([...p.articleList, ...links])];
         const currentPath = `/b/${p.href.channelId}/${p.href.articleId}`;
         if (
-          !p.uiSettings.skipVisitedArticles ||
+          !p.skipVisitedArticles ||
           links.some(
             (path) => path !== currentPath && !p.reading.hasVisited(path),
           )
@@ -152,7 +152,7 @@ async function fetchFirstBatch(
     }
     if (isCurrent())
       showToast(
-        p.uiSettings.skipVisitedArticles
+        p.skipVisitedArticles
           ? '아직 방문하지 않은 다음 게시글을 찾지 못했습니다.'
           : '다음 게시글 탐색에 실패했습니다.',
       );
@@ -197,13 +197,17 @@ async function fetchAllBatches(
 
 function openScrapSeriesArticle(p: VaultAdapter): void {
   const firstIndex = p.articleList.findIndex(
-    (path) => !p.uiSettings.skipVisitedArticles || !p.reading.hasVisited(path),
+    (path) => !p.skipVisitedArticles || !p.reading.hasVisited(path),
   );
   const firstUrl = p.articleList[firstIndex];
   if (!firstUrl) {
-    p.updateState({ isSeriesMode: false, seriesChannels: [] });
+    p.updateState({
+      isSeriesMode: false,
+      isScrapMode: false,
+      seriesChannels: [],
+    });
     showToast(
-      p.uiSettings.skipVisitedArticles
+      p.skipVisitedArticles
         ? '아직 방문하지 않은 스크랩 글이 없습니다.'
         : '스크랩 글을 찾지 못했습니다.',
     );

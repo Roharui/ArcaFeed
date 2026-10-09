@@ -9,6 +9,7 @@ import { Store } from './store';
 import { StorageRepository } from './repository';
 import { ConfigService } from './config';
 import { ReadingHistory } from './reading-history';
+import { readingPreferenceKey } from './reading-context';
 import type { ReadingSession } from './reading-history';
 import type { PageMode } from '@/types';
 
@@ -144,6 +145,25 @@ export class VaultAdapter {
     return this.store.getState().seriesChannels;
   }
 
+  get isScrapMode(): boolean {
+    return this.store.getState().isScrapMode;
+  }
+
+  get skipVisitedArticles(): boolean {
+    return (
+      this.uiSettings.skipVisitedContexts[readingPreferenceKey(this)] === true
+    );
+  }
+  set skipVisitedArticles(enabled: boolean) {
+    this.uiSettings = {
+      ...this.uiSettings,
+      skipVisitedContexts: {
+        ...this.uiSettings.skipVisitedContexts,
+        [readingPreferenceKey(this)]: enabled,
+      },
+    };
+  }
+
   get isShuffleMode(): boolean {
     return this.store.getState().isShuffleMode;
   }
@@ -224,7 +244,7 @@ export class VaultAdapter {
       // Backwards navigation remains available to revisit the previous article.
       if (
         mode === 'NEXT' &&
-        this.uiSettings.skipVisitedArticles &&
+        this.skipVisitedArticles &&
         this.reading.hasVisited(path)
       )
         continue;

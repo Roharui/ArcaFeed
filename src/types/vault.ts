@@ -29,7 +29,7 @@ interface UISettings {
   hideArticleTime: boolean;
   hideArticleView: boolean;
   showVisitedIndicators: boolean;
-  skipVisitedArticles: boolean;
+  skipVisitedContexts: Record<string, boolean>;
   lastModalTab: 'filter' | 'ui' | 'subscribe' | 'history' | 'resume';
   hiddenChannels: string[];
   homeSeriesChannels: string[];

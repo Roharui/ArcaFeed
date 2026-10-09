@@ -114,7 +114,7 @@ let vaultPrototype;
 export function vaultFixture(overrides = {}) {
   vaultPrototype ??=
     sourceLoader()('src/vault/index.ts').VaultAdapter.prototype;
-  return {
+  const fixture = {
     href: {
       mode: 'ARTICLE',
       channelId: 'test',
@@ -128,8 +128,9 @@ export function vaultFixture(overrides = {}) {
     activeIndex: -1,
     articleLoadRevision: 0,
     isSeriesMode: false,
+    isScrapMode: false,
     seriesChannels: [],
-    uiSettings: { homeSeriesChannels: [], skipVisitedArticles: false },
+    uiSettings: { homeSeriesChannels: [], skipVisitedContexts: {} },
     reading: {
       hasVisited: () => false,
       getVisitedPaths: () => new Set(),
@@ -155,4 +156,15 @@ export function vaultFixture(overrides = {}) {
     isPrevPageActive: vaultPrototype.isPrevPageActive,
     ...overrides,
   };
+  fixture.uiSettings = {
+    homeSeriesChannels: [],
+    skipVisitedContexts: {},
+    ...fixture.uiSettings,
+  };
+  Object.defineProperty(
+    fixture,
+    'skipVisitedArticles',
+    Object.getOwnPropertyDescriptor(vaultPrototype, 'skipVisitedArticles'),
+  );
+  return fixture;
 }

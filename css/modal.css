@@ -63,7 +63,15 @@ label.helper-modal-tab-label {
 }
 
 input.helper-modal-tab-radio {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.helper-modal-tab-radio:focus-visible + .helper-modal-tab-label {
+  outline: 2px solid #766df4;
+  outline-offset: -4px;
 }
 
 #filter + label {
@@ -95,6 +103,94 @@ input.helper-modal-tab-radio {
 
   display: none;
   background-color: var(--color-bg-main);
+}
+
+.helper-modal-ui,
+.helper-modal-filter {
+  padding: 22px;
+}
+
+.arcafeed-settings-section {
+  margin: 0 0 16px;
+  padding: 16px;
+  border: 1px solid var(--color-bd-btn);
+  border-radius: 12px;
+  background: var(--color-bg-body);
+}
+
+.arcafeed-settings-heading {
+  display: block;
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.arcafeed-settings-description {
+  margin: 6px 0 0;
+  font-size: 0.77rem;
+  line-height: 1.6;
+  color: var(--color-text-muted, #888);
+}
+
+.arcafeed-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  position: sticky;
+  bottom: 0;
+  margin: 0 -22px -22px;
+  padding: 14px 22px 22px;
+  border-top: 1px solid var(--color-bd-btn);
+  background: var(--color-bg-main);
+}
+
+.arcafeed-modal-button {
+  flex-shrink: 0;
+  min-height: 40px;
+  padding: 9px 18px;
+  border: 1px solid var(--color-bd-btn);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text);
+  background: var(--color-bg-body);
+  cursor: pointer;
+}
+
+.arcafeed-modal-button:hover {
+  border-color: #766df4;
+}
+
+.arcafeed-modal-button.is-primary {
+  border-color: #766df4;
+  color: #fff;
+  background: #766df4;
+}
+
+.arcafeed-modal-button.is-primary:hover {
+  background: #655cda;
+}
+
+.arcafeed-modal-button:focus-visible {
+  outline: 2px solid #766df4;
+  outline-offset: 3px;
+}
+
+@media (max-width: 440px) {
+  .helper-modal-ui,
+  .helper-modal-filter {
+    padding: 16px;
+  }
+
+  .arcafeed-settings-section {
+    padding: 12px;
+  }
+
+  .arcafeed-modal-actions {
+    margin: 0 -16px -16px;
+    padding: 12px 16px 16px;
+  }
 }
 
 @media (max-width: 380px) {

@@ -79,6 +79,11 @@ export class ConfigService {
       this.repo.getItem(this.repo.scopedKey(articleKey, 'seriesMode')) ===
       'true';
 
+    patch.isScrapMode =
+      patch.isSeriesMode &&
+      this.repo.getItem(this.repo.scopedKey(articleKey, 'scrapMode')) ===
+        'true';
+
     patch.seriesChannels = stringList(
       this.repo.getJSON<unknown>(
         this.repo.scopedKey(articleKey, 'seriesChannels'),
@@ -147,6 +152,12 @@ export class ConfigService {
           state.isSeriesMode.toString(),
         );
       }
+      if (newSession || previous?.isScrapMode !== state.isScrapMode) {
+        this.repo.setItem(
+          this.repo.scopedKey(articleKey, 'scrapMode'),
+          state.isScrapMode.toString(),
+        );
+      }
       if (newSession || previous?.seriesChannels !== state.seriesChannels) {
         this.repo.setJSON(
           this.repo.scopedKey(articleKey, 'seriesChannels'),
@@ -189,6 +200,10 @@ export class ConfigService {
       this.repo.scopedKey(articleKey, 'seriesMode'),
       String(session.isSeriesMode),
     );
+    this.repo.setItem(
+      this.repo.scopedKey(articleKey, 'scrapMode'),
+      String(session.isScrapMode),
+    );
     this.repo.setJSON(
       this.repo.scopedKey(articleKey, 'seriesChannels'),
       session.seriesChannels,
@@ -226,6 +241,10 @@ export class ConfigService {
     this.repo.setItem(
       this.repo.scopedKey(targetArticleKey, 'seriesMode'),
       'true',
+    );
+    this.repo.setItem(
+      this.repo.scopedKey(targetArticleKey, 'scrapMode'),
+      'false',
     );
 
     // Normalize article URLs to pathnames

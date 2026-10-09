@@ -15,6 +15,7 @@ export interface ReadingSession {
   searchQuery: string;
   articleList: string[];
   isSeriesMode: boolean;
+  isScrapMode: boolean;
   seriesChannels: string[];
   scrollY: number;
   updatedAt: number;
@@ -174,6 +175,7 @@ export class ReadingHistory {
           SESSION_ARTICLE_LIMIT,
         ),
         isSeriesMode: item.isSeriesMode === true,
+        isScrapMode: item.isScrapMode === true,
         seriesChannels: stringList(item.seriesChannels).filter((channel) =>
           /^[a-zA-Z0-9]+$/.test(channel),
         ),

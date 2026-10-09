@@ -564,7 +564,7 @@ test('skipping seen articles scans later pages and keeps seen links for backward
   const p = vaultFixture({
     articleList: ['/b/test/100'],
     activeIndex: 0,
-    uiSettings: { skipVisitedArticles: true },
+    uiSettings: { skipVisitedContexts: { 'channel:test': true } },
     reading: { hasVisited: (path) => path === '/b/test/99' },
   });
   await fetchFirstBatch(p, '100');
@@ -586,7 +586,7 @@ test('changing the skip setting discards an in-flight listing response', async (
   const { fetchFirstBatch } = load('src/feature/article/fetch.ts');
   const p = vaultFixture();
   const work = fetchFirstBatch(p, '100');
-  p.uiSettings = { ...p.uiSettings, skipVisitedArticles: true };
+  p.skipVisitedArticles = true;
   gate.resolve({ responseText: 'first' });
   await work;
   assert.deepEqual(p.articleList, ['/b/test/100', '/b/test/99']);

@@ -462,6 +462,17 @@
   background: #766df4;
 }
 
+.arcafeed-resume-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.arcafeed-resume-delete:hover {
+  border-color: #d65a6b;
+  color: #d65a6b;
+}
+
 .arcafeed-resume-action:hover {
   border-color: #655cda;
   background: #655cda;
@@ -471,5 +482,14 @@
   .helper-modal-history,
   .helper-modal-resume {
     padding: 16px;
+  }
+
+  .arcafeed-resume-bottom {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .arcafeed-resume-actions {
+    margin-left: auto;
   }
 }

@@ -1,70 +1,118 @@
-/* modal ui */
+/* Settings rows and accessible switches */
 
-.ui-title {
-  font-weight: bold;
-  font-size: 1.2rem;
-  margin-bottom: 10px;
+.ui-setting-list {
+  display: grid;
+  gap: 0;
 }
 
-#ui-toggle-list {
-  margin-bottom: 15px;
-}
-
-#ui-toggle-list label {
-  display: block;
-  padding: 6px 0;
+.ui-setting-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0;
+  padding: 14px 0;
   cursor: pointer;
-  font-size: 0.95rem;
 }
 
-#ui-toggle-list label:hover {
+.ui-setting-row + .ui-setting-row {
+  border-top: 1px solid var(--color-bd-btn);
+}
+
+.ui-setting-copy {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ui-setting-label {
+  font-size: 0.9rem;
+  font-weight: 500;
   color: var(--color-text);
 }
 
-#ui-toggle-list label > input {
-  margin-right: 8px;
-  cursor: pointer;
-}
-
-/* Article info toggle group */
-
-.ui-article-info-group {
-  margin-top: 12px;
-  padding: 12px;
-  border: 1px solid var(--color-bd-btn);
-  border-radius: 6px;
-}
-
-.ui-article-info-header {
-  font-weight: 600;
-  font-size: 0.9rem;
-  margin-bottom: 8px;
+.ui-setting-description {
+  font-size: 0.77rem;
+  line-height: 1.6;
   color: var(--color-text-muted, #888);
 }
 
-#ui-article-info-list label {
-  display: inline-block;
-  padding: 4px 0;
-  margin-right: 16px;
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-
-#ui-article-info-list label:hover {
-  color: var(--color-text);
-}
-
-#ui-article-info-list label > input {
-  margin-right: 4px;
+.ui-toggle-checkbox {
+  position: absolute;
+  right: 0;
+  width: 42px;
+  height: 26px;
+  margin: 0;
+  opacity: 0;
   cursor: pointer;
 }
 
-.helper-modal-ui label {
-  width: 100%;
+.ui-setting-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 42px;
+  height: 26px;
+  border: 1px solid var(--color-bd-btn);
+  border-radius: 20px;
+  background: var(--color-bg-body);
+  transition:
+    background 0.15s,
+    border-color 0.15s;
 }
 
-.helper-modal-ui label > input {
-  float: right;
+.ui-setting-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-text-muted, #888);
+  transition: transform 0.15s;
+}
+
+.ui-toggle-checkbox:checked + .ui-setting-switch {
+  border-color: #766df4;
+  background: #766df4;
+}
+
+.ui-toggle-checkbox:checked + .ui-setting-switch::after {
+  transform: translateX(16px);
+  background: #fff;
+}
+
+.ui-toggle-checkbox:focus-visible + .ui-setting-switch {
+  outline: 2px solid #766df4;
+  outline-offset: 3px;
+}
+
+.ui-article-info-group {
+  min-width: 0;
+}
+
+.ui-article-info-group legend {
+  width: auto;
+  padding: 0 4px;
+  margin: 0;
+}
+
+#ui-article-info-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24px;
+}
+
+#ui-article-info-list .ui-setting-row {
+  border-top: 0;
+  padding: 10px 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-setting-switch,
+  .ui-setting-switch::after {
+    transition: none;
+  }
 }
 
 /* Resize handle (PC only) */

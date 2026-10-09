@@ -9,10 +9,11 @@ export function captureArticleSession(p: VaultAdapter): () => boolean {
     articleFilterConfig,
     searchQuery,
     isSeriesMode,
+    isScrapMode,
     isShuffleMode,
     seriesChannels,
   } = p;
-  const skipRead = p.uiSettings.skipVisitedArticles;
+  const skipRead = p.skipVisitedArticles;
 
   return () =>
     p.articleLoadRevision === articleLoadRevision &&
@@ -21,7 +22,8 @@ export function captureArticleSession(p: VaultAdapter): () => boolean {
     p.articleFilterConfig === articleFilterConfig &&
     p.searchQuery === searchQuery &&
     p.isSeriesMode === isSeriesMode &&
+    p.isScrapMode === isScrapMode &&
     p.isShuffleMode === isShuffleMode &&
     p.seriesChannels === seriesChannels &&
-    p.uiSettings.skipVisitedArticles === skipRead;
+    p.skipVisitedArticles === skipRead;
 }

@@ -53,7 +53,6 @@ export function normalizeUISettings(value: unknown): UISettings {
     'hideArticleTime',
     'hideArticleView',
     'showVisitedIndicators',
-    'skipVisitedArticles',
   ] as const;
   for (const key of booleanKeys) {
     if (typeof value[key] === 'boolean') settings[key] = value[key];
@@ -65,11 +64,15 @@ export function normalizeUISettings(value: unknown): UISettings {
   ) {
     settings.showVisitedIndicators = value.showReadIndicators;
   }
-  if (
-    typeof value.skipVisitedArticles !== 'boolean' &&
-    typeof value.skipReadArticles === 'boolean'
-  ) {
-    settings.skipVisitedArticles = value.skipReadArticles;
+  if (isRecord(value.skipVisitedContexts)) {
+    settings.skipVisitedContexts = Object.fromEntries(
+      Object.entries(value.skipVisitedContexts).filter(
+        (entry): entry is [string, boolean] =>
+          /^(home|scrap|channel:[a-zA-Z0-9]+|series:[a-zA-Z0-9_-]+)$/.test(
+            entry[0],
+          ) && typeof entry[1] === 'boolean',
+      ),
+    );
   }
   if (
     value.lastModalTab === 'filter' ||

@@ -92,8 +92,7 @@ async function activateArticleLink(
   const remaining = p.articleList
     .slice(p.activeIndex + 1)
     .filter(
-      (path) =>
-        !p.uiSettings.skipVisitedArticles || !p.reading.hasVisited(path),
+      (path) => !p.skipVisitedArticles || !p.reading.hasVisited(path),
     ).length;
   const needsMoreArticles = remaining < 3;
   if (needsMoreArticles) {
@@ -150,6 +149,7 @@ async function initEnableScrapSeries(p: VaultAdapter): Promise<void> {
     href: { ...p.href, articleKey },
     searchQuery: appendSearchParam(p.searchQuery, 'articleKey', articleKey),
     isSeriesMode: true,
+    isScrapMode: true,
     seriesChannels: [],
   });
 
@@ -175,7 +175,7 @@ async function loadMoreHomeSeriesArticles(p: VaultAdapter): Promise<void> {
         minId: artId,
         count:
           index > p.activeIndex &&
-          (!p.uiSettings.skipVisitedArticles || !p.reading.hasVisited(url))
+          (!p.skipVisitedArticles || !p.reading.hasVisited(url))
             ? 1
             : 0,
       });
@@ -183,7 +183,7 @@ async function loadMoreHomeSeriesArticles(p: VaultAdapter): Promise<void> {
       if (artId < entry.minId) entry.minId = artId;
       if (
         index > p.activeIndex &&
-        (!p.uiSettings.skipVisitedArticles || !p.reading.hasVisited(url))
+        (!p.skipVisitedArticles || !p.reading.hasVisited(url))
       )
         entry.count++;
     }
@@ -196,7 +196,7 @@ async function loadMoreHomeSeriesArticles(p: VaultAdapter): Promise<void> {
   const existingUrls = new Set(p.articleList);
   const isCurrent = captureArticleSession(p);
   const filterConfig = p.articleFilterConfig;
-  const visitedPaths = p.uiSettings.skipVisitedArticles
+  const visitedPaths = p.skipVisitedArticles
     ? p.reading.getVisitedPaths()
     : undefined;
 

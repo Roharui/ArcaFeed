@@ -53,11 +53,7 @@ function initModal(p: VaultAdapter) {
   dialog.find('.helper-modal-tab-radio').on('change', function () {
     const selectedTab = $(this).attr('id') as typeof p.uiSettings.lastModalTab;
     p.uiSettings = { ...p.uiSettings, lastModalTab: selectedTab };
-    if (selectedTab === 'ui') {
-      dialog
-        .find('.ui-toggle-checkbox[data-key="showVisitedIndicators"]')
-        .prop('checked', p.uiSettings.showVisitedIndicators);
-    }
+    dialogBody.scrollTop(0);
     p.flushSave();
   });
   if (availableTabs.includes('filter')) {
