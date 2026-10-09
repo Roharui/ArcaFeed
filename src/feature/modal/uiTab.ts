@@ -10,6 +10,7 @@ const UI_TOGGLE_ITEMS: { key: string; label: string }[] = [
   { key: 'hideScrollbar', label: '스크롤바 숨기기' },
   { key: 'hideBlur', label: '스포일러 블러 제거' },
   { key: 'hideNavControl', label: '게시글 내비게이션 숨기기' },
+  { key: 'showVisitedIndicators', label: '목록 제목 오른쪽에 본 글 표시' },
 ];
 
 const ARTICLE_INFO_TOGGLES: { key: string; label: string }[] = [

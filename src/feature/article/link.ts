@@ -89,7 +89,13 @@ async function activateArticleLink(
   }
 
   // Pre-fetch next page when nearing the end of the list
-  const needsMoreArticles = p.articleList.length - p.activeIndex <= 3;
+  const remaining = p.articleList
+    .slice(p.activeIndex + 1)
+    .filter(
+      (path) =>
+        !p.uiSettings.skipVisitedArticles || !p.reading.hasVisited(path),
+    ).length;
+  const needsMoreArticles = remaining < 3;
   if (needsMoreArticles) {
     const loadMore = () =>
       p.isSeriesMode
@@ -144,6 +150,7 @@ async function initEnableScrapSeries(p: VaultAdapter): Promise<void> {
     href: { ...p.href, articleKey },
     searchQuery: appendSearchParam(p.searchQuery, 'articleKey', articleKey),
     isSeriesMode: true,
+    seriesChannels: [],
   });
 
   await fetchAllBatches(p, p.href.articleId);
@@ -152,7 +159,7 @@ async function initEnableScrapSeries(p: VaultAdapter): Promise<void> {
 // ── Home Series ─────────────────────────────────────────
 
 async function loadMoreHomeSeriesArticles(p: VaultAdapter): Promise<void> {
-  const { homeSeriesChannels } = p.uiSettings;
+  const homeSeriesChannels = p.seriesChannels;
   if (homeSeriesChannels.length === 0) return;
 
   const channelCounts = new Map<string, { minId: number; count: number }>();
@@ -166,11 +173,19 @@ async function loadMoreHomeSeriesArticles(p: VaultAdapter): Promise<void> {
     if (!entry) {
       channelCounts.set(chId, {
         minId: artId,
-        count: index > p.activeIndex ? 1 : 0,
+        count:
+          index > p.activeIndex &&
+          (!p.uiSettings.skipVisitedArticles || !p.reading.hasVisited(url))
+            ? 1
+            : 0,
       });
     } else {
       if (artId < entry.minId) entry.minId = artId;
-      if (index > p.activeIndex) entry.count++;
+      if (
+        index > p.activeIndex &&
+        (!p.uiSettings.skipVisitedArticles || !p.reading.hasVisited(url))
+      )
+        entry.count++;
     }
   }
 
@@ -181,6 +196,9 @@ async function loadMoreHomeSeriesArticles(p: VaultAdapter): Promise<void> {
   const existingUrls = new Set(p.articleList);
   const isCurrent = captureArticleSession(p);
   const filterConfig = p.articleFilterConfig;
+  const visitedPaths = p.uiSettings.skipVisitedArticles
+    ? p.reading.getVisitedPaths()
+    : undefined;
 
   showFetchLoader();
   try {
@@ -188,8 +206,14 @@ async function loadMoreHomeSeriesArticles(p: VaultAdapter): Promise<void> {
       if (!isCurrent()) return [];
       const minId = channelCounts.get(channelId)?.minId ?? 0;
       const filter = filterConfig[channelId];
-      return minId > 0
-        ? fetchChannelArticlesBefore(channelId, minId, filter, existingUrls)
+      return minId > 0 || visitedPaths
+        ? fetchChannelArticlesBefore(
+            channelId,
+            minId,
+            filter,
+            existingUrls,
+            visitedPaths,
+          )
         : fetchChannelFirstPage(channelId, filter);
     });
     if (!isCurrent()) return;
@@ -211,4 +235,18 @@ async function loadMoreHomeSeriesArticles(p: VaultAdapter): Promise<void> {
   }
 }
 
-export { initLink, activateArticleLink, initEnableScrapSeries };
+/** Refill the feed after changing which visited articles are skipped. */
+function refreshUnvisitedNavigation(p: VaultAdapter): void {
+  if (p.isCurrentMode('ARTICLE')) {
+    void activateArticleLink(p, p.href.articleId);
+  } else if (p.isCurrentMode('CHANNEL') && !p.isNextPageActive()) {
+    startBackgroundLoad(p, () => fetchFirstBatch(p, p.href.articleId));
+  }
+}
+
+export {
+  initLink,
+  activateArticleLink,
+  initEnableScrapSeries,
+  refreshUnvisitedNavigation,
+};

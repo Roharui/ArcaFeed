@@ -238,7 +238,9 @@ test('concurrent mapping waits for running requests after failure and stops new 
 });
 
 test('Vault commits related state atomically and list reset invalidates requests and the active index', () => {
-  const load = sourceLoader();
+  const load = sourceLoader({
+    globals: { localStorage: memoryStorage(), window: windowFixture },
+  });
   const { Store } = load('src/vault/store.ts');
   const { VaultAdapter } = load('src/vault/index.ts');
   const { captureArticleSession } = load('src/vault/article-session.ts');
@@ -328,7 +330,7 @@ for (const change of ['reset', 'search', 'channels', 'session']) {
     const work = fetchFirstBatch(p, '100');
     if (change === 'reset') p.resetArticleList();
     if (change === 'search') p.searchQuery = '?q=new';
-    if (change === 'channels') p.uiSettings = { homeSeriesChannels: ['other'] };
+    if (change === 'channels') p.seriesChannels = ['other'];
     if (change === 'session') p.articleKey = 'new';
     const expected = [...p.articleList];
     gate.resolve({ responseText: '' });
@@ -421,6 +423,7 @@ for (const scenario of ['success', 'empty', 'stale']) {
           hideFetchLoader() {},
           fetchChannelFirstPage: () => gate.promise,
         },
+        '@/utils/toast': { showToast() {} },
       },
     })('src/feature/modal/subscribeTab.ts');
     const p = vaultFixture({

@@ -22,6 +22,7 @@ import {
   initCheckUIModal,
   initCheckSubscribeModal,
   initStartHomeSeries,
+  initReading,
 } from '@/feature';
 
 import type { Step } from '@/core/step-runner';
@@ -40,6 +41,7 @@ class EventManager {
     return [
       [addVersionInfo],
       [initLink, initButton, initEvent, initSeriesContent, initUi],
+      initReading,
       initSwiper,
       initArticlePrefetch,
     ];

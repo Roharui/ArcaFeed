@@ -17,7 +17,7 @@ function toLink(mode: PageMode): PromiseFunc {
     const idx = activeIndex;
     const list = articleList;
 
-    const nextIdx = idx + (mode === 'NEXT' ? 1 : -1);
+    const nextIdx = p.getAdjacentArticleIndex(mode);
     const url = list[nextIdx];
     if (!url) {
       p.swiper?.slideTo(1, 0, false);

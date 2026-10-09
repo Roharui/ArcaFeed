@@ -15,7 +15,7 @@ export function initArticlePrefetch(p: VaultAdapter): void {
 
   let currentUrl = '';
   const update = () => {
-    const next = p.articleList[p.activeIndex + 1];
+    const next = p.articleList[p.getAdjacentArticleIndex('NEXT')];
     const enabled = !p.articleFilterConfig[p.href.channelId]?.disableSwiper;
     const url =
       enabled && next

@@ -10,9 +10,11 @@ import {
   normalizeArticles,
   normalizeFilters,
   normalizeUISettings,
+  stringList,
 } from './config-schema';
 
 import type { AppState } from '@/vault/store';
+import type { ReadingSession } from './reading-history';
 
 const ARTICLE_FILTER_CONFIG_GLOBAL_KEY = 'arcaFeed:articleFilterConfig';
 const UI_SETTINGS_KEY = 'arcaFeed:uiSettings';
@@ -77,6 +79,12 @@ export class ConfigService {
       this.repo.getItem(this.repo.scopedKey(articleKey, 'seriesMode')) ===
       'true';
 
+    patch.seriesChannels = stringList(
+      this.repo.getJSON<unknown>(
+        this.repo.scopedKey(articleKey, 'seriesChannels'),
+      ),
+    ).filter((channel) => /^[a-zA-Z0-9]+$/.test(channel));
+
     // Load search query
     patch.searchQuery =
       this.repo.getItem(this.repo.scopedKey(articleKey, 'searchQuery')) || '';
@@ -139,6 +147,12 @@ export class ConfigService {
           state.isSeriesMode.toString(),
         );
       }
+      if (newSession || previous?.seriesChannels !== state.seriesChannels) {
+        this.repo.setJSON(
+          this.repo.scopedKey(articleKey, 'seriesChannels'),
+          state.seriesChannels,
+        );
+      }
       if (newSession || previous?.searchQuery !== state.searchQuery) {
         this.repo.setItem(
           this.repo.scopedKey(articleKey, 'searchQuery'),
@@ -162,6 +176,29 @@ export class ConfigService {
       this.repo.scopedKey(articleKey, 'lastActiveIndex'),
       activeIndex.toString(),
     );
+  }
+
+  restoreReadingSession(session: ReadingSession, articleKey: string): void {
+    const articleList = [...session.articleList];
+    if (!articleList.includes(session.path)) articleList.unshift(session.path);
+    this.repo.setJSON(
+      this.repo.scopedKey(articleKey, 'articleList'),
+      articleList,
+    );
+    this.repo.setItem(
+      this.repo.scopedKey(articleKey, 'seriesMode'),
+      String(session.isSeriesMode),
+    );
+    this.repo.setJSON(
+      this.repo.scopedKey(articleKey, 'seriesChannels'),
+      session.seriesChannels,
+    );
+    this.repo.setItem(
+      this.repo.scopedKey(articleKey, 'searchQuery'),
+      appendSearchParam(session.searchQuery, 'articleKey', articleKey),
+    );
+    this.saveLastActiveIndex(articleKey, articleList.indexOf(session.path));
+    this.repo.pruneArticleKeyCaches(articleKey);
   }
 
   /**

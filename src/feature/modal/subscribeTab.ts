@@ -5,11 +5,13 @@ import { createArticleKey } from '@/utils/article-key';
 import { getArticleId } from '@/utils/regex';
 import {
   fetchChannelFirstPage,
+  fetchChannelArticlesBefore,
   showFetchLoader,
   hideFetchLoader,
 } from '@/feature/article/fetch';
 import { mapConcurrent } from '@/utils/func';
 import { captureArticleSession } from '@/vault/article-session';
+import { showToast } from '@/utils/toast';
 
 import type { VaultAdapter } from '@/vault';
 
@@ -108,7 +110,11 @@ async function initStartHomeSeries(p: VaultAdapter): Promise<VaultAdapter> {
   const hiddenSet = new Set(p.uiSettings.hiddenChannels);
   const selectedChannels = channels.filter((c) => !hiddenSet.has(c.id));
 
-  if (selectedChannels.length === 0) return p;
+  if (selectedChannels.length === 0) {
+    showToast('탐색할 채널을 하나 이상 선택해주세요.');
+    void eventBus.emit('closeModal');
+    return p;
+  }
 
   showFetchLoader();
 
@@ -121,12 +127,23 @@ async function initStartHomeSeries(p: VaultAdapter): Promise<VaultAdapter> {
     const articleKey = createArticleKey();
     const isCurrent = captureArticleSession(p);
     const filterConfig = p.articleFilterConfig;
+    const visitedPaths = p.uiSettings.skipVisitedArticles
+      ? p.reading.getVisitedPaths()
+      : undefined;
     const allArticles: { url: string; articleId: number }[] = [];
 
     const batches = await mapConcurrent(selectedChannels, async (channel) => {
       if (!isCurrent()) return [];
       const channelFilter = filterConfig[channel.id];
-      return fetchChannelFirstPage(channel.id, channelFilter);
+      return visitedPaths
+        ? fetchChannelArticlesBefore(
+            channel.id,
+            0,
+            channelFilter,
+            undefined,
+            visitedPaths,
+          )
+        : fetchChannelFirstPage(channel.id, channelFilter);
     });
     if (!isCurrent()) return p;
 
@@ -143,25 +160,41 @@ async function initStartHomeSeries(p: VaultAdapter): Promise<VaultAdapter> {
 
     allArticles.sort((a, b) => b.articleId - a.articleId);
 
-    if (allArticles.length === 0) return p;
+    const firstIndex = allArticles.findIndex(
+      (article) => !visitedPaths?.has(article.url),
+    );
+    if (firstIndex === -1) {
+      showToast(
+        visitedPaths
+          ? '선택한 채널에서 아직 방문하지 않은 게시글을 찾지 못했습니다.'
+          : '선택한 채널에서 게시글을 찾지 못했습니다.',
+      );
+      return p;
+    }
     p.updateState({
       articleKey,
       href: { ...p.href, articleKey },
       articleList: allArticles.map((a) => a.url),
       isSeriesMode: true,
-      activeIndex: 0,
+      seriesChannels: selectedChannels.map((channel) => channel.id),
+      activeIndex: firstIndex,
       searchQuery: `?articleKey=${articleKey}`,
     });
     p.flushSave();
 
     if (allArticles.length > 0) {
-      const firstArticle = allArticles[0] as { url: string; articleId: number };
+      const firstArticle = allArticles[firstIndex] as {
+        url: string;
+        articleId: number;
+      };
       const nextUrl = new URL(firstArticle.url, window.location.origin);
       nextUrl.searchParams.set('articleKey', articleKey);
       window.location.replace(nextUrl.toString());
     }
   } finally {
     hideFetchLoader();
+    // Also dismiss the loading overlay if a channel request fails.
+    void eventBus.emit('closeModal');
   }
 
   return p;

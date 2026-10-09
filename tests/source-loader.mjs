@@ -109,7 +109,11 @@ export function deferred() {
   return { promise, resolve, reject };
 }
 
+let vaultPrototype;
+
 export function vaultFixture(overrides = {}) {
+  vaultPrototype ??=
+    sourceLoader()('src/vault/index.ts').VaultAdapter.prototype;
   return {
     href: {
       mode: 'ARTICLE',
@@ -124,7 +128,12 @@ export function vaultFixture(overrides = {}) {
     activeIndex: -1,
     articleLoadRevision: 0,
     isSeriesMode: false,
-    uiSettings: { homeSeriesChannels: [] },
+    seriesChannels: [],
+    uiSettings: { homeSeriesChannels: [], skipVisitedArticles: false },
+    reading: {
+      hasVisited: () => false,
+      getVisitedPaths: () => new Set(),
+    },
     searchQuery: '',
     saves: 0,
     flushSave() {
@@ -141,12 +150,9 @@ export function vaultFixture(overrides = {}) {
     isCurrentMode(...modes) {
       return modes.includes(this.href.mode);
     },
-    isNextPageActive() {
-      return this.activeIndex < this.articleList.length - 1;
-    },
-    isPrevPageActive() {
-      return this.activeIndex > 0;
-    },
+    getAdjacentArticleIndex: vaultPrototype.getAdjacentArticleIndex,
+    isNextPageActive: vaultPrototype.isNextPageActive,
+    isPrevPageActive: vaultPrototype.isPrevPageActive,
     ...overrides,
   };
 }

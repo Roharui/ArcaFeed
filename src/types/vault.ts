@@ -28,7 +28,9 @@ interface UISettings {
   hideArticleAuthor: boolean;
   hideArticleTime: boolean;
   hideArticleView: boolean;
-  lastModalTab: 'filter' | 'ui' | 'subscribe';
+  showVisitedIndicators: boolean;
+  skipVisitedArticles: boolean;
+  lastModalTab: 'filter' | 'ui' | 'subscribe' | 'history' | 'resume';
   hiddenChannels: string[];
   homeSeriesChannels: string[];
   contentWidth: number;

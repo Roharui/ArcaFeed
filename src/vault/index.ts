@@ -8,6 +8,9 @@ export { ConfigService } from './config';
 import { Store } from './store';
 import { StorageRepository } from './repository';
 import { ConfigService } from './config';
+import { ReadingHistory } from './reading-history';
+import type { ReadingSession } from './reading-history';
+import type { PageMode } from '@/types';
 
 import type { Swiper } from 'swiper/types';
 
@@ -33,10 +36,17 @@ export class VaultAdapter {
 
   // Swiper is UI state, kept direct
   swiper: Swiper | null = null;
+  readonly reading: ReadingHistory;
 
   constructor(store?: Store, config?: ConfigService, initialHref?: HrefImpl) {
     this.config = config ?? new ConfigService(new StorageRepository());
     this.store = store ?? new Store(this.config.loadConfig());
+    this.reading = new ReadingHistory();
+    this.reading.subscribe(() => {
+      this.store.setState({
+        readingRevision: this.store.getState().readingRevision + 1,
+      });
+    });
 
     // Pre-set href from constructor injection (avoids redundant URL re-parse).
     // Falls back to synchronous URL parse if not provided.
@@ -130,6 +140,10 @@ export class VaultAdapter {
     this.store.setState({ isSeriesMode: v });
   }
 
+  get seriesChannels(): string[] {
+    return this.store.getState().seriesChannels;
+  }
+
   get isShuffleMode(): boolean {
     return this.store.getState().isShuffleMode;
   }
@@ -186,11 +200,43 @@ export class VaultAdapter {
   }
 
   isNextPageActive(): boolean {
-    return this.activeIndex < this.articleList.length - 1;
+    return this.getAdjacentArticleIndex('NEXT') !== -1;
   }
 
   isPrevPageActive(): boolean {
-    return this.activeIndex > 0;
+    return this.getAdjacentArticleIndex('PREV') !== -1;
+  }
+
+  getAdjacentArticleIndex(mode: PageMode): number {
+    const direction = mode === 'NEXT' ? 1 : -1;
+    for (
+      let index = this.activeIndex + direction;
+      index >= 0 && index < this.articleList.length;
+      index += direction
+    ) {
+      const path = this.articleList[index]!;
+      if (
+        mode === 'NEXT' &&
+        this.isCurrentMode('ARTICLE') &&
+        path === `/b/${this.href.channelId}/${this.href.articleId}`
+      )
+        continue;
+      // Backwards navigation remains available to revisit the previous article.
+      if (
+        mode === 'NEXT' &&
+        this.uiSettings.skipVisitedArticles &&
+        this.reading.hasVisited(path)
+      )
+        continue;
+      return index;
+    }
+    return -1;
+  }
+
+  restoreReadingSession(session: ReadingSession, articleKey: string): void {
+    this.loadRevision++;
+    this.flushSave();
+    this.config.restoreReadingSession(session, articleKey);
   }
 
   resetArticleList(): void {

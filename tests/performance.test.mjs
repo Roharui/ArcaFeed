@@ -337,7 +337,7 @@ test('home-series replenishment fetches channels together and preserves visited 
   const p = vaultFixture({
     isSeriesMode: true,
     articleList: ['/b/test/102', '/b/other/101', '/b/test/100', '/b/other/99'],
-    uiSettings: { homeSeriesChannels: ['test', 'other'] },
+    seriesChannels: ['test', 'other'],
   });
   const { activateArticleLink } = loadLink({
     showFetchLoader() {},
@@ -370,7 +370,7 @@ test('a filter change discards an old home-series response', async () => {
   const gate = deferred();
   const p = vaultFixture({
     isSeriesMode: true,
-    uiSettings: { homeSeriesChannels: ['test'] },
+    seriesChannels: ['test'],
   });
   const { activateArticleLink } = loadLink({
     showFetchLoader() {},
@@ -549,6 +549,48 @@ test('listing pages deduplicate existing URLs, duplicate rows and repeats across
   await fetchAllBatches(p, '100');
   assert.deepEqual(p.articleList, ['/b/test/100', '/b/test/99', '/b/test/98']);
   assert.equal(calls, 2);
+});
+
+test('skipping seen articles scans later pages and keeps seen links for backward navigation', async () => {
+  const pages = {
+    seen: { rows: [{ href: '/b/test/99' }], next: '?p=2' },
+    unseen: { rows: [{ href: '/b/test/98' }], next: '?p=3' },
+  };
+  let calls = 0;
+  const { load } = listingAdapter(pages, async () => ({
+    responseText: calls++ === 0 ? 'seen' : 'unseen',
+  }));
+  const { fetchFirstBatch } = load('src/feature/article/fetch.ts');
+  const p = vaultFixture({
+    articleList: ['/b/test/100'],
+    activeIndex: 0,
+    uiSettings: { skipVisitedArticles: true },
+    reading: { hasVisited: (path) => path === '/b/test/99' },
+  });
+  await fetchFirstBatch(p, '100');
+  assert.equal(calls, 2);
+  assert.deepEqual(p.articleList, ['/b/test/100', '/b/test/99', '/b/test/98']);
+  assert.equal(p.getAdjacentArticleIndex('NEXT'), 2);
+  p.activeIndex = 2;
+  assert.equal(p.getAdjacentArticleIndex('PREV'), 1);
+});
+
+test('changing the skip setting discards an in-flight listing response', async () => {
+  const gate = deferred();
+  const pages = { first: { rows: [{ href: '/b/test/98' }], next: '?p=2' } };
+  let calls = 0;
+  const { load } = listingAdapter(pages, () => {
+    calls++;
+    return gate.promise;
+  });
+  const { fetchFirstBatch } = load('src/feature/article/fetch.ts');
+  const p = vaultFixture();
+  const work = fetchFirstBatch(p, '100');
+  p.uiSettings = { ...p.uiSettings, skipVisitedArticles: true };
+  gate.resolve({ responseText: 'first' });
+  await work;
+  assert.deepEqual(p.articleList, ['/b/test/100', '/b/test/99']);
+  assert.equal(calls, 1);
 });
 
 test('cyclic pagination stops before requesting a page again', async () => {

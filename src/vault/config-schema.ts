@@ -52,14 +52,31 @@ export function normalizeUISettings(value: unknown): UISettings {
     'hideArticleAuthor',
     'hideArticleTime',
     'hideArticleView',
+    'showVisitedIndicators',
+    'skipVisitedArticles',
   ] as const;
   for (const key of booleanKeys) {
     if (typeof value[key] === 'boolean') settings[key] = value[key];
   }
+  // Preserve preferences saved by the earlier read-status implementation.
+  if (
+    typeof value.showVisitedIndicators !== 'boolean' &&
+    typeof value.showReadIndicators === 'boolean'
+  ) {
+    settings.showVisitedIndicators = value.showReadIndicators;
+  }
+  if (
+    typeof value.skipVisitedArticles !== 'boolean' &&
+    typeof value.skipReadArticles === 'boolean'
+  ) {
+    settings.skipVisitedArticles = value.skipReadArticles;
+  }
   if (
     value.lastModalTab === 'filter' ||
     value.lastModalTab === 'ui' ||
-    value.lastModalTab === 'subscribe'
+    value.lastModalTab === 'subscribe' ||
+    value.lastModalTab === 'history' ||
+    value.lastModalTab === 'resume'
   ) {
     settings.lastModalTab = value.lastModalTab;
   }

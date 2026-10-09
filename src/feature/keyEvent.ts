@@ -22,6 +22,7 @@ const initEvent = (p: VaultAdapter) => {
       event.metaKey
     )
       return;
+    if (document.querySelector('#dialog')) return;
     const target = event.target;
     if (
       target instanceof HTMLElement &&

@@ -140,10 +140,22 @@ async function fetchFirstBatch(
       if (!isCurrent()) return;
       if (links.length > 0) {
         p.articleList = [...new Set([...p.articleList, ...links])];
-        return;
+        const currentPath = `/b/${p.href.channelId}/${p.href.articleId}`;
+        if (
+          !p.uiSettings.skipVisitedArticles ||
+          links.some(
+            (path) => path !== currentPath && !p.reading.hasVisited(path),
+          )
+        )
+          return;
       }
     }
-    if (isCurrent()) showToast('다음 게시글 탐색에 실패했습니다.');
+    if (isCurrent())
+      showToast(
+        p.uiSettings.skipVisitedArticles
+          ? '아직 방문하지 않은 다음 게시글을 찾지 못했습니다.'
+          : '다음 게시글 탐색에 실패했습니다.',
+      );
   } finally {
     hideFetchLoader();
   }
@@ -184,10 +196,21 @@ async function fetchAllBatches(
 // ── Navigation ─────────────────────────────────────────
 
 function openScrapSeriesArticle(p: VaultAdapter): void {
-  const firstUrl = p.articleList[0];
-  if (!firstUrl) return;
+  const firstIndex = p.articleList.findIndex(
+    (path) => !p.uiSettings.skipVisitedArticles || !p.reading.hasVisited(path),
+  );
+  const firstUrl = p.articleList[firstIndex];
+  if (!firstUrl) {
+    p.updateState({ isSeriesMode: false, seriesChannels: [] });
+    showToast(
+      p.uiSettings.skipVisitedArticles
+        ? '아직 방문하지 않은 스크랩 글이 없습니다.'
+        : '스크랩 글을 찾지 못했습니다.',
+    );
+    return;
+  }
 
-  p.activeIndex = 0;
+  p.activeIndex = firstIndex;
   p.flushSave();
 
   const nextUrl = new URL(firstUrl, window.location.origin);
@@ -278,14 +301,16 @@ async function fetchChannelArticlesBefore(
   beforeArticleId: number,
   filter?: ArticleFilterImpl,
   existingUrls?: Set<string>,
+  visitedPaths?: Set<string>,
 ): Promise<string[]> {
   const basePath = channelBasePath(channelId);
   let nextUrl: string | null = withBestMode(
-    `${basePath}/${beforeArticleId}`,
+    beforeArticleId > 0 ? `${basePath}/${beforeArticleId}` : basePath,
     filter,
   );
   const results: string[] = [];
   const visitedPages = new Set<string>();
+  const seen = new Set(existingUrls);
 
   for (let page = 0; page < MAX_PAGES && nextUrl; page++) {
     const url = normalizeUrl(nextUrl);
@@ -293,12 +318,13 @@ async function fetchChannelArticlesBefore(
     visitedPages.add(url);
     const { $html } = await fetchAndParse(url);
 
-    const links = extractLinks($html, filter, existingUrls);
+    const links = extractLinks($html, filter, seen);
     results.push(...links);
+    for (const link of links) seen.add(link);
 
     nextUrl = extractNextPageUrl($html, basePath);
 
-    if (links.length > 0) break;
+    if (links.some((path) => !visitedPaths?.has(path))) break;
   }
 
   return results;

@@ -1,0 +1,475 @@
+.arcafeed-list-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.arcafeed-list-title > .title {
+  min-width: 0;
+}
+
+.arcafeed-list-visited-status {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.arcafeed-list-visited-status::after {
+  content: '본 글';
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  color: var(--color-text-muted, #888);
+  background: var(--color-bg-main);
+}
+
+.arcafeed-article-heading {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 32px;
+  padding-right: 38px;
+}
+
+.arcafeed-article-heading-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.arcafeed-skip-setting {
+  position: absolute;
+  top: 2px;
+  right: -8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: normal;
+  line-height: 1.5;
+  white-space: nowrap;
+  color: var(--color-text-muted, #888);
+  background: transparent;
+  opacity: 0.5;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.arcafeed-skip-setting::before {
+  content: '⏭️';
+}
+
+.arcafeed-skip-setting.is-active {
+  border-color: #766df4;
+  background: rgba(118, 109, 244, 0.12);
+  opacity: 1;
+}
+
+.arcafeed-skip-setting:hover {
+  opacity: 1;
+}
+
+.arcafeed-skip-setting:focus-visible {
+  outline: 2px solid #766df4;
+  outline-offset: 2px;
+}
+
+.helper-modal-history,
+.helper-modal-resume {
+  padding: 22px;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.arcafeed-reading-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.arcafeed-reading-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.arcafeed-reading-heading h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+
+.arcafeed-reading-count {
+  min-width: 24px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  text-align: center;
+  color: #766df4;
+  background: rgba(118, 109, 244, 0.1);
+}
+
+.arcafeed-history-description,
+.arcafeed-history-meta,
+.arcafeed-reading-time,
+.arcafeed-reading-total,
+.arcafeed-reading-sort {
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #888);
+}
+
+.arcafeed-history-description {
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
+
+.arcafeed-reading-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-bd-btn);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.4;
+  cursor: pointer;
+  color: var(--color-text);
+  background: var(--color-bg-body);
+}
+
+.arcafeed-reading-button:hover {
+  border-color: #766df4;
+}
+
+.arcafeed-reading-button:focus-visible,
+.arcafeed-history-row:focus-visible,
+.arcafeed-history-tools input:focus-visible,
+.arcafeed-history-tools select:focus-visible {
+  outline: 2px solid #766df4;
+  outline-offset: 2px;
+}
+
+.arcafeed-reading-close {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  font-size: 1.35rem;
+  font-weight: normal;
+  color: var(--color-text-muted, #888);
+  background: transparent;
+}
+
+.arcafeed-reading-close:hover {
+  color: var(--color-text);
+  background: var(--color-bg-body);
+}
+
+.arcafeed-history-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.arcafeed-reading-search {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 10px;
+  border: 1px solid var(--color-bd-btn);
+  border-radius: 8px;
+  color: var(--color-text-muted, #888);
+  background: var(--color-bg-body);
+}
+
+.arcafeed-reading-search:focus-within {
+  border-color: #766df4;
+  box-shadow: 0 0 0 2px rgba(118, 109, 244, 0.12);
+}
+
+.arcafeed-reading-search input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 9px 0;
+  border: 0;
+  font-size: 1rem;
+  color: var(--color-text);
+  background: transparent;
+}
+
+.arcafeed-reading-search input:focus-visible {
+  outline: none;
+}
+
+.arcafeed-reading-search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+.arcafeed-search-clear {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  font-size: 1.15rem;
+  font-weight: normal;
+  color: var(--color-text-muted, #888);
+  background: transparent;
+}
+
+.arcafeed-search-clear:hover {
+  color: var(--color-text);
+  background: var(--color-bg-main);
+}
+
+.arcafeed-history-tools select {
+  justify-self: start;
+  min-width: 0;
+  max-width: 100%;
+  padding: 9px 8px;
+  border: 1px solid var(--color-bd-btn);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  background: var(--color-bg-body);
+}
+
+.arcafeed-reading-sort {
+  margin-left: auto;
+}
+
+.arcafeed-reading-list {
+  max-height: min(48dvh, 440px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 2px;
+}
+
+.arcafeed-reading-date {
+  padding: 14px 10px 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted, #888);
+}
+
+.arcafeed-reading-date:first-child {
+  padding-top: 0;
+}
+
+.arcafeed-history-row {
+  display: block;
+  margin-bottom: 4px;
+  padding: 12px 10px;
+  border-radius: 9px;
+  text-decoration: none;
+  color: var(--color-text);
+}
+
+.arcafeed-history-row:hover {
+  color: var(--color-text);
+  background: var(--color-bg-body);
+  text-decoration: none;
+}
+
+.arcafeed-history-row-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.arcafeed-history-row-heading > .bi-arrow-up-right {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #888);
+}
+
+.arcafeed-history-link {
+  flex: 1;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: 0.93rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.arcafeed-reading-time {
+  white-space: nowrap;
+}
+
+.arcafeed-history-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.arcafeed-reading-channel {
+  max-width: 70%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arcafeed-reading-more {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.arcafeed-reading-empty {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 10px;
+  padding: 36px 12px;
+  text-align: center;
+  color: var(--color-text);
+}
+
+.arcafeed-reading-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 4px;
+  border-radius: 14px;
+  font-size: 1.35rem;
+  color: #766df4;
+  background: rgba(118, 109, 244, 0.1);
+}
+
+.arcafeed-reading-empty p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #888);
+}
+
+.arcafeed-history-footer {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-bd-btn);
+}
+
+.arcafeed-reading-delete {
+  padding: 6px 0;
+  border: 0;
+  font-size: 0.8rem;
+  font-weight: normal;
+  color: var(--color-text-muted, #888);
+  background: transparent;
+}
+
+.arcafeed-reading-delete:hover {
+  color: #df6262;
+}
+
+.arcafeed-resume-card {
+  margin-bottom: 10px;
+  padding: 16px;
+  border: 1px solid var(--color-bd-btn);
+  border-radius: 12px;
+  background: var(--color-bg-body);
+}
+
+.arcafeed-resume-card:last-child {
+  margin-bottom: 0;
+}
+
+.arcafeed-resume-context {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.arcafeed-resume-type {
+  flex-shrink: 0;
+  padding: 3px 6px;
+  border-radius: 5px;
+  font-size: 0.7rem;
+  color: #766df4;
+  background: rgba(118, 109, 244, 0.1);
+}
+
+.arcafeed-resume-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #888);
+}
+
+.arcafeed-resume-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+
+.arcafeed-resume-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.arcafeed-resume-action {
+  flex-shrink: 0;
+  border-color: #766df4;
+  color: #fff;
+  background: #766df4;
+}
+
+.arcafeed-resume-action:hover {
+  border-color: #655cda;
+  background: #655cda;
+}
+
+@media (max-width: 440px) {
+  .helper-modal-history,
+  .helper-modal-resume {
+    padding: 16px;
+  }
+}

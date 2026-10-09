@@ -10,8 +10,9 @@ export function captureArticleSession(p: VaultAdapter): () => boolean {
     searchQuery,
     isSeriesMode,
     isShuffleMode,
+    seriesChannels,
   } = p;
-  const channels = p.uiSettings.homeSeriesChannels;
+  const skipRead = p.uiSettings.skipVisitedArticles;
 
   return () =>
     p.articleLoadRevision === articleLoadRevision &&
@@ -21,5 +22,6 @@ export function captureArticleSession(p: VaultAdapter): () => boolean {
     p.searchQuery === searchQuery &&
     p.isSeriesMode === isSeriesMode &&
     p.isShuffleMode === isShuffleMode &&
-    p.uiSettings.homeSeriesChannels === channels;
+    p.seriesChannels === seriesChannels &&
+    p.uiSettings.skipVisitedArticles === skipRead;
 }

@@ -14,6 +14,8 @@ export interface AppState {
   articleList: string[];
   articleFilterConfig: ArticleFilterConfigImpl;
   isSeriesMode: boolean;
+  seriesChannels: string[];
+  readingRevision: number;
   isShuffleMode: boolean;
   searchQuery: string;
   lastActiveIndex: number;
@@ -38,6 +40,8 @@ const DEFAULT_UI_SETTINGS: UISettings = {
   hideArticleAuthor: false,
   hideArticleTime: false,
   hideArticleView: false,
+  showVisitedIndicators: true,
+  skipVisitedArticles: false,
   lastModalTab: 'filter',
   hiddenChannels: [],
   homeSeriesChannels: [],
@@ -52,6 +56,8 @@ export function createInitialState(): AppState {
     articleList: [],
     articleFilterConfig: {},
     isSeriesMode: false,
+    seriesChannels: [],
+    readingRevision: 0,
     isShuffleMode: false,
     searchQuery: '',
     lastActiveIndex: -1,

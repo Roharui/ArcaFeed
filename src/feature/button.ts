@@ -27,6 +27,9 @@ function buildScrapButtons(p: VaultAdapter): void {
     .last()
     .before(
       btnWrapper([
+        createArcaFeedBtn('filter', 'bi-gear-fill', () =>
+          eventBus.emit('showModal'),
+        ),
         createArcaFeedBtn('shuffle', shuffleIcon, () =>
           eventBus.emit('toggleShuffle'),
         ),
