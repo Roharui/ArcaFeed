@@ -25,6 +25,19 @@ const swiperOptions: SwiperOptions = {
   longSwipesMs: 100,
   longSwipesRatio: 0.1,
   touchMoveStopPropagation: true,
+  // Article slides can be very tall and contain continuously updating videos.
+  // Avoid forcing the whole article into a 3D compositing layer.
+  maxBackfaceHiddenSlides: 0,
+  on: {
+    setTranslate(swiper) {
+      // Preserve Swiper's RTL, rounding and large-coordinate adjustments.
+      const style = swiper.wrapperEl.style;
+      style.transform = style.transform.replace(
+        /^translate3d\(([^,]+),\s*([^,]+),\s*[^)]+\)$/,
+        'translate($1, $2)',
+      );
+    },
+  },
 };
 
 // ── Mode-specific slide-next events ────────────────────

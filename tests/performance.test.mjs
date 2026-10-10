@@ -453,7 +453,9 @@ test('Swiper is reused and background list changes unlock navigation', () => {
   class FakeSwiper {
     constructor(_selector, options) {
       constructions++;
-      Object.assign(this, options);
+      const { on, ...settings } = options;
+      Object.assign(this, settings);
+      this.events = on;
     }
     on() {}
     enable() {
@@ -480,6 +482,19 @@ test('Swiper is reused and background list changes unlock navigation', () => {
   })('src/feature/swiper/swiper.ts');
   initSwiperPage(p);
   assert.equal(p.swiper.speed, 300);
+  assert.equal(p.swiper.maxBackfaceHiddenSlides, 0);
+  const wrapperEl = { style: {} };
+  // Keep initial centering, drag, RTL and vertical coordinates unchanged.
+  for (const [x, y] of [
+    [-700, 0],
+    [-650.5, 0],
+    [700, 0],
+    [0, -700],
+  ]) {
+    wrapperEl.style.transform = `translate3d(${x}px, ${y}px, 0px)`;
+    p.swiper.events.setTranslate({ wrapperEl });
+    assert.equal(wrapperEl.style.transform, `translate(${x}px, ${y}px)`);
+  }
   assert.equal(p.swiper.allowSlideNext, false);
   p.articleList = [...p.articleList, '/b/test/99'];
   subscriber({ href: p.href, articleFilterConfig: p.articleFilterConfig });
@@ -500,7 +515,9 @@ test('Swiper ignores article height changes and batches width changes until the 
   const element = { clientWidth: 700 };
   class FakeSwiper {
     constructor(_selector, options) {
-      Object.assign(this, options);
+      const { on, ...settings } = options;
+      Object.assign(this, settings);
+      this.events = on;
       this.el = element;
     }
     on(name, callback) {
