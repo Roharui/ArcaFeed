@@ -21,6 +21,10 @@ const ARTICLE_TITLE_SELECTOR =
   '.article-head .title, .board-article > .title, .board-article > .arcafeed-article-heading > .title';
 const initializedVaults = new WeakSet<VaultAdapter>();
 const stoppedVaults = new WeakSet<VaultAdapter>();
+const checkpointContexts = new WeakMap<
+  VaultAdapter,
+  { source: string[]; channels: string[]; session: ReadingSession }
+>();
 
 function currentPath(p: VaultAdapter): string {
   return `/b/${p.href.channelId}/${p.href.articleId}`;
@@ -90,7 +94,6 @@ function contextId(p: VaultAdapter): string {
 function saveCheckpoint(p: VaultAdapter): void {
   if (stoppedVaults.has(p)) return;
   const path = currentPath(p);
-  const articleList = articleWindow(p.articleList, path, 2000);
   const params = new URLSearchParams(p.searchQuery);
   params.delete('articleKey');
   const query = params.size ? `?${params}` : '';
@@ -102,17 +105,37 @@ function saveCheckpoint(p: VaultAdapter): void {
         ? `구독 피드 · ${p.seriesChannels.length}개 채널`
         : `시리즈 · ${channel}`
       : `${channel}${params.get('q') ? ` · ${params.get('q')}` : ''}${params.get('mode') === 'best' ? ' · 인기글' : ''}`;
-  p.reading.saveSession({
-    id: contextId(p),
+  const id = contextId(p);
+  const previous = checkpointContexts.get(p);
+  if (
+    previous?.source === p.articleList &&
+    previous.channels === p.seriesChannels &&
+    previous.session.id === id &&
+    previous.session.path === path &&
+    previous.session.label === label &&
+    previous.session.searchQuery === query &&
+    previous.session.isSeriesMode === p.isSeriesMode &&
+    previous.session.isScrapMode === p.isScrapMode &&
+    p.reading.savePosition(id, path, window.scrollY, Date.now())
+  )
+    return;
+  const session: ReadingSession = {
+    id,
     label,
     path,
     searchQuery: query,
-    articleList,
+    articleList: articleWindow(p.articleList, path, 2000),
     isSeriesMode: p.isSeriesMode,
     isScrapMode: p.isScrapMode,
     seriesChannels: [...p.seriesChannels],
     scrollY: window.scrollY,
     updatedAt: Date.now(),
+  };
+  p.reading.saveSession(session);
+  checkpointContexts.set(p, {
+    source: p.articleList,
+    channels: p.seriesChannels,
+    session,
   });
 }
 

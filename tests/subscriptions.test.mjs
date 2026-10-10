@@ -228,6 +228,28 @@ test('photo-only and best-only subscriptions fetch their own channel listings ra
   );
   assert.deepEqual(requests, ['/b/zenlesszonezero/99?mode=best']);
   assert.deepEqual(additions, ['/b/zenlesszonezero/97']);
+  const existing = new Set(['/b/zenlesszonezero/97']);
+  existing[Symbol.iterator] = () =>
+    assert.fail('the shared existing-link set must not be copied');
+  for (const fetch of [
+    () =>
+      load('src/feature/article/fetch.ts').fetchChannelArticlesBefore(
+        'zenlesszonezero',
+        99,
+        undefined,
+        existing,
+      ),
+    () =>
+      load('src/feature/article/fetch.ts').fetchChannelArticles(
+        'zenlesszonezero',
+        undefined,
+        existing,
+      ),
+  ]) {
+    const result = await fetch();
+    assert.equal(result.includes('/b/zenlesszonezero/97'), false);
+    assert.equal(existing.size, 1);
+  }
 });
 
 test('bulk subscription startup applies independent channel filters, excludes hidden channels and skips native aliases', async () => {

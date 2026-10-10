@@ -658,7 +658,14 @@ test('deleting the current checkpoint prevents scroll and pagehide from recreati
   );
   try {
     siteVisit(storage, vault.reading, entry('/b/test/100'));
+    let fullCheckpoints = 0;
+    const saveSession = vault.reading.saveSession.bind(vault.reading);
+    vault.reading.saveSession = (checkpoint) => {
+      fullCheckpoints++;
+      saveSession(checkpoint);
+    };
     initReading(vault);
+    assert.equal(fullCheckpoints, 1);
     assert.equal(vault.reading.sessions[0].isScrapMode, true);
     assert.equal(vault.reading.sessions[0].label, '스크랩');
     const initialScans = indicatorScans;
@@ -668,6 +675,7 @@ test('deleting the current checkpoint prevents scroll and pagehide from recreati
     for (const timer of [...timers.values()])
       if (timer.delay === 700) timer.handler();
     assert.equal(indicatorScans, initialScans);
+    assert.equal(fullCheckpoints, 1);
     assert.deepEqual(
       storage.writes.map((write) => write.key),
       ['arcaFeed:readingProgress'],
@@ -675,6 +683,11 @@ test('deleting the current checkpoint prevents scroll and pagehide from recreati
     storage.writes.length = 0;
     listeners.get('pagehide')();
     assert.equal(storage.writes.length, 0);
+    assert.equal(fullCheckpoints, 1);
+    vault.articleList = ['/b/test/100', '/b/test/99'];
+    listeners.get('pagehide')();
+    assert.equal(fullCheckpoints, 2);
+    assert.deepEqual(vault.reading.sessions[0].articleList, vault.articleList);
     vault.activeIndex = 0;
     vault.uiSettings = { ...vault.uiSettings, lastModalTab: 'resume' };
     assert.equal(indicatorScans, initialScans);
@@ -722,6 +735,38 @@ test('scroll checkpoints write only small progress data and notify only progress
   history.reload();
   assert.equal(storage.writes.length, 0);
   assert.equal(progressChanged, 1);
+});
+
+test('position-only checkpoints merge other tabs and reject changed or deleted contexts', () => {
+  const { ReadingHistory, storage } = readingFixture();
+  const history = new ReadingHistory();
+  const first = session('first');
+  const second = session('second', { path: '/b/test/99' });
+  history.saveSession(second);
+  history.saveSession(first);
+  const other = new ReadingHistory();
+  other.saveSession({ ...second, scrollY: 900, updatedAt: 2 });
+  storage.writes.length = 0;
+  assert.equal(history.savePosition('first', first.path, 500, 3), true);
+  assert.deepEqual(
+    storage.writes.map((item) => item.key),
+    ['arcaFeed:readingProgress'],
+  );
+  assert.equal(
+    history.sessions.find((item) => item.id === 'second').scrollY,
+    900,
+  );
+  storage.writes.length = 0;
+  assert.equal(history.savePosition('first', first.path, 500, 4), true);
+  assert.equal(storage.writes.length, 0);
+  assert.equal(history.savePosition('first', '/b/test/98', 500, 4), false);
+  other.saveSession({ ...first, label: '다른 탭에서 바뀐 탐색', updatedAt: 5 });
+  storage.writes.length = 0;
+  assert.equal(history.savePosition('first', first.path, 600, 6), false);
+  assert.equal(storage.writes.length, 0);
+  history.saveSession({ ...first, scrollY: 600, updatedAt: 6 });
+  other.removeSession('first');
+  assert.equal(history.savePosition('first', first.path, 700, 7), false);
 });
 
 test('legacy oversized resume lists migrate within a total budget and retain every current article', () => {

@@ -279,7 +279,8 @@ export function withBestMode(url: string, filter?: ArticleFilterImpl): string {
 export function extractLinks(
   $html: JQuery<HTMLElement>,
   filter?: ArticleFilterImpl,
-  existingUrls?: Set<string>,
+  existingUrls?: ReadonlySet<string>,
+  additionalUrls?: ReadonlySet<string>,
 ): string[] {
   const $rows = extractArticleRows($html);
   const predicate = filter ? buildFilterPredicate(filter) : () => true;
@@ -289,7 +290,13 @@ export function extractLinks(
   $rows.each((_, ele) => {
     if (!predicate(ele)) return;
     const href = extractArticleHref($(ele));
-    if (!href || existingUrls?.has(href) || seen.has(href)) return;
+    if (
+      !href ||
+      existingUrls?.has(href) ||
+      additionalUrls?.has(href) ||
+      seen.has(href)
+    )
+      return;
     seen.add(href);
     links.push(href);
   });
@@ -311,12 +318,12 @@ async function fetchChannelFirstPage(
 async function fetchChannelArticles(
   channelId: string,
   filter?: ArticleFilterImpl,
-  existingUrls?: Set<string>,
+  existingUrls?: ReadonlySet<string>,
 ): Promise<string[]> {
   const basePath = channelBasePath(channelId);
   let nextUrl: string | null = withBestMode(basePath, filter);
   const results: string[] = [];
-  const seen = new Set(existingUrls);
+  const seen = new Set<string>();
   const visitedPages = new Set<string>();
 
   for (let page = 0; page < MAX_PAGES && nextUrl; page++) {
@@ -325,7 +332,7 @@ async function fetchChannelArticles(
     visitedPages.add(url);
     const { $html } = await fetchAndParse(url);
 
-    const links = extractLinks($html, filter, seen);
+    const links = extractLinks($html, filter, existingUrls, seen);
     results.push(...links);
     for (const link of links) seen.add(link);
 
@@ -339,7 +346,7 @@ async function fetchChannelArticlesBefore(
   channelId: string,
   beforeArticleId: number,
   filter?: ArticleFilterImpl,
-  existingUrls?: Set<string>,
+  existingUrls?: ReadonlySet<string>,
   visitedPaths?: Set<string>,
 ): Promise<string[]> {
   const basePath = channelBasePath(channelId);
@@ -349,7 +356,7 @@ async function fetchChannelArticlesBefore(
   );
   const results: string[] = [];
   const visitedPages = new Set<string>();
-  const seen = new Set(existingUrls);
+  const seen = new Set<string>();
 
   for (let page = 0; page < MAX_PAGES && nextUrl; page++) {
     const url = normalizeUrl(nextUrl);
@@ -357,7 +364,7 @@ async function fetchChannelArticlesBefore(
     visitedPages.add(url);
     const { $html } = await fetchAndParse(url);
 
-    const links = extractLinks($html, filter, seen);
+    const links = extractLinks($html, filter, existingUrls, seen);
     results.push(...links);
     for (const link of links) seen.add(link);
 

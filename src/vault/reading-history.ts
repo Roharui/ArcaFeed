@@ -98,6 +98,11 @@ export class ReadingHistory {
   private progress: ReadingProgress[] = [];
   private recentRaw: string | null | undefined;
   private recentDisabled: string | null | undefined;
+  private savedPositionContext?: {
+    id: string;
+    path: string;
+    raw: string | null | undefined;
+  };
 
   constructor(private repo = new StorageRepository()) {
     this.data = this.readData();
@@ -196,6 +201,11 @@ export class ReadingHistory {
       );
     }
     this.data = this.readData();
+    this.savedPositionContext = {
+      id: session.id,
+      path: session.path,
+      raw: this.historyRaw,
+    };
     this.notify(
       contextChanged
         ? ['sessions', 'progress']
@@ -209,6 +219,35 @@ export class ReadingHistory {
     this.change((data) => {
       data.sessions = data.sessions.filter((item) => item.id !== id);
     });
+  }
+
+  /** Update position without copying links while the saved context is intact. */
+  savePosition(
+    id: string,
+    path: string,
+    scrollY: number,
+    updatedAt: number,
+  ): boolean {
+    const context = this.savedPositionContext;
+    if (
+      context?.id !== id ||
+      context.path !== path ||
+      this.repo.getItem(READING_HISTORY_KEY) !== context.raw
+    )
+      return false;
+    const progress = this.loadProgress();
+    const previous = progress.find((item) => item.id === id);
+    if (previous?.path === path && previous.scrollY === scrollY) return true;
+    const sessionIds = new Set(this.cachedData.sessions.map((item) => item.id));
+    this.persistProgress(
+      [
+        { id, path, scrollY, updatedAt },
+        ...progress.filter((item) => item.id !== id && sessionIds.has(item.id)),
+      ].slice(0, SESSION_LIMIT),
+    );
+    this.data = this.readData();
+    this.notify(['progress']);
+    return true;
   }
 
   clear(): void {
