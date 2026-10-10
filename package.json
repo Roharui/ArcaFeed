@@ -1,12 +1,13 @@
 {
   "name": "arcafeed",
-  "version": "3.2.1",
+  "version": "3.2.2",
   "main": "main.js",
   "scripts": {
     "dev": "webpack --config webpack.config.dev.js",
     "dev:watch": "webpack --config webpack.config.dev.js --env WATCH=true",
     "dev:live": "node scripts/dev-server.mjs",
     "dev:live:mobile": "node scripts/dev-server.mjs --mobile --network",
+    "dev:ui": "node scripts/ui-server.mjs",
     "dev:mobile": "webpack --config webpack.config.dev.js --env DEVICE=mobile",
     "build": "webpack --config webpack.config.prod.js --mode production",
     "prod": "npm run build",
@@ -18,6 +19,7 @@
     "agent:check": "npm run typecheck",
     "test": "node --test tests/*.test.mjs",
     "test:architecture": "node tests/architecture.test.mjs",
+    "test:ui:server": "node --test tests/ui-server.test.mjs",
     "test:performance": "node tests/performance.test.mjs",
     "bench:performance": "node scripts/benchmark-performance.mjs"
   },

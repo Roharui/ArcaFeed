@@ -27,11 +27,11 @@
     var(--arcafeed-modal-tab-count, 4),
     minmax(0, 1fr)
   );
+  grid-template-rows: auto minmax(0, 1fr);
+  box-sizing: border-box;
   width: min(560px, calc(100vw - 24px));
-  max-height: calc(100dvh - 32px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  height: fit-content;
+  height: 80dvh;
+  overflow: hidden;
 
   background-color: var(--color-bg-body);
 
@@ -93,21 +93,36 @@ input.helper-modal-tab-radio {
 #subscribe:checked ~ .helper-modal-subscribe,
 #history:checked ~ .helper-modal-history,
 #resume:checked ~ .helper-modal-resume {
-  display: block;
+  display: flex;
 }
 
 .helper-modal-tab {
+  --arcafeed-modal-padding: 22px;
   grid-column: 1 / -1;
-  padding: 15px 20px 20px 20px;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
   border-radius: 0px 0px 10px 10px;
 
   display: none;
   background-color: var(--color-bg-main);
 }
 
-.helper-modal-ui,
-.helper-modal-filter {
-  padding: 22px;
+.helper-modal-tab > .arcafeed-reading-header {
+  flex-shrink: 0;
+  margin: var(--arcafeed-modal-padding) var(--arcafeed-modal-padding) 18px;
+}
+
+.arcafeed-modal-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--arcafeed-modal-padding) var(--arcafeed-modal-padding);
+  scrollbar-width: thin;
 }
 
 .arcafeed-settings-section {
@@ -135,12 +150,12 @@ input.helper-modal-tab-radio {
 
 .arcafeed-modal-actions {
   display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
-  position: sticky;
-  bottom: 0;
-  margin: 0 -22px -22px;
-  padding: 14px 22px 22px;
+  margin: 0;
+  padding: 14px var(--arcafeed-modal-padding) var(--arcafeed-modal-padding);
   border-top: 1px solid var(--color-bd-btn);
   background: var(--color-bg-main);
 }
@@ -178,9 +193,8 @@ input.helper-modal-tab-radio {
 }
 
 @media (max-width: 440px) {
-  .helper-modal-ui,
-  .helper-modal-filter {
-    padding: 16px;
+  .helper-modal-tab {
+    --arcafeed-modal-padding: 16px;
   }
 
   .arcafeed-settings-section {
@@ -188,8 +202,7 @@ input.helper-modal-tab-radio {
   }
 
   .arcafeed-modal-actions {
-    margin: 0 -16px -16px;
-    padding: 12px 16px 16px;
+    padding-top: 12px;
   }
 }
 
@@ -197,5 +210,19 @@ input.helper-modal-tab-radio {
   label.helper-modal-tab-label {
     gap: 3px;
     font-size: 0.73rem;
+  }
+}
+
+@media (max-height: 480px) {
+  .helper-modal-tab {
+    --arcafeed-modal-padding: 12px;
+  }
+
+  .helper-modal-tab > .arcafeed-reading-header {
+    margin-bottom: 10px;
+  }
+
+  .arcafeed-modal-actions {
+    padding-top: 10px;
   }
 }

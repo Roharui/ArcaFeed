@@ -81,12 +81,18 @@ Node.js 22.13 이상과 npm 10.9 이상이 필요합니다.
 npm ci
 npm run dev:live   # 로컬 서버 + 변경 감시 + 브라우저 자동 새로고침
 npm run dev:live:mobile # 안드로이드 확인용 네트워크 서버 + eruda
+npm run dev:ui     # 모달 미리보기 + 테스트 데이터 + 소스 자동 갱신
 npm run dev        # 1회 개발 빌드
 npm run dev:watch  # 변경 감시
 npm run check      # 포맷, 린트, 타입, 프로덕션 빌드
 npm run test:performance  # 네트워크·저장·초기화 성능 회귀 검증
 npm run bench:performance # 재현 가능한 합성 벤치마크
 ```
+
+모달 UI는 `npm run dev:ui` 실행 후 <http://127.0.0.1:4317>에서 반복 확인할 수 있습니다.
+모바일·데스크톱, 빈 목록·긴 목록, 밝은·어두운 테마, 요청 지연·실패를 재현하며,
+Playwright MCP에서 저장된 검사 파일을 실행할 수 있습니다.
+사용법과 검증 범위는 [UI_TESTING.md](./docs/UI_TESTING.md)를 참고하세요.
 
 개발 중에는 `npm run dev:live`를 실행하고
 [개발 로더](http://127.0.0.1:3000/ArcaFeed.live.user.js)를 TamperMonkey 또는

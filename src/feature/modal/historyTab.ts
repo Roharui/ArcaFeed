@@ -133,16 +133,21 @@ export function createHistoryModal(p: VaultAdapter): JQuery<HTMLElement> {
     visibleCount = PAGE_SIZE;
     render();
   });
-  tab.append(tools, entries, more);
+  tab.append(
+    tools,
+    $('<div>', { class: 'arcafeed-modal-content' }).append(entries, more),
+  );
   tab.append(
     $('<div>', { class: 'arcafeed-history-footer' }).append(
       total,
-      button('새로고침', () => p.reading.reload()),
-      $('<a>', {
-        href: SITE_RECENT_URL,
-        class: 'arcafeed-reading-button',
-        text: '사이트 기록 관리',
-      }),
+      $('<div>', { class: 'arcafeed-history-footer-actions' }).append(
+        button('새로고침', () => p.reading.reload()),
+        $('<a>', {
+          href: SITE_RECENT_URL,
+          class: 'arcafeed-reading-button',
+          text: '사이트 기록 관리',
+        }),
+      ),
     ),
   );
   const unsubscribeReading = p.reading.subscribe(render, ['entries']);

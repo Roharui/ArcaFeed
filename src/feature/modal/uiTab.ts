@@ -40,19 +40,21 @@ const ARTICLE_INFO_TOGGLES: { key: string; label: string }[] = [
 
 const MODAL_UI_TAB = `
 <div class="helper-modal-tab helper-modal-ui">
-  <section class="arcafeed-settings-section ui-reading-group">
-    <h3 class="arcafeed-settings-heading">탐색</h3>
-    <div id="ui-reading-list" class="ui-setting-list"></div>
-  </section>
-  <section class="arcafeed-settings-section">
-    <h3 class="arcafeed-settings-heading">화면 표시</h3>
-    <div id="ui-toggle-list" class="ui-setting-list"></div>
-  </section>
-  <fieldset class="arcafeed-settings-section ui-article-info-group">
-    <legend class="arcafeed-settings-heading">게시글 목록에서 숨기기</legend>
-    <p class="arcafeed-settings-description">숨길 정보를 선택해 목록을 간결하게 만드세요.</p>
-    <div id="ui-article-info-list" class="ui-setting-list"></div>
-  </fieldset>
+  <div class="arcafeed-modal-content">
+    <section class="arcafeed-settings-section ui-reading-group">
+      <h3 class="arcafeed-settings-heading">탐색</h3>
+      <div id="ui-reading-list" class="ui-setting-list"></div>
+    </section>
+    <section class="arcafeed-settings-section">
+      <h3 class="arcafeed-settings-heading">화면 표시</h3>
+      <div id="ui-toggle-list" class="ui-setting-list"></div>
+    </section>
+    <fieldset class="arcafeed-settings-section ui-article-info-group">
+      <legend class="arcafeed-settings-heading">게시글 목록에서 숨기기</legend>
+      <p class="arcafeed-settings-description">숨길 정보를 선택해 목록을 간결하게 만드세요.</p>
+      <div id="ui-article-info-list" class="ui-setting-list"></div>
+    </fieldset>
+  </div>
   <div id="ui-buttons" class="arcafeed-modal-actions">
     <button id="ui-cancel-btn" type="button" class="arcafeed-modal-button">취소</button>
     <button id="ui-check-btn" type="button" class="arcafeed-modal-button is-primary">적용</button>

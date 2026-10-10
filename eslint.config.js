@@ -16,6 +16,6 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['dist/', 'webpack.config.*.js'],
+    ignores: ['dist/', '.cache/', '.playwright-mcp/', 'webpack.config.*.js'],
   },
 );

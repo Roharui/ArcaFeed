@@ -26,12 +26,14 @@ import type { SubscribedChannel } from '@/feature/subscriptions';
 
 const MODAL_SUBSCRIBE_TAB = `
 <div class="helper-modal-tab helper-modal-subscribe">
-  <div class="arcafeed-subscribe-controls">
-    <button type="button" class="arcafeed-modal-button" id="subscribe-select-all">전체 선택</button>
-    <button type="button" class="arcafeed-modal-button" id="subscribe-select-none">전체 해제</button>
+  <div class="arcafeed-modal-content">
+    <div class="arcafeed-subscribe-controls">
+      <button type="button" class="arcafeed-modal-button" id="subscribe-select-all">전체 선택</button>
+      <button type="button" class="arcafeed-modal-button" id="subscribe-select-none">전체 해제</button>
+    </div>
+    <div id="subscribe-channel-list"></div>
+    <div id="subscribe-filter-editor"></div>
   </div>
-  <div id="subscribe-channel-list"></div>
-  <div id="subscribe-filter-editor"></div>
   <div id="subscribe-buttons" class="arcafeed-modal-actions">
     <button id="subscribe-cancel-btn" class="arcafeed-modal-button" type="button">취소</button>
     <button id="subscribe-save-btn" class="arcafeed-modal-button" type="button">저장</button>
@@ -82,6 +84,7 @@ function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
   const $header = $tab.children('.arcafeed-reading-header');
   const closeEditor = () => {
     editorRevision++;
+    $tab.removeClass('is-editing-filter');
     $panel.empty();
     $list.show();
     $header.show();
@@ -103,19 +106,23 @@ function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
     summarize(p.articleFilterConfig[channel.id]);
     const openEditor = async () => {
       const revision = ++editorRevision;
+      $tab.addClass('is-editing-filter');
+      $tab.find('.arcafeed-modal-content').scrollTop(0);
       $list.hide();
       $header.hide();
       $tab.find('.arcafeed-subscribe-controls, #subscribe-buttons').hide();
       $panel.empty().append(
-        $('<p>', {
-          text: `${channel.name} 카테고리를 불러오는 중…`,
-          role: 'status',
-        }),
-        $('<button>', {
-          type: 'button',
-          class: 'arcafeed-modal-button',
-          text: '취소',
-        }).on('click', closeEditor),
+        $('<div>', { class: 'arcafeed-subscribe-filter-loading' }).append(
+          $('<p>', {
+            text: `${channel.name} 카테고리를 불러오는 중…`,
+            role: 'status',
+          }),
+          $('<button>', {
+            type: 'button',
+            class: 'arcafeed-modal-button',
+            text: '취소',
+          }).on('click', closeEditor),
+        ),
       );
       let categories: string[] = [];
       let failed = false;
@@ -147,16 +154,19 @@ function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
         .addClass('arcafeed-subscribe-filter-editor');
       $panel.empty().append(editor);
       if (failed)
-        editor.prepend(
-          $('<p>', {
-            class: 'arcafeed-settings-description',
-            text: '카테고리를 불러오지 못했습니다. 저장된 카테고리와 다른 필터는 수정할 수 있습니다.',
-          }),
-          $('<button>', {
-            type: 'button',
-            class: 'arcafeed-modal-button',
-            text: '다시 불러오기',
-          }).on('click', () => void openEditor()),
+        editor.find('.arcafeed-modal-content').prepend(
+          $('<section>', { class: 'arcafeed-settings-section' }).append(
+            $('<p>', {
+              class: 'arcafeed-settings-description',
+              role: 'status',
+              text: '카테고리를 불러오지 못했습니다. 저장된 카테고리와 다른 필터는 수정할 수 있습니다.',
+            }),
+            $('<button>', {
+              type: 'button',
+              class: 'arcafeed-modal-button',
+              text: '다시 불러오기',
+            }).on('click', () => void openEditor()),
+          ),
         );
     };
     $list.append(

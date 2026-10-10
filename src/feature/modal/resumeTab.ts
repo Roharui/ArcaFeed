@@ -21,7 +21,7 @@ export function createResumeModal(p: VaultAdapter): JQuery<HTMLElement> {
   );
   const channel = $('<select>', { 'aria-label': '이어보기 채널 필터' });
   const sessions = $('<div>', {
-    class: 'arcafeed-reading-list arcafeed-resume-list',
+    class: 'arcafeed-modal-content arcafeed-reading-list arcafeed-resume-list',
   });
   const count = $('<span>', {
     class: 'arcafeed-reading-count',

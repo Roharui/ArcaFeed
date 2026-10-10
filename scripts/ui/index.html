@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ArcaFeed UI 미리보기</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/preview.css" />
+  </head>
+  <body>
+    <header>
+      <h1>ArcaFeed UI 미리보기</h1>
+      <p>
+        현재 소스의 모달을 테스트 데이터로 실행합니다. 소스 저장 시 자동으로
+        갱신됩니다.
+      </p>
+      <p id="build-status" role="status">빌드 확인 중…</p>
+    </header>
+    <form id="controls">
+      <label
+        >모드
+        <select name="mode">
+          <option value="channel">채널</option>
+          <option value="home">홈 / 구독</option>
+          <option value="series">시리즈</option>
+          <option value="feed">구독 피드</option>
+          <option value="scrap">스크랩</option>
+        </select></label
+      >
+      <label
+        >데이터
+        <select name="size">
+          <option value="empty">빈 목록</option>
+          <option value="short">1개</option>
+          <option value="long" selected>긴 목록</option>
+        </select></label
+      >
+      <label
+        >테마
+        <select name="theme">
+          <option value="light">밝게</option>
+          <option value="dark">어둡게</option>
+        </select></label
+      >
+      <label
+        >카테고리 응답
+        <select name="network">
+          <option value="success">정상</option>
+          <option value="slow">1.5초 지연</option>
+          <option value="error">실패</option>
+        </select></label
+      >
+      <label
+        >화면
+        <select name="viewport">
+          <option value="375x667">모바일 375 × 667</option>
+          <option value="320x568">작은 모바일 320 × 568</option>
+          <option value="844x390">가로 화면 844 × 390</option>
+          <option value="1280x900">데스크톱 1280 × 900</option>
+        </select></label
+      >
+      <button type="submit">모달 다시 열기</button>
+      <a id="standalone" href="/fixture" target="_blank" rel="noopener"
+        >테스트 화면 새 탭으로 열기</a
+      >
+      <a href="/results" target="_blank" rel="noopener">최근 자동 검사 결과</a>
+    </form>
+    <main><iframe id="preview" title="모달 테스트 화면"></iframe></main>
+    <pre id="build-error" hidden></pre>
+    <script type="module" src="/preview.mjs"></script>
+  </body>
+</html>
