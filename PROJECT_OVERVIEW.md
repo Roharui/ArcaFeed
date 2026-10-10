@@ -13,7 +13,7 @@
 **ArcaFeed**는 아카라이브(arca.live) 커뮤니티 사이트를 TikTok/Shorts처럼 스와이프로 게시글을 넘겨볼 수 있게 해주는 **TamperMonkey / ViolentMonkey 유저스크립트**입니다.
 
 - **저장소**: `github.com/Roharui/ArcaFeed`
-- **버전**: `3.1.0` (`package.json` 기준)
+- **버전**: `3.2.0` (`package.json` 기준)
 - **대상 사이트**: `https://arca.live/*`
 - **기술 스택**: TypeScript + Webpack → 유저스크립트 번들
 
