@@ -244,7 +244,8 @@ interface ArticleFilterImpl {
 | `arcaFeed:{articleKey}:lastActiveIndex`     | 마지막 인덱스                                     |
 | `arcaFeed:{articleKey}:articleFilterConfig` | (레거시) 필터 설정                                |
 | `arcaFeed:recentArticleKeys`                | 최근 articleKey 목록 (캐시 정리용)                |
-| `arcaFeed:readingHistory`                   | 이어보기 탐색 위치만 저장                         |
+| `arcaFeed:readingHistory`                   | 이어보기 목록·탐색 정보 (전체 최대 5,000개 링크)  |
+| `arcaFeed:readingProgress`                  | 이어보기 스크롤 위치·갱신 시각 (최대 20개)        |
 | `recent_articles`, `recent_disabled`        | 사이트 최근 읽은 글 및 기록 사용 설정 (읽기 전용) |
 
 ---

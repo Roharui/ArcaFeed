@@ -47,7 +47,7 @@ export class VaultAdapter {
       this.store.setState({
         readingRevision: this.store.getState().readingRevision + 1,
       });
-    });
+    }, ['entries']);
 
     // Pre-set href from constructor injection (avoids redundant URL re-parse).
     // Falls back to synchronous URL parse if not provided.
@@ -58,8 +58,23 @@ export class VaultAdapter {
     }
 
     // Auto-persist state changes with debounce
-    this.unsubscribeAutoSave = this.store.subscribe(() => {
-      this.scheduleSave();
+    let previous = this.store.getState();
+    const persistedKeys = [
+      'articleKey',
+      'articleList',
+      'articleFilterConfig',
+      'isSeriesMode',
+      'isScrapMode',
+      'seriesChannels',
+      'isShuffleMode',
+      'searchQuery',
+      'activeIndex',
+      'uiSettings',
+    ] as const;
+    this.unsubscribeAutoSave = this.store.subscribe((state) => {
+      const changed = persistedKeys.some((key) => state[key] !== previous[key]);
+      previous = state;
+      if (changed) this.scheduleSave();
     });
   }
 

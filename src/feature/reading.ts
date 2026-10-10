@@ -6,12 +6,14 @@ import { refreshUnvisitedNavigation } from './article/link';
 import { createArticleKey } from '@/utils/article-key';
 import {
   READING_HISTORY_KEY,
+  READING_PROGRESS_KEY,
   SITE_RECENT_KEY,
   SITE_RECENT_DISABLED_KEY,
 } from '@/vault/reading-history';
 import type { ReadingSession } from '@/vault/reading-history';
 import type { VaultAdapter } from '@/vault';
 import { readingContextLabel } from '@/vault/reading-context';
+import { articleWindow } from '@/vault/article-window';
 
 const RESUME_SCROLL_KEY = 'arcaFeed:resumeScroll';
 const ARTICLE_TITLE_SELECTOR =
@@ -87,10 +89,7 @@ function contextId(p: VaultAdapter): string {
 function saveCheckpoint(p: VaultAdapter): void {
   if (stoppedVaults.has(p)) return;
   const path = currentPath(p);
-  const index = p.articleList.indexOf(path);
-  const start = Math.max(0, index - 500);
-  const articleList = p.articleList.slice(start, start + 2000);
-  if (!articleList.includes(path)) articleList.unshift(path);
+  const articleList = articleWindow(p.articleList, path, 2000);
   const params = new URLSearchParams(p.searchQuery);
   params.delete('articleKey');
   const query = params.size ? `?${params}` : '';
@@ -191,6 +190,7 @@ export function initReading(p: VaultAdapter): void {
   window.addEventListener('storage', (event) => {
     if (
       event.key === READING_HISTORY_KEY ||
+      event.key === READING_PROGRESS_KEY ||
       event.key === SITE_RECENT_KEY ||
       event.key === SITE_RECENT_DISABLED_KEY ||
       event.key === null
@@ -202,10 +202,23 @@ export function initReading(p: VaultAdapter): void {
   let previousSkip = p.skipVisitedArticles;
   let previousHasNext = p.isNextPageActive();
   let previousReadingRevision = p.getState().readingRevision;
+  let previousIndicators = p.uiSettings.showVisitedIndicators;
+  let previousContext = readingContextLabel(p);
   p.subscribe((state) => {
-    updateVisitedIndicators(p);
     const historyChanged = previousReadingRevision !== state.readingRevision;
     previousReadingRevision = state.readingRevision;
+    const skipChanged = previousSkip !== p.skipVisitedArticles;
+    const context = readingContextLabel(p);
+    if (
+      historyChanged ||
+      skipChanged ||
+      previousContext !== context ||
+      previousIndicators !== state.uiSettings.showVisitedIndicators
+    ) {
+      previousContext = context;
+      previousIndicators = state.uiSettings.showVisitedIndicators;
+      updateVisitedIndicators(p);
+    }
     const hasNext = p.isNextPageActive();
     const lostNext = previousHasNext && !hasNext;
     previousHasNext = hasNext;
@@ -262,7 +275,7 @@ export function initReading(p: VaultAdapter): void {
       checkpointRemoved = true;
       clearTimeout(checkpointTimer);
     }
-  });
+  }, ['sessions']);
   let previousList = p.articleList;
   let previousQuery = p.searchQuery;
   p.subscribe(() => {

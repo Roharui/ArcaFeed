@@ -14,6 +14,7 @@ import {
 } from './config-schema';
 
 import type { AppState } from '@/vault/store';
+import { createInitialState } from './store';
 import type { ReadingSession } from './reading-history';
 
 const ARTICLE_FILTER_CONFIG_GLOBAL_KEY = 'arcaFeed:articleFilterConfig';
@@ -112,6 +113,13 @@ export class ConfigService {
 
     // Prune old caches
     this.repo.pruneArticleKeyCaches(articleKey);
+
+    // Loading a page is not a change to its persisted list or settings.
+    this.lastSavedState = {
+      ...createInitialState(),
+      ...patch,
+      activeIndex: patch.lastActiveIndex ?? -1,
+    };
 
     return patch;
   }
@@ -271,5 +279,6 @@ export class ConfigService {
       this.repo.scopedKey(targetArticleKey, 'lastActiveIndex'),
       activeIndex.toString(),
     );
+    this.repo.pruneArticleKeyCaches(targetArticleKey);
   }
 }

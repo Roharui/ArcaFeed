@@ -104,6 +104,52 @@ test('switching session persists its complete scoped state', () => {
   );
 });
 
+test('page reload does not rewrite the loaded navigation list or settings', () => {
+  const storage = memoryStorage();
+  const load = sourceLoader({
+    globals: { window: windowFixture },
+    mocks: { 'toastify-js': toastMock },
+  });
+  const { StorageRepository } = load('src/vault/repository.ts');
+  const { ConfigService } = load('src/vault/config.ts');
+  const { Store, createInitialState } = load('src/vault/store.ts');
+  new ConfigService(new StorageRepository(storage)).saveConfig({
+    ...createInitialState(),
+    articleKey: 'session',
+    activeIndex: 0,
+    articleList: ['/b/test/100', '/b/test/99'],
+  });
+  const config = new ConfigService(new StorageRepository(storage));
+  const store = new Store(config.loadConfig());
+  storage.writes.length = 0;
+  store.setState({ activeIndex: 0 });
+  config.saveConfig(store.getState());
+  assert.equal(storage.writes.length, 0);
+});
+
+test('cache pruning removes orphaned legacy caches even when the recency list is unchanged', () => {
+  const { StorageRepository } = sourceLoader()('src/vault/repository.ts');
+  const storage = memoryStorage({
+    'arcaFeed:recentArticleKeys': JSON.stringify(['current']),
+    'arcaFeed:current:articleList': '[]',
+    'arcaFeed:orphan:articleList': 'large old list',
+    'arcaFeed:orphan:searchQuery': '?q=old',
+    'arcaFeed:readingHistory': '{"sessions":[]}',
+    'arcaFeed:readingProgress': '[]',
+    'arcaFeed:custom:unknown': 'keep',
+    recent_articles: 'native history',
+  });
+  new StorageRepository(storage).pruneArticleKeyCaches('current');
+  assert.equal(storage.getItem('arcaFeed:orphan:articleList'), null);
+  assert.equal(storage.getItem('arcaFeed:orphan:searchQuery'), null);
+  assert.equal(storage.getItem('arcaFeed:current:articleList'), '[]');
+  assert.equal(storage.getItem('arcaFeed:readingProgress'), '[]');
+  assert.equal(storage.getItem('arcaFeed:readingHistory'), '{"sessions":[]}');
+  assert.equal(storage.getItem('arcaFeed:custom:unknown'), 'keep');
+  assert.equal(storage.getItem('recent_articles'), 'native history');
+  assert.equal(storage.writes.length, 0);
+});
+
 test('pages without a session save global settings without creating an empty session cache', () => {
   const load = sourceLoader({ mocks: { 'toastify-js': toastMock } });
   const { StorageRepository } = load('src/vault/repository.ts');
@@ -832,10 +878,15 @@ test('UI initialization installs one subscription and skips DOM work for article
   subscribers[0]({ uiSettings: p.uiSettings, isSeriesMode: p.isSeriesMode });
   assert.equal(domWrites, 0);
   subscribers[0]({
+    uiSettings: { ...p.uiSettings, lastModalTab: 'resume' },
+    isSeriesMode: p.isSeriesMode,
+  });
+  assert.equal(domWrites, 0);
+  subscribers[0]({
     uiSettings: { ...p.uiSettings, contentWidth: 900 },
     isSeriesMode: p.isSeriesMode,
   });
-  assert.ok(domWrites > 0);
+  assert.equal(domWrites, 1);
 });
 
 test('resize events perform one geometry read and style update per animation frame', () => {

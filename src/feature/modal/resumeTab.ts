@@ -101,7 +101,12 @@ export function createResumeModal(p: VaultAdapter): JQuery<HTMLElement> {
             : '시리즈'
           : '채널';
       const title = entry?.title || `게시글 ${session.path.split('/').pop()}`;
-      const resume = readingButton('이어보기', () => resumeReading(p, session))
+      const resume = readingButton('이어보기', () => {
+        const latest = p.reading.sessions.find(
+          (item) => item.id === session.id,
+        );
+        if (latest) resumeReading(p, latest);
+      })
         .addClass('arcafeed-resume-action')
         .attr('aria-label', `${session.label} · ${title} 이어보기`)
         .append(
@@ -138,7 +143,7 @@ export function createResumeModal(p: VaultAdapter): JQuery<HTMLElement> {
     }
   };
   channel.on('change', render);
-  const unsubscribe = p.reading.subscribe(render);
+  const unsubscribe = p.reading.subscribe(render, ['entries', 'sessions']);
   tab.data('cleanup', unsubscribe);
   render();
   return tab;

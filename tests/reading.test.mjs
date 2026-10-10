@@ -89,7 +89,11 @@ test('recent history reads native records and matches subscription-feed aliases 
   assert.equal(storage.writes.length, 0);
   history.saveSession(session('first'));
   assert.ok(
-    storage.writes.every((write) => write.key === 'arcaFeed:readingHistory'),
+    storage.writes.every((write) =>
+      ['arcaFeed:readingHistory', 'arcaFeed:readingProgress'].includes(
+        write.key,
+      ),
+    ),
   );
   assert.equal(
     'entries' in JSON.parse(storage.getItem('arcaFeed:readingHistory')),
@@ -500,6 +504,7 @@ test('deleting the current checkpoint prevents scroll and pagehide from recreati
   const listeners = new Map();
   const timers = new Map();
   let timerId = 0;
+  let indicatorScans = 0;
   const window = {
     location: {
       origin: 'https://arca.live',
@@ -549,7 +554,12 @@ test('deleting the current checkpoint prevents scroll and pagehide from recreati
     },
     mocks: {
       jquery: { default: () => chain },
-      './filter': { extractArticleRows: () => chain },
+      './filter': {
+        extractArticleRows: () => {
+          indicatorScans++;
+          return chain;
+        },
+      },
       './article/link': { refreshUnvisitedNavigation() {} },
     },
   });
@@ -571,6 +581,23 @@ test('deleting the current checkpoint prevents scroll and pagehide from recreati
     initReading(vault);
     assert.equal(vault.reading.sessions[0].isScrapMode, true);
     assert.equal(vault.reading.sessions[0].label, '스크랩');
+    const initialScans = indicatorScans;
+    storage.writes.length = 0;
+    window.scrollY = 240;
+    listeners.get('scroll')();
+    for (const timer of [...timers.values()])
+      if (timer.delay === 700) timer.handler();
+    assert.equal(indicatorScans, initialScans);
+    assert.deepEqual(
+      storage.writes.map((write) => write.key),
+      ['arcaFeed:readingProgress'],
+    );
+    storage.writes.length = 0;
+    listeners.get('pagehide')();
+    assert.equal(storage.writes.length, 0);
+    vault.activeIndex = 0;
+    vault.uiSettings = { ...vault.uiSettings, lastModalTab: 'resume' };
+    assert.equal(indicatorScans, initialScans);
     vault.reading.removeSession('series:session');
     listeners.get('scroll')();
     for (const timer of [...timers.values()])
@@ -578,6 +605,138 @@ test('deleting the current checkpoint prevents scroll and pagehide from recreati
     listeners.get('pagehide')();
     assert.deepEqual(vault.reading.sessions, []);
     assert.equal(vault.reading.hasVisited('/b/test/100'), true);
+  } finally {
+    vault.destroy();
+  }
+});
+
+test('scroll checkpoints write only small progress data and notify only progress listeners', () => {
+  const { ReadingHistory, storage, load } = readingFixture();
+  const { READING_PROGRESS_KEY } = load('src/vault/reading-history.ts');
+  const history = new ReadingHistory();
+  const checkpoint = session('large', {
+    articleList: Array.from({ length: 2000 }, (_, i) => `/b/test/${i + 1}`),
+  });
+  history.saveSession(checkpoint);
+  const contexts = storage.getItem('arcaFeed:readingHistory');
+  let contextsChanged = 0;
+  let visitsChanged = 0;
+  let progressChanged = 0;
+  history.subscribe(() => contextsChanged++, ['sessions']);
+  history.subscribe(() => visitsChanged++, ['entries']);
+  history.subscribe(() => progressChanged++, ['progress']);
+  storage.writes.length = 0;
+  history.saveSession({ ...checkpoint, scrollY: 950, updatedAt: 2 });
+  assert.deepEqual(
+    storage.writes.map((write) => write.key),
+    [READING_PROGRESS_KEY],
+  );
+  assert.ok(storage.writes[0].value.length < contexts.length / 10);
+  assert.equal(storage.getItem('arcaFeed:readingHistory'), contexts);
+  assert.equal(contextsChanged, 0);
+  assert.equal(visitsChanged, 0);
+  assert.equal(progressChanged, 1);
+  assert.equal(new ReadingHistory().sessions[0].scrollY, 950);
+  storage.writes.length = 0;
+  history.saveSession({ ...checkpoint, scrollY: 950, updatedAt: 3 });
+  history.reload();
+  assert.equal(storage.writes.length, 0);
+  assert.equal(progressChanged, 1);
+});
+
+test('legacy oversized resume lists migrate within a total budget and retain every current article', () => {
+  const { ReadingHistory, storage, load } = readingFixture();
+  const { SESSION_TOTAL_ARTICLE_LIMIT } = load('src/vault/reading-history.ts');
+  storage.setItem(
+    'arcaFeed:readingHistory',
+    JSON.stringify({
+      sessions: Array.from({ length: 20 }, (_, index) =>
+        session(`old:${index}`, {
+          path: `/b/test/${4000 + index}`,
+          articleList: Array.from(
+            { length: 4100 },
+            (_, i) => `/b/test/${i + 1}`,
+          ),
+        }),
+      ),
+    }),
+  );
+  const history = new ReadingHistory();
+  const stored = JSON.parse(storage.getItem('arcaFeed:readingHistory'));
+  assert.equal(stored.sessions.length, 20);
+  assert.ok(
+    stored.sessions.reduce(
+      (total, item) => total + item.articleList.length,
+      0,
+    ) <= SESSION_TOTAL_ARTICLE_LIMIT,
+  );
+  for (const item of stored.sessions)
+    assert.ok(item.articleList.includes(item.path));
+  for (const item of history.sessions)
+    assert.ok(item.articleList.includes(item.path));
+  storage.writes.length = 0;
+  new ReadingHistory();
+  assert.equal(storage.writes.length, 0);
+});
+
+test('progress from another tab preserves both sessions and removing a session also removes its progress', () => {
+  const { ReadingHistory, storage } = readingFixture();
+  const first = new ReadingHistory();
+  const second = new ReadingHistory();
+  first.saveSession(session('first', { updatedAt: 1 }));
+  second.saveSession(session('second', { updatedAt: 2 }));
+  first.saveSession(session('first', { scrollY: 700, updatedAt: 3 }));
+  second.saveSession(session('second', { scrollY: 800, updatedAt: 4 }));
+  first.reload();
+  assert.deepEqual(
+    first.sessions.map((item) => [item.id, item.scrollY]),
+    [
+      ['second', 800],
+      ['first', 700],
+    ],
+  );
+  first.removeSession('first');
+  const progress = JSON.parse(storage.getItem('arcaFeed:readingProgress'));
+  assert.deepEqual(
+    progress.map((item) => item.id),
+    ['second'],
+  );
+  second.reload();
+  assert.equal(second.sessions[0].scrollY, 800);
+});
+
+test('reading progress and native visit reloads do not schedule config autosaves', () => {
+  const storage = memoryStorage();
+  let timers = 0;
+  const load = sourceLoader({
+    globals: {
+      localStorage: storage,
+      window: { location: { origin: 'https://arca.live' } },
+      setTimeout() {
+        timers++;
+        return timers;
+      },
+      clearTimeout() {},
+    },
+  });
+  const { VaultAdapter } = load('src/vault/index.ts');
+  const { Store } = load('src/vault/store.ts');
+  const vault = new VaultAdapter(
+    new Store(),
+    { saveConfig() {} },
+    vaultFixture().href,
+  );
+  try {
+    let notifications = 0;
+    vault.subscribe(() => notifications++);
+    vault.reading.saveSession(session('first'));
+    vault.reading.saveSession(session('first', { scrollY: 500, updatedAt: 2 }));
+    assert.equal(notifications, 0);
+    siteVisit(storage, vault.reading, entry('/b/test/100'));
+    assert.equal(notifications, 1);
+    assert.equal(timers, 0);
+    vault.activeIndex = 1;
+    assert.equal(timers, 1);
   } finally {
     vault.destroy();
   }

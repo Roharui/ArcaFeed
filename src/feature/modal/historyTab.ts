@@ -145,7 +145,7 @@ export function createHistoryModal(p: VaultAdapter): JQuery<HTMLElement> {
       }),
     ),
   );
-  const unsubscribeReading = p.reading.subscribe(render);
+  const unsubscribeReading = p.reading.subscribe(render, ['entries']);
   tab.data('cleanup', unsubscribeReading);
   render();
   return tab;

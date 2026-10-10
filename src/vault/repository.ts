@@ -5,9 +5,19 @@
 
 const ARTICLE_KEY_CACHE_LIMIT = 5;
 const RECENT_ARTICLE_KEYS_KEY = 'arcaFeed:recentArticleKeys';
+const SCOPED_CACHE_SUFFIXES = new Set([
+  'articleList',
+  'articleFilterConfig',
+  'seriesMode',
+  'scrapMode',
+  'seriesChannels',
+  'searchQuery',
+  'lastActiveIndex',
+]);
 
 export class StorageRepository {
   private storage: Storage;
+  private checkedCacheInventory = false;
 
   constructor(storage: Storage = localStorage) {
     this.storage = storage;
@@ -18,6 +28,7 @@ export class StorageRepository {
   }
 
   setItem(key: string, value: string): void {
+    if (this.storage.getItem(key) === value) return;
     this.storage.setItem(key, value);
   }
 
@@ -69,24 +80,23 @@ export class StorageRepository {
       ...recentKeys.filter((key) => key !== currentArticleKey),
     ].slice(0, ARTICLE_KEY_CACHE_LIMIT);
 
-    if (
-      recentKeys.length === nextKeys.length &&
-      recentKeys.every((key, index) => key === nextKeys[index])
-    )
-      return;
-
     const expiredKeys = recentKeys.filter((key) => !nextKeys.includes(key));
 
-    if (expiredKeys.length > 0) {
-      const expired = new Set(expiredKeys);
+    if (!this.checkedCacheInventory || expiredKeys.length > 0) {
+      const retained = new Set(nextKeys);
       for (let i = this.storage.length - 1; i >= 0; i--) {
         const key = this.storage.key(i);
         if (!key?.startsWith('arcaFeed:')) continue;
         const separator = key.indexOf(':', 9);
-        if (separator !== -1 && expired.has(key.slice(9, separator))) {
+        if (
+          separator !== -1 &&
+          SCOPED_CACHE_SUFFIXES.has(key.slice(separator + 1)) &&
+          !retained.has(key.slice(9, separator))
+        ) {
           this.storage.removeItem(key);
         }
       }
+      this.checkedCacheInventory = true;
     }
 
     this.setJSON(RECENT_ARTICLE_KEYS_KEY, nextKeys);

@@ -94,24 +94,40 @@ function installResizeHandle(p: VaultAdapter): void {
 
 // ── UI Settings ─────────────────────────────────────────
 
-function applyUISettings(settings: UISettings): void {
+function applyUISettings(settings: UISettings, previous?: UISettings): void {
+  const bodyClasses = {
+    hideBlur: 'hide-blur',
+    hideNavControl: 'hide-nav-control',
+    hideArticleTitle: 'hide-article-title',
+    hideArticleAuthor: 'hide-article-author',
+    hideArticleTime: 'hide-article-time',
+    hideArticleView: 'hide-article-view',
+  } as const;
+  if (
+    previous &&
+    previous.hideScrollbar === settings.hideScrollbar &&
+    previous.contentWidth === settings.contentWidth &&
+    (Object.keys(bodyClasses) as (keyof typeof bodyClasses)[]).every(
+      (key) => previous[key] === settings[key],
+    )
+  )
+    return;
   const $body = $('body');
-  const $html = $('html');
 
   // CSS class-based toggles (sync with arcalive.css rules)
-  $html.toggleClass('hide-scrollbar', settings.hideScrollbar);
-  $body.toggleClass('hide-blur', settings.hideBlur);
-  $body.toggleClass('hide-nav-control', settings.hideNavControl);
-  $body.toggleClass('hide-article-title', settings.hideArticleTitle);
-  $body.toggleClass('hide-article-author', settings.hideArticleAuthor);
-  $body.toggleClass('hide-article-time', settings.hideArticleTime);
-  $body.toggleClass('hide-article-view', settings.hideArticleView);
+  if (!previous || previous.hideScrollbar !== settings.hideScrollbar)
+    $('html').toggleClass('hide-scrollbar', settings.hideScrollbar);
+  for (const key of Object.keys(bodyClasses) as (keyof typeof bodyClasses)[]) {
+    if (!previous || previous[key] !== settings[key])
+      $body.toggleClass(bodyClasses[key], settings[key]);
+  }
 
   // Content width (CSS variable on content-wrapper)
-  $('.body .content-wrapper').css(
-    '--content-max-width',
-    `${settings.contentWidth}px`,
-  );
+  if (!previous || previous.contentWidth !== settings.contentWidth)
+    $('.body .content-wrapper').css(
+      '--content-max-width',
+      `${settings.contentWidth}px`,
+    );
 }
 
 // ── Mode-specific UI initializers ──────────────────────
@@ -172,8 +188,8 @@ function initUi(p: VaultAdapter): void {
   let lastSeriesMode = p.isSeriesMode;
   p.subscribe((state) => {
     if (state.uiSettings !== lastSettings) {
+      applyUISettings(state.uiSettings, lastSettings);
       lastSettings = state.uiSettings;
-      applyUISettings(state.uiSettings);
     }
     if (state.isSeriesMode !== lastSeriesMode) {
       lastSeriesMode = state.isSeriesMode;
