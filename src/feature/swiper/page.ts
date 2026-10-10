@@ -4,6 +4,7 @@ import {
   clearSkippedToast,
   queueSkippedToast,
   showSkippedToast,
+  skippedToastURL,
 } from './skip-toast';
 
 const navigatingVaults = new WeakSet<VaultAdapter>();
@@ -44,7 +45,9 @@ function toLink(mode: PageMode): PromiseFunc {
     navigatingVaults.add(p);
     queueSkippedToast(url, skipped);
     try {
-      window.location.replace(`${url}${p.searchQuery}`);
+      window.location.replace(
+        skippedToastURL(`${url}${p.searchQuery}`, skipped),
+      );
     } catch (error) {
       clearSkippedToast();
       navigatingVaults.delete(p);

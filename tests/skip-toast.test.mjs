@@ -12,6 +12,7 @@ function fixture() {
       sessionStorage: storage,
       window: {
         location: {
+          href: 'https://arca.live/b/test/100?articleKey=session',
           replace(url) {
             if (fail) throw new Error('navigation failed');
             navigations.push(url);
@@ -49,7 +50,7 @@ function fixture() {
 test('skipping visited articles shows one toast on the destination, without delaying navigation', () => {
   const f = fixture();
   f.toLink('NEXT')(f.p);
-  assert.deepEqual(f.navigations, ['/b/test/97']);
+  assert.deepEqual(f.navigations, ['/b/test/97?arcaFeedSkipped=2']);
   assert.deepEqual(f.messages, []);
   f.toast.showPendingSkippedToast('/b/test/97');
   f.toast.showPendingSkippedToast('/b/test/97');
@@ -105,4 +106,33 @@ test('subscription aliases do not match a different article', () => {
   f.toast.queueSkippedToast('/b/my/97', 2);
   f.toast.showPendingSkippedToast('/b/test/98');
   assert.deepEqual(f.messages, []);
+});
+
+test('URL handoff survives cleared storage and is removed before initialization', () => {
+  const messages = [];
+  const storage = memoryStorage();
+  const location = {
+    href: 'https://arca.live/b/test/97?articleKey=session&q=hello&arcaFeedSkipped=2',
+  };
+  const history = {
+    state: { site: true },
+    replaceState(state, _title, href) {
+      assert.deepEqual(state, { site: true });
+      location.href = href;
+    },
+  };
+  const toast = sourceLoader({
+    globals: { sessionStorage: storage, window: { location, history } },
+    mocks: {
+      '@/utils/toast': { showToast: (message) => messages.push(message) },
+    },
+  })('src/feature/swiper/skip-toast.ts');
+  toast.captureSkippedToast();
+  assert.equal(
+    location.href,
+    'https://arca.live/b/test/97?articleKey=session&q=hello',
+  );
+  toast.showPendingSkippedToast('/b/test/97');
+  toast.showPendingSkippedToast('/b/test/97');
+  assert.deepEqual(messages, ['최근 본 글 2개를 건너뛰었습니다']);
 });
