@@ -9,6 +9,8 @@
     "dev:live:mobile": "node scripts/dev-server.mjs --mobile --network",
     "dev:ui": "node scripts/ui-server.mjs",
     "dev:mobile": "webpack --config webpack.config.dev.js --env DEVICE=mobile",
+    "dev:cdn": "node --env-file-if-exists=.env node_modules/webpack-cli/bin/cli.js --config webpack.config.cdn.js",
+    "dev:cdn:mobile": "npm run dev:cdn -- --env DEVICE=mobile",
     "build": "webpack --config webpack.config.prod.js --mode production",
     "prod": "npm run build",
     "lint": "eslint .",

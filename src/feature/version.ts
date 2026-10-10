@@ -10,7 +10,10 @@ function addVersionInfo(_: VaultAdapter): void {
 
   const versionInfo = `ArcaFeed Version: ${version} (Build Date: ${date})`;
 
-  if (process.env.DEVICE === 'mobile') {
+  if (
+    process.env.DEVICE === 'mobile' &&
+    process.env.VERSION_RELOAD !== 'false'
+  ) {
     if (localStorage.getItem('arca_version_info') !== versionInfo)
       window.location.reload();
 

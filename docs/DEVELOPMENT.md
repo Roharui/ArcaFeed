@@ -21,6 +21,33 @@ npm run bench:performance # 재현 가능한 합성 벤치마크
 Playwright MCP에서 저장된 검사 파일을 실행할 수 있습니다.
 사용법과 검증 범위는 [UI_TESTING.md](./UI_TESTING.md)를 참고하세요.
 
+## 로컬 CDN 업데이트용 개발 빌드
+
+`.env.example`을 `.env`로 복사하고 `CDN_URL`에 직접 구성한 CDN의 기본 주소를
+작성하세요. `.env`는 Git에 포함되지 않습니다.
+
+```dotenv
+CDN_URL=https://dev.example.com/n/
+```
+
+```bash
+npm run dev:cdn         # 데스크톱 개발 빌드
+npm run dev:cdn:mobile  # eruda를 포함한 모바일 개발 빌드
+```
+
+생성된 `dist/ArcaFeed.dev.user.js`를 CDN의
+`https://dev.example.com/n/ArcaFeed.dev.user.js` 경로에 제공하고 해당 주소에서
+설치하세요. `@updateURL`과 `@downloadURL` 모두 이 경로를 사용하며, 이후 빌드를
+CDN에 반영하면 유저스크립트 관리자의 업데이트 확인으로 받을 수 있습니다.
+빌드할 때마다 숫자 버전이 증가합니다. 기존 `ArcaFeed`와 라이브 로더는 끄고
+`ArcaFeed-dev`만 켜세요. CDN 서버 구성과 파일 반영은 별도로 진행합니다.
+CDN 빌드는 배포용과 같은 압축 방식과 외부 `@require` 라이브러리를 사용합니다.
+개발 버전 표시와 모바일 eruda는 유지하되, 버전 변경에 따른 강제 새로고침은
+실행하지 않습니다.
+
+`.env`가 없으면 `http://localhost:3000/`을 사용합니다. `CDN_URL`을 바꾼 뒤에는
+새 주소에서 다시 설치하세요.
+
 ## 실시간 개발
 
 개발 중에는 `npm run dev:live`를 실행하고

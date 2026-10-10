@@ -47,6 +47,7 @@ Node.js 22.13 이상인 22.x 또는 24 이상과 npm 10.9 이상이 필요합니
 ```bash
 npm ci
 npm run dev:live  # 실시간 개발 서버
+npm run dev:cdn   # .env의 CDN_URL에서 업데이트받는 개발 빌드
 npm run check     # 포맷, 린트, 타입, 테스트, 프로덕션 빌드
 ```
 

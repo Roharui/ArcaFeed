@@ -54,6 +54,7 @@ export default function (env = {}, _args) {
     'process.env.GIT_HASH': JSON.stringify(gitHash),
     'process.env.BUILD_DATE': JSON.stringify(buildDate),
     'process.env.DEVICE': JSON.stringify(device),
+    'process.env.VERSION_RELOAD': JSON.stringify(env.VERSION_RELOAD || 'true'),
   });
   const webpackUserscriptPlugin = new UserscriptPlugin({
     headers: getDevHeaders(device, buildDate),
