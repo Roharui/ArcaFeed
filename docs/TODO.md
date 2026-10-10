@@ -72,13 +72,13 @@
 
 ## 구현 시 참고할 코드
 
-| 영역                         | 관련 파일                                                                                                                                                |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 설정 저장·형식 검증          | [config.ts](src/vault/config.ts), [config-schema.ts](src/vault/config-schema.ts), [vault.ts](src/types/vault.ts)                                         |
-| 필터 판정·설정 화면          | [filter.ts](src/feature/filter.ts), [filterUi.ts](src/feature/modal/filterUi.ts)                                                                         |
-| 구독 피드 시작·추가 로딩     | [subscribeTab.ts](src/feature/modal/subscribeTab.ts), [link.ts](src/feature/article/link.ts), [func.ts](src/utils/func.ts)                               |
-| 탐색 목록 조회·미리 불러오기 | [fetch.ts](src/feature/article/fetch.ts), [prefetch.ts](src/feature/article/prefetch.ts)                                                                 |
-| 이어보기 보관·화면           | [reading-history.ts](src/vault/reading-history.ts), [resumeTab.ts](src/feature/modal/resumeTab.ts)                                                       |
-| 키보드·설정창·화면 스타일    | [keyEvent.ts](src/feature/keyEvent.ts), [modal/index.ts](src/feature/modal/index.ts), [ui.ts](src/feature/ui.ts), [uiTab.ts](src/feature/modal/uiTab.ts) |
+| 영역                         | 관련 파일                                                                                                                                                            |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 설정 저장·형식 검증          | [config.ts](../src/vault/config.ts), [config-schema.ts](../src/vault/config-schema.ts), [vault.ts](../src/types/vault.ts)                                            |
+| 필터 판정·설정 화면          | [filter.ts](../src/feature/filter.ts), [filterUi.ts](../src/feature/modal/filterUi.ts)                                                                               |
+| 구독 피드 시작·추가 로딩     | [subscribeTab.ts](../src/feature/modal/subscribeTab.ts), [link.ts](../src/feature/article/link.ts), [func.ts](../src/utils/func.ts)                                  |
+| 탐색 목록 조회·미리 불러오기 | [fetch.ts](../src/feature/article/fetch.ts), [prefetch.ts](../src/feature/article/prefetch.ts)                                                                       |
+| 이어보기 보관·화면           | [reading-history.ts](../src/vault/reading-history.ts), [resumeTab.ts](../src/feature/modal/resumeTab.ts)                                                             |
+| 키보드·설정창·화면 스타일    | [keyEvent.ts](../src/feature/keyEvent.ts), [modal/index.ts](../src/feature/modal/index.ts), [ui.ts](../src/feature/ui.ts), [uiTab.ts](../src/feature/modal/uiTab.ts) |
 
 우선 착수 추천: 설정 백업·복원 → 공통 필터 → 피드 프리셋. 구독 피드의 안정성이 더 시급하다면 부분 로딩·재시도를 먼저 진행합니다.

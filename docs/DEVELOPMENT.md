@@ -97,5 +97,5 @@ DEV_URL=https://dev.example.com/n npm run dev:live:mobile
 ## 빌드와 관련 문서
 
 프로덕션 유저스크립트는 `dist/ArcaFeed.user.js`에 생성됩니다. 내부 구조와
-유지보수 규칙은 [PROJECT_OVERVIEW.md](../PROJECT_OVERVIEW.md)를 참고하세요.
+유지보수 규칙은 [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md)를 참고하세요.
 성능 개선 내용과 측정 조건은 [PERFORMANCE.md](./PERFORMANCE.md)에 정리되어 있습니다.

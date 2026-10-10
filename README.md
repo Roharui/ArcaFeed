@@ -53,5 +53,7 @@ npm run check     # 포맷, 린트, 타입, 테스트, 프로덕션 빌드
 [개발 안내](./docs/DEVELOPMENT.md)에서 개발 로더 설치, 모바일 연결, HTTPS 프록시 설정과 명령어를 확인할 수 있습니다.
 
 - [UI 테스트](./docs/UI_TESTING.md)
-- [프로젝트 구조](./PROJECT_OVERVIEW.md)
+- [프로젝트 구조](./docs/PROJECT_OVERVIEW.md)
+- [아키텍처](./docs/ARCHITECTURE.md)
 - [성능 측정](./docs/PERFORMANCE.md)
+- [기능 TODO](./docs/TODO.md)
