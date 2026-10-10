@@ -9,6 +9,7 @@ import type { AppEvent } from '@/core/app-events';
 
 import type { SwiperOptions } from 'swiper/types';
 import type { VaultAdapter } from '@/vault';
+import { installSwiperVideoPause } from './video';
 
 const swiperOptions: SwiperOptions = {
   speed: 300,
@@ -122,6 +123,7 @@ function initSwiperPage(p: VaultAdapter): void {
     enabled: !disableSwiper,
   });
   observeSwiperWidth(p.swiper);
+  installSwiperVideoPause(p.swiper);
 
   const nextEvent = SLIDE_NEXT_EVENT[p.href.mode] || 'renderNextPage';
   p.swiper.on('slideNextTransitionEnd', () => eventBus.emit(nextEvent));

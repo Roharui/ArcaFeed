@@ -477,6 +477,7 @@ test('Swiper is reused and background list changes unlock navigation', () => {
     mocks: {
       jquery: {},
       swiper: { default: FakeSwiper },
+      './video': { installSwiperVideoPause() {} },
       '@/core/app-events': { eventBus: {} },
     },
   })('src/feature/swiper/swiper.ts');
@@ -549,6 +550,7 @@ test('Swiper ignores article height changes and batches width changes until the 
     mocks: {
       jquery: {},
       swiper: { default: FakeSwiper },
+      './video': { installSwiperVideoPause() {} },
       '@/core/app-events': { eventBus: {} },
     },
   })('src/feature/swiper/swiper.ts');
