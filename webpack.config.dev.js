@@ -23,6 +23,28 @@ function getBuildDate() {
   return new Date().toISOString().replace('T', '_').replace(/[:.]/g, '-');
 }
 
+export function getDevHeaders(device, version) {
+  return {
+    name: 'ArcaFeed-dev',
+    namespace: 'https://github.com/Roharui/ArcaFeed',
+    version,
+    description: 'Use ArcaLive as Shorts',
+    author: 'https://github.com/Roharui',
+    match: 'https://arca.live/*',
+    icon: 'https://www.google.com/s2/favicons?sz=64&domain=arca.live',
+    require: [
+      'https://code.jquery.com/jquery-3.7.1.min.js',
+      'https://cdn.jsdelivr.net/npm/swiper@12.2.0/swiper-bundle.min.js',
+      'https://cdn.jsdelivr.net/npm/toastify-js@1.12.0',
+      ...(device === 'mobile'
+        ? ['https://cdn.jsdelivr.net/npm/eruda@3.4.3']
+        : []),
+    ],
+    'run-at': 'document-end',
+    grant: 'none',
+  };
+}
+
 export default function (env = {}, _args) {
   const device = env.DEVICE || 'desktop';
   const gitHash = env.GIT_HASH || getGitHash();
@@ -34,25 +56,7 @@ export default function (env = {}, _args) {
     'process.env.DEVICE': JSON.stringify(device),
   });
   const webpackUserscriptPlugin = new UserscriptPlugin({
-    headers: {
-      name: 'ArcaFeed-dev',
-      namespace: 'https://github.com/Roharui/ArcaFeed',
-      version: buildDate,
-      description: 'Use ArcaLive as Shorts',
-      author: 'https://github.com/Roharui',
-      match: 'https://arca.live/*',
-      icon: 'https://www.google.com/s2/favicons?sz=64&domain=arca.live',
-      require: [
-        'https://code.jquery.com/jquery-3.7.1.min.js',
-        'https://cdn.jsdelivr.net/npm/swiper@12.2.0/swiper-bundle.min.js',
-        'https://cdn.jsdelivr.net/npm/toastify-js@1.12.0',
-        ...(device === 'mobile'
-          ? ['https://cdn.jsdelivr.net/npm/eruda@3.4.3']
-          : []),
-      ],
-      'run-at': 'document-end',
-      grant: 'none',
-    },
+    headers: getDevHeaders(device, buildDate),
   });
 
   const config = {

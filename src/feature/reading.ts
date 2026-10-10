@@ -4,7 +4,11 @@ import '@css/reading.css';
 import { extractArticleRows } from './filter';
 import { refreshUnvisitedNavigation } from './article/link';
 import { createArticleKey } from '@/utils/article-key';
-import { READING_HISTORY_KEY } from '@/vault/reading-history';
+import {
+  READING_HISTORY_KEY,
+  SITE_RECENT_KEY,
+  SITE_RECENT_DISABLED_KEY,
+} from '@/vault/reading-history';
 import type { ReadingSession } from '@/vault/reading-history';
 import type { VaultAdapter } from '@/vault';
 import { readingContextLabel } from '@/vault/reading-context';
@@ -27,13 +31,6 @@ function channelName(p: VaultAdapter): string {
       .trim() ||
     p.articleFilterConfig[p.href.channelId]?.channelName ||
     p.href.channelId
-  );
-}
-
-function articleTitle(p: VaultAdapter): string {
-  const heading = $(ARTICLE_TITLE_SELECTOR).first();
-  return (
-    heading.text().trim() || document.title || `게시글 ${p.href.articleId}`
   );
 }
 
@@ -102,7 +99,7 @@ function saveCheckpoint(p: VaultAdapter): void {
     ? '스크랩'
     : p.isSeriesMode
       ? p.seriesChannels.length > 0
-        ? `홈 피드 · ${p.seriesChannels.length}개 채널`
+        ? `구독 피드 · ${p.seriesChannels.length}개 채널`
         : `시리즈 · ${channel}`
       : `${channel}${params.get('q') ? ` · ${params.get('q')}` : ''}${params.get('mode') === 'best' ? ' · 인기글' : ''}`;
   p.reading.saveSession({
@@ -192,9 +189,16 @@ export function initReading(p: VaultAdapter): void {
   initializedVaults.add(p);
 
   window.addEventListener('storage', (event) => {
-    if (event.key === READING_HISTORY_KEY || event.key === null)
+    if (
+      event.key === READING_HISTORY_KEY ||
+      event.key === SITE_RECENT_KEY ||
+      event.key === SITE_RECENT_DISABLED_KEY ||
+      event.key === null
+    )
       p.reading.reload();
   });
+  p.reading.reload();
+  window.addEventListener('load', () => p.reading.reload(), { once: true });
   let previousSkip = p.skipVisitedArticles;
   let previousHasNext = p.isNextPageActive();
   let previousReadingRevision = p.getState().readingRevision;
@@ -223,16 +227,7 @@ export function initReading(p: VaultAdapter): void {
 
   if (!p.isCurrentMode('ARTICLE')) return;
 
-  const path = currentPath(p);
-  const recordVisit = () =>
-    p.reading.visit({
-      path,
-      title: articleTitle(p),
-      channelName: channelName(p),
-    });
-  recordVisit();
   let checkpointTimer: ReturnType<typeof setTimeout> | undefined;
-  let historyCleared = false;
   let checkpointRemoved = false;
 
   const skipButton = $('<button>', {
@@ -256,17 +251,13 @@ export function initReading(p: VaultAdapter): void {
 
   const checkpoint = () => {
     clearTimeout(checkpointTimer);
-    if (!historyCleared && !checkpointRemoved) saveCheckpoint(p);
+    if (!checkpointRemoved) saveCheckpoint(p);
   };
   const scheduleCheckpoint = () => {
     clearTimeout(checkpointTimer);
     checkpointTimer = setTimeout(checkpoint, 700);
   };
   p.reading.subscribe(() => {
-    if (!p.reading.hasVisited(path)) {
-      historyCleared = true;
-      clearTimeout(checkpointTimer);
-    }
     if (!p.reading.sessions.some((session) => session.id === contextId(p))) {
       checkpointRemoved = true;
       clearTimeout(checkpointTimer);
@@ -296,8 +287,6 @@ export function initReading(p: VaultAdapter): void {
     if (!event.persisted) return;
     stoppedVaults.delete(p);
     p.reading.reload();
-    historyCleared = false;
-    recordVisit();
     checkpoint();
   });
   restoreScroll(p);

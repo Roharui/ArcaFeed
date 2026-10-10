@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "webpack --config webpack.config.dev.js",
     "dev:watch": "webpack --config webpack.config.dev.js --env WATCH=true",
+    "dev:live": "node scripts/dev-server.mjs",
+    "dev:live:mobile": "node scripts/dev-server.mjs --mobile --network",
     "dev:mobile": "webpack --config webpack.config.dev.js --env DEVICE=mobile",
     "build": "webpack --config webpack.config.prod.js --mode production",
     "prod": "npm run build",

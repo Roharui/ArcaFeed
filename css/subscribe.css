@@ -1,0 +1,58 @@
+.helper-modal-subscribe {
+  padding: 22px;
+}
+
+.arcafeed-subscribe-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.arcafeed-subscribe-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-bd-btn);
+}
+
+.arcafeed-subscribe-row > div {
+  min-width: 0;
+}
+
+.arcafeed-subscribe-row label {
+  position: relative;
+  margin: 0;
+  cursor: pointer;
+}
+
+.arcafeed-subscribe-row .category-span {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.arcafeed-subscribe-summary {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #888);
+}
+
+.arcafeed-subscribe-filter-editor {
+  display: block;
+  padding: 0;
+}
+
+.helper-modal-subscribe .arcafeed-modal-actions {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 440px) {
+  .helper-modal-subscribe {
+    padding: 16px;
+  }
+
+  .arcafeed-subscribe-row {
+    gap: 8px;
+  }
+}

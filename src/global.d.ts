@@ -9,6 +9,7 @@ declare module 'toastify-js' {
 
   interface ToastifyOptions {
     text?: string;
+    node?: HTMLElement;
     duration?: number;
     selector?: string;
     gravity?: ToastifyGravity;

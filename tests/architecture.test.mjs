@@ -418,6 +418,9 @@ for (const scenario of ['success', 'empty', 'stale']) {
       },
       mocks: {
         jquery: { default: jquery },
+        '@/feature/subscriptions': {
+          parseSubscribedChannels: () => [{ id: 'test', name: 'Test channel' }],
+        },
         '@/feature/article/fetch': {
           showFetchLoader() {},
           hideFetchLoader() {},

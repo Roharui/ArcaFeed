@@ -8,8 +8,9 @@ import {
 import { fetchUrl } from '@/utils/fetch';
 import { shuffle } from '@/utils/func';
 import { appendSearchParam } from '@/utils/url';
-import { showToast } from '@/utils/toast';
+import { showToast, showConfirmToast } from '@/utils/toast';
 import { captureArticleSession } from '@/vault/article-session';
+import { isVisitedPath } from '@/vault/reading-history';
 
 import type { ArticleFilterImpl } from '@/types';
 import type { VaultAdapter } from '@/vault';
@@ -89,10 +90,12 @@ const MAX_PAGES = 10;
 /**
  * Yields batches of filtered article links from each paginated listing page.
  * The consumer decides when to stop by breaking out of the loop.
+ * Continuing past the page limit requires the consumer's approval once.
  */
 async function* fetchArticlePages(
   p: VaultAdapter,
   articleId: string,
+  continueSearch?: () => Promise<boolean>,
 ): AsyncGenerator<string[]> {
   const isCurrent = captureArticleSession(p);
   const basePath = p.isCurrentMode('SCRAP') ? '/u/scrap_list' : articleId;
@@ -105,10 +108,13 @@ async function* fetchArticlePages(
     nextUrl = withBestMode(nextUrl, channelFilter);
   }
 
-  for (let page = 0; page < MAX_PAGES && nextUrl; page++) {
+  for (let page = 0; nextUrl; page++) {
     if (!isCurrent()) return;
     const url = normalizeUrl(nextUrl);
     if (visitedPages.has(url)) return;
+    if (page === MAX_PAGES) {
+      if (!(await continueSearch?.()) || !isCurrent()) return;
+    }
     visitedPages.add(url);
     const { $html } = await fetchAndParse(url);
     if (!isCurrent()) return;
@@ -136,7 +142,29 @@ async function fetchFirstBatch(
   showFetchLoader();
   const isCurrent = captureArticleSession(p);
   try {
-    for await (const links of fetchArticlePages(p, articleId)) {
+    let searchCancelled = false;
+    const continueSearch = async () => {
+      if (!isCurrent() || !p.skipVisitedArticles || p.isNextPageActive())
+        return false;
+      const controller = new AbortController();
+      const unsubscribe = p.subscribe(() => {
+        if (!isCurrent() || p.isNextPageActive()) controller.abort();
+      });
+      hideFetchLoader();
+      try {
+        const accepted = await showConfirmToast(
+          '아직 방문하지 않은 다음 게시글을 찾지 못했습니다.\n찾을 때까지 계속 검색할까요?',
+          '계속 검색',
+          controller.signal,
+        );
+        searchCancelled = !accepted;
+        return accepted;
+      } finally {
+        unsubscribe();
+        showFetchLoader();
+      }
+    };
+    for await (const links of fetchArticlePages(p, articleId, continueSearch)) {
       if (!isCurrent()) return;
       if (links.length > 0) {
         p.articleList = [...new Set([...p.articleList, ...links])];
@@ -150,7 +178,7 @@ async function fetchFirstBatch(
           return;
       }
     }
-    if (isCurrent())
+    if (isCurrent() && !searchCancelled)
       showToast(
         p.skipVisitedArticles
           ? '아직 방문하지 않은 다음 게시글을 찾지 못했습니다.'
@@ -234,7 +262,14 @@ function openScrapSeriesArticle(p: VaultAdapter): void {
  * Safe to call on URLs that already have query params.
  */
 export function withBestMode(url: string, filter?: ArticleFilterImpl): string {
-  return filter?.onlyBest ? appendSearchParam(url, 'mode', 'best') : url;
+  if (!filter?.onlyBest) return url;
+  const hashIndex = url.indexOf('#');
+  const fragment = hashIndex === -1 ? '' : url.slice(hashIndex);
+  const base = hashIndex === -1 ? url : url.slice(0, hashIndex);
+  const queryIndex = base.indexOf('?');
+  const path = queryIndex === -1 ? base : base.slice(0, queryIndex);
+  const query = queryIndex === -1 ? '' : base.slice(queryIndex);
+  return `${path}${appendSearchParam(query, 'mode', 'best')}${fragment}`;
 }
 
 /**
@@ -328,7 +363,7 @@ async function fetchChannelArticlesBefore(
 
     nextUrl = extractNextPageUrl($html, basePath);
 
-    if (links.some((path) => !visitedPaths?.has(path))) break;
+    if (links.some((path) => !isVisitedPath(visitedPaths, path))) break;
   }
 
   return results;

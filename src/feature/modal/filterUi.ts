@@ -4,7 +4,6 @@ import '@css/filter.css';
 
 import { eventBus } from '@/core/app-events';
 import { NO_TAB_CATEGORIES, expandTabCategories } from '@/feature/filter';
-import { checkNotNull } from '@/utils';
 import { readingHeader } from './readingUi';
 
 import type { VaultAdapter } from '@/vault';
@@ -43,15 +42,36 @@ const MODAL_FILTER_TAB = `
 </div>
 `;
 
-function createArticleFilterModal(p: VaultAdapter) {
+interface FilterTarget {
+  channelId: string;
+  channelName: string;
+  categories: string[];
+  filter?: ArticleFilterImpl | undefined;
+  onApply: (filter: ArticleFilterImpl) => void;
+  onCancel: () => void;
+}
+
+export function extractFilterCategories($scope: JQuery<HTMLElement>): string[] {
+  return $scope
+    .find('.board-category > span')
+    .toArray()
+    .map((element) => $(element).text().trim())
+    .filter((category) => category && category !== '전체');
+}
+
+function createArticleFilterModal(p: VaultAdapter, target?: FilterTarget) {
   const $filterTab = $(MODAL_FILTER_TAB);
   $filterTab.prepend(
-    readingHeader('필터', '이 채널에서 보고 싶은 글만 골라보세요.'),
+    readingHeader(
+      target ? `${target.channelName} 필터` : '필터',
+      '이 채널에서 보고 싶은 글만 골라보세요.',
+    ),
   );
 
-  const { href, articleFilterConfig } = p;
-
-  const { tab, title, onlyBest } = articleFilterConfig[href.channelId] || {
+  const filter = target
+    ? target.filter
+    : p.articleFilterConfig[p.href.channelId];
+  const { tab, title, onlyBest } = filter || {
     tab: [],
     title: [],
     onlyBest: false,
@@ -61,15 +81,14 @@ function createArticleFilterModal(p: VaultAdapter) {
   $filterTab.find('#filter-best-checkbox').prop('checked', onlyBest);
 
   // get Categories
-  const $rootContainer = $('.root-container').first();
-  const category = $rootContainer
-    .find('.board-category > span')
-    .get()
-    .map((ele) => $(ele).text().trim())
-    .filter((text) => text !== '전체');
-
-  category.splice(0, 0, ...NO_TAB_CATEGORIES);
-  const categories = [...new Set(category)];
+  const categories = [
+    ...new Set([
+      ...NO_TAB_CATEGORIES,
+      ...(target?.categories ??
+        extractFilterCategories($('.root-container').first())),
+      ...expandTabCategories(tab),
+    ]),
+  ];
 
   const tabSet = new Set(expandTabCategories(tab));
   const $filterCategory = $filterTab.find('#category');
@@ -104,12 +123,16 @@ function createArticleFilterModal(p: VaultAdapter) {
   // Title exclude tags
   title.forEach((tag) => createExcludeSpan(tag, $filterTab));
 
-  $filterTab
-    .find('#filter-check-btn')
-    .on('click', () => eventBus.emit('checkFilterModal'));
-  $filterTab
-    .find('#filter-cancel-btn')
-    .on('click', () => eventBus.emit('closeModal'));
+  $filterTab.find('#filter-check-btn').on('click', () => {
+    addTitleExcludeTag($filterTab);
+    if (target)
+      target.onApply(readArticleFilter($filterTab, filter, target.channelName));
+    else void eventBus.emit('checkFilterModal');
+  });
+  $filterTab.find('#filter-cancel-btn').on('click', () => {
+    if (target) target.onCancel();
+    else void eventBus.emit('closeModal');
+  });
   $filterTab
     .find('#exclude-btn')
     .on('click', () => addTitleExcludeTag($filterTab));
@@ -182,27 +205,37 @@ function addTitleExcludeTag($filterTab: JQuery<HTMLElement>) {
   $filterTab.find('#exclude-title').val('').trigger('focus');
 }
 
-function initCheckFilterModal(p: VaultAdapter) {
-  const { href } = p;
-  const { channelId } = href;
-
-  const tab = $('.ele-category:checked')
+export function readArticleFilter(
+  $editor: JQuery<HTMLElement>,
+  previous?: ArticleFilterImpl,
+  channelName?: string,
+): ArticleFilterImpl {
+  const tab = $editor
+    .find('.ele-category:checked')
     .toArray()
-    .map((element) => checkNotNull($(element).val()) as string);
+    .map((element) => String($(element).val()));
 
-  const title = $('.helper-modal-filter .exclude-title-tag')
+  const title = $editor
+    .find('.exclude-title-tag')
     .toArray()
     .map((ele): string => $(ele).attr('data-text') as string);
 
-  const pageFilter: ArticleFilterImpl = {
+  return {
     tab,
     title,
-    disableSwiper: false,
-    onlyBest: $('#filter-best-checkbox').prop('checked') as boolean,
-    channelName: $('a.title')
-      .attr('data-channel-name')
-      ?.replace(' 채널', '') as string,
+    disableSwiper: previous?.disableSwiper ?? false,
+    onlyBest: $editor.find('#filter-best-checkbox').prop('checked') as boolean,
+    ...(channelName ? { channelName } : {}),
   };
+}
+
+function initCheckFilterModal(p: VaultAdapter) {
+  const { channelId } = p.href;
+  const pageFilter = readArticleFilter(
+    $('#dialog .helper-modal-filter'),
+    p.articleFilterConfig[channelId],
+    $('a.title').attr('data-channel-name')?.replace(' 채널', '') || channelId,
+  );
 
   p.updateState({
     articleFilterConfig: {

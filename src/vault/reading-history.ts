@@ -22,12 +22,13 @@ export interface ReadingSession {
 }
 
 interface ReadingData {
-  entries: ReadingEntry[];
   sessions: ReadingSession[];
 }
 
 export const READING_HISTORY_KEY = 'arcaFeed:readingHistory';
-export const HISTORY_LIMIT = 1000;
+export const SITE_RECENT_KEY = 'recent_articles';
+export const SITE_RECENT_DISABLED_KEY = 'recent_disabled';
+export const SITE_RECENT_URL = '/u/recents';
 export const SESSION_LIMIT = 20;
 const SESSION_ARTICLE_LIMIT = 2000;
 
@@ -45,19 +46,35 @@ function text(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value.slice(0, 300) : fallback;
 }
 
-/** Global history survives the small, independently pruned navigation cache. */
+/** Match aliases from /b/my using the site's globally unique article IDs. */
+export function isVisitedPath(
+  paths: Set<string> | undefined,
+  path: string,
+): boolean {
+  return (
+    !!paths && (paths.has(path) || paths.has(`/b/my/${path.split('/').pop()}`))
+  );
+}
+
+/** Read the site's recent history; persist only ArcaFeed resume positions. */
 export class ReadingHistory {
   private data: ReadingData;
+  private recentEntries: ReadingEntry[] = [];
   private visitedPaths = new Set<string>();
   private listeners = new Set<() => void>();
 
   constructor(private repo = new StorageRepository()) {
     this.data = this.load();
+    this.loadRecentEntries();
     this.updateVisitedPaths();
+    // Discard the obsolete duplicate visit list while retaining resume positions.
+    const legacy = this.repo.getJSON<unknown>(READING_HISTORY_KEY);
+    if (isRecord(legacy) && 'entries' in legacy)
+      this.repo.setJSON(READING_HISTORY_KEY, this.data);
   }
 
   get entries(): readonly ReadingEntry[] {
-    return this.data.entries;
+    return this.recentEntries;
   }
 
   get sessions(): readonly ReadingSession[] {
@@ -65,7 +82,7 @@ export class ReadingHistory {
   }
 
   hasVisited(path: string): boolean {
-    return this.visitedPaths.has(path);
+    return isVisitedPath(this.visitedPaths, path);
   }
 
   getVisitedPaths(): Set<string> {
@@ -79,16 +96,8 @@ export class ReadingHistory {
 
   reload(): void {
     this.data = this.load();
+    this.loadRecentEntries();
     this.notify();
-  }
-
-  visit(entry: Omit<ReadingEntry, 'visitedAt'>): void {
-    this.change((data) => {
-      data.entries = [
-        { ...entry, visitedAt: Date.now() },
-        ...data.entries.filter((item) => item.path !== entry.path),
-      ].slice(0, HISTORY_LIMIT);
-    });
   }
 
   saveSession(session: ReadingSession): void {
@@ -108,12 +117,11 @@ export class ReadingHistory {
 
   clear(): void {
     this.change((data) => {
-      data.entries = [];
       data.sessions = [];
     });
   }
 
-  /** Merge each operation with disk so an older tab does not overwrite newer visits. */
+  /** Merge each checkpoint operation with disk so tabs preserve each other's positions. */
   private change(mutate: (data: ReadingData) => void): void {
     const next = this.load();
     mutate(next);
@@ -128,28 +136,53 @@ export class ReadingHistory {
   }
 
   private updateVisitedPaths(): void {
-    this.visitedPaths = new Set(this.data.entries.map((entry) => entry.path));
+    this.visitedPaths = new Set(
+      this.recentEntries.flatMap((entry) => [
+        entry.path,
+        `/b/my/${entry.path.split('/').pop()}`,
+      ]),
+    );
+  }
+
+  private loadRecentEntries(): void {
+    this.recentEntries = [];
+    if (this.repo.getItem(SITE_RECENT_DISABLED_KEY)) return;
+    const raw = this.repo.getJSON<unknown>(SITE_RECENT_KEY);
+    const seenIds = new Set<string>();
+    for (const item of Array.isArray(raw) ? raw : []) {
+      if (!isRecord(item)) continue;
+      const slug = typeof item.slug === 'string' ? item.slug : '';
+      const id =
+        typeof item.articleId === 'string' || typeof item.articleId === 'number'
+          ? String(item.articleId)
+          : '';
+      const visitedAt =
+        typeof item.regdateAt === 'number'
+          ? timestamp(item.regdateAt * 1000)
+          : 0;
+      if (
+        !/^[a-zA-Z0-9]+$/.test(slug) ||
+        !/^\d+$/.test(id) ||
+        !visitedAt ||
+        seenIds.has(id)
+      )
+        continue;
+      seenIds.add(id);
+      const path = `/b/${slug}/${id}`;
+      this.recentEntries.push({
+        path,
+        title: text(item.title, path),
+        channelName: text(item.boardName, slug),
+        visitedAt,
+      });
+    }
+    this.recentEntries.sort((a, b) => b.visitedAt - a.visitedAt);
   }
 
   private load(): ReadingData {
     const raw = this.repo.getJSON<unknown>(READING_HISTORY_KEY);
-    if (!isRecord(raw)) return { entries: [], sessions: [] };
+    if (!isRecord(raw)) return { sessions: [] };
     const origin = window.location.origin;
-    const entries: ReadingEntry[] = [];
-    const seenPaths = new Set<string>();
-    for (const item of Array.isArray(raw.entries) ? raw.entries : []) {
-      if (!isRecord(item)) continue;
-      const path = normalizeArticles([item.path], origin)[0];
-      if (!path || seenPaths.has(path) || !timestamp(item.visitedAt)) continue;
-      seenPaths.add(path);
-      entries.push({
-        path,
-        title: text(item.title, path),
-        channelName: text(item.channelName),
-        visitedAt: timestamp(item.visitedAt),
-      });
-      if (entries.length === HISTORY_LIMIT) break;
-    }
     const sessions: ReadingSession[] = [];
     const seenIds = new Set<string>();
     for (const item of Array.isArray(raw.sessions) ? raw.sessions : []) {
@@ -187,6 +220,6 @@ export class ReadingHistory {
       });
       if (sessions.length === SESSION_LIMIT) break;
     }
-    return { entries, sessions };
+    return { sessions };
   }
 }

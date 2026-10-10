@@ -1,0 +1,45 @@
+.arcafeed-toast-with-actions {
+  box-sizing: border-box;
+  width: min(380px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  padding: 16px;
+}
+
+.arcafeed-toast-confirm {
+  display: grid;
+  gap: 12px;
+  white-space: pre-line;
+  line-height: 1.5;
+}
+
+.arcafeed-toast-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.arcafeed-toast-actions button {
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.arcafeed-toast-actions .arcafeed-toast-primary {
+  border-color: #fff;
+  background: #fff;
+  color: #141414;
+}
+
+.arcafeed-toast-actions button:hover {
+  opacity: 0.85;
+}
+
+.arcafeed-toast-actions button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}

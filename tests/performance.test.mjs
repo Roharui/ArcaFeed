@@ -479,7 +479,14 @@ test('prefetch follows the next article, avoids repeat mutations and respects di
   assert.equal(appended.length, 1);
 });
 
-function listingAdapter(pages, fetchResponse) {
+function listingAdapter(
+  pages,
+  fetchResponse,
+  {
+    showConfirmToast = () => assert.fail('unexpected search confirmation'),
+    showToast = () => {},
+  } = {},
+) {
   const loader = {
     length: 1,
     addClass() {
@@ -516,6 +523,7 @@ function listingAdapter(pages, fetchResponse) {
   const load = sourceLoader({
     globals: {
       window: windowFixture,
+      AbortController,
       DOMParser: class {
         parseFromString(text) {
           return { documentElement: pages[text] };
@@ -525,7 +533,7 @@ function listingAdapter(pages, fetchResponse) {
     mocks: {
       jquery: { default: jquery },
       '@/utils/fetch': { fetchUrl: fetchResponse },
-      '@/utils/toast': { showToast() {} },
+      '@/utils/toast': { showToast, showConfirmToast },
     },
   });
   return { load, jquery };
@@ -574,6 +582,165 @@ test('skipping seen articles scans later pages and keeps seen links for backward
   p.activeIndex = 2;
   assert.equal(p.getAdjacentArticleIndex('PREV'), 1);
 });
+
+for (const scenario of [
+  {
+    name: 'accepting continued search finds an unseen article past twenty pages',
+    totalPages: 25,
+    unseenPage: 22,
+    accept: true,
+    expectedRequests: 22,
+    expectedPrompts: 1,
+    expectedToasts: 0,
+  },
+  {
+    name: 'declining continued search stops at the original page limit',
+    totalPages: 25,
+    unseenPage: 22,
+    accept: false,
+    expectedRequests: 10,
+    expectedPrompts: 1,
+    expectedToasts: 0,
+  },
+  {
+    name: 'continued search stops at the end when every article was visited',
+    totalPages: 12,
+    accept: true,
+    expectedRequests: 12,
+    expectedPrompts: 1,
+    expectedToasts: 1,
+  },
+  {
+    name: 'an exhausted listing does not offer continued search',
+    totalPages: 10,
+    accept: true,
+    expectedRequests: 10,
+    expectedPrompts: 0,
+    expectedToasts: 1,
+  },
+  {
+    name: 'searching without skipping visited articles retains the page limit',
+    totalPages: 25,
+    skipVisited: false,
+    accept: true,
+    expectedRequests: 10,
+    expectedPrompts: 0,
+    expectedToasts: 1,
+  },
+]) {
+  test(scenario.name, async () => {
+    const skipVisited = scenario.skipVisited !== false;
+    const pages = {};
+    for (let page = 1; page <= scenario.totalPages; page++) {
+      pages[page] = {
+        rows: skipVisited ? [{ href: `/b/test/${100 - page}` }] : [],
+        next: page < scenario.totalPages ? `?p=${page + 1}` : null,
+      };
+    }
+    const requests = [];
+    const prompts = [];
+    const toasts = [];
+    const { load } = listingAdapter(
+      pages,
+      async (url) => {
+        requests.push(url);
+        return { responseText: String(requests.length) };
+      },
+      {
+        showConfirmToast: async (message, label) => {
+          prompts.push(message);
+          assert.equal(label, '계속 검색');
+          assert.equal(requests.length, 10);
+          return scenario.accept;
+        },
+        showToast: (message) => toasts.push(message),
+      },
+    );
+    const p = vaultFixture({
+      articleList: ['/b/test/100'],
+      activeIndex: 0,
+      subscribe: () => () => {},
+      uiSettings: { skipVisitedContexts: { 'channel:test': skipVisited } },
+      reading: {
+        hasVisited: (path) => path !== `/b/test/${100 - scenario.unseenPage}`,
+      },
+    });
+    await load('src/feature/article/fetch.ts').fetchFirstBatch(p, '100');
+    assert.deepEqual(
+      requests,
+      Array.from({ length: scenario.expectedRequests }, (_, index) =>
+        index === 0 ? '100' : `100?p=${index + 1}`,
+      ),
+    );
+    assert.equal(prompts.length, scenario.expectedPrompts);
+    if (prompts.length) assert.match(prompts[0], /찾을 때까지 계속 검색할까요/);
+    assert.equal(toasts.length, scenario.expectedToasts);
+    assert.equal(
+      p.isNextPageActive(),
+      Boolean(scenario.unseenPage && scenario.accept),
+    );
+    assert.equal(
+      p.articleList.length,
+      skipVisited ? scenario.expectedRequests + 1 : 1,
+    );
+  });
+}
+
+for (const action of ['continue', 'change-setting']) {
+  test(`search pauses for the toast and handles ${action} while waiting`, async () => {
+    const choice = deferred();
+    const prompted = deferred();
+    const pages = {};
+    for (let page = 1; page <= 11; page++) {
+      pages[page] = {
+        rows: [{ href: `/b/test/${100 - page}` }],
+        next: `?p=${page + 1}`,
+      };
+    }
+    let requests = 0;
+    let subscriber;
+    let signal;
+    let unsubscribed = false;
+    const { load } = listingAdapter(
+      pages,
+      async () => ({ responseText: String(++requests) }),
+      {
+        showConfirmToast: (_message, _label, abortSignal) => {
+          signal = abortSignal;
+          signal.addEventListener('abort', () => choice.resolve(false));
+          prompted.resolve();
+          return choice.promise;
+        },
+        showToast: () => assert.fail('unexpected failure toast'),
+      },
+    );
+    const p = vaultFixture({
+      articleList: ['/b/test/100'],
+      activeIndex: 0,
+      uiSettings: { skipVisitedContexts: { 'channel:test': true } },
+      reading: { hasVisited: (path) => path !== '/b/test/89' },
+      subscribe: (callback) => {
+        subscriber = callback;
+        return () => (unsubscribed = true);
+      },
+    });
+    const work = load('src/feature/article/fetch.ts').fetchFirstBatch(p, '100');
+    await prompted.promise;
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(requests, 10);
+    assert.equal(unsubscribed, false);
+    if (action === 'continue') choice.resolve(true);
+    else {
+      p.skipVisitedArticles = false;
+      subscriber();
+      assert.equal(signal.aborted, true);
+    }
+    await work;
+    assert.equal(requests, action === 'continue' ? 11 : 10);
+    assert.equal(unsubscribed, true);
+    assert.equal(p.articleList.includes('/b/test/89'), action === 'continue');
+  });
+}
 
 test('changing the skip setting discards an in-flight listing response', async () => {
   const gate = deferred();

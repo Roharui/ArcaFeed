@@ -10,17 +10,23 @@ import {
   matchesReadingSearch,
 } from './readingUi';
 import type { VaultAdapter } from '@/vault';
+import { SITE_RECENT_URL } from '@/vault/reading-history';
 
 const PAGE_SIZE = 50;
 
 export function createHistoryModal(p: VaultAdapter): JQuery<HTMLElement> {
+  p.reading.reload();
   const tab = $('<div>', { class: 'helper-modal-tab helper-modal-history' });
   const count = $('<span>', {
     class: 'arcafeed-reading-count',
     'aria-live': 'polite',
   });
   tab.append(
-    readingHeader('최근 본 글', '지나쳤던 글을 다시 찾아보세요.', count),
+    readingHeader(
+      '최근 본 글',
+      '아카라이브의 최근 읽은 글 목록을 표시합니다.',
+      count,
+    ),
   );
 
   const tools = $('<div>', { class: 'arcafeed-history-tools' });
@@ -85,7 +91,7 @@ export function createHistoryModal(p: VaultAdapter): JQuery<HTMLElement> {
           : readingEmptyState(
               'bi-clock-history',
               '아직 본 글이 없습니다',
-              '게시글을 열면 여기에 방문 기록이 쌓입니다.',
+              '사이트의 최근 읽은 글에서 기록 사용 설정을 확인해주세요.',
             ),
       );
     let previousDate = '';
@@ -131,12 +137,12 @@ export function createHistoryModal(p: VaultAdapter): JQuery<HTMLElement> {
   tab.append(
     $('<div>', { class: 'arcafeed-history-footer' }).append(
       total,
-      button('기록 비우기', () => {
-        if (window.confirm('방문 기록과 이어보기 위치를 모두 삭제할까요?'))
-          p.reading.clear();
-      })
-        .addClass('arcafeed-reading-delete')
-        .attr('title', '방문 기록과 이어보기 위치 전체 삭제'),
+      button('새로고침', () => p.reading.reload()),
+      $('<a>', {
+        href: SITE_RECENT_URL,
+        class: 'arcafeed-reading-button',
+        text: '사이트 기록 관리',
+      }),
     ),
   );
   const unsubscribeReading = p.reading.subscribe(render);

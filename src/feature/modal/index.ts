@@ -20,7 +20,11 @@ function resolveModalTab(lastTab: string, availableTabs: string[]): string {
 function initModal(p: VaultAdapter) {
   initCloseModal(p);
   const isHome = p.isCurrentMode('HOME');
-  const availableTabs = isHome
+  const hasSubscriptions =
+    isHome ||
+    p.href.channelId === 'my' ||
+    (p.isSeriesMode && p.seriesChannels.length > 0);
+  const availableTabs = hasSubscriptions
     ? ['subscribe', 'ui', 'history', 'resume']
     : p.isSeriesMode || p.isCurrentMode('SCRAP')
       ? ['ui', 'history', 'resume']
@@ -64,7 +68,7 @@ function initModal(p: VaultAdapter) {
   dialogBody.append(createHistoryModal(p));
   dialogBody.append(createResumeModal(p));
 
-  if (isHome) {
+  if (hasSubscriptions) {
     dialogBody.append(createSubscribeSettingModal(p));
   }
 
@@ -78,21 +82,17 @@ function initModal(p: VaultAdapter) {
 }
 
 function initCloseModal(_: VaultAdapter): void {
-  $('#dialog .helper-modal-history, #dialog .helper-modal-resume').each(
-    (_, element) => {
-      $(element).data('cleanup')?.();
-    },
-  );
+  $('#dialog .helper-modal-tab').each((_, element) => {
+    $(element).data('cleanup')?.();
+  });
   $(document).off('keydown.arcafeedModal');
   $('#dialog').remove();
 }
 
 function initCloseModalContent(_: VaultAdapter): void {
-  $('#dialog .helper-modal-history, #dialog .helper-modal-resume').each(
-    (_, element) => {
-      $(element).data('cleanup')?.();
-    },
-  );
+  $('#dialog .helper-modal-tab').each((_, element) => {
+    $(element).data('cleanup')?.();
+  });
   $(document).off('keydown.arcafeedModal');
   $('#dialog .helper-modal-body').remove();
 }

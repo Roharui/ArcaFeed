@@ -64,7 +64,7 @@ ArcaFeed/
 │   │   │   ├── index.ts            # 모달 생성/제거 (series/normal 모드별 빌더)
 │   │   │   ├── filterUi.ts         # 필터 탭 UI
 │   │   │   ├── uiTab.ts            # UI 설정 탭
-│   │   │   └── subscribeTab.ts     # 홈 시리즈 구독 채널 설정 탭
+│   │   │   └── subscribeTab.ts     # 구독 채널 선택 및 채널별 필터 편집 탭
 │   │   └── swiper/                 # Swiper 관련
 │   │       ├── swiper.ts           # Swiper 인스턴스 생성/제어 (SLIDE_NEXT_EVENT 디스패치)
 │   │       └── page.ts             # 페이지 이동 로직
@@ -234,16 +234,18 @@ interface ArticleFilterImpl {
 
 ### 3.5 localStorage 키 구조
 
-| 키                                          | 용도                               |
-| ------------------------------------------- | ---------------------------------- |
-| `arcaFeed:articleFilterConfig`              | 글로벌 필터 설정                   |
-| `arcaFeed:uiSettings`                       | UI 설정                            |
-| `arcaFeed:{articleKey}:articleList`         | 게시글 목록                        |
-| `arcaFeed:{articleKey}:seriesMode`          | 시리즈 모드 여부                   |
-| `arcaFeed:{articleKey}:searchQuery`         | 검색 쿼리                          |
-| `arcaFeed:{articleKey}:lastActiveIndex`     | 마지막 인덱스                      |
-| `arcaFeed:{articleKey}:articleFilterConfig` | (레거시) 필터 설정                 |
-| `arcaFeed:recentArticleKeys`                | 최근 articleKey 목록 (캐시 정리용) |
+| 키                                          | 용도                                              |
+| ------------------------------------------- | ------------------------------------------------- |
+| `arcaFeed:articleFilterConfig`              | 글로벌 필터 설정                                  |
+| `arcaFeed:uiSettings`                       | UI 설정                                           |
+| `arcaFeed:{articleKey}:articleList`         | 게시글 목록                                       |
+| `arcaFeed:{articleKey}:seriesMode`          | 시리즈 모드 여부                                  |
+| `arcaFeed:{articleKey}:searchQuery`         | 검색 쿼리                                         |
+| `arcaFeed:{articleKey}:lastActiveIndex`     | 마지막 인덱스                                     |
+| `arcaFeed:{articleKey}:articleFilterConfig` | (레거시) 필터 설정                                |
+| `arcaFeed:recentArticleKeys`                | 최근 articleKey 목록 (캐시 정리용)                |
+| `arcaFeed:readingHistory`                   | 이어보기 탐색 위치만 저장                         |
+| `recent_articles`, `recent_disabled`        | 사이트 최근 읽은 글 및 기록 사용 설정 (읽기 전용) |
 
 ---
 
@@ -256,7 +258,7 @@ interface ArticleFilterImpl {
 | `ARTICLE` | `/b/{channelId}/{articleId}` | `/b/bluearchive/149927310` |
 | `CHANNEL` | `/b/{channelId}`             | `/b/bluearchive`           |
 | `SCRAP`   | `/u/scrap_list`              | `/u/scrap_list`            |
-| `HOME`    | `arca.live` (루트)           | `arca.live`                |
+| `HOME`    | `arca.live` 루트, `/b/my`    | `arca.live/b/my`           |
 | `OTHER`   | 기타                         | 로그인, 설정 등            |
 
 정규식:
@@ -276,9 +278,24 @@ interface ArticleFilterImpl {
 - `mode: 'development'`
 - `GIT_HASH`, `BUILD_DATE`, `DEVICE` 환경 변수 주입
 - Webpack 파일시스템 캐시로 변경되지 않은 모듈의 재빌드 비용 절감
-- `dist/ArcaFeed.dev.js` 출력
-- `DEVICE=mobile` 일 때 `eruda` 디버거 포함 + `UserscriptPlugin` 사용
-- 워치 모드 활성화 (mobile 제외)
+- `dist/ArcaFeed.dev.user.js` 출력 (`UserscriptPlugin`이 `.user.js` 확장자로 변환)
+- `DEVICE=mobile` 일 때 `eruda` 디버거 포함
+- `UserscriptPlugin`으로 유저스크립트 헤더 생성; `getDevHeaders`로 개발 로더와 외부 의존성 공유
+- `npm run dev:watch`는 파일 변경 시 재빌드
+
+### 실시간 개발 (`npm run dev:live`)
+
+- `scripts/dev-server.mjs`: 기존 개발 설정의 Webpack watch와 `127.0.0.1:3000` HTTP 서버 실행
+- `scripts/dev-loader.mjs`: 한 번 설치하는 `ArcaFeed-live` 로더 생성; `GM_xmlhttpRequest`로 캐시 없이 로컬 빌드 조회
+- `/build`: 성공한 빌드의 해시와 코드 제공; 같은 해시이면 코드 생략, 빌드 중/실패 시 해시 `null`
+- 처음에는 번들을 실행하고, 이후 1초 간격으로 확인하여 새 빌드가 있으면 페이지 새로고침
+- 서버 연결 실패는 재시도; 빌드 실패 시 기존 탭 유지, 오류는 터미널에 표시
+- 기존 `ArcaFeed`/`ArcaFeed-dev`를 끄고 로더만 사용; 프로덕션 빌드/배포 설정은 기존 방식 유지
+- `PORT`로 포트 지정, `HOST`로 바인딩 주소 지정, `--mobile`로 eruda 포함
+- `npm run dev:live:mobile`: `--mobile --network`로 `0.0.0.0:3000`에서 네트워크 접속 허용; 설치 시 접속한 PC 주소를 로더에 주입해 안드로이드/Tailscale 환경 지원
+- GM API가 없는 환경은 `ArcaFeed.fetch.user.js` 로더의 HTTPS + 표준 fetch 경로 지원; `DEV_URL`로 외부 HTTPS 주소와 경로 지정, `https://arca.live`만 CORS 허용, CSP 제약은 브라우저에서 확인 필요
+- nginx `location /n` 프록시 지원: 기본 포트 3000, 로더에 `/n` 경로 보존, upstream의 prefix 유지/제거 모두 처리
+- `tests/dev-live.test.mjs`에서 로더 실행/재시도/새로고침과 실제 Webpack 재빌드/오류 복구 검증
 
 ### 프로덕션 빌드 (`npm run prod`)
 
@@ -442,6 +459,8 @@ fetchArticlePages(p, articleId)    ← AsyncGenerator, 페이지마다 yield new
 
 > **이 섹션은 코드 수정 시마다 업데이트하세요.**
 
+2026-10-09: 한 번 설치하는 개발 로더와 빌드 후 자동 새로고침, 안드로이드/Tailscale 접속용 모바일 개발 서버 추가 (`scripts/dev-*.mjs`, `webpack.config.dev.js`, `package.json`, `tests/dev-live.test.mjs`, `README.md`).
+
 2026-10-09: 본 글 표시·건너뛰기와 최근 본 글·이어보기 추가. `src/vault/reading-history.ts`가 브라우저 공용 방문 기록 1,000개 및 탐색 위치 20개를 `arcaFeed:readingHistory`에 저장하며, 각 탐색 위치는 최대 2,000개 링크를 보관한다. `src/feature/reading.ts`가 게시글 접속 즉시 방문 기록 저장, 목록 제목 오른쪽의 본 글 표시 및 스크롤 복원을 담당한다. 읽음·안 읽음 상태, 시간 판정 및 수동 상태 변경은 제공하지 않고 방문 기록만으로 본 글을 판단한다. 기존 방문 기록도 별도 읽음 상태와 관계없이 모두 본 글로 처리한다. 최근 본 글은 `src/feature/modal/historyTab.ts`, 이어보기는 `src/feature/modal/resumeTab.ts`의 독립된 설정 탭으로 제공하며, 상단이나 본문에 별도의 최근 본 글 버튼을 추가하지 않는다. 다음 글 이동 및 prefetch는 본 글 건너뛰기 설정을 적용하고, 이전 이동은 유지한다. 홈 피드의 채널 목록은 세션별 `seriesChannels`로 저장하여 일반 시리즈/스크랩과 분리한다. 요청에 따라 테스트 추가는 보류했다.
 
 2026-10-10: 본 글 건너뛰기를 게시글 제목 오른쪽의 ⏭️ 이모지 토글 버튼으로 제공하며, UI 설정에서는 해당 항목을 제거했다. 버튼의 활성 스타일·툴팁·aria-pressed로 켜짐 상태를 표시한다. 최근 본 글 탭은 검색·채널 필터와 날짜별 방문 목록으로, 이어보기 탭은 마지막 글 제목·탐색 종류·이어보기 버튼을 갖춘 카드로 재구성했다. 두 탭에 공통 헤더, 기록 수, 닫기 버튼 및 스크롤 영역을 적용하고, 설정 탭에 아이콘과 이름을 함께 표시한다. 제목 영역의 토글 버튼은 방문 기록의 제목에서 제외한다.
@@ -449,6 +468,8 @@ fetchArticlePages(p, articleId)    ← AsyncGenerator, 페이지마다 yield new
 2026-10-10: 최근 본 글·이어보기 탭의 검색창을 공통 UI로 정리했다. 전체 너비 검색창, 검색어 지우기, 한글 조합 중 갱신 보류, 대소문자·공백 정규화 및 여러 단어 검색을 적용한다. 이어보기에서도 채널·시리즈 이름과 마지막 게시글 제목을 검색할 수 있다.
 
 2026-10-10: 제목과 스킵 버튼을 별도 요소로 분리하고 제목 영역 오른쪽 끝에 버튼을 고정했다. 이모지는 CSS로 표시하여 제목 텍스트에 포함되지 않는다. 기존 탐색 테스트를 세션별 채널 목록과 현재 탐색 API에 맞추고, 방문 기록·탭 간 병합·삭제·건너뛰기·이어보기 복원·한글 검색 및 본 글만 있는 페이지의 추가 탐색에 대한 회귀 테스트를 추가했다. 다음 글이 3개 이상 남았을 때 불필요하게 추가 요청하지 않도록 기존 탐색 임계값을 유지한다.
+
+2026-10-10: `/b/my`를 구독 피드 설정 진입점으로 처리하고 실제 구독 드롭다운에서 채널을 읽는다. 구독 채널마다 원격 카테고리·제목 차단·인기글 필터를 독립적으로 편집하며, 임시 수정은 설정 저장 또는 일괄 탐색 시작 시 함께 반영한다. 구독 피드 내에서도 채널 필터를 수정할 수 있다. 최근 본 글과 본 글 판정은 사이트 `/u/recents`의 `recent_articles` 형식을 읽고 `recent_disabled`를 존중한다. 중복 방문 기록 저장은 제거하고 레거시 방문 목록은 이어보기 위치를 보존하여 정리한다. `arcaFeed:readingHistory`에는 이어보기 위치만 저장한다. `/b/my` 게시글 별칭은 게시글 번호로 방문 여부를 판정한다. 채널 선택·필터 분리·사이트 기록·이전 탐색 복원 회귀 테스트를 추가했다.
 
 | 날짜       | 변경 내용                                                                                                                                                                                                                         | 관련 파일                                                                                                                                                             |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

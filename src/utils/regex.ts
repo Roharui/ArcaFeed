@@ -39,6 +39,16 @@ function parseHref(href?: string) {
 
     hrefObj = { mode: 'ARTICLE', channelId, articleId, articleKey, search };
   }
+  // /b/my is the subscription feed, not an individual channel.
+  else if (realUrl.pathname.replace(/\/$/, '') === '/b/my') {
+    hrefObj = {
+      mode: 'HOME',
+      channelId: 'my',
+      articleId: '',
+      articleKey,
+      search,
+    };
+  }
   // CHANNEL: /b/{channelId}
   else if (channelPageRegex.test(realHref)) {
     const matchArr = realHref.match(channelAndArticleIdRegex);

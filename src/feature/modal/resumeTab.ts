@@ -97,7 +97,7 @@ export function createResumeModal(p: VaultAdapter): JQuery<HTMLElement> {
         ? '스크랩'
         : session.isSeriesMode
           ? session.seriesChannels.length
-            ? '홈 피드'
+            ? '구독 피드'
             : '시리즈'
           : '채널';
       const title = entry?.title || `게시글 ${session.path.split('/').pop()}`;

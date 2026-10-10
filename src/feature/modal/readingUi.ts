@@ -30,7 +30,8 @@ export function readingSearch(
   label: string,
   onChange: () => void,
 ) {
-  const input = $('<input>', {
+  // Constructor properties invoke matching jQuery plugins such as autocomplete.
+  const input = $('<input>').attr({
     type: 'search',
     placeholder,
     'aria-label': label,

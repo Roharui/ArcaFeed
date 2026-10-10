@@ -37,38 +37,78 @@ const session = (id, patch = {}) => ({
   ...patch,
 });
 
-test('opening an article immediately records a visit and revisits update a single entry', () => {
-  const { ReadingHistory } = readingFixture();
+function siteVisit(storage, history, article) {
+  const records = JSON.parse(storage.getItem('recent_articles') || '[]');
+  const [, , slug, articleId] = article.path.split('/');
+  storage.setItem(
+    'recent_articles',
+    JSON.stringify([
+      {
+        slug,
+        articleId,
+        title: article.title,
+        boardName: article.channelName,
+        regdateAt: Date.now() / 1000 + records.length,
+      },
+      ...records.filter((record) => String(record.articleId) !== articleId),
+    ]),
+  );
+  history.reload();
+}
+
+test('recent history reads native records and matches subscription-feed aliases without writing a duplicate list', () => {
+  const { ReadingHistory, storage } = readingFixture({
+    recent_articles: JSON.stringify([
+      {
+        slug: 'test',
+        articleId: 100,
+        title: '수정된 제목',
+        boardName: '테스트',
+        regdateAt: 3,
+      },
+      { slug: 'test', articleId: '99', title: '이전 글', regdateAt: 2 },
+      { slug: 'test', articleId: 100, regdateAt: 1 },
+    ]),
+  });
   const history = new ReadingHistory();
-  history.visit(entry('/b/test/100'));
-  assert.equal(history.hasVisited('/b/test/100'), true);
-  assert.ok(history.entries[0].visitedAt > 0);
-  history.visit(entry('/b/test/99'));
-  history.visit(entry('/b/test/100', '수정된 제목'));
   assert.deepEqual(
     history.entries.map((item) => item.path),
     ['/b/test/100', '/b/test/99'],
   );
+  assert.equal(history.entries[0].visitedAt, 3000);
   assert.equal(history.entries[0].title, '수정된 제목');
-  assert.equal(new ReadingHistory().hasVisited('/b/test/99'), true);
+  assert.equal(history.entries[0].channelName, '테스트');
+  assert.equal(history.hasVisited('/b/my/100'), true);
+  const { isVisitedPath } = readingFixture().load(
+    'src/vault/reading-history.ts',
+  );
+  assert.equal(isVisitedPath(history.getVisitedPaths(), '/b/test/100'), true);
   const paths = history.getVisitedPaths();
   paths.clear();
   assert.equal(history.hasVisited('/b/test/100'), true);
+  assert.equal(storage.writes.length, 0);
+  history.saveSession(session('first'));
+  assert.ok(
+    storage.writes.every((write) => write.key === 'arcaFeed:readingHistory'),
+  );
+  assert.equal(
+    'entries' in JSON.parse(storage.getItem('arcaFeed:readingHistory')),
+    false,
+  );
 });
 
-test('older tabs merge newer visits and resume checkpoints without losing either', () => {
-  const { ReadingHistory } = readingFixture();
+test('native history reloads across tabs while checkpoint updates preserve other tabs positions', () => {
+  const { ReadingHistory, storage } = readingFixture();
   const first = new ReadingHistory();
   const second = new ReadingHistory();
-  first.visit(entry('/b/test/100'));
-  second.visit(entry('/b/test/99'));
+  siteVisit(storage, first, entry('/b/test/100'));
   first.saveSession(session('series:first'));
   second.saveSession(session('series:second'));
-  first.visit(entry('/b/test/98'));
+  siteVisit(storage, first, entry('/b/test/99'));
   second.reload();
   assert.deepEqual(
     second.entries.map((item) => item.path),
-    ['/b/test/98', '/b/test/99', '/b/test/100'],
+    ['/b/test/99', '/b/test/100'],
   );
   assert.deepEqual(
     second.sessions.map((item) => item.id),
@@ -80,33 +120,30 @@ test('older tabs merge newer visits and resume checkpoints without losing either
   assert.equal(second.sessions[0].scrollY, 900);
 });
 
-test('clearing history removes visits and checkpoints from persisted and other-tab views', () => {
-  const { ReadingHistory } = readingFixture();
-  const first = new ReadingHistory();
-  const second = new ReadingHistory();
-  first.visit(entry('/b/test/100'));
-  first.saveSession(session('first'));
-  second.reload();
-  first.clear();
-  second.reload();
-  assert.equal(second.hasVisited('/b/test/100'), false);
-  assert.deepEqual(second.entries, []);
-  assert.deepEqual(second.sessions, []);
-  assert.deepEqual(new ReadingHistory().entries, []);
+test('clearing checkpoints preserves native visits, while disabling native history clears only the seen view', () => {
+  const { ReadingHistory, storage } = readingFixture();
+  const history = new ReadingHistory();
+  siteVisit(storage, history, entry('/b/test/100'));
+  history.saveSession(session('first'));
+  history.clear();
+  assert.equal(history.hasVisited('/b/test/100'), true);
+  assert.deepEqual(history.sessions, []);
+  history.saveSession(session('keep'));
+  storage.setItem('recent_disabled', '1');
+  history.reload();
+  assert.deepEqual(history.entries, []);
+  assert.equal(history.sessions.length, 1);
+  storage.removeItem('recent_disabled');
+  history.reload();
+  assert.equal(history.hasVisited('/b/test/100'), true);
 });
 
-test('legacy visits count as seen and invalid stored URLs and checkpoints are rejected', () => {
+test('legacy duplicate visits are discarded while valid checkpoints survive migration', () => {
   const { ReadingHistory, storage, READING_HISTORY_KEY } = readingFixture();
   storage.setItem(
     READING_HISTORY_KEY,
     JSON.stringify({
-      entries: [
-        { ...entry('/b/test/100'), visitedAt: 1, readAt: null },
-        { ...entry('/b/test/100'), visitedAt: 2 },
-        { ...entry('https://example.com/b/test/99'), visitedAt: 3 },
-        { ...entry('/b/test/98'), visitedAt: -1 },
-        null,
-      ],
+      entries: [{ ...entry('/b/test/100'), visitedAt: 1 }],
       sessions: [
         session('valid', {
           articleList: ['/b/test/100', 'https://example.com/b/test/99'],
@@ -119,8 +156,8 @@ test('legacy visits count as seen and invalid stored URLs and checkpoints are re
     }),
   );
   const history = new ReadingHistory();
-  assert.equal(history.hasVisited('/b/test/100'), true);
-  assert.equal(history.entries.length, 1);
+  assert.equal(history.hasVisited('/b/test/100'), false);
+  assert.deepEqual(history.entries, []);
   assert.equal(history.sessions.length, 1);
   assert.deepEqual(history.sessions[0].articleList, ['/b/test/100']);
   assert.deepEqual(history.sessions[0].seriesChannels, ['test']);
@@ -129,26 +166,34 @@ test('legacy visits count as seen and invalid stored URLs and checkpoints are re
     new URLSearchParams(history.sessions[0].searchQuery).has('articleKey'),
     false,
   );
+  assert.equal(
+    'entries' in JSON.parse(storage.getItem(READING_HISTORY_KEY)),
+    false,
+  );
 });
 
-test('history and checkpoints keep bounded recent records and evict oldest visits', () => {
-  const { ReadingHistory, storage, load, READING_HISTORY_KEY } =
-    readingFixture();
-  const { HISTORY_LIMIT, SESSION_LIMIT } = load('src/vault/reading-history.ts');
+test('malformed native records are ignored and resume positions stay bounded', () => {
+  const { ReadingHistory, storage, load, READING_HISTORY_KEY } = readingFixture(
+    {
+      recent_articles: JSON.stringify([
+        null,
+        { slug: '../external', articleId: 100, regdateAt: 1 },
+        { slug: 'test', articleId: 'bad', regdateAt: 1 },
+        { slug: 'test', articleId: 100, regdateAt: -1 },
+      ]),
+    },
+  );
+  const { SESSION_LIMIT } = load('src/vault/reading-history.ts');
   storage.setItem(
     READING_HISTORY_KEY,
     JSON.stringify({
-      entries: Array.from({ length: HISTORY_LIMIT }, (_, index) => ({
-        ...entry(`/b/test/${index + 1}`),
-        visitedAt: 1,
-      })),
       sessions: Array.from({ length: SESSION_LIMIT }, (_, index) =>
         session(`saved:${index}`),
       ),
     }),
   );
   const history = new ReadingHistory();
-  history.visit(entry('/b/test/9999'));
+  assert.deepEqual(history.entries, []);
   history.saveSession(
     session('new', {
       articleList: Array.from(
@@ -158,16 +203,16 @@ test('history and checkpoints keep bounded recent records and evict oldest visit
     }),
   );
   const reloaded = new ReadingHistory();
-  assert.equal(reloaded.entries.length, HISTORY_LIMIT);
-  assert.equal(reloaded.entries[0].path, '/b/test/9999');
-  assert.equal(reloaded.hasVisited(`/b/test/${HISTORY_LIMIT}`), false);
   assert.equal(reloaded.sessions.length, SESSION_LIMIT);
   assert.equal(reloaded.sessions[0].id, 'new');
   assert.equal(reloaded.sessions[0].articleList.length, 2000);
+  storage.setItem('recent_articles', '{bad');
+  reloaded.reload();
+  assert.deepEqual(reloaded.entries, []);
 });
 
 test('next navigation skips seen articles while previous navigation remains available', () => {
-  const { load } = readingFixture();
+  const { load, storage } = readingFixture();
   const { VaultAdapter } = load('src/vault/index.ts');
   const { Store } = load('src/vault/store.ts');
   const vault = new VaultAdapter(
@@ -179,17 +224,18 @@ test('next navigation skips seen articles while previous navigation remains avai
     vaultFixture().href,
   );
   try {
-    vault.reading.visit(entry('/b/test/99'));
-    vault.reading.visit(entry('/b/test/98'));
+    siteVisit(storage, vault.reading, entry('/b/test/99'));
+    siteVisit(storage, vault.reading, entry('/b/test/98'));
     assert.equal(vault.getAdjacentArticleIndex('NEXT'), 1);
     vault.skipVisitedArticles = true;
     assert.equal(vault.getAdjacentArticleIndex('NEXT'), 3);
     assert.equal(vault.isNextPageActive(), true);
     vault.activeIndex = 2;
     assert.equal(vault.getAdjacentArticleIndex('PREV'), 1);
-    vault.reading.visit(entry('/b/test/97'));
+    siteVisit(storage, vault.reading, entry('/b/test/97'));
     assert.equal(vault.isNextPageActive(), false);
-    vault.reading.clear();
+    storage.setItem('recent_articles', '[]');
+    vault.reading.reload();
     assert.equal(vault.getAdjacentArticleIndex('NEXT'), 3);
   } finally {
     vault.destroy();
@@ -212,7 +258,7 @@ test('resume restores session links, selected channels and search without changi
     vaultFixture().href,
   );
   try {
-    vault.reading.visit(entry('/b/test/100'));
+    siteVisit(storage, vault.reading, entry('/b/test/100'));
     vault.restoreReadingSession(session('resume'), 'restored');
     assert.deepEqual(vault.articleList, ['/b/test/100']);
     assert.equal(vault.articleKey, 'session');
@@ -239,14 +285,20 @@ test('resume restores session links, selected channels and search without changi
   }
 });
 
-test('history search waits for Korean composition and clear resets the query and focus', () => {
+test('history search avoids autocomplete plugin dispatch, waits for Korean composition and clears the query', () => {
   const elements = [];
-  const jquery = (tag) => {
+  const jquery = (tag, props = {}) => {
     const element = {
       tag,
       value: '',
+      attributes: {},
       handlers: new Map(),
       children: [],
+      autocomplete(method) {
+        throw new Error(
+          `cannot call methods on autocomplete prior to initialization; attempted to call method '${method}'`,
+        );
+      },
       on(event, handler) {
         this.handlers.set(event, handler);
         return this;
@@ -254,7 +306,8 @@ test('history search waits for Korean composition and clear resets the query and
       addClass() {
         return this;
       },
-      attr() {
+      attr(attributes) {
+        Object.assign(this.attributes, attributes);
         return this;
       },
       hide() {
@@ -278,6 +331,11 @@ test('history search waits for Korean composition and clear resets the query and
         return this;
       },
     };
+    // jQuery's single-tag constructor calls matching methods before setting attributes.
+    for (const [name, value] of Object.entries(props)) {
+      if (typeof element[name] === 'function') element[name](value);
+      else element.attr({ [name]: value });
+    }
     elements.push(element);
     return element;
   };
@@ -288,6 +346,9 @@ test('history search waits for Korean composition and clear resets the query and
   const search = readingSearch('검색', '검색', () => changes++);
   const input = elements.find((element) => element.tag === '<input>');
   const clear = elements.find((element) => element.tag === '<button>');
+  assert.equal(input.attributes.autocomplete, 'off');
+  assert.equal(input.attributes.type, 'search');
+  assert.equal(input.attributes['aria-label'], '검색');
   input.trigger('compositionstart');
   input.val('테').trigger('input');
   assert.equal(changes, 0);
@@ -415,10 +476,10 @@ test('scrap checkpoints preserve their mode through history and navigation-cache
 });
 
 test('deleting one checkpoint keeps visits and other checkpoints in older tabs', () => {
-  const { ReadingHistory } = readingFixture();
+  const { ReadingHistory, storage } = readingFixture();
   const first = new ReadingHistory();
   const second = new ReadingHistory();
-  first.visit(entry('/b/test/100'));
+  siteVisit(storage, first, entry('/b/test/100'));
   first.saveSession(session('first'));
   second.saveSession(session('second'));
   first.removeSession('first');
@@ -506,6 +567,7 @@ test('deleting the current checkpoint prevents scroll and pagehide from recreati
     vaultFixture().href,
   );
   try {
+    siteVisit(storage, vault.reading, entry('/b/test/100'));
     initReading(vault);
     assert.equal(vault.reading.sessions[0].isScrapMode, true);
     assert.equal(vault.reading.sessions[0].label, '스크랩');

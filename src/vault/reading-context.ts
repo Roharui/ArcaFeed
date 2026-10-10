@@ -17,6 +17,6 @@ export function readingPreferenceKey(p: ReadingContext): string {
 export function readingContextLabel(p: ReadingContext): string {
   if (p.isScrapMode || p.href.mode === 'SCRAP') return '스크랩';
   if (p.href.mode === 'HOME' || (p.isSeriesMode && p.seriesChannels.length))
-    return '홈 피드';
+    return '구독 피드';
   return p.isSeriesMode ? '이 시리즈' : '이 채널';
 }
