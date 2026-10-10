@@ -14,6 +14,7 @@ import type { ReadingSession } from '@/vault/reading-history';
 import type { VaultAdapter } from '@/vault';
 import { readingContextLabel } from '@/vault/reading-context';
 import { articleWindow } from '@/vault/article-window';
+import { showPendingSkippedToast } from './swiper/skip-toast';
 
 const RESUME_SCROLL_KEY = 'arcaFeed:resumeScroll';
 const ARTICLE_TITLE_SELECTOR =
@@ -186,6 +187,7 @@ function restoreScroll(p: VaultAdapter): void {
 export function initReading(p: VaultAdapter): void {
   if (initializedVaults.has(p)) return;
   initializedVaults.add(p);
+  showPendingSkippedToast(currentPath(p));
 
   window.addEventListener('storage', (event) => {
     if (
