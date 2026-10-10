@@ -118,10 +118,11 @@ function initSeriesContent(p: VaultAdapter): void {
 
   $('.article-body')!.append(buildShortcutDiv(window_));
 
-  // Scrap navigation also uses the series flag, but can open a post's series.
-  if (p.isSeriesMode && !p.isScrapMode) return;
+  // Scrap and subscription feeds also use the series flag.
+  // Hide the button only when already browsing a post's own series.
+  if (p.isSeriesMode && !p.isScrapMode && p.seriesChannels.length === 0) return;
 
-  // Show "Enable Series" button when not in series mode
+  // Other feeds can open this post's series in a separate tab.
   const $btnWrapper = $('<div>', { class: 'series-control-btns' }).append(
     buildEnableSeriesButton(),
   );
