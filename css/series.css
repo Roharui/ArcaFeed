@@ -2,18 +2,37 @@
 
 .series-control-btns {
   display: flex;
-  justify-content: space-around;
+  justify-content: center;
+  margin: 1rem 0;
 }
 
 .series-control-btn {
   cursor: pointer;
-  border-radius: 5px;
-
-  padding: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.4;
+  transition: filter 150ms ease;
 }
 
 .series-control-btn.enable-series {
   background-color: var(--color-primary-theme);
+  color: #fff;
+}
+
+.series-control-btn:hover {
+  filter: brightness(1.1);
+}
+
+.series-control-btn:focus-visible {
+  outline: 2px solid var(--color-primary-theme);
+  outline-offset: 3px;
 }
 
 .series-control-btn.disable-series {

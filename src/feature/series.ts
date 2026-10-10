@@ -80,11 +80,17 @@ function buildShortcutDiv(entries: SeriesEntry[]): JQuery<HTMLElement> {
 }
 
 function buildEnableSeriesButton(): JQuery<HTMLElement> {
-  return $('<div>', {
-    text: '시리즈 바로가기 활성화',
+  return $('<button>', {
+    type: 'button',
+    title: '이 글의 시리즈를 새 탭에서 열기',
     class: 'series-control-btn enable-series',
-    css: { opacity: '1' },
-  }).on('click', () => eventBus.emit('enableSeries'));
+  })
+    .append(
+      $('<span>', { class: 'bi-collection', 'aria-hidden': 'true' }),
+      $('<span>', { text: '시리즈 모드 열기' }),
+      $('<span>', { class: 'bi-box-arrow-up-right', 'aria-hidden': 'true' }),
+    )
+    .on('click', () => eventBus.emit('enableSeries'));
 }
 
 // ── Public API ─────────────────────────────────────────
@@ -112,8 +118,8 @@ function initSeriesContent(p: VaultAdapter): void {
 
   $('.article-body')!.append(buildShortcutDiv(window_));
 
-  // In series mode, don't show the bottom post list or enable button
-  if (p.isSeriesMode) return;
+  // Scrap navigation also uses the series flag, but can open a post's series.
+  if (p.isSeriesMode && !p.isScrapMode) return;
 
   // Show "Enable Series" button when not in series mode
   const $btnWrapper = $('<div>', { class: 'series-control-btns' }).append(
