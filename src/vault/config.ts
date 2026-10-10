@@ -6,6 +6,7 @@
 import { StorageRepository } from './repository';
 import { createArticleKey } from '@/utils/article-key';
 import { appendSearchParam } from '@/utils/url';
+import { compactNavigationArticles } from './article-window';
 import {
   normalizeArticles,
   normalizeFilters,
@@ -120,6 +121,19 @@ export class ConfigService {
       ...patch,
       activeIndex: patch.lastActiveIndex ?? -1,
     };
+
+    const compacted = compactNavigationArticles(
+      patch.articleList,
+      new URL(window.location.href).pathname.replace(/\/$/, ''),
+      patch.lastActiveIndex,
+      patch.seriesChannels,
+    );
+    if (compacted !== patch.articleList) {
+      const removed = patch.articleList.length - compacted.length;
+      patch.articleList = compacted;
+      const saved = patch.lastActiveIndex ?? -1;
+      patch.lastActiveIndex = saved >= removed ? saved - removed : -1;
+    }
 
     return patch;
   }

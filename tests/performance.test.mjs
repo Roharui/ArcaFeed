@@ -17,6 +17,114 @@ const windowFixture = {
   history: { replaceState() {} },
 };
 
+test('article lookup validates saved indices and caches searches per list', () => {
+  const { findArticleIndex } = sourceLoader()('src/vault/article-window.ts');
+  const articles = ['/b/test/102', '/b/test/101', '/b/test/100'];
+  let scans = 0;
+  articles.indexOf = function (path) {
+    scans++;
+    return Array.prototype.indexOf.call(this, path);
+  };
+  assert.equal(findArticleIndex(articles, '/b/test/100', 2), 2);
+  assert.equal(scans, 0);
+  assert.equal(findArticleIndex(articles, '/b/test/100'), 2);
+  assert.equal(scans, 0);
+  assert.equal(findArticleIndex(articles, '/b/test/101', 0), 1);
+  assert.equal(findArticleIndex(articles, '/b/test/101'), 1);
+  assert.equal(scans, 1);
+  assert.equal(findArticleIndex(articles, '/b/test/99'), -1);
+  assert.equal(findArticleIndex(articles, '/b/test/99'), -1);
+  assert.equal(scans, 2);
+  assert.equal(findArticleIndex(['/b/test/101'], '/b/test/101'), 0);
+});
+
+test('navigation compaction retains recent history and every queued article', () => {
+  const { compactNavigationArticles } = sourceLoader()(
+    'src/vault/article-window.ts',
+  );
+  const articles = Array.from({ length: 10000 }, (_, i) => `/b/test/${i + 1}`);
+  assert.equal(compactNavigationArticles(articles, articles[200]), articles);
+  assert.equal(compactNavigationArticles(articles, '/b/other/1'), articles);
+  const compacted = compactNavigationArticles(articles, articles[9000], 9000);
+  assert.equal(compacted.length, 1100);
+  assert.equal(compacted[100], articles[9000]);
+  assert.deepEqual(compacted.slice(101), articles.slice(9001));
+});
+
+test('loading a long session compacts and persists its remapped navigation index', () => {
+  const articles = Array.from(
+    { length: 1000 },
+    (_, i) => `/b/test/${1000 - i}`,
+  );
+  const storage = memoryStorage({
+    'arcaFeed:session:articleList': JSON.stringify(articles),
+    'arcaFeed:session:lastActiveIndex': '900',
+  });
+  const load = sourceLoader({ globals: { window: windowFixture } });
+  const { StorageRepository } = load('src/vault/repository.ts');
+  const { ConfigService } = load('src/vault/config.ts');
+  const { createInitialState } = load('src/vault/store.ts');
+  const config = new ConfigService(new StorageRepository(storage));
+  const patch = config.loadConfig();
+  assert.equal(patch.articleList.length, 200);
+  assert.equal(patch.articleList[100], '/b/test/100');
+  assert.equal(patch.lastActiveIndex, 100);
+  config.saveConfig({ ...createInitialState(), ...patch, activeIndex: 100 });
+  assert.equal(
+    JSON.parse(storage.getItem('arcaFeed:session:articleList')).length,
+    200,
+  );
+  assert.equal(storage.getItem('arcaFeed:session:lastActiveIndex'), '100');
+});
+
+test('compaction preserves exhausted channel cursors and shuffled ordering', () => {
+  const { compactNavigationArticles } = sourceLoader()(
+    'src/vault/article-window.ts',
+  );
+  const articles = [
+    '/b/other/50',
+    '/b/other/10',
+    ...Array.from({ length: 500 }, (_, i) => `/b/test/${1000 - i}`),
+  ];
+  const compacted = compactNavigationArticles(articles, articles[400], 400, [
+    'test',
+    'other',
+  ]);
+  assert.equal(compacted[0], '/b/other/10');
+  assert.equal(compacted[101], articles[400]);
+  assert.deepEqual(compacted.slice(102), articles.slice(401));
+  const shuffled = [...articles].reverse();
+  const result = compactNavigationArticles(shuffled, shuffled[400], 400, [
+    'test',
+    'other',
+  ]);
+  assert.ok(result.includes('/b/test/501'));
+  assert.deepEqual(
+    result.slice(result.indexOf(shuffled[400]) + 1),
+    shuffled.slice(401),
+  );
+});
+
+test('refill checks stop after three available articles instead of scanning the tail', async () => {
+  let visits = 0;
+  const p = vaultFixture({
+    articleList: [
+      '/b/test/100',
+      ...Array.from({ length: 10000 }, (_, i) => `/b/test/${i + 101}`),
+    ],
+  });
+  p.skipVisitedArticles = true;
+  p.reading.hasVisited = () => {
+    visits++;
+    return false;
+  };
+  const { activateArticleLink } = loadLink({
+    fetchFirstBatch: async () => assert.fail('unexpected refill'),
+  });
+  await activateArticleLink(p, '100');
+  assert.equal(visits, 3);
+});
+
 function loadLink(fetches, rows = []) {
   return sourceLoader({
     globals: { console: quietConsole },

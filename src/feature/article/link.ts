@@ -13,6 +13,10 @@ import { createArticleKey } from '@/utils/article-key';
 import { extractChannelId, getArticleId } from '@/utils/regex';
 import { appendSearchParam } from '@/utils/url';
 import { captureArticleSession } from '@/vault/article-session';
+import {
+  compactNavigationArticles,
+  findArticleIndex,
+} from '@/vault/article-window';
 
 import type { VaultAdapter } from '@/vault';
 
@@ -77,7 +81,14 @@ async function activateArticleLink(
   articleId: string,
 ): Promise<void> {
   const currentPath = `/b/${p.href.channelId}/${articleId}`;
-  const findCurrentIndex = () => p.articleList.indexOf(currentPath);
+  p.articleList = compactNavigationArticles(
+    p.articleList,
+    currentPath,
+    p.lastActiveIndex,
+    p.seriesChannels,
+  );
+  const findCurrentIndex = () =>
+    findArticleIndex(p.articleList, currentPath, p.lastActiveIndex);
   p.activeIndex = findCurrentIndex();
   if (p.articleList.length === 0) {
     const isCurrent = captureArticleSession(p);
@@ -89,11 +100,14 @@ async function activateArticleLink(
   }
 
   // Pre-fetch next page when nearing the end of the list
-  const remaining = p.articleList
-    .slice(p.activeIndex + 1)
-    .filter(
-      (path) => !p.skipVisitedArticles || !p.reading.hasVisited(path),
-    ).length;
+  let remaining = 0;
+  const skipVisited = p.skipVisitedArticles;
+  for (let index = p.activeIndex + 1; index < p.articleList.length; index++) {
+    const path = p.articleList[index]!;
+    if (path === currentPath || (skipVisited && p.reading.hasVisited(path)))
+      continue;
+    if (++remaining === 3) break;
+  }
   const needsMoreArticles = remaining < 3;
   if (needsMoreArticles) {
     const loadMore = () =>
