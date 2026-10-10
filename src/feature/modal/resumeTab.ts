@@ -7,9 +7,10 @@ import {
   readingEmptyState,
   readingTime,
   readingSearch,
-  matchesReadingSearch,
+  createReadingSearchMatcher,
 } from './readingUi';
 import type { VaultAdapter } from '@/vault';
+import type { ReadingEntry, ReadingSession } from '@/vault/reading-history';
 
 export function createResumeModal(p: VaultAdapter): JQuery<HTMLElement> {
   const tab = $('<div>', { class: 'helper-modal-tab helper-modal-resume' });
@@ -37,6 +38,15 @@ export function createResumeModal(p: VaultAdapter): JQuery<HTMLElement> {
     sessions,
   );
 
+  let indexedEntries: readonly ReadingEntry[] | undefined;
+  const channelNames = new Map<string, string>();
+  const entriesByPath = new Map<string, ReadingEntry>();
+  const makeMatcher = () =>
+    createReadingSearchMatcher<ReadingSession>((session) => {
+      const entry = entriesByPath.get(session.path);
+      return `${session.label} ${entry?.title || ''} ${entry?.channelName || ''} ${readingChannelId(session.path)} ${session.seriesChannels.map((id) => `${id} ${channelNames.get(id) || ''}`).join(' ')}`;
+    });
+  let matchesSearch = makeMatcher();
   const render = () => {
     const selectedChannel = String(channel.val() || '');
     const channelIds = new Set(
@@ -45,12 +55,16 @@ export function createResumeModal(p: VaultAdapter): JQuery<HTMLElement> {
         ...session.seriesChannels,
       ]),
     );
-    const channelNames = new Map(
-      p.reading.entries.map((entry) => [
-        readingChannelId(entry.path),
-        entry.channelName,
-      ]),
-    );
+    if (indexedEntries !== p.reading.entries) {
+      indexedEntries = p.reading.entries;
+      channelNames.clear();
+      entriesByPath.clear();
+      for (const entry of indexedEntries) {
+        channelNames.set(readingChannelId(entry.path), entry.channelName);
+        entriesByPath.set(entry.path, entry);
+      }
+      matchesSearch = makeMatcher();
+    }
     channel.empty().append($('<option>', { value: '', text: '전체 채널' }));
     for (const id of channelIds)
       channel.append(
@@ -59,19 +73,12 @@ export function createResumeModal(p: VaultAdapter): JQuery<HTMLElement> {
     channel.val(channelIds.has(selectedChannel) ? selectedChannel : '');
     const filterChannel = String(channel.val() || '');
     const query = search.getQuery();
-    const entriesByPath = new Map(
-      p.reading.entries.map((entry) => [entry.path, entry]),
-    );
     const checkpoints = p.reading.sessions.filter((session) => {
-      const entry = entriesByPath.get(session.path);
       return (
         (!filterChannel ||
           readingChannelId(session.path) === filterChannel ||
           session.seriesChannels.includes(filterChannel)) &&
-        matchesReadingSearch(
-          `${session.label} ${entry?.title || ''} ${entry?.channelName || ''} ${readingChannelId(session.path)} ${session.seriesChannels.map((id) => `${id} ${channelNames.get(id) || ''}`).join(' ')}`,
-          query,
-        )
+        matchesSearch(session, query)
       );
     });
 

@@ -127,6 +127,8 @@ export function vaultFixture(overrides = {}) {
     articleFilterConfig: {},
     activeIndex: -1,
     articleLoadRevision: 0,
+    readingRevision: 0,
+    adjacentCache: new Map(),
     isSeriesMode: false,
     isScrapMode: false,
     seriesChannels: [],
@@ -147,6 +149,9 @@ export function vaultFixture(overrides = {}) {
     },
     updateState(patch) {
       Object.assign(this, patch);
+    },
+    getState() {
+      return this;
     },
     isCurrentMode(...modes) {
       return modes.includes(this.href.mode);

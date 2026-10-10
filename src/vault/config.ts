@@ -213,7 +213,11 @@ export class ConfigService {
 
   restoreReadingSession(session: ReadingSession, articleKey: string): void {
     const articleList = [...session.articleList];
-    if (!articleList.includes(session.path)) articleList.unshift(session.path);
+    let index = articleList.indexOf(session.path);
+    if (index === -1) {
+      articleList.unshift(session.path);
+      index = 0;
+    }
     this.repo.setJSON(
       this.repo.scopedKey(articleKey, 'articleList'),
       articleList,
@@ -234,7 +238,7 @@ export class ConfigService {
       this.repo.scopedKey(articleKey, 'searchQuery'),
       appendSearchParam(session.searchQuery, 'articleKey', articleKey),
     );
-    this.saveLastActiveIndex(articleKey, articleList.indexOf(session.path));
+    this.saveLastActiveIndex(articleKey, index);
     this.repo.pruneArticleKeyCaches(articleKey);
   }
 

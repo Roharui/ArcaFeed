@@ -7,7 +7,7 @@ export function articleWindow(
   const index = findArticleIndex(articles, path);
   const start = Math.max(0, index - Math.min(500, Math.floor(limit / 4)));
   const window = articles.slice(start, start + limit);
-  if (!window.includes(path)) {
+  if (index < start || index >= start + window.length) {
     window.unshift(path);
     window.length = Math.min(window.length, limit);
   }

@@ -34,6 +34,17 @@ export class VaultAdapter {
   private saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private unsubscribeAutoSave: (() => void) | null = null;
   private loadRevision = 0;
+  private adjacentCache = new Map<
+    PageMode,
+    {
+      list: string[];
+      index: number;
+      currentPath: string;
+      skip: boolean;
+      revision: number;
+      result: number;
+    }
+  >();
 
   // Swiper is UI state, kept direct
   swiper: Swiper | null = null;
@@ -243,29 +254,44 @@ export class VaultAdapter {
   }
 
   getAdjacentArticleIndex(mode: PageMode): number {
+    const state = this.getState();
+    const list = state.articleList;
+    const currentPath = this.isCurrentMode('ARTICLE')
+      ? `/b/${state.href.channelId}/${state.href.articleId}`
+      : '';
+    const skip = mode === 'NEXT' && this.skipVisitedArticles;
+    const cached = this.adjacentCache.get(mode);
+    if (
+      cached?.list === list &&
+      cached.index === state.activeIndex &&
+      cached.currentPath === currentPath &&
+      cached.skip === skip &&
+      cached.revision === state.readingRevision
+    )
+      return cached.result;
     const direction = mode === 'NEXT' ? 1 : -1;
+    let result = -1;
     for (
-      let index = this.activeIndex + direction;
-      index >= 0 && index < this.articleList.length;
+      let index = state.activeIndex + direction;
+      index >= 0 && index < list.length;
       index += direction
     ) {
-      const path = this.articleList[index]!;
-      if (
-        mode === 'NEXT' &&
-        this.isCurrentMode('ARTICLE') &&
-        path === `/b/${this.href.channelId}/${this.href.articleId}`
-      )
-        continue;
+      const path = list[index]!;
+      if (mode === 'NEXT' && path === currentPath) continue;
       // Backwards navigation remains available to revisit the previous article.
-      if (
-        mode === 'NEXT' &&
-        this.skipVisitedArticles &&
-        this.reading.hasVisited(path)
-      )
-        continue;
-      return index;
+      if (skip && this.reading.hasVisited(path)) continue;
+      result = index;
+      break;
     }
-    return -1;
+    this.adjacentCache.set(mode, {
+      list,
+      index: state.activeIndex,
+      currentPath,
+      skip,
+      revision: state.readingRevision,
+      result,
+    });
+    return result;
   }
 
   restoreReadingSession(session: ReadingSession, articleKey: string): void {

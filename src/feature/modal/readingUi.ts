@@ -21,8 +21,31 @@ function normalizeSearch(value: string): string {
 }
 
 export function matchesReadingSearch(text: string, query: string): boolean {
+  if (!query) return true;
   const content = normalizeSearch(text);
-  return !query || query.split(' ').every((word) => content.includes(word));
+  return query.split(' ').every((word) => content.includes(word));
+}
+
+/** Cache normalized text by immutable record; split each query only once. */
+export function createReadingSearchMatcher<T extends object>(
+  getText: (item: T) => string,
+): (item: T, query: string) => boolean {
+  const contents = new WeakMap<T, string>();
+  let previousQuery = '';
+  let words: string[] = [];
+  return (item, query) => {
+    if (!query) return true;
+    if (query !== previousQuery) {
+      previousQuery = query;
+      words = query.split(' ');
+    }
+    let content = contents.get(item);
+    if (content === undefined) {
+      content = normalizeSearch(getText(item));
+      contents.set(item, content);
+    }
+    return words.every((word) => content.includes(word));
+  };
 }
 
 export function readingSearch(

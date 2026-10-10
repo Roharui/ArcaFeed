@@ -7,10 +7,11 @@ import {
   readingDateLabel,
   readingTime,
   readingSearch,
-  matchesReadingSearch,
+  createReadingSearchMatcher,
 } from './readingUi';
 import type { VaultAdapter } from '@/vault';
 import { SITE_RECENT_URL } from '@/vault/reading-history';
+import type { ReadingEntry } from '@/vault/reading-history';
 
 const PAGE_SIZE = 50;
 
@@ -53,30 +54,48 @@ export function createHistoryModal(p: VaultAdapter): JQuery<HTMLElement> {
     render();
   }).addClass('arcafeed-reading-more');
   let visibleCount = PAGE_SIZE;
+  const matchesSearch = createReadingSearchMatcher<ReadingEntry>(
+    (entry) => `${entry.title} ${entry.channelName} ${channelId(entry.path)}`,
+  );
+  let indexedEntries: readonly ReadingEntry[] | undefined;
+  const channelNames = new Map<string, string>();
+  let filteredEntries: readonly ReadingEntry[] | undefined;
+  let previousQuery = '';
+  let previousChannel = '';
+  let filtered: readonly ReadingEntry[] = [];
 
   const render = () => {
     const selectedChannel = String(channel.val() || '');
-    const channelNames = new Map<string, string>();
-    for (const entry of p.reading.entries)
-      channelNames.set(
-        channelId(entry.path),
-        entry.channelName || channelId(entry.path),
-      );
-    channel.empty().append($('<option>', { value: '', text: '전체 채널' }));
-    for (const [id, name] of channelNames)
-      channel.append($('<option>', { value: id, text: name }));
+    if (indexedEntries !== p.reading.entries) {
+      indexedEntries = p.reading.entries;
+      channelNames.clear();
+      for (const entry of indexedEntries)
+        channelNames.set(
+          channelId(entry.path),
+          entry.channelName || channelId(entry.path),
+        );
+      channel.empty().append($('<option>', { value: '', text: '전체 채널' }));
+      for (const [id, name] of channelNames)
+        channel.append($('<option>', { value: id, text: name }));
+    }
     channel.val(channelNames.has(selectedChannel) ? selectedChannel : '');
     const filterChannel = String(channel.val() || '');
     const query = search.getQuery();
 
-    const filtered = p.reading.entries.filter(
-      (entry) =>
-        (!filterChannel || channelId(entry.path) === filterChannel) &&
-        matchesReadingSearch(
-          `${entry.title} ${entry.channelName} ${channelId(entry.path)}`,
-          query,
-        ),
-    );
+    if (
+      filteredEntries !== p.reading.entries ||
+      previousQuery !== query ||
+      previousChannel !== filterChannel
+    ) {
+      filteredEntries = p.reading.entries;
+      previousQuery = query;
+      previousChannel = filterChannel;
+      filtered = filteredEntries.filter(
+        (entry) =>
+          (!filterChannel || channelId(entry.path) === filterChannel) &&
+          matchesSearch(entry, query),
+      );
+    }
     count.text(String(filtered.length));
     total.text(`전체 ${p.reading.entries.length}개`);
     entries.empty();

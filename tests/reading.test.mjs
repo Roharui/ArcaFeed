@@ -56,6 +56,86 @@ function siteVisit(storage, history, article) {
   history.reload();
 }
 
+test('adjacent navigation reuses scans and invalidates after visits, list, index and skip changes', () => {
+  const { load, storage } = readingFixture({
+    recent_articles: JSON.stringify(
+      Array.from({ length: 1000 }, (_, i) => ({
+        slug: 'test',
+        articleId: i + 1001,
+        regdateAt: i + 1,
+      })),
+    ),
+  });
+  const { VaultAdapter } = load('src/vault/index.ts');
+  const { Store } = load('src/vault/store.ts');
+  const list = [
+    '/b/test/100',
+    ...Array.from({ length: 1001 }, (_, i) => `/b/test/${i + 1001}`),
+  ];
+  const vault = new VaultAdapter(
+    new Store({ articleList: list, activeIndex: 0 }),
+    { saveConfig() {} },
+    vaultFixture().href,
+  );
+  try {
+    vault.skipVisitedArticles = true;
+    let lookups = 0;
+    const original = vault.reading.hasVisited.bind(vault.reading);
+    vault.reading.hasVisited = (path) => {
+      lookups++;
+      return original(path);
+    };
+    assert.equal(vault.getAdjacentArticleIndex('NEXT'), 1001);
+    assert.equal(lookups, 1001);
+    for (let i = 0; i < 50; i++) assert.equal(vault.isNextPageActive(), true);
+    assert.equal(lookups, 1001);
+    siteVisit(storage, vault.reading, entry('/b/test/2001'));
+    assert.equal(vault.getAdjacentArticleIndex('NEXT'), -1);
+    const exhaustedLookups = lookups;
+    assert.equal(vault.isNextPageActive(), false);
+    assert.equal(lookups, exhaustedLookups);
+    vault.articleList = [...list, '/b/test/2002'];
+    assert.equal(vault.getAdjacentArticleIndex('NEXT'), 1002);
+    vault.activeIndex = 1002;
+    assert.equal(vault.getAdjacentArticleIndex('NEXT'), -1);
+    assert.equal(vault.getAdjacentArticleIndex('PREV'), 1001);
+    vault.activeIndex = 0;
+    vault.skipVisitedArticles = false;
+    assert.equal(vault.getAdjacentArticleIndex('NEXT'), 1);
+    vault.href = { ...vault.href, articleId: '1001' };
+    assert.equal(vault.getAdjacentArticleIndex('NEXT'), 2);
+  } finally {
+    vault.destroy();
+  }
+});
+
+test('reading search reuses normalized records while preserving multiword and Unicode matching', () => {
+  const { createReadingSearchMatcher, matchesReadingSearch } = sourceLoader({
+    mocks: { jquery: { default: () => {} } },
+  })('src/feature/modal/readingUi.ts');
+  let textReads = 0;
+  const matcher = createReadingSearchMatcher((record) => {
+    textReads++;
+    return record.text;
+  });
+  const records = [
+    { text: '  ＡＢＣ   테스트 채널 ' },
+    { text: '다른 게시글' },
+  ];
+  assert.equal(matcher(records[0], ''), true);
+  assert.equal(textReads, 0);
+  for (const query of ['abc', '테스트 abc', '다른', '', '없는 검색', 'abc']) {
+    for (const record of records)
+      assert.equal(
+        matcher(record, query),
+        matchesReadingSearch(record.text, query),
+      );
+  }
+  assert.equal(textReads, 2);
+  assert.equal(matcher({ text: '수정된 제목' }, '수정된'), true);
+  assert.equal(textReads, 3);
+});
+
 test('recent history reads native records and matches subscription-feed aliases without writing a duplicate list', () => {
   const { ReadingHistory, storage } = readingFixture({
     recent_articles: JSON.stringify([

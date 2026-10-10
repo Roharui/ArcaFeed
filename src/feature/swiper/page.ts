@@ -25,16 +25,15 @@ function toLink(mode: PageMode): PromiseFunc {
 
     const nextIdx = p.getAdjacentArticleIndex(mode);
     const url = list[nextIdx];
-    const skipped =
-      mode === 'NEXT' && p.skipVisitedArticles
-        ? list
-            .slice(idx + 1, nextIdx === -1 ? undefined : nextIdx)
-            .filter(
-              (path) =>
-                path !== `/b/${p.href.channelId}/${p.href.articleId}` &&
-                p.reading.hasVisited(path),
-            ).length
-        : 0;
+    let skipped = 0;
+    if (mode === 'NEXT' && p.skipVisitedArticles) {
+      const currentPath = `/b/${p.href.channelId}/${p.href.articleId}`;
+      const end = nextIdx === -1 ? list.length : nextIdx;
+      for (let index = idx + 1; index < end; index++) {
+        const path = list[index]!;
+        if (path !== currentPath && p.reading.hasVisited(path)) skipped++;
+      }
+    }
     if (!url) {
       p.swiper?.slideTo(1, 0, false);
       if (skipped > 0) showSkippedToast(skipped);

@@ -180,6 +180,7 @@ export class ReadingHistory {
       previous.path !== session.path ||
       previous.scrollY !== session.scrollY;
     if (contextChanged || positionChanged) {
+      const sessionIds = new Set(next.sessions.map((item) => item.id));
       this.persistProgress(
         [
           {
@@ -189,9 +190,7 @@ export class ReadingHistory {
             updatedAt: session.updatedAt,
           },
           ...progress.filter(
-            (item) =>
-              item.id !== session.id &&
-              next.sessions.some((saved) => saved.id === item.id),
+            (item) => item.id !== session.id && sessionIds.has(item.id),
           ),
         ].slice(0, SESSION_LIMIT),
       );
@@ -223,10 +222,9 @@ export class ReadingHistory {
     const next = this.load();
     mutate(next);
     this.persistContexts(next);
+    const sessionIds = new Set(next.sessions.map((session) => session.id));
     this.persistProgress(
-      this.loadProgress().filter((item) =>
-        next.sessions.some((session) => session.id === item.id),
-      ),
+      this.loadProgress().filter((item) => sessionIds.has(item.id)),
     );
     this.data = this.readData();
     this.notify(['sessions']);

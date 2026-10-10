@@ -235,6 +235,7 @@ function readSubscribeSettingsFromModal(): string[] {
 
 function initCheckSubscribeModal(p: VaultAdapter): VaultAdapter {
   const hiddenChannels = readSubscribeSettingsFromModal();
+  const hiddenSet = new Set(hiddenChannels);
   const filters = $('#dialog .helper-modal-subscribe').data('filters') as
     | ArticleFilterConfigImpl
     | undefined;
@@ -243,7 +244,7 @@ function initCheckSubscribeModal(p: VaultAdapter): VaultAdapter {
     ...(p.isSeriesMode && p.seriesChannels.length
       ? {
           seriesChannels: parseSubscribedChannels()
-            .filter((channel) => !hiddenChannels.includes(channel.id))
+            .filter((channel) => !hiddenSet.has(channel.id))
             .map((channel) => channel.id),
           articleList: p.articleList.slice(0, p.activeIndex + 1),
         }
