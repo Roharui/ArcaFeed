@@ -34,6 +34,33 @@ const SLIDE_NEXT_EVENT: Record<string, AppEvent> = {
   ARTICLE: 'renderNextPage',
 };
 
+// Article images change the container height after the first paint. Swiper's
+// default observer treats those changes as resizes and resets the transition.
+// Horizontal slides only need to be recalculated when their width changes.
+function observeSwiperWidth(swiper: Swiper): void {
+  if (typeof ResizeObserver !== 'function') return;
+
+  let width = swiper.el.clientWidth;
+  let frame: number | null = null;
+  const observer = new ResizeObserver((entries) => {
+    const entry = entries.find(({ target }) => target === swiper.el);
+    if (!entry || swiper.destroyed) return;
+    const nextWidth = Math.round(entry.contentRect.width);
+    if (nextWidth === width) return;
+    width = nextWidth;
+    if (frame !== null) return;
+    frame = requestAnimationFrame(() => {
+      frame = null;
+      if (!swiper.destroyed) swiper.update();
+    });
+  });
+  observer.observe(swiper.el);
+  swiper.on('destroy', () => {
+    observer.disconnect();
+    if (frame !== null) cancelAnimationFrame(frame);
+  });
+}
+
 // ===
 
 function initSwiper(p: VaultAdapter): void {
@@ -75,10 +102,13 @@ function initSwiperPage(p: VaultAdapter): void {
 
   p.swiper = new Swiper('.swiper', {
     ...swiperOptions,
+    resizeObserver: false,
+    updateOnWindowResize: typeof ResizeObserver !== 'function',
     allowSlideNext: p.isNextPageActive(),
     allowSlidePrev: p.isPrevPageActive(),
     enabled: !disableSwiper,
   });
+  observeSwiperWidth(p.swiper);
 
   const nextEvent = SLIDE_NEXT_EVENT[p.href.mode] || 'renderNextPage';
   p.swiper.on('slideNextTransitionEnd', () => eventBus.emit(nextEvent));

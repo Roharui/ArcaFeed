@@ -490,6 +490,76 @@ test('Swiper is reused and background list changes unlock navigation', () => {
   assert.equal(constructions, 1);
 });
 
+test('Swiper ignores article height changes and batches width changes until the next frame', () => {
+  let notify;
+  let disconnected = false;
+  let updates = 0;
+  const handlers = new Map();
+  const frames = new Map();
+  let frameId = 0;
+  const element = { clientWidth: 700 };
+  class FakeSwiper {
+    constructor(_selector, options) {
+      Object.assign(this, options);
+      this.el = element;
+    }
+    on(name, callback) {
+      handlers.set(name, callback);
+    }
+    update() {
+      updates++;
+    }
+  }
+  const { initSwiperPage } = sourceLoader({
+    globals: {
+      ResizeObserver: class {
+        constructor(callback) {
+          notify = callback;
+        }
+        observe(target) {
+          assert.equal(target, element);
+        }
+        disconnect() {
+          disconnected = true;
+        }
+      },
+      requestAnimationFrame: (callback) => {
+        frames.set(++frameId, callback);
+        return frameId;
+      },
+      cancelAnimationFrame: (id) => frames.delete(id),
+    },
+    mocks: {
+      jquery: {},
+      swiper: { default: FakeSwiper },
+      '@/core/app-events': { eventBus: {} },
+    },
+  })('src/feature/swiper/swiper.ts');
+  const p = vaultFixture({ subscribe() {} });
+  initSwiperPage(p);
+  assert.equal(p.swiper.resizeObserver, false);
+  assert.equal(p.swiper.updateOnWindowResize, false);
+  const resize = (width, height) =>
+    notify([{ target: element, contentRect: { width, height } }]);
+  resize(700, 1000);
+  resize(700, 5000);
+  assert.equal(frames.size, 0);
+  resize(800, 5000);
+  resize(900, 6000);
+  assert.equal(frames.size, 1);
+  const callback = frames.get(1);
+  frames.delete(1);
+  callback();
+  assert.equal(updates, 1);
+  resize(900, 7000);
+  assert.equal(frames.size, 0);
+  resize(1000, 7000);
+  p.swiper.destroyed = true;
+  handlers.get('destroy')();
+  assert.equal(disconnected, true);
+  assert.equal(frames.size, 0);
+});
+
 test('prefetch follows the next article, avoids repeat mutations and respects disabled Swiper', () => {
   let subscriber;
   const appended = [];
