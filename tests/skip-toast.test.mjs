@@ -91,3 +91,18 @@ test('pending notifications cannot appear on an unrelated page', () => {
   f.toast.showPendingSkippedToast('/b/test/97');
   assert.deepEqual(f.messages, []);
 });
+
+test('subscription feed aliases survive the redirect to the real channel', () => {
+  const f = fixture();
+  f.toast.queueSkippedToast('/b/my/97', 2);
+  f.toast.showPendingSkippedToast('/b/test/97');
+  f.toast.showPendingSkippedToast('/b/test/97');
+  assert.deepEqual(f.messages, ['최근 본 글 2개를 건너뛰었습니다']);
+});
+
+test('subscription aliases do not match a different article', () => {
+  const f = fixture();
+  f.toast.queueSkippedToast('/b/my/97', 2);
+  f.toast.showPendingSkippedToast('/b/test/98');
+  assert.deepEqual(f.messages, []);
+});
