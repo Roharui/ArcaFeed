@@ -30,7 +30,15 @@ export function createNavigationModal(
     const padding = current
       ? Math.max(0, (container.clientHeight - current.offsetHeight) / 2)
       : 0;
-    list.find('.arcafeed-navigation-spacer').height(padding);
+    const spacers = list.find('.arcafeed-navigation-spacer');
+    spacers
+      .first()
+      .height(
+        list.find('.arcafeed-navigation-load-previous:visible').length
+          ? 0
+          : padding,
+      );
+    spacers.last().height(padding);
     if (current) {
       const bounds = container.getBoundingClientRect();
       const row = current.getBoundingClientRect();
@@ -127,12 +135,16 @@ export function createNavigationModal(
       previous.toggle(start > 0);
       if (anchor)
         list[0]!.scrollTop += anchor.getBoundingClientRect().top - top;
-    });
+    })
+      .addClass('arcafeed-navigation-load arcafeed-navigation-load-previous')
+      .prepend($('<span>', { class: 'bi-arrow-up', 'aria-hidden': 'true' }));
     const more = readingButton('더 보기', () => {
       rows.append(items.slice(end, end + 100).map(createRow));
       end = Math.min(items.length, end + 100);
       more.toggle(end < items.length);
-    });
+    })
+      .addClass('arcafeed-navigation-load')
+      .append($('<span>', { class: 'bi-arrow-down', 'aria-hidden': 'true' }));
     const createRow = ({ path, index }: { path: string; index: number }) => {
       const id = readingChannelId(path);
       const entry = entries.get(path);

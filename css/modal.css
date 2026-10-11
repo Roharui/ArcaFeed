@@ -376,3 +376,16 @@ body .arcafeed-navigation-control {
     stroke-dasharray: none;
   }
 }
+
+.arcafeed-reading-button.arcafeed-navigation-load {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 4px 0 12px;
+  padding: 10px 12px;
+  border-style: dashed;
+  border-radius: 20px;
+  background: transparent;
+  color: var(--color-text-muted, #888);
+  font-size: 0.78rem;
+}
