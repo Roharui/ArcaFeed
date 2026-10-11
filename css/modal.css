@@ -319,7 +319,8 @@ body .arcafeed-navigation-control {
   pointer-events: none;
 }
 
-.arcafeed-navigation-trigger.is-hovered {
+.arcafeed-navigation-trigger.is-hovered,
+.arcafeed-navigation-trigger.is-loading {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;

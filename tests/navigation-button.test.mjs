@@ -8,6 +8,7 @@ for (const pointerType of ['mouse', 'touch']) {
     let scroll;
     let control;
     let trigger;
+    let notifyLoading;
     const jquery = (_, attributes) => {
       const classes = new Set();
       const element = {
@@ -29,7 +30,9 @@ for (const pointerType of ['mouse', 'touch']) {
         text() {
           return this;
         },
-        toggleClass() {
+        toggleClass(name, active) {
+          if (active) classes.add(name);
+          else classes.delete(name);
           return this;
         },
         removeClass(name) {
@@ -86,6 +89,7 @@ for (const pointerType of ['mouse', 'touch']) {
         '@/feature/article/loading': {
           isArticleLoading: () => false,
           subscribeArticleLoading(callback) {
+            notifyLoading = callback;
             callback(false);
             return () => {};
           },
@@ -95,6 +99,12 @@ for (const pointerType of ['mouse', 'touch']) {
     initNavigationList(vaultFixture({ subscribe: () => () => {} }));
     const event = { originalEvent: { pointerType } };
     assert.equal(trigger.classes.has('is-hovered'), false);
+    notifyLoading(true);
+    assert.equal(trigger.classes.has('is-loading'), true);
+    scroll();
+    assert.equal(trigger.classes.has('is-loading'), true);
+    notifyLoading(false);
+    assert.equal(trigger.classes.has('is-loading'), false);
     control.handlers.pointerenter(event);
     control.handlers.pointerdown(event);
     assert.equal(trigger.classes.has('is-hovered'), true);
