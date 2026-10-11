@@ -172,7 +172,11 @@ document.addEventListener(
       event.target instanceof Element
         ? event.target.closest('a, .arcafeed-resume-action')
         : null;
-    if (!target || target.closest('.my-subscribe-channels')) return;
+    if (
+      !target ||
+      target.closest('.my-subscribe-channels, .arcafeed-navigation-control')
+    )
+      return;
     event.preventDefault();
     event.stopImmediatePropagation();
     notify(`테스트 화면에서 이동 생략: ${target.textContent.trim()}`);

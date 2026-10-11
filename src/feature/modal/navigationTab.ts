@@ -19,6 +19,30 @@ export function createNavigationModal(
   const channel = $('<select>', { 'aria-label': '탐색 목록 채널 필터' });
   const tools = $('<div>', { class: 'arcafeed-history-tools' }).append(channel);
   const list = $('<div>', { class: 'arcafeed-modal-content' });
+  let centerFrame: number | undefined;
+  const centerCurrent = () => {
+    const container = list[0]!;
+    const current = list.find('[aria-current=page]')[0];
+    const padding = current
+      ? Math.max(0, (container.clientHeight - current.offsetHeight) / 2)
+      : 0;
+    list.find('.arcafeed-navigation-spacer').height(padding);
+    if (current) {
+      const bounds = container.getBoundingClientRect();
+      const row = current.getBoundingClientRect();
+      container.scrollTop +=
+        row.top + row.height / 2 - bounds.top - container.clientHeight / 2;
+    }
+  };
+  const scheduleCenter = () => {
+    if (centerFrame !== undefined) cancelAnimationFrame(centerFrame);
+    centerFrame = requestAnimationFrame(() => {
+      centerFrame = undefined;
+      centerCurrent();
+    });
+  };
+  const resizeObserver = new ResizeObserver(scheduleCenter);
+  resizeObserver.observe(list[0]!);
   tab.append(
     readingHeader(
       '탐색 목록',
@@ -73,31 +97,61 @@ export function createNavigationModal(
     const items = paths
       .map((path, index) => ({ path, index }))
       .filter(({ path }) => !filter || readingChannelId(path) === filter);
-    let shown = 0;
-    const more = readingButton('더 보기', () => appendPage());
-    const appendPage = () => {
-      more.detach();
-      for (const { path, index } of items.slice(shown, shown + 100)) {
-        const id = readingChannelId(path);
-        const entry = entries.get(path);
-        const title = entry?.title || `게시글 ${path.split('/').pop()}`;
-        const name =
-          entry?.channelName || p.articleFilterConfig[id]?.channelName || id;
-        const current = index === currentIndex;
-        const row = readingButton(
-          `${index + 1}. ${name} · ${title}${current ? ' · 현재 글' : ''}`,
-          () => {
-            const latestIndex = p.articleList.indexOf(path);
-            if (latestIndex >= 0) navigateToArticle(p, latestIndex);
-          },
-        ).addClass('arcafeed-navigation-row');
-        if (current) row.attr('aria-current', 'page');
-        list.append(row);
-      }
-      shown += 100;
-      if (shown < items.length) list.append(more);
+    const currentOffset = items.findIndex(
+      ({ index }) => index === currentIndex,
+    );
+    let start = currentOffset >= 0 ? Math.max(0, currentOffset - 50) : 0;
+    let end = Math.min(items.length, start + 100);
+    const before = $('<div>', {
+      class: 'arcafeed-navigation-spacer',
+      'aria-hidden': 'true',
+    });
+    const after = before.clone();
+    const rows = $('<div>');
+    const previous = readingButton('이전 목록 더 보기', () => {
+      const anchor = rows.children()[0];
+      const top = anchor?.getBoundingClientRect().top ?? 0;
+      const nextStart = Math.max(0, start - 100);
+      rows.prepend(items.slice(nextStart, start).map(createRow));
+      start = nextStart;
+      previous.toggle(start > 0);
+      if (anchor)
+        list[0]!.scrollTop += anchor.getBoundingClientRect().top - top;
+    });
+    const more = readingButton('더 보기', () => {
+      rows.append(items.slice(end, end + 100).map(createRow));
+      end = Math.min(items.length, end + 100);
+      more.toggle(end < items.length);
+    });
+    const createRow = ({ path, index }: { path: string; index: number }) => {
+      const id = readingChannelId(path);
+      const entry = entries.get(path);
+      const title = entry?.title || `게시글 ${path.split('/').pop()}`;
+      const name =
+        entry?.channelName || p.articleFilterConfig[id]?.channelName || id;
+      const current = index === currentIndex;
+      const row = readingButton(
+        `${index + 1}. ${name} · ${title}${current ? ' · 현재 글' : ''}`,
+        () => {
+          const latestIndex = p.articleList.indexOf(path);
+          if (latestIndex >= 0) navigateToArticle(p, latestIndex);
+        },
+      ).addClass('arcafeed-navigation-row');
+      if (current) row.attr('aria-current', 'page');
+      return row[0]!;
     };
-    appendPage();
+    if (items.length) {
+      list.append(
+        before,
+        previous.toggle(start > 0),
+        rows,
+        more.toggle(end < items.length),
+        after,
+      );
+      rows.append(items.slice(start, end).map(createRow));
+    }
+    list.scrollTop(0);
+    scheduleCenter();
   };
   channel.on('change', render);
   let previous = p.getState();
@@ -112,6 +166,8 @@ export function createNavigationModal(
   });
   const unsubscribeReading = p.reading.subscribe(render, ['entries']);
   tab.data('cleanup', () => {
+    if (centerFrame !== undefined) cancelAnimationFrame(centerFrame);
+    resizeObserver.disconnect();
     unsubscribeState();
     unsubscribeReading();
   });
@@ -122,9 +178,26 @@ export function createNavigationModal(
 /** A persistent entry point independent of the settings dialog. */
 export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
   if (document.querySelector('.arcafeed-navigation-trigger')) return;
-  const trigger = readingButton('탐색 목록', () => open())
-    .addClass('arcafeed-navigation-trigger')
-    .attr({ 'aria-haspopup': 'dialog', 'aria-expanded': 'false' });
+  const control = $('<div>', {
+    class: 'nav-control arcafeed-navigation-control',
+  });
+  const count = $('<span>', { class: 'arcafeed-navigation-count' });
+  const trigger = $('<a>', {
+    class: 'arcafeed-navigation-trigger',
+    role: 'button',
+    tabindex: 0,
+    'aria-haspopup': 'dialog',
+    'aria-expanded': 'false',
+    title: '탐색 목록',
+  })
+    .append($('<span>', { class: 'bi-list-ul', 'aria-hidden': 'true' }), count)
+    .on('click', () => open())
+    .on('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        open();
+      }
+    });
   let panel: JQuery<HTMLElement> | undefined;
   const close = () => {
     panel?.find('.helper-modal-tab').data('cleanup')?.();
@@ -180,11 +253,14 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
       index >= 0
         ? `탐색 ${index + 1} / ${p.articleList.length}`
         : `탐색 목록 · ${p.articleList.length}개`;
-    trigger
-      .text(label)
-      .attr('aria-label', `${label}, 불러온 목록 기준, 목록 열기`);
+    count.text(
+      index >= 0
+        ? `${index + 1}/${p.articleList.length}`
+        : `${p.articleList.length}`,
+    );
+    trigger.attr('aria-label', `${label}, 불러온 목록 기준, 목록 열기`);
   };
-  trigger.appendTo('body');
+  control.append(trigger).appendTo('body');
   let previous = p.getState();
   const unsubscribe = p.subscribe((state) => {
     const changed =
@@ -206,13 +282,35 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
   let frame: number | undefined;
   const position = () => {
     frame = undefined;
-    const element = trigger[0]!;
+    const nativeButton = document.querySelector<HTMLElement>(
+      '.nav-control:not(.arcafeed-navigation-control) a, .nav-control:not(.arcafeed-navigation-control) button',
+    );
+    if (nativeButton) {
+      const style = getComputedStyle(nativeButton);
+      // Keep the native theme and button shape without inheriting its click handler.
+      for (const property of [
+        'background-color',
+        'color',
+        'border',
+        'border-radius',
+        'box-shadow',
+        'font-size',
+      ]) {
+        trigger[0]!.style.setProperty(
+          property,
+          style.getPropertyValue(property),
+        );
+      }
+    }
+    const element = control[0]!;
     element.style.bottom = '';
     const rect = element.getBoundingClientRect();
     let top = rect.top;
     // The site's navigation may change size, visibility, or location.
     const obstacles = Array.from(
-      document.querySelectorAll<HTMLElement>('.nav-control'),
+      document.querySelectorAll<HTMLElement>(
+        '.nav-control:not(.arcafeed-navigation-control), .fetch-loader.active',
+      ),
     )
       .map((control) => control.getBoundingClientRect())
       .filter(
@@ -237,26 +335,23 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     clearTimeout(idleTimer);
     schedulePosition();
     idleTimer = setTimeout(() => {
-      if (
-        panel ||
-        trigger.is(':hover') ||
-        document.activeElement === trigger[0]
-      )
-        return;
+      if (panel || trigger.is(':hover')) return;
       trigger.addClass('is-idle');
-    }, 4000);
+    }, 3000);
   };
-  trigger.on('pointerenter focus', reveal).on('pointerleave blur', reveal);
+  trigger.on('pointerenter focus', reveal).on('pointerleave', reveal);
   document.addEventListener('scroll', reveal, { passive: true, capture: true });
   document.addEventListener('pointerdown', reveal, { passive: true });
   document.addEventListener('pointermove', reveal, { passive: true });
   document.addEventListener('keydown', reveal);
   window.addEventListener('resize', reveal);
   const resizeObserver = new ResizeObserver(schedulePosition);
-  resizeObserver.observe(trigger[0]!);
+  resizeObserver.observe(control[0]!);
   const observeControls = () => {
     document
-      .querySelectorAll('.nav-control')
+      .querySelectorAll(
+        '.nav-control:not(.arcafeed-navigation-control), .fetch-loader',
+      )
       .forEach((control) => resizeObserver.observe(control));
     schedulePosition();
   };
@@ -266,7 +361,8 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
         const target = record.target;
         return (
           target instanceof Element &&
-          (target.matches('body, .nav-control') ||
+          !target.closest('.arcafeed-navigation-control') &&
+          (target.matches('body, .nav-control, .fetch-loader') ||
             target.closest('.nav-control'))
         );
       })
@@ -294,6 +390,6 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     document.removeEventListener('pointermove', reveal);
     document.removeEventListener('keydown', reveal);
     window.removeEventListener('resize', reveal);
-    trigger.remove();
+    control.remove();
   };
 }

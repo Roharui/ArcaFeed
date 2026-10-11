@@ -64,7 +64,7 @@ body.hide-blur .spoiler-filter {
   filter: none !important;
 }
 
-body.hide-nav-control .nav-control {
+body.hide-nav-control .nav-control:not(.arcafeed-navigation-control) {
   display: none !important;
 }
 

@@ -242,21 +242,47 @@ input.helper-modal-tab-radio {
   font-weight: 600;
 }
 
-.arcafeed-navigation-trigger {
+/* Reuse the site's .nav-control > a appearance, with a left-side position. */
+body .nav-control.arcafeed-navigation-control {
   position: fixed;
-  right: 16px;
+  top: auto;
+  right: auto;
+  left: calc(16px + env(safe-area-inset-left));
   bottom: calc(20px + env(safe-area-inset-bottom));
   z-index: 10000;
-  border: 1px solid #766df4;
-  border-radius: 24px;
-  padding: 10px 16px;
+  display: block;
+}
+
+.arcafeed-navigation-control > .arcafeed-navigation-trigger {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px;
+  border: 1px solid var(--color-bd-btn);
+  border-radius: 4px;
   background: var(--color-bg-body);
   color: var(--color-text);
-  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.2);
+  text-decoration: none;
   cursor: pointer;
   transition:
     opacity 0.35s ease,
     visibility 0.35s;
+}
+
+.arcafeed-navigation-trigger > .bi-list-ul {
+  font-size: 1.25rem;
+}
+
+.arcafeed-navigation-count {
+  font-size: 0.65rem;
+  line-height: 1.2;
+}
+
+.arcafeed-navigation-spacer {
+  pointer-events: none;
 }
 
 .arcafeed-navigation-trigger.is-idle {
