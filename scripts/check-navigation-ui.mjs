@@ -37,6 +37,13 @@ async function checkNavigationUi(page) {
     if (!isolated)
       throw new Error('Site navigation code affected the exploration control');
     const trigger = page.locator('.arcafeed-navigation-trigger');
+    const hoverControl = async () => {
+      const box = await page
+        .locator('.arcafeed-navigation-control')
+        .boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await trigger.waitFor({ state: 'visible' });
+    };
     await page.mouse.move(width / 2, 10);
     for (const index of [0, 150, 249]) {
       await page.evaluate((currentIndex) => {
@@ -50,6 +57,7 @@ async function checkNavigationUi(page) {
         vault.href.articleId = String(1000 - currentIndex);
         document.dispatchEvent(new Event('pointerdown'));
       }, index);
+      await hoverControl();
       await trigger.click();
       await page.waitForFunction(() => {
         const container = document.querySelector(
@@ -85,27 +93,21 @@ async function checkNavigationUi(page) {
         .locator('.arcafeed-navigation-panel .arcafeed-reading-close')
         .click();
     }
-    await trigger.hover();
-    await page.waitForTimeout(3400);
+    await hoverControl();
+    await page.waitForTimeout(1800);
     if (!(await trigger.isVisible()))
       throw new Error('Hovered button disappeared');
     await page.mouse.move(width / 2, 10);
-    await page.waitForTimeout(2500);
-    if (!(await trigger.isVisible()))
-      throw new Error('Button disappeared before 3 seconds');
-    await page.waitForTimeout(1000);
-    if (await trigger.isVisible())
-      throw new Error('Button remained visible after leaving hover');
-    await page.mouse.move(width / 2 + 20, 10);
-    await page.waitForTimeout(100);
-    if (!(await trigger.isVisible()))
-      throw new Error('Button did not reappear');
+    await trigger.waitFor({ state: 'hidden' });
     await page.evaluate(() => {
+      document.dispatchEvent(new Event('scroll'));
+      document.dispatchEvent(new Event('pointerdown'));
       window.uiFixture.showFetchLoader();
       window.uiFixture.showFetchLoader();
     });
-    await page.mouse.move(width / 2, 10);
-    await page.waitForTimeout(3400);
+    if (await trigger.isVisible())
+      throw new Error('Scroll, outside touch, or loading revealed the button');
+    await hoverControl();
     const loading = await page.evaluate(() => {
       const button = document.querySelector('.arcafeed-navigation-trigger');
       const ring = button.querySelector('.arcafeed-navigation-loading-ring');
@@ -123,6 +125,7 @@ async function checkNavigationUi(page) {
       throw new Error(
         'Loading ring is missing or the loading button disappeared',
       );
+    await hoverControl();
     await trigger.click();
     await page
       .locator('.arcafeed-navigation-panel .arcafeed-reading-close')

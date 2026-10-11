@@ -2,13 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { sourceLoader, vaultFixture } from './source-loader.mjs';
 
-for (const [name, supportsHover, hovered, hides] of [
-  ['touch screens ignore lingering hover', false, true, true],
-  ['mouse hover keeps the button visible', true, true, false],
-  ['mouse screens hide the button without hover', true, false, true],
-]) {
-  test(name, () => {
+for (const pointerType of ['mouse', 'touch']) {
+  test(`${pointerType} reveals only through the button area`, () => {
     let idleCallback;
+    let scroll;
+    let control;
     let trigger;
     const jquery = (_, attributes) => {
       const classes = new Set();
@@ -20,7 +18,9 @@ for (const [name, supportsHover, hovered, hides] of [
         appendTo() {
           return this;
         },
-        on() {
+        handlers: {},
+        on(event, callback) {
+          this.handlers[event] = callback;
           return this;
         },
         attr() {
@@ -42,12 +42,14 @@ for (const [name, supportsHover, hovered, hides] of [
         },
         is(selector) {
           assert.equal(selector, ':hover');
-          return hovered;
+          return false;
         },
         classes,
       };
       if (attributes?.class === 'arcafeed-navigation-trigger')
         trigger = element;
+      if (attributes?.class === 'arcafeed-navigation-control')
+        control = element;
       return element;
     };
     class Observer {
@@ -59,10 +61,12 @@ for (const [name, supportsHover, hovered, hides] of [
           body: {},
           querySelector: () => null,
           querySelectorAll: () => [],
-          addEventListener() {},
+          addEventListener(event, callback) {
+            assert.equal(event, 'scroll');
+            scroll = callback;
+          },
         },
         window: {
-          matchMedia: () => ({ matches: supportsHover }),
           addEventListener() {},
         },
         ResizeObserver: Observer,
@@ -89,7 +93,22 @@ for (const [name, supportsHover, hovered, hides] of [
       },
     })('src/feature/modal/navigationTab.ts');
     initNavigationList(vaultFixture({ subscribe: () => () => {} }));
-    idleCallback();
-    assert.equal(trigger.classes.has('is-idle'), hides);
+    const event = { originalEvent: { pointerType } };
+    assert.equal(trigger.classes.has('is-hovered'), false);
+    control.handlers.pointerenter(event);
+    control.handlers.pointerdown(event);
+    assert.equal(trigger.classes.has('is-hovered'), true);
+    scroll();
+    assert.equal(trigger.classes.has('is-hovered'), false);
+    control.handlers.pointerenter(event);
+    assert.equal(trigger.classes.has('is-hovered'), pointerType === 'mouse');
+    control.handlers.pointerdown(event);
+    assert.equal(trigger.classes.has('is-hovered'), true);
+    control.handlers.pointerleave(event);
+    if (pointerType === 'touch') {
+      assert.equal(trigger.classes.has('is-hovered'), true);
+      idleCallback();
+    }
+    assert.equal(trigger.classes.has('is-hovered'), false);
   });
 }

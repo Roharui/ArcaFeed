@@ -251,7 +251,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     panel = undefined;
     $(document).off('keydown.arcafeedNavigation');
     trigger.attr('aria-expanded', 'false').trigger('focus');
-    reveal();
+    schedulePosition();
   };
   const open = () => {
     if (panel) return close();
@@ -269,7 +269,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
         if (event.target === panel?.[0]) close();
       });
     trigger.attr('aria-expanded', 'true');
-    reveal();
+    schedulePosition();
     body.find('.arcafeed-reading-close').trigger('focus');
     $(document).on('keydown.arcafeedNavigation', (event) => {
       if (event.key === 'Escape') close();
@@ -327,7 +327,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     }
   });
   let previousSettings = p.uiSettings;
-  let idleTimer: ReturnType<typeof setTimeout> | undefined;
+  let touchTimer: ReturnType<typeof setTimeout> | undefined;
   let frame: number | undefined;
   const position = () => {
     frame = undefined;
@@ -370,24 +370,28 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
   const schedulePosition = () => {
     if (frame === undefined) frame = requestAnimationFrame(position);
   };
-  const isHovered = () =>
-    window.matchMedia('(hover: hover) and (pointer: fine)').matches &&
-    trigger.is(':hover');
-  const reveal = () => {
-    trigger.removeClass('is-idle');
-    clearTimeout(idleTimer);
-    schedulePosition();
-    idleTimer = setTimeout(() => {
-      if (loading || panel || isHovered()) return;
-      trigger.addClass('is-idle');
-    }, 1500);
+  const hide = () => {
+    clearTimeout(touchTimer);
+    trigger.removeClass('is-hovered');
   };
-  trigger.on('pointerenter focus', reveal).on('pointerleave', reveal);
-  document.addEventListener('scroll', reveal, { passive: true, capture: true });
-  document.addEventListener('pointerdown', reveal, { passive: true });
-  document.addEventListener('pointermove', reveal, { passive: true });
-  document.addEventListener('keydown', reveal);
-  window.addEventListener('resize', reveal);
+  control
+    .on('pointerenter', (event) => {
+      const pointer = event.originalEvent as PointerEvent | undefined;
+      if (pointer?.pointerType === 'mouse') trigger.addClass('is-hovered');
+    })
+    .on('pointerleave', (event) => {
+      const pointer = event.originalEvent as PointerEvent | undefined;
+      if (pointer?.pointerType === 'mouse') trigger.removeClass('is-hovered');
+    })
+    .on('pointerdown', (event) => {
+      const pointer = event.originalEvent as PointerEvent | undefined;
+      if (pointer?.pointerType !== 'touch') return;
+      trigger.addClass('is-hovered');
+      clearTimeout(touchTimer);
+      touchTimer = setTimeout(() => trigger.removeClass('is-hovered'), 1500);
+    });
+  document.addEventListener('scroll', hide, { passive: true, capture: true });
+  window.addEventListener('resize', schedulePosition);
   const resizeObserver = new ResizeObserver(schedulePosition);
   resizeObserver.observe(control[0]!);
   const observeControls = () => {
@@ -423,21 +427,18 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
       .toggleClass('is-loading', loading)
       .attr('aria-busy', String(loading));
     update();
-    reveal();
+    schedulePosition();
   });
   return () => {
     close();
-    clearTimeout(idleTimer);
+    clearTimeout(touchTimer);
     if (frame !== undefined) cancelAnimationFrame(frame);
     unsubscribe();
     unsubscribeLoading();
     resizeObserver.disconnect();
     mutationObserver.disconnect();
-    document.removeEventListener('scroll', reveal, true);
-    document.removeEventListener('pointerdown', reveal);
-    document.removeEventListener('pointermove', reveal);
-    document.removeEventListener('keydown', reveal);
-    window.removeEventListener('resize', reveal);
+    document.removeEventListener('scroll', hide, true);
+    window.removeEventListener('resize', schedulePosition);
     control.remove();
   };
 }

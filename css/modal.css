@@ -276,6 +276,12 @@ body .arcafeed-navigation-control {
   display: block;
 }
 
+.arcafeed-navigation-control::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+}
+
 .arcafeed-navigation-control > .arcafeed-navigation-trigger {
   display: flex;
   flex-direction: column;
@@ -291,6 +297,9 @@ body .arcafeed-navigation-control {
   color: #fff;
   text-decoration: none;
   cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
   transition:
     opacity 0.35s ease,
     visibility 0.35s;
@@ -310,10 +319,10 @@ body .arcafeed-navigation-control {
   pointer-events: none;
 }
 
-.arcafeed-navigation-trigger.is-idle {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
+.arcafeed-navigation-trigger.is-hovered {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {
