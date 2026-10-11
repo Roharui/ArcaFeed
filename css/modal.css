@@ -270,8 +270,8 @@ body .arcafeed-navigation-control {
   position: fixed;
   top: auto;
   right: auto;
-  left: calc(16px + env(safe-area-inset-left));
-  bottom: calc(20px + env(safe-area-inset-bottom));
+  left: 16px;
+  bottom: 20px;
   z-index: 10000;
   display: block;
 }
