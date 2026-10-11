@@ -177,7 +177,7 @@ async function checkNavigationUi(page) {
       layout.bottom < 700 ||
       layout.overflow ||
       layout.height !== 44 ||
-      layout.background !== 'rgba(72, 72, 72, 0.8)' ||
+      layout.background !== 'rgba(96, 96, 96, 0.8)' ||
       layout.alpha < 0.79 ||
       layout.alpha > 0.81
     )
