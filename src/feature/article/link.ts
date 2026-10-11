@@ -145,7 +145,11 @@ function getArticleLoad(
   const isCurrent = captureArticleSession(p);
   const request = load().finally(() => {
     if (backgroundLoads.get(p)?.request === request) backgroundLoads.delete(p);
-    if (isCurrent()) p.flushSave();
+    if (isCurrent()) {
+      if (p.articleFilterConfig[p.href.channelId]?.onlyBest)
+        filterLink(p, true);
+      p.flushSave();
+    }
   });
   backgroundLoads.set(p, {
     isCurrent,

@@ -1333,6 +1333,68 @@ test('best-only mode never seeds ordinary DOM rows and empty channels initialize
   assert.equal(channel.isNextPageActive(), false);
   gate.resolve();
   await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(styledModes.slice(2).sort(), ['ARTICLE', 'CHANNEL']);
+});
+
+test('best-only opacity follows fetched membership and resets when the option is disabled', () => {
+  const rows = [
+    { href: '/b/test/100?articleKey=session', title: 'best' },
+    { href: '/b/test/99', title: 'ordinary' },
+    { href: '/b/test/98', title: 'excluded best' },
+  ].map((row) => ({
+    ...row,
+    matches: () => true,
+    textContent: row.title,
+  }));
+  const collection = {
+    find: () => collection,
+    not: () => collection,
+    each: (callback) => rows.forEach((row, index) => callback(index, row)),
+  };
+  const jquery = (row) =>
+    typeof row === 'string'
+      ? collection
+      : {
+          attr: () => row.href,
+          css: (name, value) => {
+            assert.equal(name, 'opacity');
+            row.opacity = value;
+          },
+        };
+  const { filterLink } = sourceLoader({
+    mocks: { jquery: { default: jquery } },
+  })('src/feature/filter.ts');
+  const p = vaultFixture({
+    href: { mode: 'CHANNEL', channelId: 'test', articleKey: '', search: '' },
+    articleList: [],
+    articleFilterConfig: {
+      test: { tab: [], title: ['excluded'], onlyBest: true },
+    },
+  });
+  filterLink(p, true);
+  assert.deepEqual(
+    rows.map((row) => row.opacity),
+    ['0.5', '0.5', '0.5'],
+  );
+  p.articleList = ['/b/test/100', '/b/test/98'];
+  filterLink(p, true);
+  assert.deepEqual(
+    rows.map((row) => row.opacity),
+    ['1', '0.5', '0.5'],
+  );
+  p.href.search = '?mode=best';
+  filterLink(p, true);
+  assert.deepEqual(
+    rows.map((row) => row.opacity),
+    ['1', '1', '0.5'],
+  );
+  p.href.search = '';
+  p.articleFilterConfig.test.onlyBest = false;
+  filterLink(p, true);
+  assert.deepEqual(
+    rows.map((row) => row.opacity),
+    ['1', '1', '0.5'],
+  );
 });
 
 test('step execution keeps parallel work, sequential dependencies and follow-ups in order', async () => {

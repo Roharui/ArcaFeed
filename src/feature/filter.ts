@@ -137,20 +137,26 @@ function filterLink(
   };
   const predicate = buildFilterPredicate(filter);
   const existingUrls = new Set(p.articleList);
+  // Best status comes from the site's best-only listing, not vote thresholds.
+  const bestListing = new URLSearchParams(p.href.search).get('mode') === 'best';
 
   const result: string[] = [];
 
   $rows.each((_, ele) => {
     const allowed = predicate(ele);
     const $ele = $(ele);
+    const href = extractArticleHref($ele);
 
     if (applyCss) {
-      $ele.css('opacity', allowed ? '1' : '0.5');
+      const matchesBest =
+        !filter.onlyBest ||
+        bestListing ||
+        (href !== null && existingUrls.has(href));
+      $ele.css('opacity', allowed && matchesBest ? '1' : '0.5');
     }
 
     if (!allowed) return;
 
-    const href = extractArticleHref($ele);
     if (href && !existingUrls.has(href)) {
       existingUrls.add(href);
       result.push(href);
