@@ -127,6 +127,8 @@ export class ConfigService {
       new URL(window.location.href).pathname.replace(/\/$/, ''),
       patch.lastActiveIndex,
       patch.seriesChannels,
+      patch.isSeriesMode &&
+        (patch.isScrapMode || patch.seriesChannels.length === 0),
     );
     if (compacted !== patch.articleList) {
       const removed = patch.articleList.length - compacted.length;

@@ -77,6 +77,44 @@ test('loading a long session compacts and persists its remapped navigation index
   assert.equal(storage.getItem('arcaFeed:session:lastActiveIndex'), '100');
 });
 
+for (const isScrapMode of [false, true]) {
+  test(`a new 300-link ${isScrapMode ? 'scrap' : 'series'} session retains all links on reload and activation`, async () => {
+    const articles = Array.from({ length: 300 }, (_, i) => `/b/test/${i + 1}`);
+    const storage = memoryStorage();
+    const load = sourceLoader({
+      globals: {
+        window: {
+          ...windowFixture,
+          location: {
+            ...windowFixture.location,
+            href: 'https://arca.live/b/test/250?articleKey=session',
+          },
+        },
+      },
+    });
+    const { StorageRepository } = load('src/vault/repository.ts');
+    const { ConfigService } = load('src/vault/config.ts');
+    const config = new ConfigService(new StorageRepository(storage));
+    config.copySeriesStorage('source', 'session', articles, 249, '');
+    if (isScrapMode) storage.setItem('arcaFeed:session:scrapMode', 'true');
+    const patch = config.loadConfig();
+    assert.deepEqual(patch.articleList, articles);
+    assert.equal(patch.lastActiveIndex, 249);
+    const p = vaultFixture(patch);
+    const { activateArticleLink } = loadLink({
+      fetchFirstBatch: async () => assert.fail('unexpected refill'),
+    });
+    await activateArticleLink(p, '250');
+    assert.deepEqual(p.articleList, articles);
+    assert.equal(p.activeIndex, 249);
+    config.saveConfig(p);
+    assert.deepEqual(
+      JSON.parse(storage.getItem('arcaFeed:session:articleList')),
+      articles,
+    );
+  });
+}
+
 test('compaction preserves exhausted channel cursors and shuffled ordering', () => {
   const { compactNavigationArticles } = sourceLoader()(
     'src/vault/article-window.ts',

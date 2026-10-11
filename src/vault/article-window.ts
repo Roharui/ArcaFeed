@@ -19,7 +19,10 @@ export function compactNavigationArticles(
   path: string,
   hint = -1,
   seriesChannels: readonly string[] = [],
+  preserveCompleteList = false,
 ): string[] {
+  // Finite series and scrap lists cannot refill discarded entries.
+  if (preserveCompleteList) return articles;
   const index = findArticleIndex(articles, path, hint);
   if (index <= 200) return articles;
   const start = index - 100;

@@ -86,6 +86,7 @@ async function activateArticleLink(
     currentPath,
     p.lastActiveIndex,
     p.seriesChannels,
+    p.isSeriesMode && (p.isScrapMode || p.seriesChannels.length === 0),
   );
   const findCurrentIndex = () =>
     findArticleIndex(p.articleList, currentPath, p.lastActiveIndex);
