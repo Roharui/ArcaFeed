@@ -176,11 +176,25 @@ async function checkNavigationUi(page) {
       layout.left > 20 ||
       layout.bottom < 700 ||
       layout.overflow ||
-      Math.abs(layout.height - layout.nativeHeight) > 1 ||
-      layout.alpha < 0.7 ||
-      layout.alpha > 0.8
+      layout.height !== 44 ||
+      layout.background !== 'rgba(72, 72, 72, 0.8)' ||
+      layout.alpha < 0.79 ||
+      layout.alpha > 0.81
     )
       throw new Error(`Unexpected button layout: ${JSON.stringify(layout)}`);
+    const heights = await page.evaluate(async () => {
+      const native = document.querySelector('.nav-control');
+      const button = document.querySelector('.arcafeed-navigation-trigger');
+      const visible = button.getBoundingClientRect().height;
+      document.body.classList.add('hide-nav-control');
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const hidden = button.getBoundingClientRect().height;
+      native.remove();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      return [visible, hidden, button.getBoundingClientRect().height];
+    });
+    if (heights.some((height) => height !== 44))
+      throw new Error(`Inconsistent heights: ${heights}`);
     results.push({ width, centered: [0, 150, 249], hover: 'passed', layout });
   }
   return { passed: true, results };

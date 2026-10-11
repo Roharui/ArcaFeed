@@ -237,6 +237,29 @@ input.helper-modal-tab-radio {
   overflow-wrap: anywhere;
 }
 
+.arcafeed-navigation-channel,
+.arcafeed-navigation-title,
+.arcafeed-navigation-current {
+  display: block;
+}
+
+.arcafeed-navigation-channel {
+  margin-bottom: 4px;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--color-text-muted, #888);
+}
+
+.arcafeed-navigation-title {
+  line-height: 1.5;
+}
+
+.arcafeed-navigation-current {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: #766df4;
+}
+
 .arcafeed-navigation-row[aria-current='page'] {
   border: 2px solid #766df4;
   font-weight: 600;
@@ -260,12 +283,12 @@ body .arcafeed-navigation-control {
   justify-content: center;
   min-width: 44px;
   box-sizing: border-box;
-  height: var(--arcafeed-navigation-height, 44px);
+  height: 44px;
   padding: 2px 6px;
   border: 1px solid var(--color-bd-btn);
   border-radius: 4px;
-  background: color-mix(in srgb, var(--color-bg-body) 75%, transparent);
-  color: var(--color-text);
+  background: rgba(72, 72, 72, 0.8);
+  color: #fff;
   text-decoration: none;
   cursor: pointer;
   transition:

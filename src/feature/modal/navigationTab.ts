@@ -73,6 +73,12 @@ export function createNavigationModal(
     );
     const selected = String(channel.val() || '');
     const ids = [...new Set(paths.map(readingChannelId))];
+    const showChannels =
+      ids.length > 1 ||
+      p.seriesChannels.length > 0 ||
+      p.href.channelId === 'my';
+    if (showChannels) tools.insertBefore(list);
+    else tools.detach();
     channel.empty().append($('<option>', { value: '', text: '전체 채널' }));
     for (const id of ids) {
       channel.append(
@@ -83,7 +89,7 @@ export function createNavigationModal(
       );
     }
     channel.val(ids.includes(selected) ? selected : '');
-    const filter = String(channel.val() || '');
+    const filter = showChannels ? String(channel.val() || '') : '';
     const entries = new Map(
       p.reading.entries.map((entry) => [entry.path, entry]),
     );
@@ -134,14 +140,30 @@ export function createNavigationModal(
       const name =
         entry?.channelName || p.articleFilterConfig[id]?.channelName || id;
       const current = index === currentIndex;
-      const row = readingButton(
-        `${index + 1}. ${name} · ${title}${current ? ' · 현재 글' : ''}`,
-        () => {
-          const latestIndex = p.articleList.indexOf(path);
-          if (latestIndex >= 0) navigateToArticle(p, latestIndex);
-        },
-      ).addClass('arcafeed-navigation-row');
-      if (current) row.attr('aria-current', 'page');
+      const row = readingButton('', () => {
+        const latestIndex = p.articleList.indexOf(path);
+        if (latestIndex >= 0) navigateToArticle(p, latestIndex);
+      })
+        .addClass('arcafeed-navigation-row')
+        .append(
+          ...(showChannels
+            ? [
+                $('<span>', {
+                  class: 'arcafeed-navigation-channel',
+                  text: name,
+                }),
+              ]
+            : []),
+          $('<span>', { class: 'arcafeed-navigation-title', text: title }),
+        );
+      if (current) {
+        row.attr('aria-current', 'page').append(
+          $('<span>', {
+            class: 'arcafeed-navigation-current',
+            text: '현재 글',
+          }),
+        );
+      }
       return row[0]!;
     };
     if (items.length) {
@@ -301,17 +323,8 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     );
     if (nativeButton) {
       const style = getComputedStyle(nativeButton);
-      trigger[0]!.style.backgroundColor = `color-mix(in srgb, ${style.backgroundColor} 75%, transparent)`;
-      const height =
-        nativeButton.getBoundingClientRect().height || parseFloat(style.height);
-      if (Number.isFinite(height) && height > 0)
-        trigger[0]!.style.setProperty(
-          '--arcafeed-navigation-height',
-          `${height}px`,
-        );
       // Keep the native theme and button shape without inheriting its click handler.
       for (const property of [
-        'color',
         'border',
         'border-radius',
         'box-shadow',
