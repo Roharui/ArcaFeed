@@ -181,6 +181,33 @@ test('recent history reads native records and matches subscription-feed aliases 
   );
 });
 
+test('recent entries retain the latest 300 without changing native history or visited checks', () => {
+  const records = Array.from({ length: 350 }, (_, index) => ({
+    slug: 'test',
+    articleId: index + 1,
+    regdateAt: index + 1,
+  }));
+  const original = JSON.stringify(records);
+  const { ReadingHistory, storage } = readingFixture({
+    recent_articles: original,
+  });
+  const history = new ReadingHistory();
+  assert.equal(history.entries.length, 300);
+  assert.equal(history.entries[0].path, '/b/test/350');
+  assert.equal(history.entries.at(-1).path, '/b/test/51');
+  assert.equal(history.hasVisited('/b/test/1'), true);
+  assert.equal(storage.getItem('recent_articles'), original);
+  assert.equal(storage.writes.length, 0);
+
+  const previousEntries = history.entries;
+  history.reload();
+  assert.equal(history.entries, previousEntries);
+  siteVisit(storage, history, entry('/b/test/351'));
+  assert.equal(history.entries.length, 300);
+  assert.equal(history.entries[0].path, '/b/test/351');
+  assert.equal(history.entries.at(-1).path, '/b/test/52');
+});
+
 test('native history reloads across tabs while checkpoint updates preserve other tabs positions', () => {
   const { ReadingHistory, storage } = readingFixture();
   const first = new ReadingHistory();

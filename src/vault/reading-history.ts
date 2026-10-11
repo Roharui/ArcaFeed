@@ -31,6 +31,7 @@ export const READING_PROGRESS_KEY = 'arcaFeed:readingProgress';
 export const SITE_RECENT_KEY = 'recent_articles';
 export const SITE_RECENT_DISABLED_KEY = 'recent_disabled';
 export const SITE_RECENT_URL = '/u/recents';
+export const RECENT_ENTRY_LIMIT = 300;
 export const SESSION_LIMIT = 20;
 const SESSION_ARTICLE_LIMIT = 2000;
 export const SESSION_TOTAL_ARTICLE_LIMIT = 5000;
@@ -90,6 +91,7 @@ export function isVisitedPath(
 export class ReadingHistory {
   private data: ReadingData;
   private recentEntries: ReadingEntry[] = [];
+  private visibleRecentEntries: ReadingEntry[] = [];
   private visitedPaths = new Set<string>();
   private listeners = new Map<() => void, readonly ReadingChange[]>();
   private historyRaw: string | null | undefined;
@@ -116,7 +118,7 @@ export class ReadingHistory {
   }
 
   get entries(): readonly ReadingEntry[] {
-    return this.recentEntries;
+    return this.visibleRecentEntries;
   }
 
   get sessions(): readonly ReadingSession[] {
@@ -377,6 +379,7 @@ export class ReadingHistory {
     this.recentRaw = recentRaw;
     this.recentDisabled = disabled;
     this.recentEntries = [];
+    this.visibleRecentEntries = [];
     if (disabled) return;
     const raw = this.repo.getJSON<unknown>(SITE_RECENT_KEY);
     const seenIds = new Set<string>();
@@ -408,6 +411,7 @@ export class ReadingHistory {
       });
     }
     this.recentEntries.sort((a, b) => b.visitedAt - a.visitedAt);
+    this.visibleRecentEntries = this.recentEntries.slice(0, RECENT_ENTRY_LIMIT);
   }
 
   private load(): ReadingData {
