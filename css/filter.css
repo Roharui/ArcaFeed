@@ -71,12 +71,14 @@ input.category-check:indeterminate + .category-span {
   background: rgba(118, 109, 244, 0.12);
 }
 
-input.category-check:checked + .category-span::before {
+input.category-check:not(.ele-category):not(.ele-category-all):checked
+  + .category-span::before {
   content: '✓';
   color: #766df4;
 }
 
-input.category-check:indeterminate + .category-span::before {
+input.category-check:not(.ele-category):not(.ele-category-all):indeterminate
+  + .category-span::before {
   content: '−';
   color: #766df4;
 }
