@@ -274,23 +274,25 @@ export function initReading(p: VaultAdapter): void {
   let checkpointTimer: ReturnType<typeof setTimeout> | undefined;
   let checkpointRemoved = false;
 
-  const skipButton = $('<button>', {
-    id: 'arcafeed-skip-visited',
-    type: 'button',
-    class: 'arcafeed-skip-setting swiper-no-swiping',
-    'aria-label': '본 글 건너뛰기',
-  });
-  skipButton.on('click', () => {
-    p.skipVisitedArticles = !p.skipVisitedArticles;
-    p.flushSave();
-  });
-  const heading = $(ARTICLE_TITLE_SELECTOR).first();
-  if (heading.length) {
-    heading
-      .addClass('arcafeed-article-heading-text')
-      .wrap('<div class="arcafeed-article-heading"></div>')
-      .parent()
-      .append(skipButton);
+  if (p.canSkipVisitedArticles) {
+    const skipButton = $('<button>', {
+      id: 'arcafeed-skip-visited',
+      type: 'button',
+      class: 'arcafeed-skip-setting swiper-no-swiping',
+      'aria-label': '본 글 건너뛰기',
+    });
+    skipButton.on('click', () => {
+      p.skipVisitedArticles = !p.skipVisitedArticles;
+      p.flushSave();
+    });
+    const heading = $(ARTICLE_TITLE_SELECTOR).first();
+    if (heading.length) {
+      heading
+        .addClass('arcafeed-article-heading-text')
+        .wrap('<div class="arcafeed-article-heading"></div>')
+        .parent()
+        .append(skipButton);
+    }
   }
 
   const checkpoint = () => {
