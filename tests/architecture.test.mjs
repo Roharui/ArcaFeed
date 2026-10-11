@@ -655,3 +655,53 @@ test('runtime source imports form an acyclic graph', () => {
   }
   for (const filename of graph.keys()) walk(filename);
 });
+
+test('list jumps preserve session parameters and share the navigation guard', () => {
+  const navigations = [];
+  const { navigateToArticle, toLink } = sourceLoader({
+    globals: {
+      window: { location: { replace: (url) => navigations.push(url) } },
+    },
+  })('src/feature/swiper/page.ts');
+  const p = vaultFixture({
+    activeIndex: 0,
+    articleList: ['/b/test/100', '/b/other/95', '/b/test/90'],
+    searchQuery: '?articleKey=feed&search=hello',
+  });
+  for (const index of [-1, 3, 1.5, NaN]) navigateToArticle(p, index);
+  assert.equal(p.saves, 0);
+  navigateToArticle(p, 2);
+  assert.deepEqual(navigations, ['/b/test/90?articleKey=feed&search=hello']);
+  assert.equal(p.activeIndex, 2);
+  assert.equal(p.saves, 1);
+  toLink('PREV')(p);
+  navigateToArticle(p, 1);
+  assert.equal(navigations.length, 1);
+});
+
+test('failed list jumps restore position and allow cross-channel retry', () => {
+  let fail = true;
+  const navigations = [];
+  const { navigateToArticle } = sourceLoader({
+    globals: {
+      window: {
+        location: {
+          replace: (url) => {
+            if (fail) throw new Error('blocked');
+            navigations.push(url);
+          },
+        },
+      },
+    },
+  })('src/feature/swiper/page.ts');
+  const p = vaultFixture({
+    activeIndex: 0,
+    articleList: ['/b/test/100', '/b/other/42'],
+  });
+  assert.throws(() => navigateToArticle(p, 1), /blocked/);
+  assert.equal(p.activeIndex, 0);
+  fail = false;
+  navigateToArticle(p, 1);
+  assert.equal(p.activeIndex, 1);
+  assert.deepEqual(navigations, ['/b/other/42']);
+});

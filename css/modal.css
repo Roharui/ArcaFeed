@@ -226,3 +226,60 @@ input.helper-modal-tab-radio {
     padding-top: 10px;
   }
 }
+
+.arcafeed-navigation-row {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 12px;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.arcafeed-navigation-row[aria-current='page'] {
+  border: 2px solid #766df4;
+  font-weight: 600;
+}
+
+.arcafeed-navigation-trigger {
+  position: fixed;
+  right: 16px;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  z-index: 10000;
+  border: 1px solid #766df4;
+  border-radius: 24px;
+  padding: 10px 16px;
+  background: var(--color-bg-body);
+  color: var(--color-text);
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition:
+    opacity 0.35s ease,
+    visibility 0.35s;
+}
+
+.arcafeed-navigation-trigger.is-idle {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arcafeed-navigation-trigger {
+    transition: none;
+  }
+}
+
+.arcafeed-navigation-panel .helper-modal-navigation {
+  display: flex;
+}
+
+.arcafeed-navigation-panel .helper-modal-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.arcafeed-navigation-panel .helper-modal-navigation {
+  flex: 1;
+}

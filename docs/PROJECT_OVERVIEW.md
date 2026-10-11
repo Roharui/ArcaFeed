@@ -69,6 +69,9 @@ Webpack으로 코드와 CSS를 묶으며 jQuery, Swiper, Toastify는 유저스�
 조회 결과는 시작 시 캡처한 세션이 여전히 유효할 때만 반영합니다.
 이벤트 중복, 병렬 실패와 조회 무효화의 상세 동작은 [아키텍처](ARCHITECTURE.md)를 참고하세요.
 
+탐색 목록은 `feature/modal/navigationTab.ts`에서 고정 위치 버튼과 독립 패널을 제공합니다.
+현재 목록·인덱스를 구독하고, 직접 이동은 `feature/swiper/page.ts`의 공용 이동 함수를 사용합니다.
+
 ## 상태와 저장소
 
 [Store](../src/vault/store.ts)는 `AppState`와 구독을 관리하고,

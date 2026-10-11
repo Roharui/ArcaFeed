@@ -1,3 +1,4 @@
+import { initNavigationList } from '@/feature/modal/navigationTab';
 import { StepRunner } from '@/core/step-runner';
 import { initArticlePrefetch } from '@/feature/article/prefetch';
 
@@ -42,6 +43,9 @@ class EventManager {
       [addVersionInfo],
       [initLink, initButton, initEvent, initSeriesContent, initUi],
       initReading,
+      (p: VaultAdapter) => {
+        initNavigationList(p);
+      },
       initSwiper,
       initArticlePrefetch,
     ];

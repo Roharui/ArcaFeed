@@ -22,7 +22,7 @@ const initEvent = (p: VaultAdapter) => {
       event.metaKey
     )
       return;
-    if (document.querySelector('#dialog')) return;
+    if (document.querySelector('#dialog, .arcafeed-navigation-panel')) return;
     const target = event.target;
     if (
       target instanceof HTMLElement &&

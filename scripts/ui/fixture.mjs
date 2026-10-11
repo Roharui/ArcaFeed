@@ -1,4 +1,5 @@
 import $ from 'jquery';
+import { initNavigationList } from '@/feature/modal/navigationTab';
 import './fixture.css';
 import { createInitialState } from '@/vault/store';
 import { eventBus } from '@/core/app-events';
@@ -15,6 +16,7 @@ const nativeFetch = window.fetch.bind(window);
 let scenario;
 let vault;
 let savedCount = 0;
+let cleanupNavigation;
 
 function notify(message) {
   $('#fixture-event').text(message);
@@ -84,7 +86,7 @@ function makeVault(data) {
     isScrapMode: mode === 'scrap',
     seriesChannels: mode === 'feed' ? ['test0', 'test1'] : [],
     articleKey: 'ui-preview',
-    articleList: ['/b/test0/100'],
+    articleList: data.entries.map((entry) => entry.path),
     activeIndex: 0,
     articleFilterConfig: {
       test0: {
@@ -108,10 +110,17 @@ function makeVault(data) {
       return modes.includes(this.href.mode);
     },
     isNextPageActive: () => true,
+    getState() {
+      return this;
+    },
+    subscribe() {
+      return () => {};
+    },
   };
 }
 
 function render(options = scenario) {
+  cleanupNavigation?.();
   if (vault) initCloseModal(vault);
   scenario = normalizeScenario(options);
   savedCount = 0;
@@ -134,6 +143,7 @@ function render(options = scenario) {
   vault = makeVault(data);
   notify('테스트 데이터가 준비됐습니다.');
   initModal(vault);
+  cleanupNavigation = initNavigationList(vault);
   return scenario;
 }
 
