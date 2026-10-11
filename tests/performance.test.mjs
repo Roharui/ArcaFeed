@@ -163,12 +163,17 @@ test('refill checks stop after three available articles instead of scanning the 
   assert.equal(visits, 3);
 });
 
-function loadLink(fetches, rows = []) {
+function loadLink(fetches, rows = [], onFilter = () => {}) {
   return sourceLoader({
     globals: { console: quietConsole },
     mocks: {
       './fetch': fetches,
-      '@/feature/filter': { filterLink: () => rows },
+      '@/feature/filter': {
+        filterLink: (p, applyCss) => {
+          onFilter(p, applyCss);
+          return rows;
+        },
+      },
       '@/feature/search': { parseSearchQuery: (p) => p },
       'toastify-js': toastMock,
     },
@@ -1295,6 +1300,7 @@ test('a direct article uses its DOM listing while saved sessions keep their exis
 test('best-only mode never seeds ordinary DOM rows and empty channels initialize without waiting', async () => {
   const gate = deferred();
   let fetches = 0;
+  const styledModes = [];
   const { initLink } = loadLink(
     {
       fetchFirstBatch: async () => {
@@ -1303,6 +1309,10 @@ test('best-only mode never seeds ordinary DOM rows and empty channels initialize
       },
     },
     ['/b/test/99'],
+    (p, applyCss) => {
+      assert.equal(applyCss, true);
+      styledModes.push(p.href.mode);
+    },
   );
   const p = vaultFixture({
     articleList: [],
@@ -1317,6 +1327,8 @@ test('best-only mode never seeds ordinary DOM rows and empty channels initialize
     articleFilterConfig: { test: { onlyBest: true } },
   });
   await initLink(channel);
+  assert.deepEqual(styledModes, ['ARTICLE', 'CHANNEL']);
+  assert.deepEqual(channel.articleList, []);
   assert.equal(fetches, 2);
   assert.equal(channel.isNextPageActive(), false);
   gate.resolve();

@@ -41,13 +41,13 @@ async function initChannelLink(p: VaultAdapter): Promise<void> {
   parseSearchQuery(p);
 
   const channelFilter = p.articleFilterConfig[p.href.channelId];
+  const newLinks = filterLink(p, true);
 
   if (channelFilter?.onlyBest) {
     startBackgroundLoad(p, () => fetchFirstBatch(p, p.href.articleId));
     return;
   }
 
-  const newLinks = filterLink(p, true);
   p.articleList = newLinks.length > 0 ? newLinks : [];
   if (newLinks.length === 0) {
     startBackgroundLoad(p, () => fetchFirstBatch(p, p.href.articleId));
