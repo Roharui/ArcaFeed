@@ -69,7 +69,7 @@ for (const [name, supportsHover, hovered, hides] of [
         MutationObserver: Observer,
         requestAnimationFrame: () => 1,
         setTimeout(callback, delay) {
-          assert.equal(delay, 3000);
+          assert.equal(delay, 1500);
           idleCallback = callback;
           return 1;
         },

@@ -380,7 +380,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     idleTimer = setTimeout(() => {
       if (loading || panel || isHovered()) return;
       trigger.addClass('is-idle');
-    }, 3000);
+    }, 1500);
   };
   trigger.on('pointerenter focus', reveal).on('pointerleave', reveal);
   document.addEventListener('scroll', reveal, { passive: true, capture: true });
