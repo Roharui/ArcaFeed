@@ -1,3 +1,4 @@
+import { navigationMode } from './navigation-context';
 import type { AppState } from './store';
 
 type ReadingContext = Pick<
@@ -7,16 +8,27 @@ type ReadingContext = Pick<
 
 /** Keep skip preferences stable as a feed moves between channels and articles. */
 export function readingPreferenceKey(p: ReadingContext): string {
-  if (p.isScrapMode || p.href.mode === 'SCRAP') return 'scrap';
-  if (p.href.mode === 'HOME' || (p.isSeriesMode && p.seriesChannels.length))
-    return 'home';
-  if (p.isSeriesMode) return `series:${p.articleKey}`;
-  return `channel:${p.href.channelId}`;
+  switch (navigationMode(p)) {
+    case 'scrap':
+      return 'scrap';
+    case 'subscription':
+      return 'home';
+    case 'series':
+      return `series:${p.articleKey}`;
+    case 'channel':
+      return `channel:${p.href.channelId}`;
+  }
 }
 
 export function readingContextLabel(p: ReadingContext): string {
-  if (p.isScrapMode || p.href.mode === 'SCRAP') return '스크랩';
-  if (p.href.mode === 'HOME' || (p.isSeriesMode && p.seriesChannels.length))
-    return '구독 피드';
-  return p.isSeriesMode ? '이 시리즈' : '이 채널';
+  switch (navigationMode(p)) {
+    case 'scrap':
+      return '스크랩';
+    case 'subscription':
+      return '구독 피드';
+    case 'series':
+      return '이 시리즈';
+    case 'channel':
+      return '이 채널';
+  }
 }

@@ -10,6 +10,7 @@ import {
   withArticleKey,
 } from '@/utils/article-key';
 
+import { navigationMode } from '@/vault/navigation-context';
 import type { VaultAdapter } from '@/vault';
 
 // ── Types ──────────────────────────────────────────────
@@ -118,9 +119,7 @@ function initSeriesContent(p: VaultAdapter): void {
 
   $('.article-body')!.append(buildShortcutDiv(window_));
 
-  // Scrap and subscription feeds also use the series flag.
-  // Hide the button only when already browsing a post's own series.
-  if (p.isSeriesMode && !p.isScrapMode && p.seriesChannels.length === 0) return;
+  if (navigationMode(p) === 'series') return;
 
   // Other feeds can open this post's series in a separate tab.
   const $btnWrapper = $('<div>', { class: 'series-control-btns' }).append(

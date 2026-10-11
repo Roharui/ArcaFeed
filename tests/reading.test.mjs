@@ -479,7 +479,7 @@ test('history search avoids autocomplete plugin dispatch, waits for Korean compo
   assert.equal(changes, 2);
 });
 
-test('series and scrap modes disable skipping without changing channel preferences', () => {
+test('subscription feeds allow skipping while ordinary series and scrap preserve preferences', () => {
   const { load } = readingFixture({
     recent_articles: JSON.stringify([
       { slug: 'test', articleId: 99, regdateAt: 1 },
@@ -510,7 +510,7 @@ test('series and scrap modes disable skipping without changing channel preferenc
     assert.equal(vault.getAdjacentArticleIndex('NEXT'), 2);
     for (const mode of [
       { isSeriesMode: true, isScrapMode: false, seriesChannels: [] },
-      { isSeriesMode: true, isScrapMode: false, seriesChannels: ['test'] },
+      { isSeriesMode: true, isScrapMode: true, seriesChannels: ['test'] },
       { isSeriesMode: true, isScrapMode: true, seriesChannels: [] },
       { isSeriesMode: false, isScrapMode: true, seriesChannels: [] },
     ]) {
@@ -522,11 +522,30 @@ test('series and scrap modes disable skipping without changing channel preferenc
       vault.skipVisitedArticles = false;
       assert.equal(vault.uiSettings.skipVisitedContexts, preferences);
     }
+    vault.updateState({
+      isSeriesMode: true,
+      isScrapMode: false,
+      seriesChannels: ['test', 'other'],
+    });
+    assert.equal(vault.canSkipVisitedArticles, true);
+    assert.equal(vault.skipVisitedArticles, true);
+    assert.equal(vault.getAdjacentArticleIndex('NEXT'), 2);
+    vault.skipVisitedArticles = false;
+    assert.equal(vault.getAdjacentArticleIndex('NEXT'), 1);
+    assert.equal(vault.uiSettings.skipVisitedContexts.home, false);
+    assert.equal(vault.uiSettings.skipVisitedContexts['channel:test'], true);
+    vault.href = { ...vault.href, mode: 'HOME', channelId: 'my' };
+    assert.equal(vault.canSkipVisitedArticles, true);
+    assert.equal(vault.skipVisitedArticles, false);
+    vault.skipVisitedArticles = true;
+    vault.href = { ...vaultFixture().href, channelId: 'other' };
+    assert.equal(vault.skipVisitedArticles, true);
+    assert.equal(vault.uiSettings.skipVisitedContexts.home, true);
     vault.updateState({ isSeriesMode: false, isScrapMode: false });
     vault.href = { ...vault.href, mode: 'SCRAP' };
     assert.equal(vault.skipVisitedArticles, false);
     vault.skipVisitedArticles = true;
-    assert.equal(vault.uiSettings.skipVisitedContexts, preferences);
+    assert.equal(vault.uiSettings.skipVisitedContexts.home, true);
     vault.href = vaultFixture().href;
     assert.equal(vault.canSkipVisitedArticles, true);
     assert.equal(vault.skipVisitedArticles, true);

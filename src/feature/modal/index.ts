@@ -9,6 +9,7 @@ import { createSubscribeSettingModal } from './subscribeTab';
 import { createHistoryModal } from './historyTab';
 import { createResumeModal } from './resumeTab';
 
+import { navigationMode } from '@/vault/navigation-context';
 import type { VaultAdapter } from '@/vault';
 
 function resolveModalTab(lastTab: string, availableTabs: string[]): string {
@@ -19,16 +20,13 @@ function resolveModalTab(lastTab: string, availableTabs: string[]): string {
 
 function initModal(p: VaultAdapter) {
   initCloseModal(p);
-  const isHome = p.isCurrentMode('HOME');
-  const hasSubscriptions =
-    isHome ||
-    p.href.channelId === 'my' ||
-    (p.isSeriesMode && p.seriesChannels.length > 0);
-  const availableTabs = hasSubscriptions
-    ? ['subscribe', 'ui', 'history', 'resume']
-    : p.isSeriesMode || p.isCurrentMode('SCRAP')
-      ? ['ui', 'history', 'resume']
-      : ['filter', 'ui', 'history', 'resume'];
+  const mode = navigationMode(p);
+  const availableTabs =
+    mode === 'subscription'
+      ? ['subscribe', 'ui', 'history', 'resume']
+      : mode === 'series' || mode === 'scrap'
+        ? ['ui', 'history', 'resume']
+        : ['filter', 'ui', 'history', 'resume'];
   const labels: Record<string, { icon: string; title: string }> = {
     filter: { icon: '🔍', title: '필터' },
     ui: { icon: '🪟', title: 'UI 설정' },
@@ -68,7 +66,7 @@ function initModal(p: VaultAdapter) {
   dialogBody.append(createHistoryModal(p));
   dialogBody.append(createResumeModal(p));
 
-  if (hasSubscriptions) {
+  if (mode === 'subscription') {
     dialogBody.append(createSubscribeSettingModal(p));
   }
 

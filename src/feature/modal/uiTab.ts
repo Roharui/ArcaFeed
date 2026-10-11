@@ -103,7 +103,7 @@ function createUISettingModal(p: VaultAdapter): JQuery<HTMLElement> {
       p.skipVisitedArticles,
       p.canSkipVisitedArticles
         ? `${readingContextLabel(p)}에만 적용됩니다. 다른 채널·피드의 설정은 따로 기억합니다.`
-        : '시리즈·스크랩 모드에서는 본 글 건너뛰기를 사용할 수 없습니다.',
+        : '일반 시리즈·스크랩 모드에서는 본 글 건너뛰기를 사용할 수 없습니다.',
     )
       .find('input')
       .prop('disabled', !p.canSkipVisitedArticles)

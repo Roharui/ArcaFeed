@@ -78,7 +78,7 @@ function updateVisitedIndicators(p: VaultAdapter): void {
       'aria-label': `${readingContextLabel(p)}에서 본 글 건너뛰기`,
       title: p.canSkipVisitedArticles
         ? `${readingContextLabel(p)} · 본 글 건너뛰기: ${skip ? '켜짐 · 클릭하여 끄기' : '꺼짐 · 클릭하여 켜기'}`
-        : '시리즈·스크랩 모드에서는 본 글 건너뛰기를 사용할 수 없습니다.',
+        : '일반 시리즈·스크랩 모드에서는 본 글 건너뛰기를 사용할 수 없습니다.',
     });
 }
 

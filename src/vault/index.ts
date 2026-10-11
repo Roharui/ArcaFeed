@@ -9,6 +9,7 @@ import { Store } from './store';
 import { StorageRepository } from './repository';
 import { ConfigService } from './config';
 import { ReadingHistory } from './reading-history';
+import { navigationMode } from './navigation-context';
 import { readingPreferenceKey } from './reading-context';
 import type { ReadingSession } from './reading-history';
 import type { PageMode } from '@/types';
@@ -176,9 +177,8 @@ export class VaultAdapter {
   }
 
   get canSkipVisitedArticles(): boolean {
-    return (
-      !this.isSeriesMode && !this.isScrapMode && !this.isCurrentMode('SCRAP')
-    );
+    const mode = navigationMode(this);
+    return mode === 'channel' || mode === 'subscription';
   }
 
   get skipVisitedArticles(): boolean {
