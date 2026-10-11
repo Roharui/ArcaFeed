@@ -215,6 +215,7 @@ export function createNavigationModal(
 
 /** A persistent entry point independent of the settings dialog. */
 export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
+  if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
   if (document.querySelector('.arcafeed-navigation-trigger')) return;
   const control = $('<div>', {
     class: 'arcafeed-navigation-control',
