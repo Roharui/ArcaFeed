@@ -828,6 +828,51 @@ test('skipping seen articles scans later pages and keeps seen links for backward
 
 for (const scenario of [
   {
+    name: 'one next article remains',
+    links: ['/b/test/99'],
+    expectedToasts: 0,
+  },
+  {
+    name: 'multiple next articles remain',
+    links: ['/b/test/99', '/b/test/98'],
+    expectedToasts: 0,
+  },
+  { name: 'no next article remains', links: [], expectedToasts: 1 },
+  {
+    name: 'only visited next articles remain with skipping enabled',
+    links: ['/b/test/99'],
+    skipVisited: true,
+    expectedToasts: 1,
+  },
+  {
+    name: 'an unvisited next article remains with skipping enabled',
+    links: ['/b/test/99', '/b/test/98'],
+    skipVisited: true,
+    expectedToasts: 0,
+  },
+]) {
+  test(`exhausted search toast when ${scenario.name}`, async () => {
+    const toasts = [];
+    const { load } = listingAdapter(
+      { empty: { rows: [], next: null } },
+      async () => ({ responseText: 'empty' }),
+      { showToast: (message) => toasts.push(message) },
+    );
+    const p = vaultFixture({
+      articleList: ['/b/test/100', ...scenario.links],
+      activeIndex: 0,
+      uiSettings: {
+        skipVisitedContexts: { 'channel:test': Boolean(scenario.skipVisited) },
+      },
+      reading: { hasVisited: (path) => path === '/b/test/99' },
+    });
+    await load('src/feature/article/fetch.ts').fetchFirstBatch(p, '100');
+    assert.equal(toasts.length, scenario.expectedToasts);
+  });
+}
+
+for (const scenario of [
+  {
     name: 'accepting continued search finds an unseen article past twenty pages',
     totalPages: 25,
     unseenPage: 22,

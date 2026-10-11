@@ -133,7 +133,7 @@ async function* fetchArticlePages(
 
 /**
  * Fetch until the first page that yields results, then stop.
- * Shows a failure toast if no articles are found across all pages.
+ * Shows a failure toast only if no navigable next article remains.
  */
 async function fetchFirstBatch(
   p: VaultAdapter,
@@ -178,7 +178,7 @@ async function fetchFirstBatch(
           return;
       }
     }
-    if (isCurrent() && !searchCancelled)
+    if (isCurrent() && !searchCancelled && !p.isNextPageActive())
       showToast(
         p.skipVisitedArticles
           ? '아직 방문하지 않은 다음 게시글을 찾지 못했습니다.'
