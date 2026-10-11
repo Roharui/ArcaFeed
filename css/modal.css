@@ -242,8 +242,8 @@ input.helper-modal-tab-radio {
   font-weight: 600;
 }
 
-/* Reuse the site's .nav-control > a appearance, with a left-side position. */
-body .nav-control.arcafeed-navigation-control {
+/* Keep the control independent of site navigation selectors. */
+body .arcafeed-navigation-control {
   position: fixed;
   top: auto;
   right: auto;

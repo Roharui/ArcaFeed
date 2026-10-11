@@ -179,7 +179,7 @@ export function createNavigationModal(
 export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
   if (document.querySelector('.arcafeed-navigation-trigger')) return;
   const control = $('<div>', {
-    class: 'nav-control arcafeed-navigation-control',
+    class: 'arcafeed-navigation-control',
   });
   const count = $('<span>', { class: 'arcafeed-navigation-count' });
   const trigger = $('<a>', {
@@ -283,7 +283,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
   const position = () => {
     frame = undefined;
     const nativeButton = document.querySelector<HTMLElement>(
-      '.nav-control:not(.arcafeed-navigation-control) a, .nav-control:not(.arcafeed-navigation-control) button',
+      '.nav-control a, .nav-control button',
     );
     if (nativeButton) {
       const style = getComputedStyle(nativeButton);
@@ -309,7 +309,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     // The site's navigation may change size, visibility, or location.
     const obstacles = Array.from(
       document.querySelectorAll<HTMLElement>(
-        '.nav-control:not(.arcafeed-navigation-control), .fetch-loader.active',
+        '.nav-control, .fetch-loader.active',
       ),
     )
       .map((control) => control.getBoundingClientRect())
@@ -349,9 +349,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
   resizeObserver.observe(control[0]!);
   const observeControls = () => {
     document
-      .querySelectorAll(
-        '.nav-control:not(.arcafeed-navigation-control), .fetch-loader',
-      )
+      .querySelectorAll('.nav-control, .fetch-loader')
       .forEach((control) => resizeObserver.observe(control));
     schedulePosition();
   };

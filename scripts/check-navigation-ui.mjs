@@ -16,6 +16,26 @@ async function checkNavigationUi(page) {
         '<a style="display:block;width:44px;height:44px;background:rgb(35,45,55);color:white;border-radius:2px">↑</a>';
       document.body.append(native);
     });
+    const isolated = await page.evaluate(() => {
+      // Simulate site code adding settings to every native navigation container.
+      document.querySelectorAll('.nav-control').forEach((control) => {
+        const settings = document.createElement('button');
+        settings.textContent = '설정';
+        control.append(settings);
+      });
+      const control = document.querySelector('.arcafeed-navigation-control');
+      document.body.classList.add('hide-nav-control');
+      const visible = getComputedStyle(control).display !== 'none';
+      document.body.classList.remove('hide-nav-control');
+      return (
+        visible &&
+        !control.matches('.nav-control') &&
+        control.children.length === 1 &&
+        control.firstElementChild.matches('.arcafeed-navigation-trigger')
+      );
+    });
+    if (!isolated)
+      throw new Error('Site navigation code affected the exploration control');
     const trigger = page.locator('.arcafeed-navigation-trigger');
     await page.mouse.move(width / 2, 10);
     for (const index of [0, 150, 249]) {
