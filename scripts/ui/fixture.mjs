@@ -1,4 +1,5 @@
 import $ from 'jquery';
+import { showFetchLoader, hideFetchLoader } from '@/feature/article/loading';
 import { initNavigationList } from '@/feature/modal/navigationTab';
 import './fixture.css';
 import { createInitialState } from '@/vault/store';
@@ -185,6 +186,8 @@ document.addEventListener(
 );
 
 window.uiFixture = {
+  showFetchLoader,
+  hideFetchLoader,
   render,
   get scenario() {
     return { ...scenario };

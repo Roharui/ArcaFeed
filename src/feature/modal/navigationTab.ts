@@ -1,6 +1,10 @@
 import $ from 'jquery';
 import '@css/modal.css';
 import '@css/reading.css';
+import {
+  isArticleLoading,
+  subscribeArticleLoading,
+} from '@/feature/article/loading';
 import { navigateToArticle } from '@/feature/swiper/page';
 import {
   readingButton,
@@ -181,6 +185,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
   const control = $('<div>', {
     class: 'arcafeed-navigation-control',
   });
+  let loading = isArticleLoading();
   const count = $('<span>', { class: 'arcafeed-navigation-count' });
   const trigger = $('<a>', {
     class: 'arcafeed-navigation-trigger',
@@ -190,7 +195,13 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     'aria-expanded': 'false',
     title: '탐색 목록',
   })
-    .append($('<span>', { class: 'bi-list-ul', 'aria-hidden': 'true' }), count)
+    .append(
+      $('<span>', { class: 'bi-list-ul', 'aria-hidden': 'true' }),
+      count,
+      $(
+        '<svg class="arcafeed-navigation-loading-ring" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="2" y="2" width="96" height="96" rx="8" pathLength="100" /></svg>',
+      ),
+    )
     .on('click', () => open())
     .on('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
@@ -258,7 +269,10 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
         ? `${index + 1}/${p.articleList.length}`
         : `${p.articleList.length}`,
     );
-    trigger.attr('aria-label', `${label}, 불러온 목록 기준, 목록 열기`);
+    trigger.attr(
+      'aria-label',
+      `${label}, ${loading ? '게시글 목록 불러오는 중, ' : ''}불러온 목록 기준, 목록 열기`,
+    );
   };
   control.append(trigger).appendTo('body');
   let previous = p.getState();
@@ -287,9 +301,16 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     );
     if (nativeButton) {
       const style = getComputedStyle(nativeButton);
+      trigger[0]!.style.backgroundColor = `color-mix(in srgb, ${style.backgroundColor} 75%, transparent)`;
+      const height =
+        nativeButton.getBoundingClientRect().height || parseFloat(style.height);
+      if (Number.isFinite(height) && height > 0)
+        trigger[0]!.style.setProperty(
+          '--arcafeed-navigation-height',
+          `${height}px`,
+        );
       // Keep the native theme and button shape without inheriting its click handler.
       for (const property of [
-        'background-color',
         'color',
         'border',
         'border-radius',
@@ -308,9 +329,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     let top = rect.top;
     // The site's navigation may change size, visibility, or location.
     const obstacles = Array.from(
-      document.querySelectorAll<HTMLElement>(
-        '.nav-control, .fetch-loader.active',
-      ),
+      document.querySelectorAll<HTMLElement>('.nav-control'),
     )
       .map((control) => control.getBoundingClientRect())
       .filter(
@@ -335,7 +354,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     clearTimeout(idleTimer);
     schedulePosition();
     idleTimer = setTimeout(() => {
-      if (panel || trigger.is(':hover')) return;
+      if (loading || panel || trigger.is(':hover')) return;
       trigger.addClass('is-idle');
     }, 3000);
   };
@@ -349,7 +368,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
   resizeObserver.observe(control[0]!);
   const observeControls = () => {
     document
-      .querySelectorAll('.nav-control, .fetch-loader')
+      .querySelectorAll('.nav-control')
       .forEach((control) => resizeObserver.observe(control));
     schedulePosition();
   };
@@ -360,7 +379,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
         return (
           target instanceof Element &&
           !target.closest('.arcafeed-navigation-control') &&
-          (target.matches('body, .nav-control, .fetch-loader') ||
+          (target.matches('body, .nav-control') ||
             target.closest('.nav-control'))
         );
       })
@@ -374,13 +393,20 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     attributeFilter: ['class', 'style', 'hidden'],
   });
   observeControls();
-  update();
-  reveal();
+  const unsubscribeLoading = subscribeArticleLoading((active) => {
+    loading = active;
+    trigger
+      .toggleClass('is-loading', loading)
+      .attr('aria-busy', String(loading));
+    update();
+    reveal();
+  });
   return () => {
     close();
     clearTimeout(idleTimer);
     if (frame !== undefined) cancelAnimationFrame(frame);
     unsubscribe();
+    unsubscribeLoading();
     resizeObserver.disconnect();
     mutationObserver.disconnect();
     document.removeEventListener('scroll', reveal, true);

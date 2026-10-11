@@ -13,7 +13,7 @@ async function checkNavigationUi(page) {
       native.className = 'nav-control';
       native.style.cssText = 'position:fixed;right:16px;bottom:20px';
       native.innerHTML =
-        '<a style="display:block;width:44px;height:44px;background:rgb(35,45,55);color:white;border-radius:2px">↑</a>';
+        '<a style="display:block;width:44px;height:36px;background:rgb(35,45,55);color:white;border-radius:2px">↑</a>';
       document.body.append(native);
     });
     const isolated = await page.evaluate(() => {
@@ -100,6 +100,57 @@ async function checkNavigationUi(page) {
     await page.waitForTimeout(100);
     if (!(await trigger.isVisible()))
       throw new Error('Button did not reappear');
+    await page.evaluate(() => {
+      window.uiFixture.showFetchLoader();
+      window.uiFixture.showFetchLoader();
+    });
+    await page.mouse.move(width / 2, 10);
+    await page.waitForTimeout(3400);
+    const loading = await page.evaluate(() => {
+      const button = document.querySelector('.arcafeed-navigation-trigger');
+      const ring = button.querySelector('.arcafeed-navigation-loading-ring');
+      const stroke = ring.querySelector('rect');
+      return (
+        getComputedStyle(button).visibility === 'visible' &&
+        getComputedStyle(ring).display !== 'none' &&
+        getComputedStyle(stroke).animationName ===
+          'arcafeed-navigation-loading' &&
+        button.getAttribute('aria-busy') === 'true' &&
+        !document.querySelector('.fetch-loader')
+      );
+    });
+    if (!loading)
+      throw new Error(
+        'Loading ring is missing or the loading button disappeared',
+      );
+    await trigger.click();
+    await page
+      .locator('.arcafeed-navigation-panel .arcafeed-reading-close')
+      .click();
+    await page.evaluate(() => window.uiFixture.hideFetchLoader());
+    if (
+      !(await trigger.evaluate((button) =>
+        button.classList.contains('is-loading'),
+      ))
+    )
+      throw new Error(
+        'First completed request cleared the loading ring too early',
+      );
+    await page.evaluate(() => window.uiFixture.hideFetchLoader());
+    if (
+      await trigger.evaluate((button) =>
+        button.classList.contains('is-loading'),
+      )
+    )
+      throw new Error('Loading ring remained after all requests completed');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.evaluate(() => window.uiFixture.showFetchLoader());
+    const reduced = await page
+      .locator('.arcafeed-navigation-loading-ring rect')
+      .evaluate((stroke) => getComputedStyle(stroke).animationName === 'none');
+    if (!reduced) throw new Error('Loading animation ignored reduced motion');
+    await page.evaluate(() => window.uiFixture.hideFetchLoader());
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
     const layout = await page.evaluate(() => {
       const button = document.querySelector('.arcafeed-navigation-trigger');
       const bounds = button.getBoundingClientRect();
@@ -107,6 +158,17 @@ async function checkNavigationUi(page) {
         left: bounds.left,
         bottom: bounds.bottom,
         background: getComputedStyle(button).backgroundColor,
+        nativeHeight: document
+          .querySelector('.nav-control a')
+          .getBoundingClientRect().height,
+        height: bounds.height,
+        alpha: (() => {
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          context.fillStyle = getComputedStyle(button).backgroundColor;
+          context.fillRect(0, 0, 1, 1);
+          return context.getImageData(0, 0, 1, 1).data[3] / 255;
+        })(),
         overflow: document.documentElement.scrollWidth > innerWidth,
       };
     });
@@ -114,7 +176,9 @@ async function checkNavigationUi(page) {
       layout.left > 20 ||
       layout.bottom < 700 ||
       layout.overflow ||
-      layout.background !== 'rgb(35, 45, 55)'
+      Math.abs(layout.height - layout.nativeHeight) > 1 ||
+      layout.alpha < 0.7 ||
+      layout.alpha > 0.8
     )
       throw new Error(`Unexpected button layout: ${JSON.stringify(layout)}`);
     results.push({ width, centered: [0, 150, 249], hover: 'passed', layout });

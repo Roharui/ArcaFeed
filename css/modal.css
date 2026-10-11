@@ -259,11 +259,12 @@ body .arcafeed-navigation-control {
   align-items: center;
   justify-content: center;
   min-width: 44px;
-  min-height: 44px;
-  padding: 6px;
+  box-sizing: border-box;
+  height: var(--arcafeed-navigation-height, 44px);
+  padding: 2px 6px;
   border: 1px solid var(--color-bd-btn);
   border-radius: 4px;
-  background: var(--color-bg-body);
+  background: color-mix(in srgb, var(--color-bg-body) 75%, transparent);
   color: var(--color-text);
   text-decoration: none;
   cursor: pointer;
@@ -273,7 +274,8 @@ body .arcafeed-navigation-control {
 }
 
 .arcafeed-navigation-trigger > .bi-list-ul {
-  font-size: 1.25rem;
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .arcafeed-navigation-count {
@@ -308,4 +310,46 @@ body .arcafeed-navigation-control {
 
 .arcafeed-navigation-panel .helper-modal-navigation {
   flex: 1;
+}
+
+/* The moving stroke stays on the button perimeter; its contents do not rotate. */
+.arcafeed-navigation-trigger {
+  position: relative;
+}
+
+.arcafeed-navigation-loading-ring {
+  position: absolute;
+  inset: -5px;
+  width: calc(100% + 10px);
+  height: calc(100% + 10px);
+  overflow: visible;
+  pointer-events: none;
+  display: none;
+}
+
+.arcafeed-navigation-trigger.is-loading .arcafeed-navigation-loading-ring {
+  display: block;
+}
+
+.arcafeed-navigation-loading-ring rect {
+  fill: none;
+  stroke: #766df4;
+  stroke-width: 3px;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-dasharray: 28 72;
+  animation: arcafeed-navigation-loading 1s linear infinite;
+}
+
+@keyframes arcafeed-navigation-loading {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arcafeed-navigation-loading-ring rect {
+    animation: none;
+    stroke-dasharray: none;
+  }
 }

@@ -69,3 +69,7 @@ npm run test:ui:server
 `browser_run_code_unsafe({ filename: "scripts/check-navigation-ui.mjs" })`로 실행합니다.
 375px·1200px 화면에서 사이트 버튼 스타일 적용, 좌측 하단 배치, hover 유지와
 hover 종료 후 3초 숨김, 목록 첫·중간·마지막 글의 중앙 정렬을 확인합니다.
+
+탐색 버튼 전용 검사는 목록 로딩 중 테두리 애니메이션·버튼 유지·목록 열기,
+동시 요청의 마지막 완료 시 로딩 해제, 동작 줄이기 설정도 확인합니다.
+별도 `.fetch-loader` 표시가 생성되지 않는지 검사합니다.

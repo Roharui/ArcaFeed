@@ -15,27 +15,7 @@ import { isVisitedPath } from '@/vault/reading-history';
 import type { ArticleFilterImpl } from '@/types';
 import type { VaultAdapter } from '@/vault';
 
-// ── Loading indicator ──────────────────────────────────
-
-function getLoader(): JQuery<HTMLElement> {
-  let $loader = $('#arcafeed-fetch-loader');
-  if (!$loader.length) {
-    $loader = $('<div id="arcafeed-fetch-loader" class="fetch-loader"></div>');
-    $('body').append($loader);
-  }
-  return $loader;
-}
-
-let activeLoads = 0;
-
-function showFetchLoader(): void {
-  if (activeLoads++ === 0) getLoader().addClass('active');
-}
-
-function hideFetchLoader(): void {
-  activeLoads = Math.max(0, activeLoads - 1);
-  if (activeLoads === 0) getLoader().removeClass('active');
-}
+import { showFetchLoader, hideFetchLoader } from './loading';
 
 // ── Helpers ────────────────────────────────────────────
 
