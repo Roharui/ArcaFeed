@@ -622,132 +622,161 @@ test('deleting one checkpoint keeps visits and other checkpoints in older tabs',
   );
 });
 
-test('deleting the current checkpoint prevents scroll and pagehide from recreating it', () => {
-  const storage = memoryStorage();
-  const listeners = new Map();
-  const timers = new Map();
-  let timerId = 0;
-  let indicatorScans = 0;
-  const window = {
-    location: {
-      origin: 'https://arca.live',
-      href: 'https://arca.live/b/test/100?articleKey=session',
-    },
-    scrollY: 120,
-    addEventListener: (name, handler) => listeners.set(name, handler),
-  };
-  const chain = {
-    length: 0,
-    first() {
-      return this;
-    },
-    text() {
-      return '';
-    },
-    find() {
-      return this;
-    },
-    each() {
-      return this;
-    },
-    toggleClass() {
-      return this;
-    },
-    prop() {
-      return this;
-    },
-    attr() {
-      return this;
-    },
-    on() {
-      return this;
-    },
-  };
-  const load = sourceLoader({
-    globals: {
-      window,
-      localStorage: storage,
-      sessionStorage: { getItem: () => null },
-      document: {
-        title: '스크랩한 게시글',
-        addEventListener: (name, handler) => listeners.set(name, handler),
+for (const quickExit of [false, true])
+  test(`deferred reading checkpoint preserves scroll and deletion (quick exit: ${quickExit})`, () => {
+    const storage = memoryStorage();
+    const listeners = new Map();
+    const timers = new Map();
+    let timerId = 0;
+    const frames = new Map();
+    let frameId = 0;
+    let indicatorScans = 0;
+    const window = {
+      location: {
+        origin: 'https://arca.live',
+        href: 'https://arca.live/b/test/100?articleKey=session',
       },
-      setTimeout: (handler, delay) => {
-        timers.set(++timerId, { handler, delay });
-        return timerId;
-      },
-      clearTimeout: (id) => timers.delete(id),
-    },
-    mocks: {
-      jquery: { default: () => chain },
-      './filter': {
-        extractArticleRows: () => {
-          indicatorScans++;
-          return chain;
-        },
-      },
-      './article/link': { refreshUnvisitedNavigation() {} },
-    },
-  });
-  const { VaultAdapter } = load('src/vault/index.ts');
-  const { Store } = load('src/vault/store.ts');
-  const { initReading } = load('src/feature/reading.ts');
-  const vault = new VaultAdapter(
-    new Store({
-      articleKey: 'session',
-      isSeriesMode: true,
-      isScrapMode: true,
-      articleList: ['/b/test/100'],
-    }),
-    { saveConfig() {} },
-    vaultFixture().href,
-  );
-  try {
-    siteVisit(storage, vault.reading, entry('/b/test/100'));
-    let fullCheckpoints = 0;
-    const saveSession = vault.reading.saveSession.bind(vault.reading);
-    vault.reading.saveSession = (checkpoint) => {
-      fullCheckpoints++;
-      saveSession(checkpoint);
+      scrollY: 120,
+      addEventListener: (name, handler) => listeners.set(name, handler),
     };
-    initReading(vault);
-    assert.equal(fullCheckpoints, 1);
-    assert.equal(vault.reading.sessions[0].isScrapMode, true);
-    assert.equal(vault.reading.sessions[0].label, '스크랩');
-    const initialScans = indicatorScans;
-    storage.writes.length = 0;
-    window.scrollY = 240;
-    listeners.get('scroll')();
-    for (const timer of [...timers.values()])
-      if (timer.delay === 700) timer.handler();
-    assert.equal(indicatorScans, initialScans);
-    assert.equal(fullCheckpoints, 1);
-    assert.deepEqual(
-      storage.writes.map((write) => write.key),
-      ['arcaFeed:readingProgress'],
+    const chain = {
+      length: 0,
+      first() {
+        return this;
+      },
+      text() {
+        return '';
+      },
+      find() {
+        return this;
+      },
+      each() {
+        return this;
+      },
+      toggleClass() {
+        return this;
+      },
+      prop() {
+        return this;
+      },
+      attr() {
+        return this;
+      },
+      on() {
+        return this;
+      },
+    };
+    const load = sourceLoader({
+      globals: {
+        window,
+        localStorage: storage,
+        sessionStorage: { getItem: () => null },
+        document: {
+          title: '스크랩한 게시글',
+          addEventListener: (name, handler) => listeners.set(name, handler),
+        },
+        setTimeout: (handler, delay) => {
+          timers.set(++timerId, { handler, delay });
+          return timerId;
+        },
+        clearTimeout: (id) => timers.delete(id),
+        requestAnimationFrame: (handler) => {
+          frames.set(++frameId, handler);
+          return frameId;
+        },
+        cancelAnimationFrame: (id) => frames.delete(id),
+      },
+      mocks: {
+        jquery: { default: () => chain },
+        './filter': {
+          extractArticleRows: () => {
+            indicatorScans++;
+            return chain;
+          },
+        },
+        './article/link': { refreshUnvisitedNavigation() {} },
+      },
+    });
+    const { VaultAdapter } = load('src/vault/index.ts');
+    const { Store } = load('src/vault/store.ts');
+    const { initReading } = load('src/feature/reading.ts');
+    const vault = new VaultAdapter(
+      new Store({
+        articleKey: 'session',
+        isSeriesMode: true,
+        isScrapMode: true,
+        articleList: ['/b/test/100'],
+      }),
+      { saveConfig() {} },
+      vaultFixture().href,
     );
-    storage.writes.length = 0;
-    listeners.get('pagehide')();
-    assert.equal(storage.writes.length, 0);
-    assert.equal(fullCheckpoints, 1);
-    vault.articleList = ['/b/test/100', '/b/test/99'];
-    listeners.get('pagehide')();
-    assert.equal(fullCheckpoints, 2);
-    assert.deepEqual(vault.reading.sessions[0].articleList, vault.articleList);
-    vault.activeIndex = 0;
-    vault.uiSettings = { ...vault.uiSettings, lastModalTab: 'resume' };
-    assert.equal(indicatorScans, initialScans);
-    vault.reading.removeSession('series:session');
-    listeners.get('scroll')();
-    for (const timer of [...timers.values()])
-      if (timer.delay === 700) timer.handler();
-    listeners.get('pagehide')();
-    assert.deepEqual(vault.reading.sessions, []);
-    assert.equal(vault.reading.hasVisited('/b/test/100'), true);
-  } finally {
-    vault.destroy();
-  }
-});
+    try {
+      siteVisit(storage, vault.reading, entry('/b/test/100'));
+      let fullCheckpoints = 0;
+      const saveSession = vault.reading.saveSession.bind(vault.reading);
+      vault.reading.saveSession = (checkpoint) => {
+        fullCheckpoints++;
+        saveSession(checkpoint);
+      };
+      initReading(vault);
+      assert.equal(fullCheckpoints, 0);
+      assert.equal(indicatorScans, 0);
+      // Changes to another session must not cancel our first deferred save.
+      saveSession(session('other', { path: '/b/other/1' }));
+      // A quick exit must persist before the deferred initial checkpoint runs.
+      if (quickExit) listeners.get('pagehide')();
+      assert.equal(fullCheckpoints, quickExit ? 1 : 0);
+      for (const [id, handler] of [...frames]) {
+        frames.delete(id);
+        handler();
+      }
+      assert.equal(indicatorScans, 0);
+      for (const timer of [...timers.values()])
+        if (timer.delay === 0) timer.handler();
+      assert.equal(fullCheckpoints, 1);
+      assert.equal(indicatorScans, 1);
+      assert.equal(vault.reading.sessions[0].isScrapMode, true);
+      assert.equal(vault.reading.sessions[0].label, '스크랩');
+      const initialScans = indicatorScans;
+      storage.writes.length = 0;
+      window.scrollY = 240;
+      listeners.get('scroll')();
+      for (const timer of [...timers.values()])
+        if (timer.delay === 700) timer.handler();
+      assert.equal(indicatorScans, initialScans);
+      assert.equal(fullCheckpoints, 1);
+      assert.deepEqual(
+        storage.writes.map((write) => write.key),
+        ['arcaFeed:readingProgress'],
+      );
+      storage.writes.length = 0;
+      listeners.get('pagehide')();
+      assert.equal(storage.writes.length, 0);
+      assert.equal(fullCheckpoints, 1);
+      vault.articleList = ['/b/test/100', '/b/test/99'];
+      listeners.get('pagehide')();
+      assert.equal(fullCheckpoints, 2);
+      assert.deepEqual(
+        vault.reading.sessions[0].articleList,
+        vault.articleList,
+      );
+      vault.activeIndex = 0;
+      vault.uiSettings = { ...vault.uiSettings, lastModalTab: 'resume' };
+      assert.equal(indicatorScans, initialScans);
+      vault.reading.removeSession('series:session');
+      listeners.get('scroll')();
+      for (const timer of [...timers.values()])
+        if (timer.delay === 700) timer.handler();
+      listeners.get('pagehide')();
+      assert.deepEqual(
+        vault.reading.sessions.map(({ id }) => id),
+        ['other'],
+      );
+      assert.equal(vault.reading.hasVisited('/b/test/100'), true);
+    } finally {
+      vault.destroy();
+    }
+  });
 
 test('scroll checkpoints write only small progress data and notify only progress listeners', () => {
   const { ReadingHistory, storage, load } = readingFixture();

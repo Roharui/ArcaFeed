@@ -15,6 +15,7 @@ import type { VaultAdapter } from '@/vault';
 import { readingContextLabel } from '@/vault/reading-context';
 import { articleWindow } from '@/vault/article-window';
 import { showPendingSkippedToast } from './swiper/skip-toast';
+import { afterPaint } from '@/utils/after-paint';
 
 const RESUME_SCROLL_KEY = 'arcaFeed:resumeScroll';
 const ARTICLE_TITLE_SELECTOR =
@@ -69,6 +70,10 @@ function updateVisitedIndicators(p: VaultAdapter): void {
       })
       .toggle(show);
   });
+  updateSkipButton(p);
+}
+
+function updateSkipButton(p: VaultAdapter): void {
   const skip = p.skipVisitedArticles;
   $('#arcafeed-skip-visited')
     .prop('disabled', !p.canSkipVisitedArticles)
@@ -213,7 +218,12 @@ function restoreScroll(p: VaultAdapter): void {
 export function initReading(p: VaultAdapter): void {
   if (initializedVaults.has(p)) return;
   initializedVaults.add(p);
-  showPendingSkippedToast(currentPath(p));
+  let indicatorsReady = false;
+  afterPaint(() => {
+    indicatorsReady = true;
+    showPendingSkippedToast(currentPath(p));
+    updateVisitedIndicators(p);
+  });
 
   window.addEventListener('storage', (event) => {
     if (
@@ -248,7 +258,8 @@ export function initReading(p: VaultAdapter): void {
       previousContext = context;
       previousCanSkip = p.canSkipVisitedArticles;
       previousIndicators = state.uiSettings.showVisitedIndicators;
-      updateVisitedIndicators(p);
+      if (indicatorsReady) updateVisitedIndicators(p);
+      else updateSkipButton(p);
     }
     const hasNext = p.isNextPageActive();
     const lostNext = previousHasNext && !hasNext;
@@ -265,7 +276,6 @@ export function initReading(p: VaultAdapter): void {
       refreshUnvisitedNavigation(p);
     }
   });
-  updateVisitedIndicators(p);
   if (p.skipVisitedArticles && !p.isNextPageActive())
     refreshUnvisitedNavigation(p);
 
@@ -273,6 +283,9 @@ export function initReading(p: VaultAdapter): void {
 
   let checkpointTimer: ReturnType<typeof setTimeout> | undefined;
   let checkpointRemoved = false;
+  let checkpointTracked = p.reading.sessions.some(
+    (session) => session.id === contextId(p),
+  );
 
   if (p.canSkipVisitedArticles) {
     const skipButton = $('<button>', {
@@ -296,6 +309,7 @@ export function initReading(p: VaultAdapter): void {
   }
 
   const checkpoint = () => {
+    cancelInitialCheckpoint();
     clearTimeout(checkpointTimer);
     if (!checkpointRemoved) saveCheckpoint(p);
   };
@@ -304,8 +318,11 @@ export function initReading(p: VaultAdapter): void {
     checkpointTimer = setTimeout(checkpoint, 700);
   };
   p.reading.subscribe(() => {
-    if (!p.reading.sessions.some((session) => session.id === contextId(p))) {
+    if (p.reading.sessions.some((session) => session.id === contextId(p))) {
+      checkpointTracked = true;
+    } else if (checkpointTracked) {
       checkpointRemoved = true;
+      cancelInitialCheckpoint();
       clearTimeout(checkpointTimer);
     }
   }, ['sessions']);
@@ -335,7 +352,7 @@ export function initReading(p: VaultAdapter): void {
     p.reading.reload();
     checkpoint();
   });
+  const cancelInitialCheckpoint = afterPaint(checkpoint);
   restoreScroll(p);
-  checkpoint();
-  updateVisitedIndicators(p);
+  updateSkipButton(p);
 }

@@ -1,6 +1,7 @@
 import { initNavigationList } from '@/feature/modal/navigationTab';
 import { StepRunner } from '@/core/step-runner';
 import { initArticlePrefetch } from '@/feature/article/prefetch';
+import { afterPaint } from '@/utils/after-paint';
 
 import {
   initLink,
@@ -43,11 +44,13 @@ class EventManager {
       [addVersionInfo],
       [initLink, initButton, initEvent, initSeriesContent, initUi],
       initReading,
-      (p: VaultAdapter) => {
-        initNavigationList(p);
-      },
       initSwiper,
       initArticlePrefetch,
+      (p: VaultAdapter) => {
+        afterPaint(() => {
+          initNavigationList(p);
+        });
+      },
     ];
   }
 
