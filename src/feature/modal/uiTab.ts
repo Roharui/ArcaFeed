@@ -96,16 +96,19 @@ function createToggleRow(
 function createUISettingModal(p: VaultAdapter): JQuery<HTMLElement> {
   const $uiTab = $(MODAL_UI_TAB);
   $uiTab.prepend(readingHeader('UI 설정', '읽기 편한 화면으로 맞춰보세요.'));
-  $uiTab
-    .find('#ui-reading-list')
-    .append(
-      createToggleRow(
-        'skipVisitedArticles',
-        '본 글 건너뛰기',
-        p.skipVisitedArticles,
-        `${readingContextLabel(p)}에만 적용됩니다. 다른 채널·피드의 설정은 따로 기억합니다.`,
-      ),
-    );
+  $uiTab.find('#ui-reading-list').append(
+    createToggleRow(
+      'skipVisitedArticles',
+      '본 글 건너뛰기',
+      p.skipVisitedArticles,
+      p.canSkipVisitedArticles
+        ? `${readingContextLabel(p)}에만 적용됩니다. 다른 채널·피드의 설정은 따로 기억합니다.`
+        : '시리즈·스크랩 모드에서는 본 글 건너뛰기를 사용할 수 없습니다.',
+    )
+      .find('input')
+      .prop('disabled', !p.canSkipVisitedArticles)
+      .end(),
+  );
 
   // Build toggle list from current settings
   const { uiSettings } = p;

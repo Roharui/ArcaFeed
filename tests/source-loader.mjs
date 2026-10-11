@@ -168,6 +168,11 @@ export function vaultFixture(overrides = {}) {
   };
   Object.defineProperty(
     fixture,
+    'canSkipVisitedArticles',
+    Object.getOwnPropertyDescriptor(vaultPrototype, 'canSkipVisitedArticles'),
+  );
+  Object.defineProperty(
+    fixture,
     'skipVisitedArticles',
     Object.getOwnPropertyDescriptor(vaultPrototype, 'skipVisitedArticles'),
   );

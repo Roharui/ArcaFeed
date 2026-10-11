@@ -452,61 +452,58 @@ test('history search avoids autocomplete plugin dispatch, waits for Korean compo
   assert.equal(changes, 2);
 });
 
-test('skip preferences stay independent for channels, home, scraps and individual series after reload', () => {
-  const { load, storage, window } = readingFixture();
-  const { VaultAdapter, ConfigService, StorageRepository } =
-    load('src/vault/index.ts');
+test('series and scrap modes disable skipping without changing channel preferences', () => {
+  const { load } = readingFixture({
+    recent_articles: JSON.stringify([
+      { slug: 'test', articleId: 99, regdateAt: 1 },
+    ]),
+  });
+  const { VaultAdapter } = load('src/vault/index.ts');
   const { Store } = load('src/vault/store.ts');
-  const config = new ConfigService(new StorageRepository(storage));
   const vault = new VaultAdapter(
-    new Store({ articleKey: 'session' }),
-    config,
+    new Store({
+      articleKey: 'session',
+      articleList: ['/b/test/100', '/b/test/99', '/b/test/98'],
+      activeIndex: 0,
+      uiSettings: {
+        ...load('src/vault/store.ts').createInitialState().uiSettings,
+        skipVisitedContexts: {
+          'channel:test': true,
+          home: true,
+          scrap: true,
+          'series:session': true,
+        },
+      },
+    }),
+    { saveConfig() {} },
     vaultFixture().href,
   );
   try {
-    vault.skipVisitedArticles = true;
-    vault.href = { ...vault.href, channelId: 'other' };
-    assert.equal(vault.skipVisitedArticles, false);
-    vault.skipVisitedArticles = false;
-    vault.href = { ...vault.href, channelId: 'test' };
-    assert.equal(vault.skipVisitedArticles, true);
-    vault.updateState({
-      isSeriesMode: true,
-      seriesChannels: ['test', 'other'],
-    });
-    assert.equal(vault.skipVisitedArticles, false);
-    vault.skipVisitedArticles = true;
-    vault.href = { ...vault.href, channelId: 'other' };
-    assert.equal(vault.skipVisitedArticles, true);
-    vault.updateState({ isScrapMode: true, seriesChannels: [] });
-    assert.equal(vault.skipVisitedArticles, false);
-    vault.skipVisitedArticles = true;
-    vault.updateState({ isScrapMode: false });
-    assert.equal(vault.skipVisitedArticles, false);
-    vault.skipVisitedArticles = true;
-    vault.articleKey = 'another-series';
-    assert.equal(vault.skipVisitedArticles, false);
-    vault.articleKey = 'session';
-    assert.equal(vault.skipVisitedArticles, true);
-    vault.flushSave();
-    window.location.href = 'https://arca.live/b/test/100?articleKey=session';
-    const reloaded = new VaultAdapter(
-      new Store(config.loadConfig()),
-      config,
-      vaultFixture().href,
-    );
-    try {
-      assert.equal(reloaded.skipVisitedArticles, true);
-      reloaded.updateState({ isScrapMode: true });
-      assert.equal(reloaded.skipVisitedArticles, true);
-      reloaded.skipVisitedArticles = false;
-      reloaded.updateState({ isScrapMode: false, seriesChannels: ['test'] });
-      assert.equal(reloaded.skipVisitedArticles, true);
-      reloaded.updateState({ isSeriesMode: false, seriesChannels: [] });
-      assert.equal(reloaded.skipVisitedArticles, true);
-    } finally {
-      reloaded.destroy();
+    const preferences = vault.uiSettings.skipVisitedContexts;
+    assert.equal(vault.getAdjacentArticleIndex('NEXT'), 2);
+    for (const mode of [
+      { isSeriesMode: true, isScrapMode: false, seriesChannels: [] },
+      { isSeriesMode: true, isScrapMode: false, seriesChannels: ['test'] },
+      { isSeriesMode: true, isScrapMode: true, seriesChannels: [] },
+      { isSeriesMode: false, isScrapMode: true, seriesChannels: [] },
+    ]) {
+      vault.updateState(mode);
+      assert.equal(vault.canSkipVisitedArticles, false);
+      assert.equal(vault.skipVisitedArticles, false);
+      assert.equal(vault.getAdjacentArticleIndex('NEXT'), 1);
+      vault.skipVisitedArticles = true;
+      vault.skipVisitedArticles = false;
+      assert.equal(vault.uiSettings.skipVisitedContexts, preferences);
     }
+    vault.updateState({ isSeriesMode: false, isScrapMode: false });
+    vault.href = { ...vault.href, mode: 'SCRAP' };
+    assert.equal(vault.skipVisitedArticles, false);
+    vault.skipVisitedArticles = true;
+    assert.equal(vault.uiSettings.skipVisitedContexts, preferences);
+    vault.href = vaultFixture().href;
+    assert.equal(vault.canSkipVisitedArticles, true);
+    assert.equal(vault.skipVisitedArticles, true);
+    assert.equal(vault.getAdjacentArticleIndex('NEXT'), 2);
   } finally {
     vault.destroy();
   }
@@ -608,6 +605,9 @@ test('deleting the current checkpoint prevents scroll and pagehide from recreati
       return this;
     },
     toggleClass() {
+      return this;
+    },
+    prop() {
       return this;
     },
     attr() {

@@ -175,12 +175,20 @@ export class VaultAdapter {
     return this.store.getState().isScrapMode;
   }
 
+  get canSkipVisitedArticles(): boolean {
+    return (
+      !this.isSeriesMode && !this.isScrapMode && !this.isCurrentMode('SCRAP')
+    );
+  }
+
   get skipVisitedArticles(): boolean {
     return (
+      this.canSkipVisitedArticles &&
       this.uiSettings.skipVisitedContexts[readingPreferenceKey(this)] === true
     );
   }
   set skipVisitedArticles(enabled: boolean) {
+    if (!this.canSkipVisitedArticles) return;
     this.uiSettings = {
       ...this.uiSettings,
       skipVisitedContexts: {

@@ -71,11 +71,14 @@ function updateVisitedIndicators(p: VaultAdapter): void {
   });
   const skip = p.skipVisitedArticles;
   $('#arcafeed-skip-visited')
+    .prop('disabled', !p.canSkipVisitedArticles)
     .toggleClass('is-active', skip)
     .attr({
       'aria-pressed': String(skip),
       'aria-label': `${readingContextLabel(p)}에서 본 글 건너뛰기`,
-      title: `${readingContextLabel(p)} · 본 글 건너뛰기: ${skip ? '켜짐 · 클릭하여 끄기' : '꺼짐 · 클릭하여 켜기'}`,
+      title: p.canSkipVisitedArticles
+        ? `${readingContextLabel(p)} · 본 글 건너뛰기: ${skip ? '켜짐 · 클릭하여 끄기' : '꺼짐 · 클릭하여 켜기'}`
+        : '시리즈·스크랩 모드에서는 본 글 건너뛰기를 사용할 수 없습니다.',
     });
 }
 
@@ -225,6 +228,7 @@ export function initReading(p: VaultAdapter): void {
   p.reading.reload();
   window.addEventListener('load', () => p.reading.reload(), { once: true });
   let previousSkip = p.skipVisitedArticles;
+  let previousCanSkip = p.canSkipVisitedArticles;
   let previousHasNext = p.isNextPageActive();
   let previousReadingRevision = p.getState().readingRevision;
   let previousIndicators = p.uiSettings.showVisitedIndicators;
@@ -237,10 +241,12 @@ export function initReading(p: VaultAdapter): void {
     if (
       historyChanged ||
       skipChanged ||
+      previousCanSkip !== p.canSkipVisitedArticles ||
       previousContext !== context ||
       previousIndicators !== state.uiSettings.showVisitedIndicators
     ) {
       previousContext = context;
+      previousCanSkip = p.canSkipVisitedArticles;
       previousIndicators = state.uiSettings.showVisitedIndicators;
       updateVisitedIndicators(p);
     }
