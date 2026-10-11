@@ -234,7 +234,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
       $('<span>', { class: 'bi-list-ul', 'aria-hidden': 'true' }),
       count,
       $(
-        '<svg class="arcafeed-navigation-loading-ring" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="2" y="2" width="96" height="96" rx="8" pathLength="100" /></svg>',
+        '<svg class="arcafeed-navigation-loading-ring" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="2" y="2" width="96" height="96" rx="20" pathLength="100" /></svg>',
       ),
     )
     .on('click', () => open())
@@ -336,13 +336,8 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     );
     if (nativeButton) {
       const style = getComputedStyle(nativeButton);
-      // Keep the native theme and button shape without inheriting its click handler.
-      for (const property of [
-        'border',
-        'border-radius',
-        'box-shadow',
-        'font-size',
-      ]) {
+      // Keep the native theme while retaining our rounded corners.
+      for (const property of ['border', 'box-shadow', 'font-size']) {
         trigger[0]!.style.setProperty(
           property,
           style.getPropertyValue(property),
@@ -375,12 +370,15 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
   const schedulePosition = () => {
     if (frame === undefined) frame = requestAnimationFrame(position);
   };
+  const isHovered = () =>
+    window.matchMedia('(hover: hover) and (pointer: fine)').matches &&
+    trigger.is(':hover');
   const reveal = () => {
     trigger.removeClass('is-idle');
     clearTimeout(idleTimer);
     schedulePosition();
     idleTimer = setTimeout(() => {
-      if (loading || panel || trigger.is(':hover')) return;
+      if (loading || panel || isHovered()) return;
       trigger.addClass('is-idle');
     }, 3000);
   };
