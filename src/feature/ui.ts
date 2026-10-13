@@ -1,3 +1,4 @@
+import { mergeState } from '@/vault/lazy-state';
 import $ from 'jquery';
 
 import { extractChannelId } from '@/utils';
@@ -76,7 +77,7 @@ function installResizeHandle(p: VaultAdapter): void {
     $(`.arca-resize-handle-${dragging}`).removeClass('dragging');
     dragging = null;
 
-    p.uiSettings = { ...p.uiSettings, contentWidth: currentWidth };
+    p.uiSettings = mergeState(p.uiSettings, { contentWidth: currentWidth });
     p.flushSave();
   });
 

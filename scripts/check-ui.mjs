@@ -130,8 +130,14 @@ async function checkUi(page) {
                         : ['filter', 'ui', 'history', 'resume'];
                   if (actual.join() !== expected.join())
                     errors.push(`Unexpected tabs: ${actual}`);
+                  if (
+                    document.querySelectorAll('.helper-modal-tab').length !== 1
+                  )
+                    errors.push('Unselected modal tabs were created eagerly');
                   for (const id of actual) {
-                    document.getElementById(id).checked = true;
+                    const input = document.getElementById(id);
+                    input.checked = true;
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
                     const body = document.querySelector('.helper-modal-body');
                     const tab = document.querySelector(`.helper-modal-${id}`);
                     const box = tab.getBoundingClientRect();

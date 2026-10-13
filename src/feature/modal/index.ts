@@ -9,6 +9,7 @@ import { createSubscribeSettingModal } from './subscribeTab';
 import { createHistoryModal } from './historyTab';
 import { createResumeModal } from './resumeTab';
 
+import { mergeState } from '@/vault/lazy-state';
 import { navigationMode } from '@/vault/navigation-context';
 import type { VaultAdapter } from '@/vault';
 
@@ -50,26 +51,29 @@ function initModal(p: VaultAdapter) {
   `);
   const dialogBody = dialog.find('.helper-modal-body');
 
+  const factories: Record<string, () => JQuery<HTMLElement>> = {
+    filter: () => createArticleFilterModal(p),
+    ui: () => createUISettingModal(p),
+    subscribe: () => createSubscribeSettingModal(p),
+    history: () => createHistoryModal(p),
+    resume: () => createResumeModal(p),
+  };
+  const created = new Set<string>();
+  const ensureTab = (tab: string) => {
+    if (created.has(tab) || !availableTabs.includes(tab)) return;
+    dialogBody.append(factories[tab]!());
+    created.add(tab);
+  };
   const initialTab = resolveModalTab(p.uiSettings.lastModalTab, availableTabs);
   dialog.find(`#${initialTab}`).prop('checked', true);
+  ensureTab(initialTab);
   dialog.find('.helper-modal-tab-radio').on('change', function () {
     const selectedTab = $(this).attr('id') as typeof p.uiSettings.lastModalTab;
-    p.uiSettings = { ...p.uiSettings, lastModalTab: selectedTab };
+    ensureTab(selectedTab);
+    p.uiSettings = mergeState(p.uiSettings, { lastModalTab: selectedTab });
     dialogBody.find('.arcafeed-modal-content').scrollTop(0);
     p.flushSave();
   });
-  if (availableTabs.includes('filter')) {
-    dialogBody.append(createArticleFilterModal(p));
-  }
-
-  dialogBody.append(createUISettingModal(p));
-  dialogBody.append(createHistoryModal(p));
-  dialogBody.append(createResumeModal(p));
-
-  if (mode === 'subscription') {
-    dialogBody.append(createSubscribeSettingModal(p));
-  }
-
   dialog.appendTo('body');
   dialog.on('click', (event) => {
     if (event.target === dialog[0]) void eventBus.emit('closeModal');

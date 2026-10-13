@@ -1084,3 +1084,24 @@ test('malformed split-list metadata stays bounded and missing lists retain the c
     ['/b/test/100'],
   );
 });
+
+test('disabled native history never reads or parses its records and enabling it loads fresh visits', () => {
+  const { storage, ReadingHistory } = readingFixture({
+    recent_disabled: 'true',
+    recent_articles: '[{"slug":"test","articleId":100,"regdateAt":1}]',
+  });
+  const reads = [];
+  const getItem = storage.getItem.bind(storage);
+  storage.getItem = (key) => {
+    reads.push(key);
+    return getItem(key);
+  };
+  const reading = new ReadingHistory();
+  assert.deepEqual(reading.entries, []);
+  assert.equal(reading.hasVisited('/b/test/100'), false);
+  reading.reload(['entries']);
+  assert.ok(reads.every((key) => key === 'recent_disabled'));
+  storage.removeItem('recent_disabled');
+  reading.reload(['entries']);
+  assert.equal(reading.hasVisited('/b/test/100'), true);
+});

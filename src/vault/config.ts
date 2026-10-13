@@ -5,22 +5,16 @@ import { deferField, mergeState, sameField } from './lazy-state';
  */
 
 import { StorageRepository } from './repository';
+import { ConfigStorage } from './config-storage';
 import { createArticleKey } from '@/utils/article-key';
 import { appendSearchParam } from '@/utils/url';
 import { compactNavigationArticles, findArticleIndex } from './article-window';
-import {
-  normalizeArticles,
-  normalizeFilters,
-  normalizeUISettings,
-  stringList,
-} from './config-schema';
+import { normalizeArticles, stringList } from './config-schema';
 
 import type { AppState } from '@/vault/store';
 import { createInitialState } from './store';
 import type { ReadingSession } from './reading-history';
 
-const ARTICLE_FILTER_CONFIG_GLOBAL_KEY = 'arcaFeed:articleFilterConfig';
-const UI_SETTINGS_KEY = 'arcaFeed:uiSettings';
 const SHUFFLE_MODE_KEY = 'arcaFeed:isShuffleMode';
 
 const CHANNEL_OR_ARTICLE_PAGE_REGEX = /^\/b\/[a-zA-Z0-9]+(\/\d+)?\/?$/;
@@ -28,7 +22,11 @@ const CHANNEL_OR_ARTICLE_PAGE_REGEX = /^\/b\/[a-zA-Z0-9]+(\/\d+)?\/?$/;
 export class ConfigService {
   private lastSavedState: Readonly<AppState> | undefined;
 
-  constructor(private repo: StorageRepository) {}
+  private storage: ConfigStorage;
+
+  constructor(private repo: StorageRepository) {
+    this.storage = new ConfigStorage(repo);
+  }
 
   /**
    * Ensure the current page has an articleKey in its URL query params.
@@ -62,13 +60,7 @@ export class ConfigService {
 
     // Load article filter config
     deferField(patch, 'articleFilterConfig', () =>
-      normalizeFilters(
-        this.repo.getJSON<unknown>(ARTICLE_FILTER_CONFIG_GLOBAL_KEY) ??
-          this.repo.getJSON<unknown>(
-            this.repo.scopedKey(articleKey, 'articleFilterConfig'),
-          ) ??
-          {},
-      ),
+      this.storage.filters(articleKey),
     );
 
     // Load article list
@@ -115,9 +107,7 @@ export class ConfigService {
     patch.isShuffleMode = this.repo.getItem(SHUFFLE_MODE_KEY) === 'true';
 
     // Load UI settings (getJSON handles null / parse errors internally)
-    deferField(patch, 'uiSettings', () =>
-      normalizeUISettings(this.repo.getJSON<unknown>(UI_SETTINGS_KEY)),
-    );
+    deferField(patch, 'uiSettings', () => this.storage.settings());
 
     // Prune old caches
     this.repo.pruneArticleKeyCaches(articleKey);
@@ -173,12 +163,12 @@ export class ConfigService {
 
     // Global settings — saved regardless of articleKey
     if (!sameField(previous, state, 'uiSettings')) {
-      this.repo.setJSON(UI_SETTINGS_KEY, state.uiSettings);
+      this.storage.saveSettings(state.uiSettings, previous?.uiSettings);
     }
     if (!sameField(previous, state, 'articleFilterConfig')) {
-      this.repo.setJSON(
-        ARTICLE_FILTER_CONFIG_GLOBAL_KEY,
+      this.storage.saveFilters(
         state.articleFilterConfig,
+        previous?.articleFilterConfig,
       );
     }
     if (!sameField(previous, state, 'isShuffleMode')) {

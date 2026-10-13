@@ -1,4 +1,4 @@
-import { sameField } from './lazy-state';
+import { sameField, mergeState } from './lazy-state';
 export { StorageRepository } from './repository';
 export { ConfigService } from './config';
 
@@ -192,13 +192,12 @@ export class VaultAdapter {
   }
   set skipVisitedArticles(enabled: boolean) {
     if (!this.canSkipVisitedArticles) return;
-    this.uiSettings = {
-      ...this.uiSettings,
+    this.uiSettings = mergeState(this.uiSettings, {
       skipVisitedContexts: {
         ...this.uiSettings.skipVisitedContexts,
         [readingPreferenceKey(this)]: enabled,
       },
-    };
+    });
   }
 
   get isShuffleMode(): boolean {

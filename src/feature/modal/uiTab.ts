@@ -1,3 +1,4 @@
+import { mergeState } from '@/vault/lazy-state';
 import $ from 'jquery';
 
 import '@css/ui.css';
@@ -164,7 +165,7 @@ function initCheckUIModal(p: VaultAdapter): VaultAdapter {
   const formSettings = readUISettingsFromModal();
   const skipVisitedArticles = formSettings.skipVisitedArticles;
   delete formSettings.skipVisitedArticles;
-  p.uiSettings = { ...p.uiSettings, ...formSettings };
+  p.uiSettings = mergeState(p.uiSettings, formSettings);
   if (typeof skipVisitedArticles === 'boolean')
     p.skipVisitedArticles = skipVisitedArticles;
   p.flushSave();

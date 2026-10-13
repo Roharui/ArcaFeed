@@ -39,6 +39,12 @@ JSON 파싱 성공은 데이터 형식이 올바르다는 뜻이 아닙니다. `
 
 설정·목록의 JSON은 `ConfigService`가 필드별 memoized getter로 제공하고, `Store`는 getter를 실행하지 않고 상태 스냅샷에 보존합니다. 첫 접근 때 해당 키만 파싱·정규화하며 setter로 교체하면 기존 데이터는 읽지 않습니다. `StorageRepository.getJSON()`은 키별 원본 문자열과 파싱 결과를 캐시하고, 원본 변경·쓰기·삭제 시 갱신합니다. 캐시된 배열과 객체는 직접 수정하지 않습니다. 읽기 기록은 방문 기록과 이어보기를 각각 첫 접근 때 로드하며, 사용하지 않은 이어보기는 `reload()`에서도 파싱하지 않습니다. 이전 저장 형식의 읽기·정리는 첫 이어보기 조회나 존재 확인 시 한 번 실행합니다. 새 형식의 조회에는 이전 코드를 실행하지 않습니다.
 
+채널 필터는 `arcaFeed:channelFilter:{channelId}`에 개별 저장하며 `arcaFeed:filterChannels`는 채널 ID 목록만 보관합니다. `ConfigStorage.filters()`는 채널별 지연 getter를 제공하고, 단일 채널 조회는 해당 필터만 파싱합니다. 필터 목록 열거·스냅샷 복사는 ID 목록과 getter만 복사하며, 필터를 실제로 수정한 채널만 저장합니다. 필터 삭제 시 인덱스와 해당 키를 함께 정리합니다.
+
+설정은 화면 표시·너비(`arcaFeed:displaySettings`), 구독 채널(`arcaFeed:subscriptionSettings`), 본 글 건너뛰기(`arcaFeed:readingSettings`), 마지막 모달 탭(`arcaFeed:lastModalTab`)으로 나눕니다. 상태의 `uiSettings` 인터페이스는 유지하고 각 필드는 소속 저장 그룹을 첫 접근 때만 읽습니다. 필터·설정 변경은 `mergeState()`로 getter를 보존하여 다른 그룹을 읽지 않습니다. 저장 비교도 getter 참조를 비교하고 바뀐 그룹만 직렬화합니다. `arcaFeed:settingsVersion`은 새 설정 형식의 준비 여부를 표시합니다. 방문 기록이 비활성화되어 있으면 `recent_disabled`만 확인하고 `recent_articles` 원본은 읽지 않습니다.
+
+설정 모달은 선택한 탭을 처음 열 때만 생성하며 이후 선택에는 같은 폼을 재사용합니다. 선택하지 않은 기록·이어보기 탭은 조회·렌더링·구독을 시작하지 않습니다. 모달을 닫거나 다시 열 때에는 실제로 생성한 탭의 cleanup만 호출합니다.
+
 상태 배열과 설정 객체는 새 참조로 갱신해야 합니다. 저장은 이전 스냅샷과 참조를 비교하며, 자동 저장은 300ms 동안 변경을 모읍니다. 페이지 이동 전에는 즉시 저장합니다.
 
 `ReadingHistory`는 사이트 방문 기록(`entries`), 이어보기 탐색 정보(`sessions`), 스크롤 위치(`progress`)를 독립적으로 알립니다. 전체 상태의 `readingRevision`과 본 글 표시·건너뛰기는 방문 기록 변경에만 반응합니다. 기록 모달은 필요한 변경만 구독하며, 이어보기 버튼은 클릭 시 최신 위치를 조회합니다.
@@ -50,6 +56,10 @@ JSON 파싱 성공은 데이터 형식이 올바르다는 뜻이 아닙니다. `
 ## 한시적 이어보기 데이터 이전
 
 기존의 통합 이어보기 JSON을 읽는 코드는 [reading-history-migration.ts](../src/vault/reading-history-migration.ts)에 격리했습니다. 지원 종료 후 해당 파일과 `ReadingHistory`의 import, `legacyContexts` 상태, `migrateLegacyContexts()`와 호출 지점, `load()`의 구형 형식 분기를 제거합니다. 구형 분기는 제거 시 알 수 없는 버전을 빈 데이터로 처리하는 버전 검사로 교체합니다. `tests/reading.test.mjs`의 기존 중복 방문 기록 이전·대용량 구형 목록 이전 테스트도 함께 제거하거나 새 형식 검증으로 교체합니다. 새 형식의 요약 조회·선택한 목록 조회·부분 reload 테스트는 유지합니다. 이 절차는 한시적인 호환 코드 제거 작업이며 일반 조회 기능의 일부가 아닙니다.
+
+## 한시적 설정 데이터 이전
+
+통합 채널 필터와 UI 설정을 이전하는 코드는 [config-storage-migration.ts](../src/vault/config-storage-migration.ts)에 격리했습니다. 첫 필터·설정 접근 때 기존 데이터가 있으면 검증한 뒤 새 키로 분리합니다. 기존에 쓰인 새 키는 덮어쓰지 않으며 필터 인덱스와 설정 버전은 그룹 저장이 끝난 뒤 기록합니다. 이후 조회는 기존 통합 JSON을 읽지 않습니다. 지원 종료 후 해당 파일과 `ConfigStorage`의 migration import, 두 `ensureMigrated` 호환 훅 및 호출 지점을 제거합니다. `tests/config-storage.test.mjs`의 한시적 이전 테스트도 함께 제거하고, `tests/architecture.test.mjs`의 통합 설정 fixtures는 새 키 형식으로 바꿉니다. 개별 키 조회·다른 그룹 미조회·부분 저장 테스트는 유지합니다. 이전 지원 종료 시점은 별도로 결정하며 이 호환 로직을 영구 유지하지 않습니다.
 
 ## 검증
 

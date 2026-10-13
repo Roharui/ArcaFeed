@@ -450,8 +450,8 @@ export class ReadingHistory {
   }
 
   private loadRecentEntries(): void {
-    const recentRaw = this.repo.getItem(SITE_RECENT_KEY);
     const disabled = this.repo.getItem(SITE_RECENT_DISABLED_KEY);
+    const recentRaw = disabled ? null : this.repo.getItem(SITE_RECENT_KEY);
     if (recentRaw === this.recentRaw && disabled === this.recentDisabled)
       return;
     this.recentRaw = recentRaw;

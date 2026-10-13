@@ -310,7 +310,18 @@ test('pages without a session save global settings without creating an empty ses
   new ConfigService(new StorageRepository(storage)).saveConfig(
     createInitialState(),
   );
-  assert.equal(storage.writes.length, 3);
+  assert.deepEqual(
+    storage.writes.map(({ key }) => key).sort(),
+    [
+      'arcaFeed:displaySettings',
+      'arcaFeed:subscriptionSettings',
+      'arcaFeed:readingSettings',
+      'arcaFeed:lastModalTab',
+      'arcaFeed:settingsVersion',
+      'arcaFeed:filterChannels',
+      'arcaFeed:isShuffleMode',
+    ].sort(),
+  );
   assert.ok(
     storage.writes.every((entry) => !entry.key.startsWith('arcaFeed::')),
   );
@@ -1462,7 +1473,8 @@ test('JSON getters parse once per raw value and setters invalidate cached payloa
 test('config getters defer unrelated JSON through store updates and setters', () => {
   const storage = memoryStorage({
     'arcaFeed:articleFilterConfig': '{"test":{}}',
-    'arcaFeed:uiSettings': '{"contentWidth":800}',
+    'arcaFeed:displaySettings': '{"contentWidth":800}',
+    'arcaFeed:settingsVersion': '2',
     'arcaFeed:session:articleList': '["/b/test/100"]',
   });
   const parsed = [];

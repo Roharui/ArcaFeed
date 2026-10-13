@@ -1,3 +1,4 @@
+import { mergeState } from '@/vault/lazy-state';
 import { initNavigationList } from '@/feature/modal/navigationTab';
 import { StepRunner } from '@/core/step-runner';
 import { initArticlePrefetch } from '@/feature/article/prefetch';
@@ -156,10 +157,9 @@ class EventManager {
           disableSwiper: !existingFilter.disableSwiper,
         };
 
-        p.articleFilterConfig = {
-          ...p.articleFilterConfig,
+        p.articleFilterConfig = mergeState(p.articleFilterConfig, {
           [p.href.channelId]: pageFilter,
-        };
+        });
 
         p.flushSave();
 

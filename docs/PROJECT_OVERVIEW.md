@@ -82,11 +82,11 @@ Webpack으로 코드와 CSS를 묶으며 jQuery, Swiper, Toastify는 유저스�
 [VaultAdapter](../src/vault/index.ts)는 기능 모듈에 상태 접근과 자동 저장을 제공합니다.
 [ConfigService](../src/vault/config.ts)는
 [config-schema.ts](../src/vault/config-schema.ts)로 데이터를 검증한 뒤
-[StorageRepository](../src/vault/repository.ts)를 통해 localStorage를 읽고 씁니다. JSON 필드는 첫 접근 때만 파싱·정규화하며, 상태 복사와 변경 감지는 사용하지 않은 getter를 실행하지 않습니다.
+[StorageRepository](../src/vault/repository.ts)를 통해 localStorage를 읽고 씁니다. JSON 필드는 첫 접근 때만 파싱·정규화하며, 상태 복사와 변경 감지는 사용하지 않은 getter를 실행하지 않습니다. [ConfigStorage](../src/vault/config-storage.ts)는 채널별 필터와 화면·구독·읽기 설정을 별도 키에서 읽고 저장합니다. 설정 모달도 선택한 탭을 처음 열 때 생성합니다.
 
 | 저장 범위        | 주요 키와 내용                                                                                                 |
 | ---------------- | -------------------------------------------------------------------------------------------------------------- |
-| 전역 설정        | `arcaFeed:articleFilterConfig`, `arcaFeed:uiSettings`, `arcaFeed:isShuffleMode`                                |
+| 전역 설정        | `arcaFeed:channelFilter:{id}`, `arcaFeed:filterChannels`, 용도별 설정 키와 `arcaFeed:isShuffleMode`            |
 | 탐색 세션        | `arcaFeed:{articleKey}:` 아래 목록, 시리즈·스크랩 모드, 구독 채널, 검색 조건과 마지막 인덱스                   |
 | 탐색 캐시 관리   | `arcaFeed:recentArticleKeys`                                                                                   |
 | 이어보기         | `arcaFeed:readingHistory`에 요약, `arcaFeed:readingList:{id}`에 세션별 목록, `arcaFeed:readingProgress`에 위치 |

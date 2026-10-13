@@ -1,3 +1,4 @@
+import { mergeState } from '@/vault/lazy-state';
 import $ from 'jquery';
 
 import { eventBus } from '@/core/app-events';
@@ -240,7 +241,7 @@ function initCheckSubscribeModal(p: VaultAdapter): VaultAdapter {
     | ArticleFilterConfigImpl
     | undefined;
   p.updateState({
-    uiSettings: { ...p.uiSettings, hiddenChannels },
+    uiSettings: mergeState(p.uiSettings, { hiddenChannels }),
     ...(p.isSeriesMode && p.seriesChannels.length
       ? {
           seriesChannels: parseSubscribedChannels()
@@ -251,7 +252,7 @@ function initCheckSubscribeModal(p: VaultAdapter): VaultAdapter {
       : {}),
     ...(filters && Object.keys(filters).length
       ? {
-          articleFilterConfig: { ...p.articleFilterConfig, ...filters },
+          articleFilterConfig: mergeState(p.articleFilterConfig, filters),
           articleList: p.articleList.slice(0, p.activeIndex + 1),
         }
       : {}),
@@ -276,10 +277,9 @@ async function initStartHomeSeries(p: VaultAdapter): Promise<VaultAdapter> {
   const isCurrent = captureArticleSession(p);
 
   try {
-    p.uiSettings = {
-      ...p.uiSettings,
+    p.uiSettings = mergeState(p.uiSettings, {
       homeSeriesChannels: selectedChannels.map((c) => c.id),
-    };
+    });
 
     const articleKey = createArticleKey();
     const filterConfig = p.articleFilterConfig;

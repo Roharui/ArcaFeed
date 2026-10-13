@@ -1,3 +1,4 @@
+import { mergeState } from '@/vault/lazy-state';
 import $ from 'jquery';
 
 import '@css/filter.css';
@@ -240,10 +241,9 @@ function initCheckFilterModal(p: VaultAdapter) {
   );
 
   p.updateState({
-    articleFilterConfig: {
-      ...p.articleFilterConfig,
+    articleFilterConfig: mergeState(p.articleFilterConfig, {
       [channelId]: pageFilter,
-    },
+    }),
     articleList: p.articleList.slice(0, p.activeIndex + 1),
   });
 
