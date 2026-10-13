@@ -7,6 +7,7 @@ import { createArticleKey } from '@/utils/article-key';
 import {
   READING_HISTORY_KEY,
   READING_PROGRESS_KEY,
+  READING_LIST_PREFIX,
   SITE_RECENT_KEY,
   SITE_RECENT_DISABLED_KEY,
 } from '@/vault/reading-history';
@@ -226,14 +227,16 @@ export function initReading(p: VaultAdapter): void {
   });
 
   window.addEventListener('storage', (event) => {
-    if (
-      event.key === READING_HISTORY_KEY ||
-      event.key === READING_PROGRESS_KEY ||
+    if (event.key === null) p.reading.reload();
+    else if (
       event.key === SITE_RECENT_KEY ||
-      event.key === SITE_RECENT_DISABLED_KEY ||
-      event.key === null
+      event.key === SITE_RECENT_DISABLED_KEY
     )
-      p.reading.reload();
+      p.reading.reload(['entries']);
+    else if (event.key === READING_PROGRESS_KEY) p.reading.reload(['progress']);
+    else if (event.key === READING_HISTORY_KEY) p.reading.reload(['sessions']);
+    else if (event.key.startsWith(READING_LIST_PREFIX))
+      p.reading.reloadSessionList();
   });
   p.reading.reload();
   window.addEventListener('load', () => p.reading.reload(), { once: true });
@@ -283,9 +286,7 @@ export function initReading(p: VaultAdapter): void {
 
   let checkpointTimer: ReturnType<typeof setTimeout> | undefined;
   let checkpointRemoved = false;
-  let checkpointTracked = p.reading.sessions.some(
-    (session) => session.id === contextId(p),
-  );
+  let checkpointTracked = p.reading.hasSession(contextId(p));
 
   if (p.canSkipVisitedArticles) {
     const skipButton = $('<button>', {
@@ -318,7 +319,7 @@ export function initReading(p: VaultAdapter): void {
     checkpointTimer = setTimeout(checkpoint, 700);
   };
   p.reading.subscribe(() => {
-    if (p.reading.sessions.some((session) => session.id === contextId(p))) {
+    if (p.reading.hasSession(contextId(p))) {
       checkpointTracked = true;
     } else if (checkpointTracked) {
       checkpointRemoved = true;

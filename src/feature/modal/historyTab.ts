@@ -16,7 +16,7 @@ import type { ReadingEntry } from '@/vault/reading-history';
 const PAGE_SIZE = 50;
 
 export function createHistoryModal(p: VaultAdapter): JQuery<HTMLElement> {
-  p.reading.reload();
+  p.reading.reload(['entries']);
   const tab = $('<div>', { class: 'helper-modal-tab helper-modal-history' });
   const count = $('<span>', {
     class: 'arcafeed-reading-count',
@@ -160,7 +160,7 @@ export function createHistoryModal(p: VaultAdapter): JQuery<HTMLElement> {
     $('<div>', { class: 'arcafeed-history-footer' }).append(
       total,
       $('<div>', { class: 'arcafeed-history-footer-actions' }).append(
-        button('새로고침', () => p.reading.reload()),
+        button('새로고침', () => p.reading.reload(['entries'])),
         $('<a>', {
           href: SITE_RECENT_URL,
           class: 'arcafeed-reading-button',

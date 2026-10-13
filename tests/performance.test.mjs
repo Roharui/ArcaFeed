@@ -1527,3 +1527,25 @@ test('reading payloads load independently on demand and reload leaves unused ses
   void reading.sessions;
   assert.equal(parsed.length, 3);
 });
+
+test('short navigation lists do not load unrelated series channel settings', () => {
+  const storage = memoryStorage({
+    'arcaFeed:session:articleList': '["/b/test/100"]',
+    'arcaFeed:session:seriesChannels': '["unused"]',
+  });
+  const reads = [];
+  const getItem = storage.getItem.bind(storage);
+  storage.getItem = (key) => {
+    reads.push(key);
+    return getItem(key);
+  };
+  const load = sourceLoader({ globals: { window: windowFixture } });
+  const { StorageRepository } = load('src/vault/repository.ts');
+  const { ConfigService } = load('src/vault/config.ts');
+  const config = new ConfigService(new StorageRepository(storage)).loadConfig();
+  reads.length = 0;
+  assert.deepEqual(config.articleList, ['/b/test/100']);
+  assert.ok(!reads.includes('arcaFeed:session:seriesChannels'));
+  assert.ok(!reads.includes('arcaFeed:articleFilterConfig'));
+  assert.ok(!reads.includes('arcaFeed:uiSettings'));
+});

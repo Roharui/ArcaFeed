@@ -7,7 +7,7 @@ import { deferField, mergeState, sameField } from './lazy-state';
 import { StorageRepository } from './repository';
 import { createArticleKey } from '@/utils/article-key';
 import { appendSearchParam } from '@/utils/url';
-import { compactNavigationArticles } from './article-window';
+import { compactNavigationArticles, findArticleIndex } from './article-window';
 import {
   normalizeArticles,
   normalizeFilters,
@@ -131,9 +131,21 @@ export class ConfigService {
     const original = mergeState(createInitialState(), patch);
     let compacted: string[] | undefined;
     const loadWindow = () => {
-      compacted ??= compactNavigationArticles(
+      if (compacted) return compacted;
+      const path = new URL(window.location.href).pathname.replace(/\/$/, '');
+      if (
+        findArticleIndex(
+          original.articleList,
+          path,
+          original.lastActiveIndex,
+        ) <= 200
+      ) {
+        compacted = original.articleList;
+        return compacted;
+      }
+      compacted = compactNavigationArticles(
         original.articleList,
-        new URL(window.location.href).pathname.replace(/\/$/, ''),
+        path,
         original.lastActiveIndex,
         original.seriesChannels,
         original.isSeriesMode &&

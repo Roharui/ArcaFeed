@@ -84,13 +84,13 @@ Webpack으로 코드와 CSS를 묶으며 jQuery, Swiper, Toastify는 유저스�
 [config-schema.ts](../src/vault/config-schema.ts)로 데이터를 검증한 뒤
 [StorageRepository](../src/vault/repository.ts)를 통해 localStorage를 읽고 씁니다. JSON 필드는 첫 접근 때만 파싱·정규화하며, 상태 복사와 변경 감지는 사용하지 않은 getter를 실행하지 않습니다.
 
-| 저장 범위        | 주요 키와 내용                                                                                 |
-| ---------------- | ---------------------------------------------------------------------------------------------- |
-| 전역 설정        | `arcaFeed:articleFilterConfig`, `arcaFeed:uiSettings`, `arcaFeed:isShuffleMode`                |
-| 탐색 세션        | `arcaFeed:{articleKey}:` 아래 목록, 시리즈·스크랩 모드, 구독 채널, 검색 조건과 마지막 인덱스   |
-| 탐색 캐시 관리   | `arcaFeed:recentArticleKeys`                                                                   |
-| 이어보기         | `arcaFeed:readingHistory`에 목록·탐색 정보, `arcaFeed:readingProgress`에 스크롤 위치·갱신 시각 |
-| 사이트 방문 기록 | `recent_articles`, `recent_disabled`를 읽어 최근 본 글과 본 글 여부 판정                       |
+| 저장 범위        | 주요 키와 내용                                                                                                 |
+| ---------------- | -------------------------------------------------------------------------------------------------------------- |
+| 전역 설정        | `arcaFeed:articleFilterConfig`, `arcaFeed:uiSettings`, `arcaFeed:isShuffleMode`                                |
+| 탐색 세션        | `arcaFeed:{articleKey}:` 아래 목록, 시리즈·스크랩 모드, 구독 채널, 검색 조건과 마지막 인덱스                   |
+| 탐색 캐시 관리   | `arcaFeed:recentArticleKeys`                                                                                   |
+| 이어보기         | `arcaFeed:readingHistory`에 요약, `arcaFeed:readingList:{id}`에 세션별 목록, `arcaFeed:readingProgress`에 위치 |
+| 사이트 방문 기록 | `recent_articles`, `recent_disabled`를 읽어 최근 본 글과 본 글 여부 판정                                       |
 
 [ReadingHistory](../src/vault/reading-history.ts)는 사이트 방문 기록과 이어보기를
 관리하며 방문 기록·세션·위치 변경을 별도로 알립니다.

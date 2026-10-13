@@ -169,10 +169,11 @@ test('recent history reads native records and matches subscription-feed aliases 
   assert.equal(storage.writes.length, 0);
   history.saveSession(session('first'));
   assert.ok(
-    storage.writes.every((write) =>
-      ['arcaFeed:readingHistory', 'arcaFeed:readingProgress'].includes(
-        write.key,
-      ),
+    storage.writes.every(
+      (write) =>
+        ['arcaFeed:readingHistory', 'arcaFeed:readingProgress'].includes(
+          write.key,
+        ) || write.key.startsWith('arcaFeed:readingList:'),
     ),
   );
   assert.equal(
@@ -787,6 +788,7 @@ test('scroll checkpoints write only small progress data and notify only progress
   });
   history.saveSession(checkpoint);
   const contexts = storage.getItem('arcaFeed:readingHistory');
+  const links = storage.getItem('arcaFeed:readingList:large');
   let contextsChanged = 0;
   let visitsChanged = 0;
   let progressChanged = 0;
@@ -799,7 +801,8 @@ test('scroll checkpoints write only small progress data and notify only progress
     storage.writes.map((write) => write.key),
     [READING_PROGRESS_KEY],
   );
-  assert.ok(storage.writes[0].value.length < contexts.length / 10);
+  assert.ok(storage.writes[0].value.length < links.length / 10);
+  assert.equal(storage.getItem('arcaFeed:readingList:large'), links);
   assert.equal(storage.getItem('arcaFeed:readingHistory'), contexts);
   assert.equal(contextsChanged, 0);
   assert.equal(visitsChanged, 0);
@@ -866,13 +869,16 @@ test('legacy oversized resume lists migrate within a total budget and retain eve
   const stored = JSON.parse(storage.getItem('arcaFeed:readingHistory'));
   assert.equal(stored.sessions.length, 20);
   assert.ok(
-    stored.sessions.reduce(
-      (total, item) => total + item.articleList.length,
-      0,
-    ) <= SESSION_TOTAL_ARTICLE_LIMIT,
+    stored.sessions.reduce((total, item) => total + item.articleCount, 0) <=
+      SESSION_TOTAL_ARTICLE_LIMIT,
   );
-  for (const item of stored.sessions)
-    assert.ok(item.articleList.includes(item.path));
+  for (const item of stored.sessions) {
+    assert.equal('articleList' in item, false);
+    const list = JSON.parse(
+      storage.getItem(`arcaFeed:readingList:${encodeURIComponent(item.id)}`),
+    );
+    assert.ok(list.includes(item.path));
+  }
   for (const item of history.sessions)
     assert.ok(item.articleList.includes(item.path));
   storage.writes.length = 0;
@@ -941,4 +947,140 @@ test('reading progress and native visit reloads do not schedule config autosaves
   } finally {
     vault.destroy();
   }
+});
+
+test('resume summaries and existence checks read no article lists; selecting one loads only its list', () => {
+  const { storage, ReadingHistory, window } = readingFixture();
+  const writer = new ReadingHistory();
+  writer.saveSession(
+    session('first', { articleList: ['/b/test/100', '/b/test/99'] }),
+  );
+  writer.saveSession(
+    session('second', { articleList: ['/b/test/100', '/b/test/98'] }),
+  );
+  const reads = [];
+  const getItem = storage.getItem.bind(storage);
+  storage.getItem = (key) => {
+    reads.push(key);
+    return getItem(key);
+  };
+  const { ReadingHistory: Reader } = sourceLoader({
+    globals: { localStorage: storage, window },
+  })('src/vault/reading-history.ts');
+  const reader = new Reader();
+  assert.equal(reader.hasSession('first'), true);
+  assert.ok(reads.every((key) => key === 'arcaFeed:readingHistory'));
+  const summaries = reader.sessions;
+  assert.equal(summaries.length, 2);
+  assert.ok(reads.every((key) => !key.startsWith('arcaFeed:readingList:')));
+  reads.length = 0;
+  const first = summaries.find((item) => item.id === 'first');
+  assert.deepEqual(first.articleList, ['/b/test/100', '/b/test/99']);
+  assert.ok(reads.every((key) => key === 'arcaFeed:readingList:first'));
+  reads.length = 0;
+  void first.articleList;
+  assert.deepEqual(reads, []);
+});
+
+test('targeted history refreshes never read unrelated storage payloads', () => {
+  const { storage, ReadingHistory } = readingFixture();
+  const history = new ReadingHistory();
+  history.saveSession(session('first'));
+  void history.entries;
+  const reads = [];
+  const getItem = storage.getItem.bind(storage);
+  storage.getItem = (key) => {
+    reads.push(key);
+    return getItem(key);
+  };
+  history.reload(['entries']);
+  assert.ok(
+    reads.every((key) => ['recent_articles', 'recent_disabled'].includes(key)),
+  );
+  reads.length = 0;
+  history.reload(['progress']);
+  assert.deepEqual(reads, ['arcaFeed:readingProgress']);
+  reads.length = 0;
+  history.reload(['sessions']);
+  assert.ok(
+    reads.every((key) =>
+      ['arcaFeed:readingHistory', 'arcaFeed:readingProgress'].includes(key),
+    ),
+  );
+});
+
+test('saving and removing one resumed context leaves other session lists unloaded', () => {
+  const { storage, ReadingHistory, window } = readingFixture();
+  const writer = new ReadingHistory();
+  writer.saveSession(session('first'));
+  writer.saveSession(session('second'));
+  const reads = [];
+  const getItem = storage.getItem.bind(storage);
+  storage.getItem = (key) => {
+    reads.push(key);
+    return getItem(key);
+  };
+  const { ReadingHistory: Reader } = sourceLoader({
+    globals: { localStorage: storage, window },
+  })('src/vault/reading-history.ts');
+  const reader = new Reader();
+  reader.saveSession(
+    session('first', { articleList: ['/b/test/100', '/b/test/99'] }),
+  );
+  assert.ok(!reads.includes('arcaFeed:readingList:second'));
+  reads.length = 0;
+  reader.removeSession('first');
+  assert.ok(reads.every((key) => !key.startsWith('arcaFeed:readingList:')));
+  assert.equal(storage.getItem('arcaFeed:readingList:first'), null);
+  assert.notEqual(storage.getItem('arcaFeed:readingList:second'), null);
+});
+
+test('cross-tab list changes invalidate deferred lists without loading other lists', () => {
+  const { storage, ReadingHistory } = readingFixture();
+  const writer = new ReadingHistory();
+  writer.saveSession(session('first'));
+  writer.saveSession(session('second'));
+  const reader = new ReadingHistory();
+  const first = reader.sessions.find((item) => item.id === 'first');
+  void first.articleList;
+  const updated = ['/b/test/100', '/b/test/77'];
+  storage.setItem('arcaFeed:readingList:first', JSON.stringify(updated));
+  reader.reloadSessionList();
+  assert.deepEqual(
+    reader.sessions.find((item) => item.id === 'first').articleList,
+    updated,
+  );
+});
+
+test('malformed split-list metadata stays bounded and missing lists retain the current article', () => {
+  const contexts = Array.from({ length: 20 }, (_, index) => ({
+    ...session(`bounded:${index}`),
+    articleCount: 2000,
+  }));
+  const { storage, ReadingHistory, load } = readingFixture({
+    'arcaFeed:readingHistory': JSON.stringify({
+      version: 2,
+      sessions: contexts,
+    }),
+  });
+  const { SESSION_TOTAL_ARTICLE_LIMIT, readingListKey } = load(
+    'src/vault/reading-history.ts',
+  );
+  const links = Array.from({ length: 2100 }, (_, i) => `/b/test/${i + 1}`);
+  for (const context of contexts)
+    storage.setItem(readingListKey(context.id), JSON.stringify(links));
+  const history = new ReadingHistory();
+  assert.ok(
+    history.sessions.reduce(
+      (total, item) => total + item.articleList.length,
+      0,
+    ) <= SESSION_TOTAL_ARTICLE_LIMIT,
+  );
+  const id = history.sessions[0].id;
+  storage.removeItem(readingListKey(id));
+  history.reloadSessionList();
+  assert.deepEqual(
+    history.sessions.find((item) => item.id === id).articleList,
+    ['/b/test/100'],
+  );
 });
