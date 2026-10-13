@@ -74,7 +74,7 @@ export class ConfigService {
     // Load article list
     deferField(patch, 'articleList', () =>
       normalizeArticles(
-        this.repo.getJSON<unknown>(
+        this.repo.getArticleList(
           this.repo.scopedKey(articleKey, 'articleList'),
         ),
         window.location.origin,
@@ -176,9 +176,10 @@ export class ConfigService {
     // Per-articleKey scoped storage
     if (articleKey) {
       if (newSession || !sameField(previous, state, 'articleList')) {
-        this.repo.setJSON(
+        this.repo.setArticleList(
           this.repo.scopedKey(articleKey, 'articleList'),
           state.articleList,
+          newSession ? undefined : previous?.articleList,
         );
       }
       if (newSession || !sameField(previous, state, 'isSeriesMode')) {
@@ -231,7 +232,7 @@ export class ConfigService {
       articleList.unshift(session.path);
       index = 0;
     }
-    this.repo.setJSON(
+    this.repo.setArticleList(
       this.repo.scopedKey(articleKey, 'articleList'),
       articleList,
     );
@@ -298,7 +299,7 @@ export class ConfigService {
       targetArticleKey,
     );
 
-    this.repo.setJSON(
+    this.repo.setArticleList(
       this.repo.scopedKey(targetArticleKey, 'articleList'),
       normalizedList,
     );

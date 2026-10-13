@@ -1,3 +1,4 @@
+import { AppendListStorage } from './append-list';
 /**
  * Storage Repository - abstracts localStorage access.
  * Separates persistence concerns from business logic (previously in Config class).
@@ -7,6 +8,7 @@ const ARTICLE_KEY_CACHE_LIMIT = 5;
 const RECENT_ARTICLE_KEYS_KEY = 'arcaFeed:recentArticleKeys';
 const SCOPED_CACHE_SUFFIXES = new Set([
   'articleList',
+  'articleList:pending',
   'articleFilterConfig',
   'seriesMode',
   'scrapMode',
@@ -17,6 +19,7 @@ const SCOPED_CACHE_SUFFIXES = new Set([
 
 export class StorageRepository {
   private storage: Storage;
+  private appendLists = new AppendListStorage(this);
   private checkedCacheInventory = false;
   private jsonCache = new Map<string, { raw: string | null; value: unknown }>();
 
@@ -57,6 +60,18 @@ export class StorageRepository {
     const raw = JSON.stringify(value);
     this.setItem(key, raw);
     // Keep the serialized snapshot separate from the caller's mutable object.
+  }
+
+  getArticleList(key: string): string[] {
+    return this.appendLists.get(key);
+  }
+
+  setArticleList(
+    key: string,
+    value: string[],
+    previous?: readonly string[],
+  ): void {
+    this.appendLists.set(key, value, previous);
   }
 
   /**

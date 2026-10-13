@@ -88,6 +88,7 @@ Webpack으로 코드와 CSS를 묶으며 jQuery, Swiper, Toastify는 유저스�
 | ---------------- | ---------------------------------------------------------------------------------------------- |
 | 전역 설정        | `arcaFeed:articleFilterConfig`, `arcaFeed:uiSettings`, `arcaFeed:isShuffleMode`                |
 | 탐색 세션        | `arcaFeed:{articleKey}:` 아래 목록, 시리즈·스크랩 모드, 구독 채널, 검색 조건과 마지막 인덱스   |
+| 목록 추가분      | `arcaFeed:{articleKey}:articleList:pending`에 큰 탐색 목록의 추가분을 보관하며 조회 때 병합    |
 | 탐색 캐시 관리   | `arcaFeed:recentArticleKeys`                                                                   |
 | 이어보기         | `arcaFeed:readingHistory`에 목록·탐색 정보, `arcaFeed:readingProgress`에 스크롤 위치·갱신 시각 |
 | 사이트 방문 기록 | `recent_articles`, `recent_disabled`를 읽어 최근 본 글과 본 글 여부 판정                       |
