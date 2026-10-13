@@ -1425,3 +1425,105 @@ test('step execution keeps parallel work, sequential dependencies and follow-ups
   assert.deepEqual(events, ['a', 'b', 'follow-up', 'c', 'last']);
   assert.equal(p.saves, 1);
 });
+
+test('JSON getters parse once per raw value and setters invalidate cached payloads', () => {
+  const storage = memoryStorage({ large: '{"items":[1,2]}', broken: '{' });
+  let parses = 0;
+  const load = sourceLoader({
+    globals: {
+      JSON: {
+        ...JSON,
+        stringify: JSON.stringify,
+        parse(raw) {
+          parses++;
+          return JSON.parse(raw);
+        },
+      },
+    },
+  });
+  const { StorageRepository } = load('src/vault/repository.ts');
+  const repo = new StorageRepository(storage);
+  assert.equal(parses, 0);
+  const first = repo.getJSON('large');
+  assert.equal(repo.getJSON('large'), first);
+  assert.equal(parses, 1);
+  repo.getJSON('broken');
+  repo.getJSON('broken');
+  assert.equal(parses, 2);
+  storage.setItem('large', '{"items":[3]}');
+  assert.deepEqual(repo.getJSON('large'), { items: [3] });
+  repo.setJSON('large', { items: [4] });
+  assert.deepEqual(repo.getJSON('large'), { items: [4] });
+  repo.removeItem('large');
+  assert.equal(repo.getJSON('large'), null);
+  assert.equal(parses, 4);
+});
+
+test('config getters defer unrelated JSON through store updates and setters', () => {
+  const storage = memoryStorage({
+    'arcaFeed:articleFilterConfig': '{"test":{}}',
+    'arcaFeed:uiSettings': '{"contentWidth":800}',
+    'arcaFeed:session:articleList': '["/b/test/100"]',
+  });
+  const parsed = [];
+  const load = sourceLoader({
+    globals: {
+      window: windowFixture,
+      JSON: {
+        stringify: JSON.stringify,
+        parse(raw) {
+          parsed.push(raw);
+          return JSON.parse(raw);
+        },
+      },
+    },
+  });
+  const { StorageRepository } = load('src/vault/repository.ts');
+  const { ConfigService } = load('src/vault/config.ts');
+  const { Store } = load('src/vault/store.ts');
+  const store = new Store(
+    new ConfigService(new StorageRepository(storage)).loadConfig(),
+  );
+  assert.deepEqual(parsed, []);
+  store.setState({ readingRevision: 1 });
+  assert.deepEqual(parsed, []);
+  assert.equal(store.getState().uiSettings.contentWidth, 800);
+  assert.deepEqual(parsed, ['{"contentWidth":800}']);
+  assert.equal(store.getState().uiSettings.contentWidth, 800);
+  store.setState({ articleList: ['/b/test/101'] });
+  assert.deepEqual(store.getState().articleList, ['/b/test/101']);
+  assert.deepEqual(parsed, ['{"contentWidth":800}']);
+});
+
+test('reading payloads load independently on demand and reload leaves unused sessions untouched', () => {
+  const storage = memoryStorage({
+    recent_articles: '[]',
+    'arcaFeed:readingHistory': '{"sessions":[]}',
+    'arcaFeed:readingProgress': '[]',
+  });
+  const parsed = [];
+  const load = sourceLoader({
+    globals: {
+      window: windowFixture,
+      localStorage: storage,
+      JSON: {
+        stringify: JSON.stringify,
+        parse(raw) {
+          parsed.push(raw);
+          return JSON.parse(raw);
+        },
+      },
+    },
+  });
+  const { ReadingHistory } = load('src/vault/reading-history.ts');
+  const reading = new ReadingHistory();
+  assert.deepEqual(parsed, []);
+  assert.equal(reading.hasVisited('/b/test/100'), false);
+  assert.deepEqual(parsed, ['[]']);
+  reading.reload();
+  assert.deepEqual(parsed, ['[]']);
+  assert.deepEqual(reading.sessions, []);
+  assert.deepEqual(parsed, ['[]', '{"sessions":[]}', '[]']);
+  void reading.sessions;
+  assert.equal(parsed.length, 3);
+});

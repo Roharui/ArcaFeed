@@ -46,7 +46,7 @@ Webpack으로 코드와 CSS를 묶으며 jQuery, Swiper, Toastify는 유저스�
 ## 실행 흐름
 
 1. `src/index.ts`가 중복 실행을 확인하고 `ArcaFeed`를 생성합니다.
-2. `VaultAdapter`가 저장 설정을 불러오고 URL의 페이지 모드를 판단합니다.
+2. `VaultAdapter`가 저장 설정의 지연 getter를 준비하고 URL의 페이지 모드를 판단합니다.
    지원하지 않는 `OTHER` 페이지는 레이아웃 CSS 로드와 이벤트 연결 전에 종료합니다.
 3. 지원 페이지에서는 이벤트를 `EventManager`의 단계와 연결하고 `init`을 발행합니다.
 4. 초기화는 개발 버전 표시 → 링크·버튼·키보드·시리즈·UI 병렬 초기화 →
@@ -82,7 +82,7 @@ Webpack으로 코드와 CSS를 묶으며 jQuery, Swiper, Toastify는 유저스�
 [VaultAdapter](../src/vault/index.ts)는 기능 모듈에 상태 접근과 자동 저장을 제공합니다.
 [ConfigService](../src/vault/config.ts)는
 [config-schema.ts](../src/vault/config-schema.ts)로 데이터를 검증한 뒤
-[StorageRepository](../src/vault/repository.ts)를 통해 localStorage를 읽고 씁니다.
+[StorageRepository](../src/vault/repository.ts)를 통해 localStorage를 읽고 씁니다. JSON 필드는 첫 접근 때만 파싱·정규화하며, 상태 복사와 변경 감지는 사용하지 않은 getter를 실행하지 않습니다.
 
 | 저장 범위        | 주요 키와 내용                                                                                 |
 | ---------------- | ---------------------------------------------------------------------------------------------- |

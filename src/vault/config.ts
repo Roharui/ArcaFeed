@@ -1,3 +1,4 @@
+import { deferField, mergeState, sameField } from './lazy-state';
 /**
  * Config Service - handles loading and saving application configuration.
  * Uses StorageRepository instead of directly accessing localStorage.
@@ -60,20 +61,24 @@ export class ConfigService {
     const patch: Partial<AppState> = { articleKey };
 
     // Load article filter config
-    patch.articleFilterConfig = normalizeFilters(
-      this.repo.getJSON<unknown>(ARTICLE_FILTER_CONFIG_GLOBAL_KEY) ??
-        this.repo.getJSON<unknown>(
-          this.repo.scopedKey(articleKey, 'articleFilterConfig'),
-        ) ??
-        {},
+    deferField(patch, 'articleFilterConfig', () =>
+      normalizeFilters(
+        this.repo.getJSON<unknown>(ARTICLE_FILTER_CONFIG_GLOBAL_KEY) ??
+          this.repo.getJSON<unknown>(
+            this.repo.scopedKey(articleKey, 'articleFilterConfig'),
+          ) ??
+          {},
+      ),
     );
 
     // Load article list
-    patch.articleList = normalizeArticles(
-      this.repo.getJSON<unknown>(
-        this.repo.scopedKey(articleKey, 'articleList'),
+    deferField(patch, 'articleList', () =>
+      normalizeArticles(
+        this.repo.getJSON<unknown>(
+          this.repo.scopedKey(articleKey, 'articleList'),
+        ),
+        window.location.origin,
       ),
-      window.location.origin,
     );
 
     // Load series mode
@@ -86,11 +91,13 @@ export class ConfigService {
       this.repo.getItem(this.repo.scopedKey(articleKey, 'scrapMode')) ===
         'true';
 
-    patch.seriesChannels = stringList(
-      this.repo.getJSON<unknown>(
-        this.repo.scopedKey(articleKey, 'seriesChannels'),
-      ),
-    ).filter((channel) => /^[a-zA-Z0-9]+$/.test(channel));
+    deferField(patch, 'seriesChannels', () =>
+      stringList(
+        this.repo.getJSON<unknown>(
+          this.repo.scopedKey(articleKey, 'seriesChannels'),
+        ),
+      ).filter((channel) => /^[a-zA-Z0-9]+$/.test(channel)),
+    );
 
     // Load search query
     patch.searchQuery =
@@ -108,34 +115,38 @@ export class ConfigService {
     patch.isShuffleMode = this.repo.getItem(SHUFFLE_MODE_KEY) === 'true';
 
     // Load UI settings (getJSON handles null / parse errors internally)
-    patch.uiSettings = normalizeUISettings(
-      this.repo.getJSON<unknown>(UI_SETTINGS_KEY),
+    deferField(patch, 'uiSettings', () =>
+      normalizeUISettings(this.repo.getJSON<unknown>(UI_SETTINGS_KEY)),
     );
 
     // Prune old caches
     this.repo.pruneArticleKeyCaches(articleKey);
 
     // Loading a page is not a change to its persisted list or settings.
-    this.lastSavedState = {
-      ...createInitialState(),
-      ...patch,
+    this.lastSavedState = mergeState(createInitialState(), patch);
+    this.lastSavedState = mergeState(this.lastSavedState, {
       activeIndex: patch.lastActiveIndex ?? -1,
-    };
+    });
 
-    const compacted = compactNavigationArticles(
-      patch.articleList,
-      new URL(window.location.href).pathname.replace(/\/$/, ''),
-      patch.lastActiveIndex,
-      patch.seriesChannels,
-      patch.isSeriesMode &&
-        (patch.isScrapMode || patch.seriesChannels.length === 0),
-    );
-    if (compacted !== patch.articleList) {
-      const removed = patch.articleList.length - compacted.length;
-      patch.articleList = compacted;
-      const saved = patch.lastActiveIndex ?? -1;
-      patch.lastActiveIndex = saved >= removed ? saved - removed : -1;
-    }
+    const original = mergeState(createInitialState(), patch);
+    let compacted: string[] | undefined;
+    const loadWindow = () => {
+      compacted ??= compactNavigationArticles(
+        original.articleList,
+        new URL(window.location.href).pathname.replace(/\/$/, ''),
+        original.lastActiveIndex,
+        original.seriesChannels,
+        original.isSeriesMode &&
+          (original.isScrapMode || original.seriesChannels.length === 0),
+      );
+      return compacted;
+    };
+    deferField(patch, 'articleList', loadWindow);
+    deferField(patch, 'lastActiveIndex', () => {
+      const removed = original.articleList.length - loadWindow().length;
+      const saved = original.lastActiveIndex;
+      return saved >= removed ? saved - removed : -1;
+    });
 
     return patch;
   }
@@ -149,52 +160,52 @@ export class ConfigService {
     const newSession = !previous || previous.articleKey !== articleKey;
 
     // Global settings — saved regardless of articleKey
-    if (previous?.uiSettings !== state.uiSettings) {
+    if (!sameField(previous, state, 'uiSettings')) {
       this.repo.setJSON(UI_SETTINGS_KEY, state.uiSettings);
     }
-    if (previous?.articleFilterConfig !== state.articleFilterConfig) {
+    if (!sameField(previous, state, 'articleFilterConfig')) {
       this.repo.setJSON(
         ARTICLE_FILTER_CONFIG_GLOBAL_KEY,
         state.articleFilterConfig,
       );
     }
-    if (previous?.isShuffleMode !== state.isShuffleMode) {
+    if (!sameField(previous, state, 'isShuffleMode')) {
       this.repo.setItem(SHUFFLE_MODE_KEY, state.isShuffleMode.toString());
     }
 
     // Per-articleKey scoped storage
     if (articleKey) {
-      if (newSession || previous?.articleList !== state.articleList) {
+      if (newSession || !sameField(previous, state, 'articleList')) {
         this.repo.setJSON(
           this.repo.scopedKey(articleKey, 'articleList'),
           state.articleList,
         );
       }
-      if (newSession || previous?.isSeriesMode !== state.isSeriesMode) {
+      if (newSession || !sameField(previous, state, 'isSeriesMode')) {
         this.repo.setItem(
           this.repo.scopedKey(articleKey, 'seriesMode'),
           state.isSeriesMode.toString(),
         );
       }
-      if (newSession || previous?.isScrapMode !== state.isScrapMode) {
+      if (newSession || !sameField(previous, state, 'isScrapMode')) {
         this.repo.setItem(
           this.repo.scopedKey(articleKey, 'scrapMode'),
           state.isScrapMode.toString(),
         );
       }
-      if (newSession || previous?.seriesChannels !== state.seriesChannels) {
+      if (newSession || !sameField(previous, state, 'seriesChannels')) {
         this.repo.setJSON(
           this.repo.scopedKey(articleKey, 'seriesChannels'),
           state.seriesChannels,
         );
       }
-      if (newSession || previous?.searchQuery !== state.searchQuery) {
+      if (newSession || !sameField(previous, state, 'searchQuery')) {
         this.repo.setItem(
           this.repo.scopedKey(articleKey, 'searchQuery'),
           state.searchQuery,
         );
       }
-      if (newSession || previous?.activeIndex !== state.activeIndex) {
+      if (newSession || !sameField(previous, state, 'activeIndex')) {
         this.saveLastActiveIndex(articleKey, state.activeIndex);
       }
       if (newSession) this.repo.pruneArticleKeyCaches(articleKey);

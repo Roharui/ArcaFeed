@@ -89,7 +89,9 @@ export function isVisitedPath(
 
 /** Read the site's recent history; persist only ArcaFeed resume positions. */
 export class ReadingHistory {
-  private data: ReadingData;
+  private data: ReadingData = { sessions: [] };
+  private sessionsLoaded = false;
+  private entriesLoaded = false;
   private recentEntries: ReadingEntry[] = [];
   private visibleRecentEntries: ReadingEntry[] = [];
   private visitedPaths = new Set<string>();
@@ -107,29 +109,44 @@ export class ReadingHistory {
   };
 
   constructor(private repo = new StorageRepository()) {
+    // Each independent payload is loaded by the first getter or operation that needs it.
+  }
+
+  private ensureSessions(): void {
+    if (this.sessionsLoaded) return;
+    this.sessionsLoaded = true;
     this.data = this.readData();
-    this.loadRecentEntries();
-    this.updateVisitedPaths();
-    // Migrate legacy duplicate visits and oversized lists once, keeping positions.
+    // Defer legacy migration until resume data is actually used.
     if (this.historyRaw !== null) {
       this.persistContexts(this.load());
       this.data = this.readData();
     }
   }
 
+  private ensureEntries(): void {
+    if (this.entriesLoaded) return;
+    this.entriesLoaded = true;
+    this.loadRecentEntries();
+    this.updateVisitedPaths();
+  }
+
   get entries(): readonly ReadingEntry[] {
+    this.ensureEntries();
     return this.visibleRecentEntries;
   }
 
   get sessions(): readonly ReadingSession[] {
+    this.ensureSessions();
     return this.data.sessions;
   }
 
   hasVisited(path: string): boolean {
+    this.ensureEntries();
     return isVisitedPath(this.visitedPaths, path);
   }
 
   getVisitedPaths(): Set<string> {
+    this.ensureEntries();
     return new Set(this.visitedPaths);
   }
 
@@ -145,7 +162,8 @@ export class ReadingHistory {
     const previousData = this.cachedData;
     const previousProgress = this.progress;
     const previousEntries = this.recentEntries;
-    this.data = this.readData();
+    if (this.sessionsLoaded) this.data = this.readData();
+    this.entriesLoaded = true;
     this.loadRecentEntries();
     const changes: ReadingChange[] = [];
     if (previousEntries !== this.recentEntries) {
@@ -158,6 +176,7 @@ export class ReadingHistory {
   }
 
   saveSession(session: ReadingSession): void {
+    this.ensureSessions();
     const next = this.load();
     const existing = next.sessions.find((item) => item.id === session.id);
     const params = new URLSearchParams(session.searchQuery);
@@ -260,6 +279,7 @@ export class ReadingHistory {
 
   /** Merge each checkpoint operation with disk so tabs preserve each other's positions. */
   private change(mutate: (data: ReadingData) => void): void {
+    this.ensureSessions();
     const next = this.load();
     mutate(next);
     this.persistContexts(next);
@@ -311,12 +331,7 @@ export class ReadingHistory {
   private loadProgress(): ReadingProgress[] {
     const raw = this.repo.getItem(READING_PROGRESS_KEY);
     if (raw === this.progressRaw) return this.progress;
-    let parsed: unknown;
-    try {
-      parsed = raw ? JSON.parse(raw) : [];
-    } catch {
-      parsed = [];
-    }
+    const parsed = this.repo.getJSON<unknown>(READING_PROGRESS_KEY);
     this.progressRaw = raw;
     this.progress = (Array.isArray(parsed) ? parsed : [])
       .filter(

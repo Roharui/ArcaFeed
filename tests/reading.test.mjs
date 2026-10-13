@@ -862,6 +862,7 @@ test('legacy oversized resume lists migrate within a total budget and retain eve
     }),
   );
   const history = new ReadingHistory();
+  void history.sessions; // Legacy migration runs on first resume access.
   const stored = JSON.parse(storage.getItem('arcaFeed:readingHistory'));
   assert.equal(stored.sessions.length, 20);
   assert.ok(

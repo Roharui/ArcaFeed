@@ -1,3 +1,4 @@
+import { sameField } from './lazy-state';
 export { StorageRepository } from './repository';
 export { ConfigService } from './config';
 
@@ -84,7 +85,9 @@ export class VaultAdapter {
       'uiSettings',
     ] as const;
     this.unsubscribeAutoSave = this.store.subscribe((state) => {
-      const changed = persistedKeys.some((key) => state[key] !== previous[key]);
+      const changed = persistedKeys.some(
+        (key) => !sameField(previous, state, key),
+      );
       previous = state;
       if (changed) this.scheduleSave();
     });

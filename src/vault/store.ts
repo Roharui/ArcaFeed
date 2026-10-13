@@ -1,3 +1,4 @@
+import { mergeState, sameField } from './lazy-state';
 /**
  * Centralized state store with immutable updates and subscription support.
  * Replaces the mutable Vault god-object with a Flux-like single-direction data flow.
@@ -81,14 +82,18 @@ export class Store {
 
     // Deep-merge uiSettings so newly added fields get default values
     // even when old localStorage data is missing them.
-    if (initialState?.uiSettings) {
+    if (
+      initialState &&
+      !Object.getOwnPropertyDescriptor(initialState, 'uiSettings')?.get &&
+      initialState.uiSettings
+    ) {
       initialState = {
         ...initialState,
         uiSettings: { ...base.uiSettings, ...initialState.uiSettings },
       };
     }
 
-    this.state = { ...base, ...initialState };
+    this.state = mergeState(base, initialState);
   }
 
   getState(): Readonly<AppState> {
@@ -97,10 +102,10 @@ export class Store {
 
   setState(patch: Partial<AppState>): void {
     const changed = (Object.keys(patch) as (keyof AppState)[]).some(
-      (key) => !Object.is(this.state[key], patch[key]),
+      (key) => !sameField(this.state, patch as AppState, key),
     );
     if (!changed) return;
-    this.state = { ...this.state, ...patch };
+    this.state = mergeState(this.state, patch);
     this.notify();
   }
 

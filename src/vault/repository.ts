@@ -18,6 +18,7 @@ const SCOPED_CACHE_SUFFIXES = new Set([
 export class StorageRepository {
   private storage: Storage;
   private checkedCacheInventory = false;
+  private jsonCache = new Map<string, { raw: string | null; value: unknown }>();
 
   constructor(storage: Storage = localStorage) {
     this.storage = storage;
@@ -30,25 +31,32 @@ export class StorageRepository {
   setItem(key: string, value: string): void {
     if (this.storage.getItem(key) === value) return;
     this.storage.setItem(key, value);
+    this.jsonCache.delete(key);
   }
 
   removeItem(key: string): void {
     this.storage.removeItem(key);
+    this.jsonCache.delete(key);
   }
 
   getJSON<T>(key: string): T | null {
     const raw = this.getItem(key);
-    if (!raw) return null;
-
+    const cached = this.jsonCache.get(key);
+    if (cached && cached.raw === raw) return cached.value as T | null;
+    let value: T | null = null;
     try {
-      return JSON.parse(raw) as T;
+      value = raw ? (JSON.parse(raw) as T) : null;
     } catch {
-      return null;
+      // Cache malformed payloads too, until the stored string changes.
     }
+    this.jsonCache.set(key, { raw, value });
+    return value;
   }
 
   setJSON<T>(key: string, value: T): void {
-    this.setItem(key, JSON.stringify(value));
+    const raw = JSON.stringify(value);
+    this.setItem(key, raw);
+    // Keep the serialized snapshot separate from the caller's mutable object.
   }
 
   /**
@@ -93,7 +101,7 @@ export class StorageRepository {
           SCOPED_CACHE_SUFFIXES.has(key.slice(separator + 1)) &&
           !retained.has(key.slice(9, separator))
         ) {
-          this.storage.removeItem(key);
+          this.removeItem(key);
         }
       }
       this.checkedCacheInventory = true;
