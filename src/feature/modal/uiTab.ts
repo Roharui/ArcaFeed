@@ -143,9 +143,9 @@ function createUISettingModal(p: VaultAdapter): JQuery<HTMLElement> {
     $('<p>', {
       class: 'arcafeed-settings-description',
       text: p.isCurrentMode('ARTICLE')
-        ? '← 이전 글 · → 다음 글. 스와이프가 켜져 있을 때 사용할 수 있습니다.'
+        ? '← 이전 글 · → 다음 글. 스와이프가 켜져 있을 때 사용할 수 있습니다. 화면 폭이 1024px 이상이면 본문 왼쪽 빈 공간 클릭으로 이전 글, 오른쪽 빈 공간 클릭으로 다음 글로 이동합니다.'
         : p.isCurrentMode('CHANNEL')
-          ? '→ 다음 글. 목록에서 탐색을 시작합니다.'
+          ? '→ 다음 글. 목록에서 탐색을 시작합니다. 화면 폭이 1024px 이상이고 스와이프가 켜져 있으면 본문 오른쪽 빈 공간 클릭으로도 시작합니다.'
           : '이 화면에서는 글 이동 단축키를 사용하지 않습니다.',
     }),
     $('<p>', {

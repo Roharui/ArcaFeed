@@ -11,6 +11,7 @@ import type { SwiperOptions } from 'swiper/types';
 import type { VaultAdapter } from '@/vault';
 import { installReducedMotion } from './motion';
 import { installSwiperVideoPause } from './video';
+import { installSideClick } from './side-click';
 
 const swiperOptions: SwiperOptions = {
   speed: 300,
@@ -126,6 +127,7 @@ function initSwiperPage(p: VaultAdapter): void {
   installReducedMotion(p.swiper);
   observeSwiperWidth(p.swiper);
   installSwiperVideoPause(p.swiper);
+  installSideClick(p, p.swiper);
 
   const nextEvent = SLIDE_NEXT_EVENT[p.href.mode] || 'renderNextPage';
   p.swiper.on('slideNextTransitionEnd', () => eventBus.emit(nextEvent));
