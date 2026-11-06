@@ -17,16 +17,26 @@ const initEvent = (p: VaultAdapter) => {
   document.addEventListener('keydown', (event) => {
     if (
       event.defaultPrevented ||
+      event.isComposing ||
+      event.keyCode === 229 ||
+      event.repeat ||
+      event.shiftKey ||
       event.altKey ||
       event.ctrlKey ||
       event.metaKey
     )
       return;
     if (document.querySelector('#dialog, .arcafeed-navigation-panel')) return;
-    const target = event.target;
+    const targets = event.composedPath?.() ?? [event.target];
     if (
-      target instanceof HTMLElement &&
-      (target.isContentEditable || target.closest('input, textarea, select'))
+      targets.some(
+        (target) =>
+          target instanceof HTMLElement &&
+          (target.isContentEditable ||
+            target.closest(
+              'input, textarea, select, [role="textbox"], [role="combobox"], [role="searchbox"]',
+            )),
+      )
     )
       return;
     const nextEvent = events[event.key];

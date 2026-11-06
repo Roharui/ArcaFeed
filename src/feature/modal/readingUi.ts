@@ -1,15 +1,22 @@
 import $ from 'jquery';
+import { reportFailure } from '@/utils/operation-error';
 import { eventBus } from '@/core/app-events';
 
 export function readingButton(
   label: string,
-  action: () => void,
+  action: () => unknown,
 ): JQuery<HTMLElement> {
   return $('<button>', {
     type: 'button',
     text: label,
     class: 'arcafeed-reading-button',
-  }).on('click', action);
+  }).on('click', () => {
+    try {
+      void Promise.resolve(action()).catch(reportFailure);
+    } catch (error) {
+      reportFailure(error);
+    }
+  });
 }
 
 function normalizeSearch(value: string): string {

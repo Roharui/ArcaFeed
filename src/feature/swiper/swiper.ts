@@ -9,6 +9,7 @@ import type { AppEvent } from '@/core/app-events';
 
 import type { SwiperOptions } from 'swiper/types';
 import type { VaultAdapter } from '@/vault';
+import { installReducedMotion } from './motion';
 import { installSwiperVideoPause } from './video';
 
 const swiperOptions: SwiperOptions = {
@@ -122,6 +123,7 @@ function initSwiperPage(p: VaultAdapter): void {
     allowSlidePrev: p.isPrevPageActive(),
     enabled: !disableSwiper,
   });
+  installReducedMotion(p.swiper);
   observeSwiperWidth(p.swiper);
   installSwiperVideoPause(p.swiper);
 

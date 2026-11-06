@@ -133,6 +133,32 @@ function createUISettingModal(p: VaultAdapter): JQuery<HTMLElement> {
     $uiTab.find('.ui-article-info-group').remove();
   }
 
+  const help = $('<details>', {
+    class: 'arcafeed-settings-section arcafeed-operation-help',
+  }).append(
+    $('<summary>', {
+      class: 'arcafeed-settings-heading',
+      text: '조작 도움말·키보드',
+    }),
+    $('<p>', {
+      class: 'arcafeed-settings-description',
+      text: p.isCurrentMode('ARTICLE')
+        ? '← 이전 글 · → 다음 글. 스와이프가 켜져 있을 때 사용할 수 있습니다.'
+        : p.isCurrentMode('CHANNEL')
+          ? '→ 다음 글. 목록에서 탐색을 시작합니다.'
+          : '이 화면에서는 글 이동 단축키를 사용하지 않습니다.',
+    }),
+    $('<p>', {
+      class: 'arcafeed-settings-description',
+      text: '설정·이동 버튼: Tab으로 선택한 뒤 Enter 또는 Space. 설정창: Tab·Shift+Tab으로 내부 이동, 탭 선택에서 방향키로 전환, Escape로 닫기. 닫으면 열기 전 위치로 포커스가 돌아갑니다.',
+    }),
+    $('<p>', {
+      class: 'arcafeed-settings-description',
+      text: '댓글·검색·입력·한글 조합 중에는 글 이동 단축키를 실행하지 않습니다. 설정창과 탐색 목록이 열려 있어도 이동하지 않습니다. 기기의 동작 줄이기 설정을 따릅니다.',
+    }),
+  );
+  $uiTab.find('.arcafeed-modal-content').append(help);
+
   $uiTab.find('#ui-check-btn').on('click', () => eventBus.emit('checkUIModal'));
   $uiTab.find('#ui-cancel-btn').on('click', () => eventBus.emit('closeModal'));
 

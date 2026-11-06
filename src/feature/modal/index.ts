@@ -1,6 +1,8 @@
 import $ from 'jquery';
+import { reportFailure } from '@/utils/operation-error';
 
 import '@css/modal.css';
+import { installDialogFocus } from './focus';
 import { eventBus } from '@/core/app-events';
 
 import { createArticleFilterModal } from './filterUi';
@@ -72,30 +74,43 @@ function initModal(p: VaultAdapter) {
     ensureTab(selectedTab);
     p.uiSettings = mergeState(p.uiSettings, { lastModalTab: selectedTab });
     dialogBody.find('.arcafeed-modal-content').scrollTop(0);
-    p.flushSave();
+    try {
+      p.flushSave();
+    } catch (error) {
+      reportFailure(error);
+    }
   });
   dialog.appendTo('body');
   dialog.on('click', (event) => {
     if (event.target === dialog[0]) void eventBus.emit('closeModal');
   });
-  $(document).on('keydown.arcafeedModal', (event) => {
-    if (event.key === 'Escape') void eventBus.emit('closeModal');
-  });
+  if (dialogBody[0]?.addEventListener)
+    dialog.data(
+      'cleanupFocus',
+      installDialogFocus(
+        dialogBody[0],
+        () => {
+          void eventBus.emit('closeModal');
+        },
+        dialog.find('.helper-modal-tab-radio:checked')[0],
+      ),
+    );
 }
 
-function initCloseModal(_: VaultAdapter): void {
+function cleanupModal(): void {
   $('#dialog .helper-modal-tab').each((_, element) => {
     $(element).data('cleanup')?.();
   });
-  $(document).off('keydown.arcafeedModal');
+  $('#dialog').data('cleanupFocus')?.();
+}
+
+function initCloseModal(_: VaultAdapter): void {
+  cleanupModal();
   $('#dialog').remove();
 }
 
 function initCloseModalContent(_: VaultAdapter): void {
-  $('#dialog .helper-modal-tab').each((_, element) => {
-    $(element).data('cleanup')?.();
-  });
-  $(document).off('keydown.arcafeedModal');
+  cleanupModal();
   $('#dialog .helper-modal-body').remove();
 }
 

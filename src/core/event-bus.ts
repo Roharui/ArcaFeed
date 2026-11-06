@@ -3,9 +3,11 @@
  * Replaces static ArcaFeed.runEvent() calls with injected dependencies.
  */
 
+import type { CommandResult } from './result';
+
 type EventHandler<Args extends unknown[]> = (
   ...args: Args
-) => void | Promise<void>;
+) => void | CommandResult | Promise<void | CommandResult>;
 
 export class EventBus<
   Events extends { [K in keyof Events]: unknown[] } = Record<string, any[]>,
@@ -30,22 +32,33 @@ export class EventBus<
   async emit<K extends keyof Events>(
     event: K,
     ...args: Events[K]
-  ): Promise<void> {
+  ): Promise<CommandResult> {
     const handlers = this.handlers[event];
-    if (!handlers) return;
+    if (!handlers?.size)
+      return {
+        ok: false,
+        errors: [new Error(`No handler for ${String(event)}`)],
+      };
 
     const promises = Array.from(handlers).map(async (handler) => {
       try {
-        await handler(...args);
+        const result = await handler(...args);
+        return result && !result.ok
+          ? result.errors.length
+            ? [...result.errors]
+            : [new Error('Command failed without details')]
+          : [];
       } catch (err) {
         console.error(
           `[EventBus] Error in handler for "${String(event)}":`,
           err,
         );
+        return [err];
       }
     });
 
-    await Promise.all(promises);
+    const errors = (await Promise.all(promises)).flat();
+    return errors.length ? { ok: false, errors } : { ok: true };
   }
 
   off<K extends keyof Events>(

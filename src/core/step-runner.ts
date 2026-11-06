@@ -51,7 +51,16 @@ export class StepRunner {
     fn: PromiseFunc,
   ): Promise<PromiseFuncResult> {
     try {
-      return await fn(p);
+      const result = await fn(p);
+      if (
+        result &&
+        typeof result === 'object' &&
+        'ok' in result &&
+        !result.ok
+      ) {
+        throw result.errors[0] ?? new Error('Command failed');
+      }
+      return result;
     } catch (error) {
       console.error(`[StepRunner] Error in ${fn.name || 'anonymous'}:`, error);
       throw error;

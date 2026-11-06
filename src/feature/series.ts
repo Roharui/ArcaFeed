@@ -3,7 +3,9 @@ import $ from 'jquery';
 import '@css/series.css';
 
 import { eventBus } from '@/core/app-events';
-import { parseSearchQuery } from './search';
+import { navigate, isNavigating } from '@/feature/navigation';
+import { OperationError } from '@/utils/operation-error';
+import { normalizedSearchQuery } from './search';
 import {
   createArticleKey,
   getCurrentArticleKey,
@@ -12,6 +14,8 @@ import {
 
 import { navigationMode } from '@/vault/navigation-context';
 import type { VaultAdapter } from '@/vault';
+
+const openedSeriesTabs = new WeakMap<VaultAdapter, Window>();
 
 // ── Types ──────────────────────────────────────────────
 
@@ -133,12 +137,20 @@ function initSeriesBtnCss(_v: VaultAdapter): void {
 }
 
 function initEnableSeries(p: VaultAdapter): void {
+  if (isNavigating(p)) return;
+  const previousTab = openedSeriesTabs.get(p);
+  if (previousTab && !previousTab.closed) {
+    previousTab.focus();
+    return;
+  }
   const entries = parseSeriesEntries(
     $('.article-series').first().find('.series-link'),
     getCurrentArticleKey(),
   );
 
-  parseSearchQuery(p);
+  if (!entries.length)
+    throw new OperationError('command', '시리즈 글을 찾지 못했습니다.');
+  const query = normalizedSearchQuery(p.href.search);
 
   const currentIndex = Math.max(
     0,
@@ -149,15 +161,45 @@ function initEnableSeries(p: VaultAdapter): void {
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.set('articleKey', nextKey);
 
-  p.copySeriesStorage(
-    p.articleKey,
-    nextKey,
-    entries.map((e) => e.url),
-    currentIndex,
-    p.searchQuery,
+  let tab: Window | null = null;
+  navigate(
+    p,
+    () => {
+      tab!.location.replace(nextUrl.toString());
+      openedSeriesTabs.set(p, tab!);
+    },
+    {
+      stayOnPage: true,
+      prepare: () => {
+        try {
+          tab = window.open('about:blank', '_blank');
+        } catch (error) {
+          throw new OperationError(
+            'navigation',
+            '새 탭을 열지 못했습니다. 다시 시도해주세요.',
+            error,
+          );
+        }
+        if (!tab)
+          throw new OperationError(
+            'navigation',
+            '새 탭을 열지 못했습니다. 팝업 허용 설정을 확인하고 다시 시도해주세요.',
+          );
+        tab.opener = null;
+        p.copySeriesStorage(
+          p.articleKey,
+          nextKey,
+          entries.map((entry) => entry.url),
+          currentIndex,
+          query,
+        );
+      },
+      rollback: () => {
+        tab?.close();
+        openedSeriesTabs.delete(p);
+      },
+    },
   );
-
-  window.open(nextUrl.toString(), '_blank', 'noopener');
 }
 
 export { initSeriesContent, initEnableSeries, initSeriesBtnCss };

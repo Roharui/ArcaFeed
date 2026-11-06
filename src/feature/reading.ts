@@ -1,4 +1,5 @@
 import $ from 'jquery';
+import { navigate } from '@/feature/navigation';
 import '@css/reading.css';
 
 import { extractArticleRows } from './filter';
@@ -16,6 +17,8 @@ import type { VaultAdapter } from '@/vault';
 import { readingContextLabel } from '@/vault/reading-context';
 import { articleWindow } from '@/vault/article-window';
 import { showPendingSkippedToast } from './swiper/skip-toast';
+import { reportFailure } from '@/utils/operation-error';
+import { showToast } from '@/utils/toast';
 import { afterPaint } from '@/utils/after-paint';
 
 const RESUME_SCROLL_KEY = 'arcaFeed:resumeScroll';
@@ -23,6 +26,7 @@ const ARTICLE_TITLE_SELECTOR =
   '.article-head .title, .board-article > .title, .board-article > .arcafeed-article-heading > .title';
 const initializedVaults = new WeakSet<VaultAdapter>();
 const stoppedVaults = new WeakSet<VaultAdapter>();
+const fullPinnedWarnings = new WeakSet<VaultAdapter>();
 const checkpointContexts = new WeakMap<
   VaultAdapter,
   { source: string[]; channels: string[]; session: ReadingSession }
@@ -140,7 +144,15 @@ function saveCheckpoint(p: VaultAdapter): void {
     scrollY: window.scrollY,
     updatedAt: Date.now(),
   };
-  p.reading.saveSession(session);
+  if (p.reading.saveSession(session) === false) {
+    if (!fullPinnedWarnings.has(p))
+      showToast(
+        '이어보기 20개가 모두 고정되어 새 탐색을 저장하지 못했습니다. 이어보기에서 고정을 해제하거나 항목을 정리해주세요.',
+      );
+    fullPinnedWarnings.add(p);
+    return;
+  }
+  fullPinnedWarnings.delete(p);
   checkpointContexts.set(p, {
     source: p.articleList,
     channels: p.seriesChannels,
@@ -157,18 +169,35 @@ export function resumeReading(p: VaultAdapter, session: ReadingSession): void {
   const url = new URL(session.path, window.location.origin);
   url.search = session.searchQuery;
   url.searchParams.set('articleKey', key);
-  // The outgoing page must not checkpoint itself over the restored session.
-  stoppedVaults.add(p);
-  p.restoreReadingSession(session, key);
-  try {
-    sessionStorage.setItem(
-      RESUME_SCROLL_KEY,
-      JSON.stringify({ path: session.path, key, scrollY: session.scrollY }),
-    );
-  } catch {
-    // The article and list can still be resumed if sessionStorage is unavailable.
-  }
-  window.location.assign(url.toString());
+  let previousScroll: string | null = null;
+  let wroteScroll = false;
+  navigate(p, () => window.location.assign(url.toString()), {
+    suspend: () => {
+      const wasStopped = stoppedVaults.has(p);
+      stoppedVaults.add(p);
+      return () => {
+        if (!wasStopped) stoppedVaults.delete(p);
+      };
+    },
+    prepare: () => {
+      p.restoreReadingSession(session, key);
+      try {
+        previousScroll = sessionStorage.getItem(RESUME_SCROLL_KEY);
+        sessionStorage.setItem(
+          RESUME_SCROLL_KEY,
+          JSON.stringify({ path: session.path, key, scrollY: session.scrollY }),
+        );
+        wroteScroll = true;
+      } catch {
+        // Scroll handoff is optional; the saved article session is required.
+      }
+    },
+    rollback: () => {
+      if (!wroteScroll) return;
+      if (previousScroll === null) sessionStorage.removeItem(RESUME_SCROLL_KEY);
+      else sessionStorage.setItem(RESUME_SCROLL_KEY, previousScroll);
+    },
+  });
 }
 
 function restoreScroll(p: VaultAdapter): void {
@@ -297,7 +326,11 @@ export function initReading(p: VaultAdapter): void {
     });
     skipButton.on('click', () => {
       p.skipVisitedArticles = !p.skipVisitedArticles;
-      p.flushSave();
+      try {
+        p.flushSave();
+      } catch (error) {
+        reportFailure(error);
+      }
     });
     const heading = $(ARTICLE_TITLE_SELECTOR).first();
     if (heading.length) {

@@ -15,6 +15,8 @@ export interface ReadingEntry {
 export interface ReadingSession {
   id: string;
   label: string;
+  customName?: string;
+  pinned?: boolean;
   path: string;
   searchQuery: string;
   articleList: string[];
@@ -62,6 +64,8 @@ function sameContext(a: ReadingSession, b: ReadingSession): boolean {
   return (
     a.id === b.id &&
     a.label === b.label &&
+    (a.customName || '') === (b.customName || '') &&
+    !!a.pinned === !!b.pinned &&
     a.path === b.path &&
     a.searchQuery === b.searchQuery &&
     a.isSeriesMode === b.isSeriesMode &&
@@ -210,14 +214,24 @@ export class ReadingHistory {
     this.reload(['sessions']);
   }
 
-  saveSession(session: ReadingSession): void {
+  saveSession(session: ReadingSession): boolean {
     this.ensureSessions();
     const next = this.load();
     const existing = next.sessions.find((item) => item.id === session.id);
+    if (
+      !existing &&
+      next.sessions.length >= SESSION_LIMIT &&
+      next.sessions.every((item) => item.pinned)
+    )
+      return false;
     const params = new URLSearchParams(session.searchQuery);
     params.delete('articleKey');
     const bounded = {
       ...session,
+      // Automatic checkpoints may not overwrite a name or pin changed in another tab.
+      ...(existing
+        ? { customName: existing.customName || '', pinned: !!existing.pinned }
+        : {}),
       searchQuery: params.size ? `?${params}` : '',
       articleList: articleWindow(
         session.articleList,
@@ -230,7 +244,7 @@ export class ReadingHistory {
       next.sessions = [
         bounded,
         ...next.sessions.filter((item) => item.id !== session.id),
-      ].slice(0, SESSION_LIMIT);
+      ];
       this.persistContexts(next);
     }
     const progress = this.loadProgress();
@@ -269,6 +283,36 @@ export class ReadingHistory {
           ? ['progress']
           : [],
     );
+    return true;
+  }
+
+  /** Edit summaries; touch lists only if the new pin order needs budget trimming. */
+  updateSession(
+    id: string,
+    patch: { customName?: string; pinned?: boolean },
+  ): void {
+    this.ensureSessions();
+    const next = this.load();
+    const existing = next.sessions.find((item) => item.id === id);
+    if (!existing) return;
+    const updated = mergeState(existing, {
+      ...(typeof patch.customName === 'string'
+        ? { customName: patch.customName.trim().slice(0, 100) }
+        : {}),
+      ...(typeof patch.pinned === 'boolean' ? { pinned: patch.pinned } : {}),
+    });
+    if (
+      updated.customName === existing.customName &&
+      !!updated.pinned === !!existing.pinned
+    )
+      return;
+    this.listCounts.set(updated, this.listCounts.get(existing)!);
+    next.sessions = next.sessions.map((item) =>
+      item.id === id ? updated : item,
+    );
+    this.persistContexts(next, true);
+    this.data = this.readData();
+    this.notify(['sessions']);
   }
 
   removeSession(id: string): void {
@@ -333,7 +377,10 @@ export class ReadingHistory {
     });
   }
 
-  private persistContexts(data: ReadingData): void {
+  private persistContexts(data: ReadingData, preserveLists = false): void {
+    data.sessions = [...data.sessions]
+      .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned))
+      .slice(0, SESSION_LIMIT);
     let remaining = SESSION_TOTAL_ARTICLE_LIMIT;
     const previousIds = new Set(
       this.cachedData.sessions.map((session) => session.id),
@@ -349,7 +396,7 @@ export class ReadingHistory {
         ?.get;
       let bounded = session;
       let articleCount = count;
-      if (!lazy || count > limit) {
+      if ((!lazy && !preserveLists) || count > limit) {
         const articleList = articleWindow(
           session.articleList,
           session.path,
@@ -366,6 +413,8 @@ export class ReadingHistory {
     const summaries = sessions.map((session) => ({
       id: session.id,
       label: session.label,
+      ...(session.customName ? { customName: session.customName } : {}),
+      ...(session.pinned ? { pinned: true } : {}),
       path: session.path,
       searchQuery: session.searchQuery,
       isSeriesMode: session.isSeriesMode,
@@ -433,6 +482,7 @@ export class ReadingHistory {
         })
         .sort(
           (a, b) =>
+            Number(!!b.pinned) - Number(!!a.pinned) ||
             b.updatedAt - a.updatedAt ||
             (order.get(a.id) ?? SESSION_LIMIT) -
               (order.get(b.id) ?? SESSION_LIMIT),

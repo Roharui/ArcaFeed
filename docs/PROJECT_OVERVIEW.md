@@ -67,8 +67,10 @@ Webpack으로 코드와 CSS를 묶으며 jQuery, Swiper, Toastify는 유저스�
 | `OTHER`   | 그 밖의 페이지                      |
 
 목록 초기화는 현재 HTML과 저장된 목록을 먼저 사용하고 필요한 보충 조회는
-백그라운드에서 수행합니다. 구독 채널의 일괄 탐색도 `article/link.ts`에서 조립합니다.
+백그라운드에서 수행합니다. 구독 채널의 일괄 탐색·부분 성공·보충·재시도는 `article/subscription-feed.ts`에서 처리합니다.
+`article/listing.ts`는 목록 파싱과 페이지 순회를 공유합니다.
 조회 결과는 시작 시 캡처한 세션이 여전히 유효할 때만 반영합니다.
+사이트 루트는 쿼리·fragment와 무관하게 `HOME`으로 판별하고 검색 조건과 `articleKey`를 유지합니다.
 이벤트 중복, 병렬 실패와 조회 무효화의 상세 동작은 [아키텍처](ARCHITECTURE.md)를 참고하세요.
 
 탐색 목록은 `feature/modal/navigationTab.ts`에서 고정 위치 버튼과 독립 패널을 제공합니다.
@@ -100,8 +102,8 @@ Webpack으로 코드와 CSS를 묶으며 jQuery, Swiper, Toastify는 유저스�
 
 - 기능 모듈에서 이벤트를 발행할 때는 `@/core/app-events`를 사용합니다.
   같은 디렉토리에서도 구체적인 모듈을 가져와 barrel을 통한 순환 참조를 피합니다.
-- 새 명령은 `AppEvent`, `EventManager`의 `Step[]` 메서드,
-  `ArcaFeed.wireEventBus()`의 매핑에 함께 추가합니다.
+- 새 명령은 `APP_EVENTS`와 같은 이름의 `EventManager` `Step[]` 메서드에 추가합니다.
+  이벤트 타입과 버스 등록은 명령 목록에서 파생합니다.
 - 배열과 설정 객체는 새 참조로 갱신합니다. 여러 필드가 함께 바뀌면
   `VaultAdapter.updateState()`를 사용하고, 목록 초기화에는 `resetArticleList()`를 사용합니다.
 - 저장할 상태를 추가하면 `AppState`와 기본값, 스키마 정규화, 설정 로드·저장,

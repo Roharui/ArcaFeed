@@ -93,6 +93,25 @@ function createArcaFeedBtn(
   </a>
   </li>`);
 
+  const labels: Record<string, string> = {
+    filter: '아카피드 설정',
+    next: '스와이프 모드 전환',
+    shuffle: '스크랩 순서 전환',
+    series: '스크랩 탐색 시작',
+  };
+  btn
+    .find('a')
+    .attr({ role: 'button', tabindex: 0, 'aria-label': labels[id] || id })
+    .on('keydown', (event) => {
+      if (
+        (event.key === 'Enter' || event.key === ' ') &&
+        !event.originalEvent?.isComposing
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        void callback();
+      }
+    });
   btn.on('click', () => callback());
 
   return btn;

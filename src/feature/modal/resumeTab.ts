@@ -23,6 +23,8 @@ export function createResumeModal(p: VaultAdapter): JQuery<HTMLElement> {
   const channel = $('<select>', { 'aria-label': '이어보기 채널 필터' });
   const sessions = $('<div>', {
     class: 'arcafeed-modal-content arcafeed-reading-list arcafeed-resume-list',
+    tabindex: -1,
+    'aria-label': '이어보기 목록',
   });
   const count = $('<span>', {
     class: 'arcafeed-reading-count',
@@ -33,10 +35,21 @@ export function createResumeModal(p: VaultAdapter): JQuery<HTMLElement> {
     tools.append(
       search.element,
       channel,
-      $('<span>', { class: 'arcafeed-reading-sort', text: '최근 탐색 순' }),
+      $('<span>', {
+        class: 'arcafeed-reading-sort',
+        text: '고정 우선 · 최근 탐색 순',
+      }),
     ),
     sessions,
   );
+
+  const focusAction = (selector: string, id: string) => {
+    const target = sessions
+      .find(selector)
+      .filter((_, el) => $(el).attr('data-session-id') === id);
+    if (target.length) target.trigger('focus');
+    else tab.find('input[type="search"]').trigger('focus');
+  };
 
   let indexedEntries: readonly ReadingEntry[] | undefined;
   const channelNames = new Map<string, string>();
@@ -44,7 +57,7 @@ export function createResumeModal(p: VaultAdapter): JQuery<HTMLElement> {
   const makeMatcher = () =>
     createReadingSearchMatcher<ReadingSession>((session) => {
       const entry = entriesByPath.get(session.path);
-      return `${session.label} ${entry?.title || ''} ${entry?.channelName || ''} ${readingChannelId(session.path)} ${session.seriesChannels.map((id) => `${id} ${channelNames.get(id) || ''}`).join(' ')}`;
+      return `${session.customName || ''} ${session.label} ${entry?.title || ''} ${entry?.channelName || ''} ${readingChannelId(session.path)} ${session.seriesChannels.map((id) => `${id} ${channelNames.get(id) || ''}`).join(' ')}`;
     });
   let matchesSearch = makeMatcher();
   const render = () => {
@@ -99,6 +112,7 @@ export function createResumeModal(p: VaultAdapter): JQuery<HTMLElement> {
             ),
       );
     for (const session of checkpoints) {
+      const displayName = session.customName || session.label;
       const entry = entriesByPath.get(session.path);
       const type = session.isScrapMode
         ? '스크랩'
@@ -115,27 +129,115 @@ export function createResumeModal(p: VaultAdapter): JQuery<HTMLElement> {
         if (latest) resumeReading(p, latest);
       })
         .addClass('arcafeed-resume-action')
-        .attr('aria-label', `${session.label} · ${title} 이어보기`)
-        .append(
-          $('<span>', { class: 'bi-arrow-right', 'aria-hidden': 'true' }),
-        );
-      const remove = readingButton('삭제', () => {
+        .attr('aria-label', `${displayName} · ${title} 이어보기`);
+      const remove = readingButton('', () => {
         p.reading.removeSession(session.id);
+        sessions[0]?.focus({ preventScroll: true });
       })
-        .addClass('arcafeed-resume-delete')
+        .addClass('arcafeed-resume-delete arcafeed-resume-icon')
         .attr({
-          'aria-label': `${session.label} · ${title} 이어보기 삭제`,
+          'aria-label': `${displayName} · ${title} 이어보기 삭제`,
           title: '이 이어보기 삭제',
+        })
+        .append(
+          $(
+            '<svg class="bi-trash" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg>',
+          ),
+        );
+      const pin = readingButton('', () => {
+        const latest = p.reading.sessions.find(
+          (item) => item.id === session.id,
+        );
+        if (latest)
+          p.reading.updateSession(session.id, { pinned: !latest.pinned });
+        focusAction('.arcafeed-resume-pin', session.id);
+      })
+        .addClass('arcafeed-resume-pin arcafeed-resume-icon')
+        .attr({
+          'data-session-id': session.id,
+          'aria-pressed': String(!!session.pinned),
+          title: session.pinned ? '고정 해제' : '고정',
+          'aria-label': `${displayName} ${session.pinned ? '고정 해제' : '고정'}`,
         });
+      pin.append(
+        $(
+          `<svg class="${session.pinned ? 'bi-pin-angle-fill' : 'bi-pin-angle'}" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 5 5-3 1-4 6v3l-8-8h3l6-4z" fill="${session.pinned ? 'currentColor' : 'none'}"/><path d="m10 14-7 7"/></svg>`,
+        ),
+      );
+      const label = $('<span>', {
+        class: 'arcafeed-resume-label',
+        text: displayName,
+        title: displayName,
+      });
+      const nameRow = $('<div>', { class: 'arcafeed-resume-name' });
+      const rename = readingButton('', () => {
+        const editor = $('<form>', {
+          class: 'arcafeed-resume-name-editor',
+          'aria-label': '이어보기 이름 변경',
+        });
+        const name = $<HTMLInputElement>('<input>', {
+          type: 'text',
+          maxlength: 100,
+          value: displayName,
+          placeholder: session.label,
+          'aria-label': '이어보기 이름',
+        });
+        const close = () => {
+          editor.remove();
+          label.prop('hidden', false);
+          rename.prop('hidden', false).trigger('focus');
+        };
+        editor.append(
+          name,
+          $('<button>', {
+            type: 'submit',
+            class: 'arcafeed-reading-button',
+            text: '저장',
+          }),
+          readingButton('취소', close),
+        );
+        editor.on('submit', (event) => {
+          event.preventDefault();
+          p.reading.updateSession(session.id, {
+            customName: String(name.val() || ''),
+          });
+          if (editor.closest('body').length) close();
+          else focusAction('.arcafeed-resume-rename', session.id);
+        });
+        editor.on('keydown', (event) => {
+          if (event.key === 'Escape' && !event.originalEvent?.isComposing) {
+            event.preventDefault();
+            event.stopPropagation();
+            close();
+          }
+        });
+        label.prop('hidden', true);
+        rename.prop('hidden', true);
+        nameRow.append(editor);
+        name.trigger('focus');
+        name[0]?.select();
+      })
+        .addClass('arcafeed-resume-rename arcafeed-resume-icon')
+        .attr({
+          'data-session-id': session.id,
+          'aria-label': `${displayName} 이름 변경`,
+          title: '이름 변경',
+        });
+      rename.append(
+        $(
+          '<svg class="bi-pencil" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15z"/></svg>',
+        ),
+      );
+      nameRow.append(label, rename);
       sessions.append(
         $('<div>', { class: 'arcafeed-resume-card' }).append(
           $('<div>', { class: 'arcafeed-resume-context' }).append(
-            $('<span>', { class: 'arcafeed-resume-type', text: type }),
             $('<span>', {
-              class: 'arcafeed-resume-label',
-              text: session.label,
-              title: session.label,
+              class: 'arcafeed-resume-type',
+              text: type,
             }),
+            nameRow,
+            pin,
           ),
           $('<div>', { class: 'arcafeed-resume-title', text: title, title }),
           $('<div>', { class: 'arcafeed-resume-bottom' }).append(

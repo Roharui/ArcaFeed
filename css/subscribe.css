@@ -74,3 +74,22 @@
     margin-bottom: 10px;
   }
 }
+
+.arcafeed-subscription-status {
+  flex-shrink: 0;
+  overflow-wrap: anywhere;
+}
+
+.arcafeed-subscription-status p {
+  margin: 0 0 8px;
+}
+
+.helper-modal-navigation > .arcafeed-subscription-status {
+  margin: 0 var(--arcafeed-modal-padding) 12px;
+  max-height: 30%;
+  overflow-y: auto;
+}
+
+.arcafeed-subscription-status button {
+  flex-shrink: 0;
+}

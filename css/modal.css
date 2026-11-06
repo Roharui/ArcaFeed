@@ -319,8 +319,7 @@ body .arcafeed-navigation-control {
   pointer-events: none;
 }
 
-.arcafeed-navigation-trigger.is-hovered,
-.arcafeed-navigation-trigger.is-loading {
+.arcafeed-navigation-trigger.is-hovered {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
@@ -398,4 +397,21 @@ body .arcafeed-navigation-control {
   background: transparent;
   color: var(--color-text-muted, #888);
   font-size: 0.78rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .helper-modal *,
+  .custom-loader,
+  .arcafeed-navigation-control * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.helper-modal-body input:focus-visible,
+.helper-modal-body select:focus-visible,
+.helper-modal-body summary:focus-visible {
+  outline: 2px solid #766df4;
+  outline-offset: 2px;
 }

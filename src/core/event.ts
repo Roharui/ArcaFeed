@@ -1,3 +1,4 @@
+import { navigate } from '@/feature/navigation';
 import { mergeState } from '@/vault/lazy-state';
 import { initNavigationList } from '@/feature/modal/navigationTab';
 import { StepRunner } from '@/core/step-runner';
@@ -20,7 +21,6 @@ import {
   initSeriesBtnCss,
   initUi,
   initCloseModal,
-  initCloseModalContent,
   initCheckFilterModal,
   initCheckUIModal,
   initCheckSubscribeModal,
@@ -30,8 +30,9 @@ import {
 
 import type { Step } from '@/core/step-runner';
 import type { VaultAdapter } from '@/vault';
+import type { AppEvent } from './app-events';
 
-class EventManager {
+class EventManager implements Record<AppEvent, () => Step[]> {
   runner: StepRunner;
 
   constructor() {
@@ -112,11 +113,7 @@ class EventManager {
   }
 
   checkSubscribeModal(): Step[] {
-    return [
-      initCheckSubscribeModal,
-      initCloseModalContent,
-      initStartHomeSeries,
-    ];
+    return [initCheckSubscribeModal, initStartHomeSeries];
   }
 
   closeModal(): Step[] {
@@ -130,10 +127,9 @@ class EventManager {
       (p: VaultAdapter) => {
         if (!p.isCurrentMode('SCRAP')) return;
 
-        p.isShuffleMode = !p.isShuffleMode;
-        p.flushSave();
-
-        window.location.reload();
+        navigate(p, () => window.location.reload(), {
+          patch: { isShuffleMode: !p.isShuffleMode },
+        });
       },
     ];
   }
@@ -157,13 +153,13 @@ class EventManager {
           disableSwiper: !existingFilter.disableSwiper,
         };
 
-        p.articleFilterConfig = mergeState(p.articleFilterConfig, {
-          [p.href.channelId]: pageFilter,
+        navigate(p, () => window.location.reload(), {
+          patch: {
+            articleFilterConfig: mergeState(p.articleFilterConfig, {
+              [p.href.channelId]: pageFilter,
+            }),
+          },
         });
-
-        p.flushSave();
-
-        window.location.reload();
       },
     ];
   }

@@ -25,6 +25,10 @@ export function normalizeSessionMetadata(
     path,
     updatedAt,
     label: typeof item.label === 'string' ? item.label.slice(0, 300) : path,
+    ...(typeof item.customName === 'string' && item.customName.trim()
+      ? { customName: item.customName.trim().slice(0, 100) }
+      : {}),
+    ...(item.pinned === true ? { pinned: true } : {}),
     searchQuery: params.size ? `?${params}` : '',
     isSeriesMode: item.isSeriesMode === true,
     isScrapMode: item.isScrapMode === true,

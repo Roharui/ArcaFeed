@@ -1,23 +1,25 @@
+import { failedCommand } from '@/core/result';
+import type { CommandResult } from '@/core/result';
+import { OperationError, reportFailure } from '@/utils/operation-error';
 import { mergeState } from '@/vault/lazy-state';
 import $ from 'jquery';
 
 import { eventBus } from '@/core/app-events';
-import { createArticleKey } from '@/utils/article-key';
-import { getArticleId } from '@/utils/regex';
 import {
-  fetchChannelFirstPage,
-  fetchChannelArticlesBefore,
-  showFetchLoader,
-  hideFetchLoader,
-} from '@/feature/article/fetch';
-import { mapConcurrent } from '@/utils/func';
-import { captureArticleSession } from '@/vault/article-session';
+  startSubscriptionFeed,
+  retrySubscriptionStart,
+} from '@/feature/article/subscription-feed';
+import type { SubscriptionStartResult } from '@/feature/article/subscription-feed';
+import {
+  createSubscriptionStatus,
+  subscriptionFailureRows,
+} from './subscriptionStatus';
+import { subscribeArticleLoading } from '@/feature/article/loading';
 import { showToast } from '@/utils/toast';
 import { fetchUrl } from '@/utils/fetch';
 import { parseSubscribedChannels } from '@/feature/subscriptions';
 import { createArticleFilterModal, extractFilterCategories } from './filterUi';
 import { readingHeader } from './readingUi';
-import { isVisitedPath } from '@/vault/reading-history';
 import { refreshUnvisitedNavigation } from '@/feature/article/link';
 import '@css/subscribe.css';
 
@@ -32,6 +34,7 @@ const MODAL_SUBSCRIBE_TAB = `
       <button type="button" class="arcafeed-modal-button" id="subscribe-select-all">전체 선택</button>
       <button type="button" class="arcafeed-modal-button" id="subscribe-select-none">전체 해제</button>
     </div>
+    <div id="subscribe-start-status" class="arcafeed-subscription-status" hidden></div>
     <div id="subscribe-channel-list"></div>
     <div id="subscribe-filter-editor"></div>
   </div>
@@ -76,12 +79,25 @@ function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
   $tab.data('filters', drafts);
   let disposed = false;
   let editorRevision = 0;
+  let editorOpener: HTMLElement | null = null;
+  const status = createSubscriptionStatus(p);
+  $tab.find('.arcafeed-modal-content').prepend(status.element);
+  const unsubscribeLoading = subscribeArticleLoading((active) => {
+    $tab
+      .find('#subscribe-start-status button, #subscribe-check-btn')
+      .prop('disabled', active || channels.length === 0);
+  });
   $tab.data('cleanup', () => {
     disposed = true;
+    status.cleanup();
+    unsubscribeLoading();
   });
   const hiddenSet = new Set(p.uiSettings.hiddenChannels);
   const $list = $tab.find('#subscribe-channel-list');
   const $panel = $tab.find('#subscribe-filter-editor');
+  const clearStartResult = () =>
+    $tab.find('#subscribe-start-status').empty().prop('hidden', true);
+  $tab.on('change', '.subscribe-channel-checkbox', clearStartResult);
   const $header = $tab.children('.arcafeed-reading-header');
   const closeEditor = () => {
     editorRevision++;
@@ -90,6 +106,8 @@ function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
     $list.show();
     $header.show();
     $tab.find('.arcafeed-subscribe-controls, #subscribe-buttons').show();
+    if (editorOpener?.isConnected && $tab.is(':visible'))
+      editorOpener.focus({ preventScroll: true });
   };
 
   for (const channel of channels) {
@@ -102,10 +120,20 @@ function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
             : '전체 카테고리',
           filter?.onlyBest ? '인기글' : '전체글',
           `차단 키워드 ${filter?.title.length ?? 0}개`,
+          ...(filter?.includeTitle?.length
+            ? [
+                `포함 ${filter.includeTitle.length}개 · ${filter.includeMode === 'all' ? '모두' : '하나 이상'} 일치${filter.includeCaseSensitive ? ' · 대소문자 구분' : ''}`,
+              ]
+            : []),
         ].join(' · '),
       );
     summarize(p.articleFilterConfig[channel.id]);
     const openEditor = async () => {
+      if (!$tab.hasClass('is-editing-filter'))
+        editorOpener =
+          document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
       const revision = ++editorRevision;
       $tab.addClass('is-editing-filter');
       $tab.find('.arcafeed-modal-content').scrollTop(0);
@@ -125,6 +153,7 @@ function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
           }).on('click', closeEditor),
         ),
       );
+      $panel.find('button').first().trigger('focus');
       let categories: string[] = [];
       let failed = false;
       try {
@@ -145,6 +174,7 @@ function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
         categories,
         filter: drafts[channel.id] ?? p.articleFilterConfig[channel.id],
         onApply: (filter) => {
+          clearStartResult();
           drafts[channel.id] = filter;
           summarize(filter);
           closeEditor();
@@ -153,7 +183,14 @@ function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
       })
         .removeClass('helper-modal-tab')
         .addClass('arcafeed-subscribe-filter-editor');
+      const focusedLoading = $panel[0]?.contains(document.activeElement);
       $panel.empty().append(editor);
+      if (focusedLoading && $panel.is(':visible'))
+        editor
+          .find('input, button, select')
+          .filter(':visible')
+          .first()
+          .trigger('focus');
       if (failed)
         editor.find('.arcafeed-modal-content').prepend(
           $('<section>', { class: 'arcafeed-settings-section' }).append(
@@ -191,23 +228,25 @@ function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
         text: '구독 채널이 없습니다. /b/my에서 로그인 상태와 구독 목록을 확인해주세요.',
       }),
     );
-  $tab.find('#subscribe-check-btn').prop('disabled', channels.length === 0);
-  $tab
-    .find('#subscribe-select-all')
-    .on('click', () =>
-      $tab.find('.subscribe-channel-checkbox').prop('checked', true),
-    );
-  $tab
-    .find('#subscribe-select-none')
-    .on('click', () =>
-      $tab.find('.subscribe-channel-checkbox').prop('checked', false),
-    );
+  $tab.find('#subscribe-select-all').on('click', () => {
+    clearStartResult();
+    $tab.find('.subscribe-channel-checkbox').prop('checked', true);
+  });
+  $tab.find('#subscribe-select-none').on('click', () => {
+    clearStartResult();
+    $tab.find('.subscribe-channel-checkbox').prop('checked', false);
+  });
   $tab.find('#subscribe-save-btn').on('click', () => {
-    initCheckSubscribeModal(p);
-    refreshUnvisitedNavigation(p);
-    p.flushSave();
-    void eventBus.emit('closeModal');
-    showToast('구독 채널 설정을 저장했습니다.');
+    try {
+      $tab.find('#subscribe-start-status').empty().prop('hidden', true);
+      initCheckSubscribeModal(p);
+      refreshUnvisitedNavigation(p);
+      p.flushSave();
+      void eventBus.emit('closeModal');
+      showToast('구독 채널 설정을 저장했습니다.');
+    } catch (error) {
+      reportFailure(error);
+    }
   });
 
   $tab
@@ -241,6 +280,7 @@ function initCheckSubscribeModal(p: VaultAdapter): VaultAdapter {
     | ArticleFilterConfigImpl
     | undefined;
   p.updateState({
+    subscriptionFailures: [],
     uiSettings: mergeState(p.uiSettings, { hiddenChannels }),
     ...(p.isSeriesMode && p.seriesChannels.length
       ? {
@@ -257,112 +297,77 @@ function initCheckSubscribeModal(p: VaultAdapter): VaultAdapter {
         }
       : {}),
   });
+  p.flushSave();
   return p;
 }
 
 // ── Home Series ─────────────────────────────────────────
 
-async function initStartHomeSeries(p: VaultAdapter): Promise<VaultAdapter> {
-  const channels = parseSubscribedChannels();
+async function initStartHomeSeries(p: VaultAdapter): Promise<CommandResult> {
   const hiddenSet = new Set(p.uiSettings.hiddenChannels);
-  const selectedChannels = channels.filter((c) => !hiddenSet.has(c.id));
-
-  if (selectedChannels.length === 0) {
+  const channelIds = parseSubscribedChannels()
+    .filter((channel) => !hiddenSet.has(channel.id))
+    .map((channel) => channel.id);
+  if (channelIds.length === 0) {
     showToast('탐색할 채널을 하나 이상 선택해주세요.');
     void eventBus.emit('closeModal');
-    return p;
+    return reportedStartFailure('탐색할 채널이 없습니다.');
   }
-
-  showFetchLoader();
-  const isCurrent = captureArticleSession(p);
-
   try {
-    p.uiSettings = mergeState(p.uiSettings, {
-      homeSeriesChannels: selectedChannels.map((c) => c.id),
-    });
-
-    const articleKey = createArticleKey();
-    const filterConfig = p.articleFilterConfig;
-    const visitedPaths = p.skipVisitedArticles
-      ? p.reading.getVisitedPaths()
-      : undefined;
-    const allArticles: { url: string; articleId: number }[] = [];
-
-    const batches = await mapConcurrent(selectedChannels, async (channel) => {
-      if (!isCurrent()) return [];
-      const channelFilter = filterConfig[channel.id];
-      return visitedPaths ||
-        channelFilter?.tab.length ||
-        channelFilter?.title.length
-        ? fetchChannelArticlesBefore(
-            channel.id,
-            0,
-            channelFilter,
-            undefined,
-            visitedPaths,
-          )
-        : fetchChannelFirstPage(channel.id, channelFilter);
-    });
-    if (!isCurrent()) return p;
-
-    const seen = new Set<string>();
-    for (const articles of batches) {
-      for (const url of articles) {
-        const articleIdNum = parseInt(getArticleId(url));
-        if (!isNaN(articleIdNum) && !seen.has(url)) {
-          seen.add(url);
-          allArticles.push({ url, articleId: articleIdNum });
-        }
-      }
+    const result = await startSubscriptionFeed(p, channelIds);
+    if (result?.started) {
+      void eventBus.emit('closeModal');
+      return { ok: true };
     }
-
-    allArticles.sort((a, b) => b.articleId - a.articleId);
-
-    const firstIndex = allArticles.findIndex(
-      (article) => !isVisitedPath(visitedPaths, article.url),
+    if (result) renderStartResult(p, result);
+    return reportedStartFailure(
+      result
+        ? '탐색할 글을 불러오지 못했습니다.'
+        : '탐색 조건이 바뀌었거나 다른 이동이 진행 중입니다.',
     );
-    if (firstIndex === -1) {
-      showToast(
-        visitedPaths
-          ? '선택한 채널에서 아직 방문하지 않은 게시글을 찾지 못했습니다.'
-          : '선택한 채널에서 게시글을 찾지 못했습니다.',
-      );
-      return p;
-    }
-    p.updateState({
-      articleKey,
-      href: { ...p.href, articleKey },
-      articleList: allArticles.map((a) => a.url),
-      isSeriesMode: true,
-      isScrapMode: false,
-      seriesChannels: selectedChannels.map((channel) => channel.id),
-      activeIndex: firstIndex,
-      searchQuery: `?articleKey=${articleKey}`,
-    });
-    p.flushSave();
-
-    if (allArticles.length > 0) {
-      const firstArticle = allArticles[firstIndex] as {
-        url: string;
-        articleId: number;
-      };
-      const nextUrl = new URL(firstArticle.url, window.location.origin);
-      nextUrl.searchParams.set('articleKey', articleKey);
-      window.location.replace(nextUrl.toString());
-    }
   } catch (error) {
-    console.error('[ArcaFeed] Subscription feed load failed:', error);
-    if (isCurrent())
-      showToast(
-        '구독 채널의 글을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.',
-      );
-  } finally {
-    hideFetchLoader();
-    // Also dismiss the loading overlay if a channel request fails.
-    void eventBus.emit('closeModal');
+    console.error('[ArcaFeed] Subscription feed start failed:', error);
+    return failedCommand(reportFailure(error));
   }
+}
 
-  return p;
+function reportedStartFailure(message: string): CommandResult {
+  const error = new OperationError('command', message);
+  error.reported = true;
+  return failedCommand(error);
+}
+
+function renderStartResult(
+  p: VaultAdapter,
+  result: SubscriptionStartResult,
+): void {
+  const panel = $('#dialog #subscribe-start-status');
+  if (!panel.length) return;
+  panel
+    .empty()
+    .prop('hidden', false)
+    .append(
+      $('<p>', {
+        role: 'status',
+        text:
+          result.failures.length === result.channels.length
+            ? '선택한 모든 채널을 불러오지 못했습니다.'
+            : result.failures.length
+              ? '정상 조회한 채널에 탐색할 글이 없습니다. 실패 채널을 다시 시도하세요.'
+              : '정상 조회했지만 현재 조건에서 탐색할 글이 없습니다.',
+      }),
+      ...subscriptionFailureRows(p, result.failures, async (id) => {
+        if (!result.isCurrent()) {
+          panel.empty().prop('hidden', true);
+          showToast('탐색 조건이 바뀌었습니다. 일괄 탐색을 다시 시작해주세요.');
+          return;
+        }
+        const next = await retrySubscriptionStart(p, result, id);
+        if (next?.started) void eventBus.emit('closeModal');
+        else if (next && panel.closest('body').length)
+          renderStartResult(p, next);
+      }),
+    );
 }
 
 export {

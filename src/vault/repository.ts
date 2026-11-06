@@ -11,6 +11,7 @@ const SCOPED_CACHE_SUFFIXES = new Set([
   'seriesMode',
   'scrapMode',
   'seriesChannels',
+  'subscriptionFailures',
   'searchQuery',
   'lastActiveIndex',
 ]);

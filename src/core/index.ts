@@ -1,6 +1,8 @@
+import { reportFailure } from '@/utils/operation-error';
+import type { CommandResult } from './result';
 import { EventManager } from './event';
 import { EventBus } from './event-bus';
-import { eventBus } from './app-events';
+import { APP_EVENTS, eventBus } from './app-events';
 import { EventQueue } from './event-queue';
 import type { AppEvent } from './app-events';
 import { VaultAdapter } from '@/vault';
@@ -52,34 +54,17 @@ class ArcaFeed {
    * Each event maps to a method that returns Step[], which StepRunner executes.
    */
   private wireEventBus(): void {
-    const stepGetters: Record<AppEvent, () => Step[]> = {
-      init: () => this.events.init(),
-      toNextPage: () => this.events.toNextPage(),
-      toPrevPage: () => this.events.toPrevPage(),
-      toNextLinkForce: () => this.events.toNextLinkForce(),
-      renderNextPage: () => this.events.renderNextPage(),
-      renderPrevPage: () => this.events.renderPrevPage(),
-      enableSeries: () => this.events.enableSeries(),
-      enableScrapSeries: () => this.events.enableScrapSeries(),
-      toggleShuffle: () => this.events.toggleShuffle(),
-      showModal: () => this.events.showModal(),
-      checkFilterModal: () => this.events.checkFilterModal(),
-      checkUIModal: () => this.events.checkUIModal(),
-      checkSubscribeModal: () => this.events.checkSubscribeModal(),
-      closeModal: () => this.events.closeModal(),
-      toggleSwiper: () => this.events.toggleSwiper(),
-    };
-
-    for (const eventName of Object.keys(stepGetters) as AppEvent[]) {
+    for (const eventName of APP_EVENTS) {
       eventBus.on(eventName, () =>
         this.queue.run(async () => {
           try {
-            await this.events.runner.run(this.vault, stepGetters[eventName]());
+            await this.events.runner.run(this.vault, this.events[eventName]());
           } catch (err) {
             console.error(
               `[ArcaFeed] Error running event "${eventName}":`,
               err,
             );
+            throw reportFailure(err);
           }
         }, eventName),
       );
@@ -89,8 +74,8 @@ class ArcaFeed {
   /**
    * @deprecated Use eventBus.emit() directly.
    */
-  static async runEvent(eventName: AppEvent): Promise<void> {
-    await eventBus.emit(eventName);
+  static async runEvent(eventName: AppEvent): Promise<CommandResult> {
+    return eventBus.emit(eventName);
   }
 }
 

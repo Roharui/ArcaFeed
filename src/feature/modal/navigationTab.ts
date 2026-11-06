@@ -1,4 +1,6 @@
 import $ from 'jquery';
+import { installDialogFocus } from './focus';
+import { createSubscriptionStatus } from './subscriptionStatus';
 import '@css/modal.css';
 import '@css/reading.css';
 import {
@@ -23,6 +25,7 @@ export function createNavigationModal(
   const channel = $('<select>', { 'aria-label': '탐색 목록 채널 필터' });
   const tools = $('<div>', { class: 'arcafeed-history-tools' }).append(channel);
   const list = $('<div>', { class: 'arcafeed-modal-content' });
+  const status = createSubscriptionStatus(p);
   let centerFrame: number | undefined;
   const centerCurrent = () => {
     const container = list[0]!;
@@ -62,6 +65,7 @@ export function createNavigationModal(
       position,
     ),
     tools,
+    status.element,
     list,
   );
   tab.find('.arcafeed-reading-close').off('click').on('click', close);
@@ -206,6 +210,7 @@ export function createNavigationModal(
   tab.data('cleanup', () => {
     if (centerFrame !== undefined) cancelAnimationFrame(centerFrame);
     resizeObserver.disconnect();
+    status.cleanup();
     unsubscribeState();
     unsubscribeReading();
   });
@@ -245,12 +250,18 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
       }
     });
   let panel: JQuery<HTMLElement> | undefined;
+  let cleanupFocus: (() => void) | undefined;
   const close = () => {
+    if (!panel) return;
+    cleanupFocus?.();
+    cleanupFocus = undefined;
     panel?.find('.helper-modal-tab').data('cleanup')?.();
     panel?.remove();
     panel = undefined;
-    $(document).off('keydown.arcafeedNavigation');
-    trigger.attr('aria-expanded', 'false').trigger('focus');
+    trigger
+      .addClass('is-hovered')
+      .attr('aria-expanded', 'false')
+      .trigger('focus');
     schedulePosition();
   };
   const open = () => {
@@ -270,22 +281,11 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
       });
     trigger.attr('aria-expanded', 'true');
     schedulePosition();
-    body.find('.arcafeed-reading-close').trigger('focus');
-    $(document).on('keydown.arcafeedNavigation', (event) => {
-      if (event.key === 'Escape') close();
-      if (event.key === 'Tab') {
-        const controls = body.find('button, select').filter(':visible');
-        const first = controls[0];
-        const last = controls[controls.length - 1];
-        if (event.shiftKey && document.activeElement === first) {
-          event.preventDefault();
-          last?.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
-          event.preventDefault();
-          first?.focus();
-        }
-      }
-    });
+    cleanupFocus = installDialogFocus(
+      body[0]!,
+      close,
+      body.find('.arcafeed-reading-close')[0],
+    );
   };
   const update = () => {
     const current = p.isCurrentMode('ARTICLE')
@@ -304,9 +304,27 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
         ? `${index + 1}/${p.articleList.length}`
         : `${p.articleList.length}`,
     );
+    const failures =
+      p.isSeriesMode && !p.isScrapMode
+        ? p.subscriptionFailures.filter((failure) =>
+            p.seriesChannels.includes(failure.channelId),
+          ).length
+        : 0;
+    if (failures)
+      count.append(
+        $('<span>', {
+          text: ` · 실패 ${failures}`,
+          class: 'arcafeed-subscription-failure-count',
+        }),
+      );
+    trigger.attr(
+      'title',
+      failures ? `탐색 목록 · 실패 채널 ${failures}개 다시 시도` : '탐색 목록',
+    );
+    trigger.attr('data-failed-channels', String(failures));
     trigger.attr(
       'aria-label',
-      `${label}, ${loading ? '게시글 목록 불러오는 중, ' : ''}불러온 목록 기준, 목록 열기`,
+      `${label}, ${failures ? `실패 채널 ${failures}개, ` : ''}${loading ? '게시글 목록 불러오는 중, ' : ''}불러온 목록 기준, 목록 열기`,
     );
   };
   control.append(trigger).appendTo('body');
@@ -315,7 +333,11 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     const changed =
       state.articleList !== previous.articleList ||
       state.activeIndex !== previous.activeIndex ||
-      state.href !== previous.href;
+      state.href !== previous.href ||
+      state.subscriptionFailures !== previous.subscriptionFailures ||
+      state.seriesChannels !== previous.seriesChannels ||
+      state.isSeriesMode !== previous.isSeriesMode ||
+      state.isScrapMode !== previous.isScrapMode;
     previous = state;
     if (changed) {
       update();

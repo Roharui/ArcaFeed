@@ -11,6 +11,9 @@ interface HrefImpl {
 interface ArticleFilterImpl {
   tab: string[];
   title: string[];
+  includeTitle?: string[];
+  includeMode?: 'any' | 'all';
+  includeCaseSensitive?: boolean;
   disableSwiper: boolean;
   onlyBest: boolean;
   channelName?: string;
@@ -43,3 +46,8 @@ export type {
   PageMode,
   UISettings,
 };
+
+export interface SubscriptionFailure {
+  channelId: string;
+  reason: 'timeout' | 'network' | 'unavailable';
+}

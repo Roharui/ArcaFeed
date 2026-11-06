@@ -1,3 +1,4 @@
+import type { SubscriptionFailure } from '@/types/vault';
 import { mergeState, sameField } from './lazy-state';
 /**
  * Centralized state store with immutable updates and subscription support.
@@ -17,6 +18,7 @@ export interface AppState {
   isSeriesMode: boolean;
   isScrapMode: boolean;
   seriesChannels: string[];
+  subscriptionFailures: SubscriptionFailure[];
   readingRevision: number;
   isShuffleMode: boolean;
   searchQuery: string;
@@ -60,6 +62,7 @@ export function createInitialState(): AppState {
     isSeriesMode: false,
     isScrapMode: false,
     seriesChannels: [],
+    subscriptionFailures: [],
     readingRevision: 0,
     isShuffleMode: false,
     searchQuery: '',

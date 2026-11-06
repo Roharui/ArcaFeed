@@ -1,8 +1,9 @@
 import $ from 'jquery';
+import { navigate } from '@/feature/navigation';
 
 import type { VaultAdapter } from '@/vault';
 
-function addVersionInfo(_: VaultAdapter): void {
+function addVersionInfo(p: VaultAdapter): void {
   if (process.env.NODE_ENV !== 'development') return;
 
   const version = process.env.GIT_HASH || 'unknown';
@@ -15,9 +16,9 @@ function addVersionInfo(_: VaultAdapter): void {
     process.env.VERSION_RELOAD !== 'false'
   ) {
     if (localStorage.getItem('arca_version_info') !== versionInfo)
-      window.location.reload();
-
-    localStorage.setItem('arca_version_info', versionInfo);
+      navigate(p, () => window.location.reload(), {
+        prepare: () => localStorage.setItem('arca_version_info', versionInfo),
+      });
   }
 
   $('footer').append(

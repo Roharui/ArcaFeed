@@ -25,11 +25,25 @@ export function normalizeFilters(value: unknown): ArticleFilterConfigImpl {
       )
       .map(([channel, raw]) => {
         const filter = raw as Record<string, unknown>;
+        const includeTitle = [
+          ...new Set(
+            stringList(filter.includeTitle)
+              .map((word) => word.trim())
+              .filter(Boolean),
+          ),
+        ];
         return [
           channel,
           {
             tab: stringList(filter.tab),
             title: stringList(filter.title),
+            ...(includeTitle.length
+              ? {
+                  includeTitle,
+                  includeMode: filter.includeMode === 'all' ? 'all' : 'any',
+                  includeCaseSensitive: filter.includeCaseSensitive === true,
+                }
+              : {}),
             disableSwiper: filter.disableSwiper === true,
             onlyBest: filter.onlyBest === true,
             ...(typeof filter.channelName === 'string'

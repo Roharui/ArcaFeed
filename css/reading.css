@@ -517,3 +517,50 @@
     grid-column: auto;
   }
 }
+
+.arcafeed-resume-name-editor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
+.arcafeed-resume-name-editor input {
+  flex: 1 1 100%;
+  width: 100%;
+  min-width: 0;
+  padding: 8px;
+  color: var(--color-text);
+  background: var(--color-bg-body);
+  border: 1px solid var(--color-bd-btn);
+  border-radius: 8px;
+}
+
+.arcafeed-resume-name {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: 4px;
+}
+
+.arcafeed-resume-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-text-muted, #888);
+  font-size: 1rem;
+}
+
+.arcafeed-resume-icon[hidden],
+.arcafeed-resume-label[hidden] {
+  display: none;
+}
+
+.arcafeed-resume-pin[aria-pressed='true'] {
+  color: #766df4;
+  background: rgba(118, 109, 244, 0.1);
+}

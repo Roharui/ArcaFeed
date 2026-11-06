@@ -2,7 +2,6 @@ import type { HrefImpl } from '@/types';
 
 import { getRegexMatchByIndex, getRegexMatchByIndexTry } from './type';
 
-const homePageRegex = /arca\.live\/?$/;
 const channelPageRegex = /b\/[a-zA-Z0-9]+(\?|\?.+)?$/;
 const articlePageRegex = /b\/([A-Za-z0-9])+\/[0-9]+(\?|\?.+)?$/;
 const scrapPageRegex = /\/u\/scrap_list(?:\/?|\?.+)?$/i;
@@ -29,8 +28,18 @@ function parseHref(href?: string) {
 
   let hrefObj: HrefImpl;
 
+  // HOME: the site root, regardless of query parameters or fragment.
+  if (realUrl.hostname === 'arca.live' && realUrl.pathname === '/') {
+    hrefObj = {
+      mode: 'HOME',
+      channelId: '',
+      articleId: '',
+      articleKey,
+      search,
+    };
+  }
   // ARTICLE : /b/{channelId}/{articleId}
-  if (articlePageRegex.test(realHref)) {
+  else if (articlePageRegex.test(realHref)) {
     const matchArr = realHref.match(channelAndArticleIdRegex);
 
     const channelId = getRegexMatchByIndex(matchArr, 1);
@@ -68,16 +77,16 @@ function parseHref(href?: string) {
       search,
     };
   }
-  // HOME: arca.live or arca.live?...
   // OTHER: other pages
-  else
+  else {
     hrefObj = {
-      mode: homePageRegex.test(realHref) ? 'HOME' : 'OTHER',
+      mode: 'OTHER',
       channelId: '',
       articleId: '',
       articleKey,
       search: '',
     };
+  }
 
   return hrefObj;
 }

@@ -1,3 +1,4 @@
+import { OperationError, reportFailure } from '@/utils/operation-error';
 import { sameField, mergeState } from './lazy-state';
 export { StorageRepository } from './repository';
 export { ConfigService } from './config';
@@ -79,6 +80,7 @@ export class VaultAdapter {
       'isSeriesMode',
       'isScrapMode',
       'seriesChannels',
+      'subscriptionFailures',
       'isShuffleMode',
       'searchQuery',
       'activeIndex',
@@ -102,8 +104,12 @@ export class VaultAdapter {
     }
 
     this.saveDebounceTimer = setTimeout(() => {
-      this.config.saveConfig(this.store.getState());
       this.saveDebounceTimer = null;
+      try {
+        this.flushSave();
+      } catch (error) {
+        reportFailure(error);
+      }
     }, 300);
   }
 
@@ -115,7 +121,20 @@ export class VaultAdapter {
       clearTimeout(this.saveDebounceTimer);
       this.saveDebounceTimer = null;
     }
-    this.config.saveConfig(this.store.getState());
+    try {
+      this.config.saveConfig(this.store.getState());
+    } catch (error) {
+      throw new OperationError(
+        'storage',
+        '설정을 저장하지 못했습니다. 저장 공간·브라우저 설정을 확인한 뒤 다시 시도해주세요.',
+        error,
+      );
+    }
+  }
+
+  /** Force a complete write after a partially failed navigation transaction. */
+  invalidateSavedState(): void {
+    this.config.invalidateSavedState();
   }
 
   /**
@@ -173,6 +192,10 @@ export class VaultAdapter {
 
   get seriesChannels(): string[] {
     return this.store.getState().seriesChannels;
+  }
+
+  get subscriptionFailures() {
+    return this.store.getState().subscriptionFailures;
   }
 
   get isScrapMode(): boolean {
@@ -312,7 +335,11 @@ export class VaultAdapter {
 
   resetArticleList(): void {
     this.loadRevision++;
-    this.store.setState({ articleList: [], activeIndex: -1 });
+    this.store.setState({
+      articleList: [],
+      activeIndex: -1,
+      subscriptionFailures: [],
+    });
   }
 
   /**

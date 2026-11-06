@@ -1,16 +1,12 @@
 import {
-  fetchFirstBatch,
-  fetchAllBatches,
-  fetchChannelArticlesBefore,
-  fetchChannelFirstPage,
-  showFetchLoader,
-  hideFetchLoader,
-} from './fetch';
+  captureNavigationState,
+  restoreNavigationState,
+} from '@/feature/navigation';
+import { fetchFirstBatch, fetchAllBatches } from './fetch';
+import { loadMoreHomeSeriesArticles } from './subscription-feed';
 import { filterLink } from '@/feature/filter';
 import { parseSearchQuery } from '@/feature/search';
-import { mapConcurrent } from '@/utils/func';
 import { createArticleKey } from '@/utils/article-key';
-import { extractChannelId, getArticleId } from '@/utils/regex';
 import { appendSearchParam } from '@/utils/url';
 import { captureArticleSession } from '@/vault/article-session';
 import {
@@ -161,6 +157,7 @@ function getArticleLoad(
 // ── Scrap Series ───────────────────────────────────────
 
 async function initEnableScrapSeries(p: VaultAdapter): Promise<void> {
+  const previous = captureNavigationState(p);
   parseSearchQuery(p);
   const articleKey = p.articleKey || createArticleKey();
   p.updateState({
@@ -172,85 +169,21 @@ async function initEnableScrapSeries(p: VaultAdapter): Promise<void> {
     seriesChannels: [],
   });
 
-  await fetchAllBatches(p, p.href.articleId);
-}
-
-// ── Home Series ─────────────────────────────────────────
-
-async function loadMoreHomeSeriesArticles(p: VaultAdapter): Promise<void> {
-  const homeSeriesChannels = p.seriesChannels;
-  if (homeSeriesChannels.length === 0) return;
-
-  const channelCounts = new Map<string, { minId: number; count: number }>();
-
-  for (const [index, url] of p.articleList.entries()) {
-    const chId = extractChannelId(url);
-    const artId = parseInt(getArticleId(url));
-    if (!chId || isNaN(artId)) continue;
-
-    const entry = channelCounts.get(chId);
-    if (!entry) {
-      channelCounts.set(chId, {
-        minId: artId,
-        count:
-          index > p.activeIndex &&
-          (!p.skipVisitedArticles || !p.reading.hasVisited(url))
-            ? 1
-            : 0,
-      });
-    } else {
-      if (artId < entry.minId) entry.minId = artId;
-      if (
-        index > p.activeIndex &&
-        (!p.skipVisitedArticles || !p.reading.hasVisited(url))
-      )
-        entry.count++;
-    }
-  }
-
-  const channels = [...new Set(homeSeriesChannels)].filter(
-    (channelId) => (channelCounts.get(channelId)?.count ?? 0) <= 3,
-  );
-  if (channels.length === 0) return;
-  const existingUrls = new Set(p.articleList);
   const isCurrent = captureArticleSession(p);
-  const filterConfig = p.articleFilterConfig;
-  const visitedPaths = p.skipVisitedArticles
-    ? p.reading.getVisitedPaths()
-    : undefined;
-
-  showFetchLoader();
   try {
-    const batches = await mapConcurrent(channels, async (channelId) => {
-      if (!isCurrent()) return [];
-      const minId = channelCounts.get(channelId)?.minId ?? 0;
-      const filter = filterConfig[channelId];
-      return minId > 0 || visitedPaths
-        ? fetchChannelArticlesBefore(
-            channelId,
-            minId,
-            filter,
-            existingUrls,
-            visitedPaths,
-          )
-        : fetchChannelFirstPage(channelId, filter);
-    });
-    if (!isCurrent()) return;
-    const seen = new Set(p.articleList);
-    const additions = batches.flat().filter((url) => {
-      if (seen.has(url)) return false;
-      seen.add(url);
-      return true;
-    });
-    if (additions.length === 0) return;
-    // Preserve the visited prefix and the current index when channels are merged.
-    const prefix = p.articleList.slice(0, p.activeIndex + 1);
-    const tail = [...p.articleList.slice(p.activeIndex + 1), ...additions]
-      .map((url) => ({ url, articleId: Number(getArticleId(url)) }))
-      .sort((a, b) => b.articleId - a.articleId);
-    p.articleList = [...prefix, ...tail.map((article) => article.url)];
-  } finally {
-    hideFetchLoader();
+    await fetchAllBatches(p, p.href.articleId);
+  } catch (error) {
+    if (isCurrent()) {
+      try {
+        restoreNavigationState(p, previous);
+      } catch (recovery) {
+        console.error(
+          '[ArcaFeed] Scrap recovery persistence failed:',
+          recovery,
+        );
+      }
+    }
+    throw error;
   }
 }
 

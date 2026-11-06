@@ -1,8 +1,10 @@
+import type { CommandResult } from '@/core/result';
 import type { VaultAdapter } from '@/vault';
 
 type PromiseFuncResultObj = VaultAdapter | PromiseFunc;
 type PromiseFuncResult =
   | void
+  | CommandResult
   | PromiseFuncResultObj
   | Array<PromiseFuncResultObj>;
 

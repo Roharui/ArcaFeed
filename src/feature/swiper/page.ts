@@ -1,3 +1,4 @@
+import { navigate, isNavigating } from '@/feature/navigation';
 import type { PageMode, PromiseFunc } from '@/types';
 import type { VaultAdapter } from '@/vault';
 import {
@@ -7,8 +8,6 @@ import {
   skippedToastURL,
 } from './skip-toast';
 
-const navigatingVaults = new WeakSet<VaultAdapter>();
-
 // For Event
 function nextLinkForce(p: VaultAdapter) {
   return toLink('NEXT')(p);
@@ -17,7 +16,7 @@ function nextLinkForce(p: VaultAdapter) {
 // For Event
 function toLink(mode: PageMode): PromiseFunc {
   return (p: VaultAdapter): void => {
-    if (navigatingVaults.has(p)) return;
+    if (isNavigating(p)) return;
     const { activeIndex, articleList } = p;
 
     const idx = activeIndex;
@@ -49,26 +48,20 @@ export function navigateToArticle(
   index: number,
   skipped = 0,
 ): void {
-  if (navigatingVaults.has(p) || !Number.isSafeInteger(index)) return;
+  if (isNavigating(p) || !Number.isSafeInteger(index)) return;
   const path = p.articleList[index];
   if (!path || !/^\/b\/[^/?#]+\/\d+$/.test(path)) return;
   if (path === `/b/${p.href.channelId}/${p.href.articleId}`) return;
-  const previousIndex = p.activeIndex;
-  p.activeIndex = index;
-  p.flushSave();
-  navigatingVaults.add(p);
-  queueSkippedToast(path, skipped);
-  try {
-    window.location.replace(
-      skippedToastURL(`${path}${p.searchQuery}`, skipped),
-    );
-  } catch (error) {
-    clearSkippedToast();
-    navigatingVaults.delete(p);
-    p.activeIndex = previousIndex;
-    p.flushSave();
-    throw error;
-  }
+  navigate(
+    p,
+    () => {
+      queueSkippedToast(path, skipped);
+      window.location.replace(
+        skippedToastURL(`${path}${p.searchQuery}`, skipped),
+      );
+    },
+    { patch: { activeIndex: index }, rollback: clearSkippedToast },
+  );
 }
 
 export { nextLinkForce, toLink };

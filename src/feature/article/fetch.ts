@@ -1,112 +1,33 @@
-import $ from 'jquery';
-
-import {
-  buildFilterPredicate,
-  extractArticleHref,
-  extractArticleRows,
-} from '@/feature/filter';
-import { fetchUrl } from '@/utils/fetch';
+import { navigate } from '@/feature/navigation';
+import { OperationError } from '@/utils/operation-error';
 import { shuffle } from '@/utils/func';
-import { appendSearchParam } from '@/utils/url';
 import { showToast, showConfirmToast } from '@/utils/toast';
 import { captureArticleSession } from '@/vault/article-session';
 import { isVisitedPath } from '@/vault/reading-history';
-
+import { fetchListingPages } from './listing';
+import { showFetchLoader, hideFetchLoader } from './loading';
 import type { ArticleFilterImpl } from '@/types';
 import type { VaultAdapter } from '@/vault';
 
-import { showFetchLoader, hideFetchLoader } from './loading';
+// Preserve the article API while parsing and pagination live in their own module.
+export { extractLinks, withBestMode } from './listing';
 
-// ── Helpers ────────────────────────────────────────────
-
-function buildPageUrl(p: VaultAdapter, articleId: string): string {
-  return p.isCurrentMode('SCRAP')
-    ? `/u/scrap_list${p.searchQuery}`
-    : `${articleId}${p.searchQuery}`;
-}
-
-function normalizeUrl(pageUrl: string): string {
-  if (!pageUrl.startsWith('http')) return pageUrl;
-  const u = new URL(pageUrl);
-  return `${u.pathname}${u.search}`;
-}
-
-async function fetchAndParse(
-  url: string,
-): Promise<{ $html: JQuery<HTMLElement> }> {
-  const res = await fetchUrl(url);
-  return {
-    $html: $(
-      new DOMParser().parseFromString(res.responseText, 'text/html')
-        .documentElement,
-    ),
-  };
-}
-
-function extractNextPageUrl(
-  $html: JQuery<HTMLElement>,
-  basePath: string,
-): string | null {
-  const nextLink = $html
-    .find('.page-item.active')
-    .next()
-    .find('a')
-    .attr('href');
-  return nextLink
-    ? nextLink.startsWith('?')
-      ? `${basePath}${nextLink}`
-      : nextLink
-    : null;
-}
-
-function channelBasePath(channelId: string): string {
-  return `/b/${channelId}`;
-}
-
-// ── Async Generator (core) ─────────────────────────────
-
-const MAX_PAGES = 10;
-
-/**
- * Yields batches of filtered article links from each paginated listing page.
- * The consumer decides when to stop by breaking out of the loop.
- * Continuing past the page limit requires the consumer's approval once.
- */
-async function* fetchArticlePages(
+/** Capture the navigation session before iterating its listing pages. */
+function fetchArticlePages(
   p: VaultAdapter,
   articleId: string,
   continueSearch?: () => Promise<boolean>,
 ): AsyncGenerator<string[]> {
-  const isCurrent = captureArticleSession(p);
-  const basePath = p.isCurrentMode('SCRAP') ? '/u/scrap_list' : articleId;
-  let nextUrl: string | null = buildPageUrl(p, articleId);
-
-  const channelFilter = p.articleFilterConfig[p.href.channelId];
-  const existingUrls = new Set(p.articleList);
-  const visitedPages = new Set<string>();
-  if (nextUrl) {
-    nextUrl = withBestMode(nextUrl, channelFilter);
-  }
-
-  for (let page = 0; nextUrl; page++) {
-    if (!isCurrent()) return;
-    const url = normalizeUrl(nextUrl);
-    if (visitedPages.has(url)) return;
-    if (page === MAX_PAGES) {
-      if (!(await continueSearch?.()) || !isCurrent()) return;
-    }
-    visitedPages.add(url);
-    const { $html } = await fetchAndParse(url);
-    if (!isCurrent()) return;
-
-    const newLinks = extractLinks($html, channelFilter, existingUrls);
-    for (const link of newLinks) existingUrls.add(link);
-
-    yield newLinks;
-
-    nextUrl = extractNextPageUrl($html, basePath);
-    if (!nextUrl) return;
-  }
+  const scrap = p.isCurrentMode('SCRAP');
+  const basePath = scrap ? '/u/scrap_list' : articleId;
+  return fetchListingPages({
+    url: `${basePath}${p.searchQuery}`,
+    basePath,
+    filter: p.articleFilterConfig[p.href.channelId],
+    existingUrls: new Set(p.articleList),
+    isCurrent: captureArticleSession(p),
+    continueSearch,
+  });
 }
 
 // ── Convenience wrappers ───────────────────────────────
@@ -209,21 +130,15 @@ function openScrapSeriesArticle(p: VaultAdapter): void {
   );
   const firstUrl = p.articleList[firstIndex];
   if (!firstUrl) {
-    p.updateState({
-      isSeriesMode: false,
-      isScrapMode: false,
-      seriesChannels: [],
-    });
     showToast(
       p.skipVisitedArticles
         ? '아직 방문하지 않은 스크랩 글이 없습니다.'
         : '스크랩 글을 찾지 못했습니다.',
     );
-    return;
+    const error = new OperationError('command', '탐색할 스크랩 글이 없습니다.');
+    error.reported = true;
+    throw error;
   }
-
-  p.activeIndex = firstIndex;
-  p.flushSave();
 
   const nextUrl = new URL(firstUrl, window.location.origin);
   nextUrl.search = p.searchQuery;
@@ -232,67 +147,28 @@ function openScrapSeriesArticle(p: VaultAdapter): void {
     nextUrl.searchParams.set('articleKey', p.articleKey);
   }
 
-  window.location.replace(nextUrl.toString());
-}
-
-// ── Multi-channel fetch helpers ─────────────────────────
-
-/**
- * Append ?mode=best if the filter has onlyBest enabled.
- * Safe to call on URLs that already have query params.
- */
-export function withBestMode(url: string, filter?: ArticleFilterImpl): string {
-  if (!filter?.onlyBest) return url;
-  const hashIndex = url.indexOf('#');
-  const fragment = hashIndex === -1 ? '' : url.slice(hashIndex);
-  const base = hashIndex === -1 ? url : url.slice(0, hashIndex);
-  const queryIndex = base.indexOf('?');
-  const path = queryIndex === -1 ? base : base.slice(0, queryIndex);
-  const query = queryIndex === -1 ? '' : base.slice(queryIndex);
-  return `${path}${appendSearchParam(query, 'mode', 'best')}${fragment}`;
-}
-
-/**
- * Extract filtered article hrefs from parsed HTML.
- * Shared by default channel fetch and reusable by special channel handlers.
- */
-export function extractLinks(
-  $html: JQuery<HTMLElement>,
-  filter?: ArticleFilterImpl,
-  existingUrls?: ReadonlySet<string>,
-  additionalUrls?: ReadonlySet<string>,
-): string[] {
-  const $rows = extractArticleRows($html);
-  const predicate = filter ? buildFilterPredicate(filter) : () => true;
-
-  const seen = new Set<string>();
-  const links: string[] = [];
-  $rows.each((_, ele) => {
-    if (!predicate(ele)) return;
-    const href = extractArticleHref($(ele));
-    if (
-      !href ||
-      existingUrls?.has(href) ||
-      additionalUrls?.has(href) ||
-      seen.has(href)
-    )
-      return;
-    seen.add(href);
-    links.push(href);
+  navigate(p, () => window.location.replace(nextUrl.toString()), {
+    patch: { activeIndex: firstIndex },
   });
-  return links;
 }
 
-// ── Standard channel fetch (default /b/{channelId} pattern) ──
+// ── Channel listings ───────────────────────────────────
 
 async function fetchChannelFirstPage(
   channelId: string,
   filter?: ArticleFilterImpl,
+  isCurrent: () => boolean = () => true,
 ): Promise<string[]> {
-  const url = withBestMode(channelBasePath(channelId), filter);
-  const { $html } = await fetchAndParse(url);
-
-  return extractLinks($html, filter);
+  const basePath = `/b/${channelId}`;
+  for await (const links of fetchListingPages({
+    url: basePath,
+    basePath,
+    filter,
+    isCurrent,
+  })) {
+    return links;
+  }
+  return [];
 }
 
 async function fetchChannelArticles(
@@ -300,25 +176,16 @@ async function fetchChannelArticles(
   filter?: ArticleFilterImpl,
   existingUrls?: ReadonlySet<string>,
 ): Promise<string[]> {
-  const basePath = channelBasePath(channelId);
-  let nextUrl: string | null = withBestMode(basePath, filter);
+  const basePath = `/b/${channelId}`;
   const results: string[] = [];
-  const seen = new Set<string>();
-  const visitedPages = new Set<string>();
-
-  for (let page = 0; page < MAX_PAGES && nextUrl; page++) {
-    const url = normalizeUrl(nextUrl);
-    if (visitedPages.has(url)) break;
-    visitedPages.add(url);
-    const { $html } = await fetchAndParse(url);
-
-    const links = extractLinks($html, filter, existingUrls, seen);
+  for await (const links of fetchListingPages({
+    url: basePath,
+    basePath,
+    filter,
+    existingUrls,
+  })) {
     results.push(...links);
-    for (const link of links) seen.add(link);
-
-    nextUrl = extractNextPageUrl($html, basePath);
   }
-
   return results;
 }
 
@@ -328,31 +195,20 @@ async function fetchChannelArticlesBefore(
   filter?: ArticleFilterImpl,
   existingUrls?: ReadonlySet<string>,
   visitedPaths?: Set<string>,
+  isCurrent: () => boolean = () => true,
 ): Promise<string[]> {
-  const basePath = channelBasePath(channelId);
-  let nextUrl: string | null = withBestMode(
-    beforeArticleId > 0 ? `${basePath}/${beforeArticleId}` : basePath,
-    filter,
-  );
+  const basePath = `/b/${channelId}`;
   const results: string[] = [];
-  const visitedPages = new Set<string>();
-  const seen = new Set<string>();
-
-  for (let page = 0; page < MAX_PAGES && nextUrl; page++) {
-    const url = normalizeUrl(nextUrl);
-    if (visitedPages.has(url)) break;
-    visitedPages.add(url);
-    const { $html } = await fetchAndParse(url);
-
-    const links = extractLinks($html, filter, existingUrls, seen);
+  for await (const links of fetchListingPages({
+    url: beforeArticleId > 0 ? `${basePath}/${beforeArticleId}` : basePath,
+    basePath,
+    filter,
+    existingUrls,
+    isCurrent,
+  })) {
     results.push(...links);
-    for (const link of links) seen.add(link);
-
-    nextUrl = extractNextPageUrl($html, basePath);
-
     if (links.some((path) => !isVisitedPath(visitedPaths, path))) break;
   }
-
   return results;
 }
 

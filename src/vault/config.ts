@@ -6,10 +6,9 @@ import { deferField, mergeState, sameField } from './lazy-state';
 
 import { StorageRepository } from './repository';
 import { ConfigStorage } from './config-storage';
+import { NavigationStorage } from './navigation-storage';
 import { createArticleKey } from '@/utils/article-key';
-import { appendSearchParam } from '@/utils/url';
 import { compactNavigationArticles, findArticleIndex } from './article-window';
-import { normalizeArticles, stringList } from './config-schema';
 
 import type { AppState } from '@/vault/store';
 import { createInitialState } from './store';
@@ -23,9 +22,11 @@ export class ConfigService {
   private lastSavedState: Readonly<AppState> | undefined;
 
   private storage: ConfigStorage;
+  private navigation: NavigationStorage;
 
   constructor(private repo: StorageRepository) {
     this.storage = new ConfigStorage(repo);
+    this.navigation = new NavigationStorage(repo);
   }
 
   /**
@@ -56,52 +57,12 @@ export class ConfigService {
    */
   loadConfig(): Partial<AppState> {
     const articleKey = this.ensureArticleKey();
-    const patch: Partial<AppState> = { articleKey };
+    const patch = this.navigation.load(articleKey);
 
     // Load article filter config
     deferField(patch, 'articleFilterConfig', () =>
       this.storage.filters(articleKey),
     );
-
-    // Load article list
-    deferField(patch, 'articleList', () =>
-      normalizeArticles(
-        this.repo.getJSON<unknown>(
-          this.repo.scopedKey(articleKey, 'articleList'),
-        ),
-        window.location.origin,
-      ),
-    );
-
-    // Load series mode
-    patch.isSeriesMode =
-      this.repo.getItem(this.repo.scopedKey(articleKey, 'seriesMode')) ===
-      'true';
-
-    patch.isScrapMode =
-      patch.isSeriesMode &&
-      this.repo.getItem(this.repo.scopedKey(articleKey, 'scrapMode')) ===
-        'true';
-
-    deferField(patch, 'seriesChannels', () =>
-      stringList(
-        this.repo.getJSON<unknown>(
-          this.repo.scopedKey(articleKey, 'seriesChannels'),
-        ),
-      ).filter((channel) => /^[a-zA-Z0-9]+$/.test(channel)),
-    );
-
-    // Load search query
-    patch.searchQuery =
-      this.repo.getItem(this.repo.scopedKey(articleKey, 'searchQuery')) || '';
-
-    // Load last active index
-    const savedIndex = this.repo.getItem(
-      this.repo.scopedKey(articleKey, 'lastActiveIndex'),
-    );
-    const index = savedIndex === null ? -1 : Number(savedIndex);
-    patch.lastActiveIndex =
-      Number.isSafeInteger(index) && index >= -1 ? index : -1;
 
     // Load shuffle mode (global setting)
     patch.isShuffleMode = this.repo.getItem(SHUFFLE_MODE_KEY) === 'true';
@@ -157,9 +118,20 @@ export class ConfigService {
    * Save current state to localStorage.
    */
   saveConfig(state: Readonly<AppState>): void {
-    const { articleKey } = state;
+    try {
+      this.writeConfig(state);
+    } catch (error) {
+      this.invalidateSavedState();
+      throw error;
+    }
+  }
+
+  invalidateSavedState(): void {
+    this.lastSavedState = undefined;
+  }
+
+  private writeConfig(state: Readonly<AppState>): void {
     const previous = this.lastSavedState;
-    const newSession = !previous || previous.articleKey !== articleKey;
 
     // Global settings — saved regardless of articleKey
     if (!sameField(previous, state, 'uiSettings')) {
@@ -175,91 +147,18 @@ export class ConfigService {
       this.repo.setItem(SHUFFLE_MODE_KEY, state.isShuffleMode.toString());
     }
 
-    // Per-articleKey scoped storage
-    if (articleKey) {
-      if (newSession || !sameField(previous, state, 'articleList')) {
-        this.repo.setJSON(
-          this.repo.scopedKey(articleKey, 'articleList'),
-          state.articleList,
-        );
-      }
-      if (newSession || !sameField(previous, state, 'isSeriesMode')) {
-        this.repo.setItem(
-          this.repo.scopedKey(articleKey, 'seriesMode'),
-          state.isSeriesMode.toString(),
-        );
-      }
-      if (newSession || !sameField(previous, state, 'isScrapMode')) {
-        this.repo.setItem(
-          this.repo.scopedKey(articleKey, 'scrapMode'),
-          state.isScrapMode.toString(),
-        );
-      }
-      if (newSession || !sameField(previous, state, 'seriesChannels')) {
-        this.repo.setJSON(
-          this.repo.scopedKey(articleKey, 'seriesChannels'),
-          state.seriesChannels,
-        );
-      }
-      if (newSession || !sameField(previous, state, 'searchQuery')) {
-        this.repo.setItem(
-          this.repo.scopedKey(articleKey, 'searchQuery'),
-          state.searchQuery,
-        );
-      }
-      if (newSession || !sameField(previous, state, 'activeIndex')) {
-        this.saveLastActiveIndex(articleKey, state.activeIndex);
-      }
-      if (newSession) this.repo.pruneArticleKeyCaches(articleKey);
-    }
+    this.navigation.save(state, previous);
     this.lastSavedState = state;
   }
 
-  /**
-   * Save last active index (called more frequently than full save).
-   */
   saveLastActiveIndex(articleKey: string, activeIndex: number): void {
-    if (!articleKey) return;
-    this.repo.setItem(
-      this.repo.scopedKey(articleKey, 'lastActiveIndex'),
-      activeIndex.toString(),
-    );
+    this.navigation.saveLastActiveIndex(articleKey, activeIndex);
   }
 
   restoreReadingSession(session: ReadingSession, articleKey: string): void {
-    const articleList = [...session.articleList];
-    let index = articleList.indexOf(session.path);
-    if (index === -1) {
-      articleList.unshift(session.path);
-      index = 0;
-    }
-    this.repo.setJSON(
-      this.repo.scopedKey(articleKey, 'articleList'),
-      articleList,
-    );
-    this.repo.setItem(
-      this.repo.scopedKey(articleKey, 'seriesMode'),
-      String(session.isSeriesMode),
-    );
-    this.repo.setItem(
-      this.repo.scopedKey(articleKey, 'scrapMode'),
-      String(session.isScrapMode),
-    );
-    this.repo.setJSON(
-      this.repo.scopedKey(articleKey, 'seriesChannels'),
-      session.seriesChannels,
-    );
-    this.repo.setItem(
-      this.repo.scopedKey(articleKey, 'searchQuery'),
-      appendSearchParam(session.searchQuery, 'articleKey', articleKey),
-    );
-    this.saveLastActiveIndex(articleKey, index);
-    this.repo.pruneArticleKeyCaches(articleKey);
+    this.navigation.restoreReadingSession(session, articleKey);
   }
 
-  /**
-   * Copy series storage from source articleKey to target articleKey.
-   */
   copySeriesStorage(
     sourceArticleKey: string,
     targetArticleKey: string,
@@ -267,51 +166,12 @@ export class ConfigService {
     activeIndex: number,
     searchQuery: string,
   ): void {
-    // Copy article filter config if exists
-    const filterConfig = this.repo.getItem(
-      this.repo.scopedKey(sourceArticleKey, 'articleFilterConfig'),
-    );
-
-    if (filterConfig !== null) {
-      this.repo.setItem(
-        this.repo.scopedKey(targetArticleKey, 'articleFilterConfig'),
-        filterConfig,
-      );
-    }
-
-    this.repo.setItem(
-      this.repo.scopedKey(targetArticleKey, 'seriesMode'),
-      'true',
-    );
-    this.repo.setItem(
-      this.repo.scopedKey(targetArticleKey, 'scrapMode'),
-      'false',
-    );
-
-    // Normalize article URLs to pathnames
-    const normalizedList = articleList.map((href) => {
-      const url = new URL(href, window.location.origin);
-      return url.pathname;
-    });
-
-    const normalizedSearch = appendSearchParam(
-      searchQuery,
-      'articleKey',
+    this.navigation.copySeriesStorage(
+      sourceArticleKey,
       targetArticleKey,
+      articleList,
+      activeIndex,
+      searchQuery,
     );
-
-    this.repo.setJSON(
-      this.repo.scopedKey(targetArticleKey, 'articleList'),
-      normalizedList,
-    );
-    this.repo.setItem(
-      this.repo.scopedKey(targetArticleKey, 'searchQuery'),
-      normalizedSearch,
-    );
-    this.repo.setItem(
-      this.repo.scopedKey(targetArticleKey, 'lastActiveIndex'),
-      activeIndex.toString(),
-    );
-    this.repo.pruneArticleKeyCaches(targetArticleKey);
   }
 }

@@ -73,8 +73,17 @@ function buildFilterPredicate(
 ): (ele: HTMLElement) => boolean {
   const { tab: tabFilter, title: titleFilter } = filter;
 
+  const includeTitle = filter.includeTitle ?? [];
+  const includes = filter.includeCaseSensitive
+    ? includeTitle
+    : includeTitle.map((word) => word.toLocaleLowerCase());
+
   // No active filters → allow all
-  if (tabFilter.length === 0 && titleFilter.length === 0) {
+  if (
+    tabFilter.length === 0 &&
+    titleFilter.length === 0 &&
+    includes.length === 0
+  ) {
     return () => true;
   }
 
@@ -92,13 +101,20 @@ function buildFilterPredicate(
           : NO_TAB_CATEGORY_WITHOUT_IMAGE);
       if (!allowedTabs.has(tab)) return false;
     }
-    if (titleFilter.length === 0) return true;
+    if (titleFilter.length === 0 && includes.length === 0) return true;
     const title =
       (ele.matches('.title')
         ? ele
         : ele.querySelector('.title')
       )?.textContent?.trim() ?? '';
-    return !titleFilter.some((keyword) => title.includes(keyword));
+    if (titleFilter.some((keyword) => title.includes(keyword))) return false;
+    if (!includes.length) return true;
+    const content = filter.includeCaseSensitive
+      ? title
+      : title.toLocaleLowerCase();
+    return filter.includeMode === 'all'
+      ? includes.every((word) => content.includes(word))
+      : includes.some((word) => content.includes(word));
   };
 }
 

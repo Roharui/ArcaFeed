@@ -29,6 +29,15 @@ const MODAL_FILTER_TAB = `
       <p class="arcafeed-settings-description">채널의 인기글 목록에서 글을 불러옵니다.</p>
     </section>
     <section class="arcafeed-settings-section">
+      <label for="include-title" class="arcafeed-settings-heading">제목 포함 키워드</label>
+      <p id="include-title-help" class="arcafeed-settings-description">입력한 키워드가 포함된 글만 탐색합니다. 여러 개는 쉼표로 구분하며 비우면 제한하지 않습니다. 차단 키워드와 겹치면 차단이 우선합니다.</p>
+      <input type="text" id="include-title" placeholder="포함할 키워드" aria-describedby="include-title-help" autocomplete="off" />
+      <div class="filter-include-options">
+        <label>일치 방식 <select id="include-mode"><option value="any">하나 이상 일치</option><option value="all">모두 일치</option></select></label>
+        <label><input type="checkbox" id="include-case-sensitive" /> 대소문자 구분</label>
+      </div>
+    </section>
+    <section class="arcafeed-settings-section">
       <label for="exclude-title" class="arcafeed-settings-heading">제목 키워드 차단</label>
       <p id="exclude-title-help" class="arcafeed-settings-description">키워드가 포함된 글을 제외합니다. 여러 개는 쉼표로 구분하세요.</p>
       <div class="exclude-title-input-wrapper">
@@ -79,6 +88,14 @@ function createArticleFilterModal(p: VaultAdapter, target?: FilterTarget) {
     title: [],
     onlyBest: false,
   };
+
+  $filterTab
+    .find('#include-title')
+    .val((filter?.includeTitle ?? []).join(', '));
+  $filterTab.find('#include-mode').val(filter?.includeMode ?? 'any');
+  $filterTab
+    .find('#include-case-sensitive')
+    .prop('checked', filter?.includeCaseSensitive === true);
 
   // Set best checkbox
   $filterTab.find('#filter-best-checkbox').prop('checked', onlyBest);
@@ -223,9 +240,31 @@ export function readArticleFilter(
     .toArray()
     .map((ele): string => $(ele).attr('data-text') as string);
 
+  const includeInput = $editor.find('#include-title');
+  const includeTitle = includeInput.length
+    ? [
+        ...new Set(
+          String(includeInput.val() || '')
+            .split(',')
+            .map((word) => word.trim())
+            .filter(Boolean),
+        ),
+      ]
+    : [];
   return {
     tab,
     title,
+    ...(includeTitle.length
+      ? {
+          includeTitle,
+          includeMode:
+            $editor.find('#include-mode').val() === 'all'
+              ? ('all' as const)
+              : ('any' as const),
+          includeCaseSensitive:
+            $editor.find('#include-case-sensitive').prop('checked') === true,
+        }
+      : {}),
     disableSwiper: previous?.disableSwiper ?? false,
     onlyBest: $editor.find('#filter-best-checkbox').prop('checked') as boolean,
     ...(channelName ? { channelName } : {}),
