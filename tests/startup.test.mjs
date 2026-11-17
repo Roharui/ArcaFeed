@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { sourceLoader, vaultFixture } from './source-loader.mjs';
+import { deferred, sourceLoader, vaultFixture } from './source-loader.mjs';
 
 function scheduler() {
   const frames = new Map();
@@ -135,8 +135,49 @@ test('unsupported pages exit before opening IndexedDB or constructing the applic
         eventBus: { emit: () => calls.push('init') },
       },
       '@/feature/swiper/skip-toast': { captureSkippedToast() {} },
+      get '@css/arcalive.css'() {
+        calls.push('layout');
+        return {};
+      },
     },
   })('src/index.ts');
   await Promise.resolve();
   assert.deepEqual(calls, []);
+});
+
+test('layout is applied before storage completes while application initialization waits', async () => {
+  const calls = [];
+  const storage = deferred();
+  sourceLoader({
+    globals: {
+      window: { location: { href: 'https://arca.live/b/test/100' } },
+      process: { env: { NODE_ENV: 'production' } },
+    },
+    mocks: {
+      get '@css/arcalive.css'() {
+        calls.push('layout');
+        return {};
+      },
+      '@/vault/indexed-storage': {
+        initializeStorage() {
+          calls.push('storage');
+          return storage.promise;
+        },
+      },
+      '@/core': {
+        ArcaFeed: class {
+          constructor() {
+            calls.push('app');
+          }
+        },
+        eventBus: { emit: () => calls.push('init') },
+      },
+      '@/feature/swiper/skip-toast': { captureSkippedToast() {} },
+    },
+  })('src/index.ts');
+  await new Promise(setImmediate);
+  assert.deepEqual(calls, ['layout', 'storage']);
+  storage.resolve();
+  await new Promise(setImmediate);
+  assert.deepEqual(calls, ['layout', 'storage', 'app', 'init']);
 });

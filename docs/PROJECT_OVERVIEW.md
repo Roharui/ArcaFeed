@@ -46,7 +46,7 @@ Webpack으로 코드와 CSS를 묶으며 jQuery, Swiper, Toastify는 유저스�
 ## 실행 흐름
 
 1. `src/index.ts`가 중복 실행을 확인하고 `ArcaFeed`를 생성합니다.
-2. URL의 페이지 모드를 먼저 판단하고 지원하지 않는 `OTHER` 페이지는 DB 접근 전에 종료합니다. IndexedDB `ArcaFeed` 버전 2의 용도별 저장소를 열고 기존 ArcaFeed localStorage 데이터를 이전한 뒤 설정·요약과 현재 탐색 목록을 준비합니다. 다른 탐색 목록과 이어보기 목록은 초기 값 조회에서 제외하며, `VaultAdapter`는 메모리 캐시 위에 지연 getter를 제공합니다.
+2. URL의 페이지 모드를 먼저 판단하고 지원하지 않는 `OTHER` 페이지는 DB 접근 전에 종료합니다. 지원 페이지는 기본 레이아웃 CSS를 먼저 적용한 뒤 IndexedDB `ArcaFeed` 버전 2의 용도별 저장소를 열고 기존 ArcaFeed localStorage 데이터를 이전한 뒤 설정·요약과 현재 탐색 목록을 준비합니다. 다른 탐색 목록과 이어보기 목록은 초기 값 조회에서 제외하며, `VaultAdapter`는 메모리 캐시 위에 지연 getter를 제공합니다.
 3. 지원 페이지에서는 이벤트를 `EventManager`의 단계와 연결하고 `init`을 발행합니다.
 4. 초기화는 개발 버전 표시 → 링크·버튼·키보드·시리즈·UI 병렬 초기화 →
    읽기 이벤트·버튼 연결 → Swiper → 다음 글 prefetch 순서로 실행합니다.

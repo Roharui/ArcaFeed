@@ -16,6 +16,8 @@ if ((window as any)[GUARD_KEY]) {
 
   async function start(): Promise<void> {
     if (parseHref(window.location.href).mode === 'OTHER') return;
+    // Keep the base layout stable while asynchronous storage is prepared.
+    await import(/* webpackMode: "eager" */ '@css/arcalive.css');
     await initializeStorage();
     new ArcaFeed();
     if (

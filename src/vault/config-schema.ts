@@ -112,16 +112,32 @@ export function normalizeUISettings(value: unknown): UISettings {
 }
 
 export function normalizeArticles(value: unknown, origin: string): string[] {
-  const articles = stringList(value).flatMap((href) => {
+  if (!Array.isArray(value)) return [];
+  let canonicalOrigin = false;
+  try {
+    canonicalOrigin = new URL(origin).origin === origin;
+  } catch {
+    return [];
+  }
+  const articles = new Set<string>();
+  for (const href of value) {
+    if (typeof href !== 'string') continue;
+    // Native records normally contain validated, origin-relative pathnames.
+    // Check those directly; retain URL resolution for older/external input.
+    if (canonicalOrigin && /^\/b\/[a-zA-Z0-9]+\/\d+\/?(?![\s\S])/.test(href)) {
+      articles.add(href.endsWith('/') ? href.slice(0, -1) : href);
+      continue;
+    }
     try {
       const url = new URL(href, origin);
-      return url.origin === origin &&
+      if (
+        url.origin === origin &&
         /^\/b\/[a-zA-Z0-9]+\/\d+\/?$/.test(url.pathname)
-        ? [url.pathname.replace(/\/$/, '')]
-        : [];
+      )
+        articles.add(url.pathname.replace(/\/$/, ''));
     } catch {
-      return [];
+      // Ignore malformed stored links.
     }
-  });
-  return [...new Set(articles)];
+  }
+  return [...articles];
 }

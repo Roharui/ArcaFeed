@@ -32,17 +32,12 @@ class ArcaFeed {
     const { mode } = this.vault.href;
 
     // ArcaFeed only operates on HOME / ARTICLE / CHANNEL / SCRAP pages.
-    // On OTHER pages, exit early without loading CSS or wiring events.
+    // On OTHER pages, exit early without wiring events.
     if (mode === 'OTHER') {
       ArcaFeed.instance = this;
       console.log('[ArcaFeed] Unsupported page, exiting.');
       return;
     }
-
-    // Load global layout CSS only on supported pages.
-    // Feature-specific CSS (swiper, modal, series, etc.) is loaded via their
-    // respective module imports and only affects ArcaFeed-created elements.
-    import(/* webpackMode: "eager" */ '@css/arcalive.css');
 
     this.events = new EventManager();
     this.wireEventBus();

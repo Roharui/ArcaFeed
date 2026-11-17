@@ -17,6 +17,64 @@ const windowFixture = {
   history: { replaceState() {} },
 };
 
+test('native article paths avoid per-link URL parsing and preserve input rules', () => {
+  let urls = 0;
+  class CountedURL extends URL {
+    constructor(...args) {
+      super(...args);
+      urls++;
+    }
+  }
+  const { normalizeArticles } = sourceLoader({
+    globals: { URL: CountedURL },
+  })('src/vault/config-schema.ts');
+  const paths = Array.from({ length: 20000 }, (_, i) => `/b/test/${i + 1}`);
+  assert.deepEqual(normalizeArticles(paths, 'https://arca.live'), paths);
+  assert.equal(urls, 1);
+  const input = [
+    '/b/test/1',
+    '/b/test/1/',
+    'https://arca.live/b/test/2?q=hello#title',
+    '//arca.live/b/test/3',
+    '/b/test/4?query=1',
+    '/b/test/5#title',
+    ' /b/test/6\n',
+    '/b/test/7\n',
+    '/b/test/8\u2028',
+    '/b/test/../other/9',
+    'https://other.example/b/test/10',
+    '//other.example/b/test/11',
+    '/b/invalid-channel/12',
+    '/b/test/no-article',
+    '/b/test/13/extra',
+    'http://[invalid',
+    null,
+    123,
+  ];
+  const reference = (value, origin) => [
+    ...new Set(
+      value.flatMap((href) => {
+        if (typeof href !== 'string') return [];
+        try {
+          const url = new URL(href, origin);
+          return url.origin === origin &&
+            /^\/b\/[a-zA-Z0-9]+\/\d+\/?$/.test(url.pathname)
+            ? [url.pathname.replace(/\/$/, '')]
+            : [];
+        } catch {
+          return [];
+        }
+      }),
+    ),
+  ];
+  for (const origin of ['https://arca.live', 'https://arca.live/', 'invalid'])
+    assert.deepEqual(
+      normalizeArticles(input, origin),
+      reference(input, origin),
+    );
+  assert.deepEqual(normalizeArticles(null, 'https://arca.live'), []);
+});
+
 test('article lookup validates saved indices and caches searches per list', () => {
   const { findArticleIndex } = sourceLoader()('src/vault/article-window.ts');
   const articles = ['/b/test/102', '/b/test/101', '/b/test/100'];
