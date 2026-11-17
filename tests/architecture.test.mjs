@@ -466,7 +466,7 @@ for (const scenario of ['success', 'empty', 'stale']) {
   });
 }
 
-test('invalid navigation indices leave the current article and saved index intact', () => {
+test('invalid navigation indices leave the current article and saved index intact', async () => {
   const { toLink, nextLinkForce } = sourceLoader({
     globals: {
       window: {
@@ -475,15 +475,15 @@ test('invalid navigation indices leave the current article and saved index intac
     },
   })('src/feature/swiper/page.ts');
   const p = vaultFixture({ activeIndex: 0 });
-  toLink('PREV')(p);
+  await toLink('PREV')(p);
   assert.equal(p.activeIndex, 0);
   p.activeIndex = p.articleList.length - 1;
-  nextLinkForce(p);
+  await nextLinkForce(p);
   assert.equal(p.activeIndex, 1);
   assert.equal(p.saves, 0);
 });
 
-test('repeated navigation events cannot skip articles while the browser is leaving', () => {
+test('repeated navigation events cannot skip articles while the browser is leaving', async () => {
   const navigations = [];
   const { toLink, nextLinkForce } = sourceLoader({
     globals: {
@@ -494,15 +494,15 @@ test('repeated navigation events cannot skip articles while the browser is leavi
     activeIndex: 0,
     articleList: ['/b/test/100', '/b/test/99', '/b/test/98'],
   });
-  toLink('NEXT')(p);
-  nextLinkForce(p);
-  toLink('PREV')(p);
+  await toLink('NEXT')(p);
+  await nextLinkForce(p);
+  await toLink('PREV')(p);
   assert.deepEqual(navigations, ['/b/test/99']);
   assert.equal(p.activeIndex, 1);
   assert.equal(p.saves, 1);
 });
 
-test('a failed browser navigation restores the saved index and permits retry', () => {
+test('a failed browser navigation restores the saved index and permits retry', async () => {
   let fail = true;
   const navigations = [];
   const { toLink } = sourceLoader({
@@ -518,10 +518,13 @@ test('a failed browser navigation restores the saved index and permits retry', (
     },
   })('src/feature/swiper/page.ts');
   const p = vaultFixture({ activeIndex: 0 });
-  assert.throws(() => toLink('NEXT')(p), /navigation failed/);
+  await assert.rejects(
+    () => toLink('NEXT')(p),
+    (error) => error.cause?.message === 'navigation failed',
+  );
   assert.equal(p.activeIndex, 0);
   fail = false;
-  toLink('NEXT')(p);
+  await toLink('NEXT')(p);
   assert.deepEqual(navigations, ['/b/test/99']);
   assert.equal(p.activeIndex, 1);
 });
@@ -656,7 +659,7 @@ test('runtime source imports form an acyclic graph', () => {
   for (const filename of graph.keys()) walk(filename);
 });
 
-test('list jumps preserve session parameters and share the navigation guard', () => {
+test('list jumps preserve session parameters and share the navigation guard', async () => {
   const navigations = [];
   const { navigateToArticle, toLink } = sourceLoader({
     globals: {
@@ -670,16 +673,16 @@ test('list jumps preserve session parameters and share the navigation guard', ()
   });
   for (const index of [-1, 3, 1.5, NaN]) navigateToArticle(p, index);
   assert.equal(p.saves, 0);
-  navigateToArticle(p, 2);
+  await navigateToArticle(p, 2);
   assert.deepEqual(navigations, ['/b/test/90?articleKey=feed&search=hello']);
   assert.equal(p.activeIndex, 2);
   assert.equal(p.saves, 1);
-  toLink('PREV')(p);
-  navigateToArticle(p, 1);
+  await toLink('PREV')(p);
+  await navigateToArticle(p, 1);
   assert.equal(navigations.length, 1);
 });
 
-test('failed list jumps restore position and allow cross-channel retry', () => {
+test('failed list jumps restore position and allow cross-channel retry', async () => {
   let fail = true;
   const navigations = [];
   const { navigateToArticle } = sourceLoader({
@@ -698,10 +701,13 @@ test('failed list jumps restore position and allow cross-channel retry', () => {
     activeIndex: 0,
     articleList: ['/b/test/100', '/b/other/42'],
   });
-  assert.throws(() => navigateToArticle(p, 1), /blocked/);
+  await assert.rejects(
+    () => navigateToArticle(p, 1),
+    (error) => error.cause?.message === 'blocked',
+  );
   assert.equal(p.activeIndex, 0);
   fail = false;
-  navigateToArticle(p, 1);
+  await navigateToArticle(p, 1);
   assert.equal(p.activeIndex, 1);
   assert.deepEqual(navigations, ['/b/other/42']);
 });

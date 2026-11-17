@@ -161,7 +161,7 @@ async function buildSubscriptionFeed(
     const articleKey = createArticleKey();
     const nextUrl = new URL(articles[firstIndex]!, window.location.origin);
     nextUrl.searchParams.set('articleKey', articleKey);
-    const moved = navigate(
+    const moved = await navigate(
       p,
       () => window.location.replace(nextUrl.toString()),
       {

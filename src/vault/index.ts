@@ -27,7 +27,7 @@ import { parseHref } from '@/utils/regex';
  * Compatibility layer that mimics the old Vault interface
  * while delegating to Store and ConfigService internally.
  *
- * - Auto-persists state changes to localStorage via Store subscription.
+ * - Auto-persists state changes to IndexedDB via Store subscription.
  * - Can be constructed with no args (creates its own Store/ConfigService)
  *   or with explicit dependencies for testing.
  */
@@ -96,7 +96,7 @@ export class VaultAdapter {
   }
 
   /**
-   * Debounced auto-save: batches rapid state changes into a single localStorage write.
+   * Debounced auto-save: batches rapid state changes into a single IndexedDB write.
    */
   private scheduleSave(): void {
     if (this.saveDebounceTimer) {

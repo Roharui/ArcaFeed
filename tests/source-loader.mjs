@@ -43,6 +43,15 @@ export function sourceLoader({
     );
     function requireSource(specifier) {
       if (Object.hasOwn(mocks, specifier)) return mocks[specifier];
+      if (
+        specifier === './indexed-storage' ||
+        specifier === '@/vault/indexed-storage'
+      ) {
+        return {
+          getStorage: () => environment.localStorage,
+          flushStorage: () => Promise.resolve(),
+        };
+      }
       if (specifier.endsWith('.css')) return {};
       let target;
       if (specifier.startsWith('@/'))
@@ -139,6 +148,8 @@ export function vaultFixture(overrides = {}) {
     },
     searchQuery: '',
     saves: 0,
+    invalidateSavedState() {},
+    subscriptionFailures: [],
     flushSave() {
       this.saves++;
     },

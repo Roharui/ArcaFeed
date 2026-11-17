@@ -175,7 +175,7 @@ async function initEnableScrapSeries(p: VaultAdapter): Promise<void> {
   } catch (error) {
     if (isCurrent()) {
       try {
-        restoreNavigationState(p, previous);
+        await restoreNavigationState(p, previous);
       } catch (recovery) {
         console.error(
           '[ArcaFeed] Scrap recovery persistence failed:',

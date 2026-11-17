@@ -1,3 +1,5 @@
+import { initializeStorage } from '@/vault/indexed-storage';
+import { reportFailure } from '@/utils/operation-error';
 import { ArcaFeed, eventBus } from '@/core';
 import { captureSkippedToast } from '@/feature/swiper/skip-toast';
 
@@ -11,16 +13,19 @@ if ((window as any)[GUARD_KEY]) {
   (window as any)[GUARD_KEY] = true;
   captureSkippedToast();
 
-  // Ensure ArcaFeed singleton is created (registers EventBus listeners)
-  new ArcaFeed();
-
-  (function () {
+  async function start(): Promise<void> {
+    await initializeStorage();
+    new ArcaFeed();
     if (
       process.env.NODE_ENV === 'development' &&
       process.env.DEVICE === 'mobile'
     ) {
-      import('eruda').then((eruda) => eruda.default.init());
+      void import('eruda').then((eruda) => eruda.default.init());
     }
-    eventBus.emit('init');
-  })();
+    await eventBus.emit('init');
+  }
+  void start().catch((error) => {
+    (window as any)[GUARD_KEY] = false;
+    reportFailure(error);
+  });
 }

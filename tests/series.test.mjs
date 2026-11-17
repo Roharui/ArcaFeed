@@ -59,7 +59,14 @@ function seriesFixture() {
           origin: 'https://arca.live',
         },
         crypto: { randomUUID: () => 'newseries' },
-        open: (...args) => opened.push(args),
+        open: (...args) => {
+          opened.push(args);
+          return {
+            opener: {},
+            location: { replace: (url) => opened.push([url]) },
+            close() {},
+          };
+        },
       },
     },
     mocks: {
@@ -67,7 +74,6 @@ function seriesFixture() {
       '@/core/app-events': {
         eventBus: { emit: (event) => events.push(event) },
       },
-      './search': { parseSearchQuery() {} },
     },
   });
   return { ...load('src/feature/series.ts'), buttons, events, opened };
@@ -98,7 +104,7 @@ for (const [feed, isScrapMode, seriesChannels] of [
   ['scraps', true, []],
   ['subscriptions', false, ['test', 'other']],
 ]) {
-  test(`opening a series from ${feed} creates a separate session in a new tab`, () => {
+  test(`opening a series from ${feed} creates a separate session in a new tab`, async () => {
     const fixture = seriesFixture();
     const copies = [];
     const p = vaultFixture({
@@ -108,7 +114,7 @@ for (const [feed, isScrapMode, seriesChannels] of [
       seriesChannels,
       copySeriesStorage: (...args) => copies.push(args),
     });
-    fixture.initEnableSeries(p);
+    await fixture.initEnableSeries(p);
     assert.deepEqual(copies[0].slice(0, 4), [
       'scraps',
       'newserie',
@@ -116,11 +122,8 @@ for (const [feed, isScrapMode, seriesChannels] of [
       0,
     ]);
     assert.deepEqual(fixture.opened, [
-      [
-        'https://arca.live/b/test/100?articleKey=newserie',
-        '_blank',
-        'noopener',
-      ],
+      ['about:blank', '_blank'],
+      ['https://arca.live/b/test/100?articleKey=newserie'],
     ]);
     assert.equal(p.isScrapMode, isScrapMode);
     assert.deepEqual(p.seriesChannels, seriesChannels);

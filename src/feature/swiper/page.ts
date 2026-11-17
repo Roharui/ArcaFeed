@@ -15,7 +15,7 @@ function nextLinkForce(p: VaultAdapter) {
 
 // For Event
 function toLink(mode: PageMode): PromiseFunc {
-  return (p: VaultAdapter): void => {
+  return async (p: VaultAdapter): Promise<void> => {
     if (isNavigating(p)) return;
     const { activeIndex, articleList } = p;
 
@@ -38,21 +38,21 @@ function toLink(mode: PageMode): PromiseFunc {
       if (skipped > 0) showSkippedToast(skipped);
       return;
     }
-    navigateToArticle(p, nextIdx, skipped);
+    await navigateToArticle(p, nextIdx, skipped);
   };
 }
 
 /** Jump within the current session while retaining its filters and order. */
-export function navigateToArticle(
+export async function navigateToArticle(
   p: VaultAdapter,
   index: number,
   skipped = 0,
-): void {
+): Promise<void> {
   if (isNavigating(p) || !Number.isSafeInteger(index)) return;
   const path = p.articleList[index];
   if (!path || !/^\/b\/[^/?#]+\/\d+$/.test(path)) return;
   if (path === `/b/${p.href.channelId}/${p.href.articleId}`) return;
-  navigate(
+  await navigate(
     p,
     () => {
       queueSkippedToast(path, skipped);

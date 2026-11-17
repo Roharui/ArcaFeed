@@ -84,7 +84,7 @@ export class Store {
     const base = createInitialState();
 
     // Deep-merge uiSettings so newly added fields get default values
-    // even when old localStorage data is missing them.
+    // even when old IndexedDB data is missing them.
     if (
       initialState &&
       !Object.getOwnPropertyDescriptor(initialState, 'uiSettings')?.get &&

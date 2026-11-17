@@ -161,7 +161,10 @@ function saveCheckpoint(p: VaultAdapter): void {
 }
 
 /** Rebuild the navigation cache even when its original articleKey has expired. */
-export function resumeReading(p: VaultAdapter, session: ReadingSession): void {
+export async function resumeReading(
+  p: VaultAdapter,
+  session: ReadingSession,
+): Promise<void> {
   const key =
     session.isSeriesMode && session.id.startsWith('series:')
       ? session.id.slice('series:'.length)
@@ -171,7 +174,7 @@ export function resumeReading(p: VaultAdapter, session: ReadingSession): void {
   url.searchParams.set('articleKey', key);
   let previousScroll: string | null = null;
   let wroteScroll = false;
-  navigate(p, () => window.location.assign(url.toString()), {
+  await navigate(p, () => window.location.assign(url.toString()), {
     suspend: () => {
       const wasStopped = stoppedVaults.has(p);
       stoppedVaults.add(p);
@@ -255,7 +258,7 @@ export function initReading(p: VaultAdapter): void {
     updateVisitedIndicators(p);
   });
 
-  window.addEventListener('storage', (event) => {
+  const onStorage = (event: { key: string | null }) => {
     if (event.key === null) p.reading.reload();
     else if (
       event.key === SITE_RECENT_KEY ||
@@ -266,7 +269,11 @@ export function initReading(p: VaultAdapter): void {
     else if (event.key === READING_HISTORY_KEY) p.reading.reload(['sessions']);
     else if (event.key.startsWith(READING_LIST_PREFIX))
       p.reading.reloadSessionList();
-  });
+  };
+  window.addEventListener('storage', onStorage);
+  window.addEventListener('arcafeed:storage', ((
+    event: CustomEvent<{ key: string }>,
+  ) => onStorage(event.detail)) as EventListener);
   p.reading.reload();
   window.addEventListener('load', () => p.reading.reload(), { once: true });
   let previousSkip = p.skipVisitedArticles;

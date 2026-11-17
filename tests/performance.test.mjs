@@ -168,6 +168,7 @@ function loadLink(fetches, rows = [], onFilter = () => {}) {
     globals: { console: quietConsole },
     mocks: {
       './fetch': fetches,
+      '@/feature/article/fetch': fetches,
       '@/feature/filter': {
         filterLink: (p, applyCss) => {
           onFilter(p, applyCss);
@@ -592,7 +593,7 @@ test('a filter change discards an old home-series response', async () => {
   assert.deepEqual(p.articleList, ['/b/test/100', '/b/test/99']);
 });
 
-test('navigation persists the target index before leaving', () => {
+test('navigation persists the target index before leaving', async () => {
   const navigations = [];
   const p = vaultFixture({ activeIndex: 0 });
   const { toLink } = sourceLoader({
@@ -605,7 +606,7 @@ test('navigation persists the target index before leaving', () => {
     },
     mocks: { '@/utils': { getArrayItem: (list, index) => list[index] } },
   })('src/feature/swiper/page.ts');
-  toLink('NEXT')(p);
+  await toLink('NEXT')(p);
   assert.deepEqual(navigations, [['/b/test/99', 1, 1]]);
 });
 
@@ -640,6 +641,7 @@ test('Swiper is reused and background list changes unlock navigation', () => {
       jquery: {},
       swiper: { default: FakeSwiper },
       './video': { installSwiperVideoPause() {} },
+      './side-click': { installSideClick() {} },
       '@/core/app-events': { eventBus: {} },
     },
   })('src/feature/swiper/swiper.ts');
@@ -713,6 +715,7 @@ test('Swiper ignores article height changes and batches width changes until the 
       jquery: {},
       swiper: { default: FakeSwiper },
       './video': { installSwiperVideoPause() {} },
+      './side-click': { installSideClick() {} },
       '@/core/app-events': { eventBus: {} },
     },
   })('src/feature/swiper/swiper.ts');

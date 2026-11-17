@@ -1,7 +1,7 @@
 import { deferField, mergeState, sameField } from './lazy-state';
 /**
  * Config Service - handles loading and saving application configuration.
- * Uses StorageRepository instead of directly accessing localStorage.
+ * Uses StorageRepository instead of directly accessing IndexedDB.
  */
 
 import { StorageRepository } from './repository';
@@ -53,7 +53,7 @@ export class ConfigService {
   }
 
   /**
-   * Load saved config from localStorage and populate initial state.
+   * Load saved config from IndexedDB and populate initial state.
    */
   loadConfig(): Partial<AppState> {
     const articleKey = this.ensureArticleKey();
@@ -115,7 +115,7 @@ export class ConfigService {
   }
 
   /**
-   * Save current state to localStorage.
+   * Save current state to IndexedDB.
    */
   saveConfig(state: Readonly<AppState>): void {
     try {

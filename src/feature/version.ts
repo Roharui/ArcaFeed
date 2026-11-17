@@ -1,9 +1,10 @@
+import { getStorage } from '@/vault/indexed-storage';
 import $ from 'jquery';
 import { navigate } from '@/feature/navigation';
 
 import type { VaultAdapter } from '@/vault';
 
-function addVersionInfo(p: VaultAdapter): void {
+async function addVersionInfo(p: VaultAdapter): Promise<void> {
   if (process.env.NODE_ENV !== 'development') return;
 
   const version = process.env.GIT_HASH || 'unknown';
@@ -15,9 +16,9 @@ function addVersionInfo(p: VaultAdapter): void {
     process.env.DEVICE === 'mobile' &&
     process.env.VERSION_RELOAD !== 'false'
   ) {
-    if (localStorage.getItem('arca_version_info') !== versionInfo)
-      navigate(p, () => window.location.reload(), {
-        prepare: () => localStorage.setItem('arca_version_info', versionInfo),
+    if (getStorage().getItem('arca_version_info') !== versionInfo)
+      await navigate(p, () => window.location.reload(), {
+        prepare: () => getStorage().setItem('arca_version_info', versionInfo),
       });
   }
 

@@ -124,10 +124,10 @@ class EventManager implements Record<AppEvent, () => Step[]> {
 
   toggleShuffle(): Step[] {
     return [
-      (p: VaultAdapter) => {
+      async (p: VaultAdapter) => {
         if (!p.isCurrentMode('SCRAP')) return;
 
-        navigate(p, () => window.location.reload(), {
+        await navigate(p, () => window.location.reload(), {
           patch: { isShuffleMode: !p.isShuffleMode },
         });
       },
@@ -138,7 +138,7 @@ class EventManager implements Record<AppEvent, () => Step[]> {
 
   toggleSwiper(): Step[] {
     return [
-      (p: VaultAdapter) => {
+      async (p: VaultAdapter) => {
         if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
 
         const existingFilter = p.articleFilterConfig[p.href.channelId] || {
@@ -153,7 +153,7 @@ class EventManager implements Record<AppEvent, () => Step[]> {
           disableSwiper: !existingFilter.disableSwiper,
         };
 
-        navigate(p, () => window.location.reload(), {
+        await navigate(p, () => window.location.reload(), {
           patch: {
             articleFilterConfig: mergeState(p.articleFilterConfig, {
               [p.href.channelId]: pageFilter,

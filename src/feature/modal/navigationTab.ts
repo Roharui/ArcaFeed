@@ -158,7 +158,8 @@ export function createNavigationModal(
       const current = index === currentIndex;
       const row = readingButton('', () => {
         const latestIndex = p.articleList.indexOf(path);
-        if (latestIndex >= 0) navigateToArticle(p, latestIndex);
+        if (latestIndex >= 0)
+          void navigateToArticle(p, latestIndex).catch(() => {});
       })
         .addClass('arcafeed-navigation-row')
         .append(

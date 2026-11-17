@@ -46,7 +46,7 @@ Webpack으로 코드와 CSS를 묶으며 jQuery, Swiper, Toastify는 유저스�
 ## 실행 흐름
 
 1. `src/index.ts`가 중복 실행을 확인하고 `ArcaFeed`를 생성합니다.
-2. `VaultAdapter`가 저장 설정의 지연 getter를 준비하고 URL의 페이지 모드를 판단합니다.
+2. IndexedDB `ArcaFeed`의 `values` 저장소를 열고 기존 ArcaFeed localStorage 데이터를 이전한 뒤, `VaultAdapter`가 저장 설정의 지연 getter를 준비하고 URL의 페이지 모드를 판단합니다.
    지원하지 않는 `OTHER` 페이지는 레이아웃 CSS 로드와 이벤트 연결 전에 종료합니다.
 3. 지원 페이지에서는 이벤트를 `EventManager`의 단계와 연결하고 `init`을 발행합니다.
 4. 초기화는 개발 버전 표시 → 링크·버튼·키보드·시리즈·UI 병렬 초기화 →
@@ -84,7 +84,7 @@ Webpack으로 코드와 CSS를 묶으며 jQuery, Swiper, Toastify는 유저스�
 [VaultAdapter](../src/vault/index.ts)는 기능 모듈에 상태 접근과 자동 저장을 제공합니다.
 [ConfigService](../src/vault/config.ts)는
 [config-schema.ts](../src/vault/config-schema.ts)로 데이터를 검증한 뒤
-[StorageRepository](../src/vault/repository.ts)를 통해 localStorage를 읽고 씁니다. JSON 필드는 첫 접근 때만 파싱·정규화하며, 상태 복사와 변경 감지는 사용하지 않은 getter를 실행하지 않습니다. [ConfigStorage](../src/vault/config-storage.ts)는 채널별 필터와 화면·구독·읽기 설정을 별도 키에서 읽고 저장합니다. 설정 모달도 선택한 탭을 처음 열 때 생성합니다.
+[StorageRepository](../src/vault/repository.ts)를 통해 IndexedDB의 메모리 읽기 캐시에 접근합니다. [IndexedStorage](../src/vault/indexed-storage.ts)가 비동기 초기화, 트랜잭션 저장과 탭 간 캐시 갱신을 담당합니다. JSON 필드는 첫 접근 때만 파싱·정규화하며, 상태 복사와 변경 감지는 사용하지 않은 getter를 실행하지 않습니다. [ConfigStorage](../src/vault/config-storage.ts)는 채널별 필터와 화면·구독·읽기 설정을 별도 키에서 읽고 저장합니다. 설정 모달도 선택한 탭을 처음 열 때 생성합니다.
 
 | 저장 범위        | 주요 키와 내용                                                                                                 |
 | ---------------- | -------------------------------------------------------------------------------------------------------------- |
@@ -107,7 +107,7 @@ Webpack으로 코드와 CSS를 묶으며 jQuery, Swiper, Toastify는 유저스�
 - 배열과 설정 객체는 새 참조로 갱신합니다. 여러 필드가 함께 바뀌면
   `VaultAdapter.updateState()`를 사용하고, 목록 초기화에는 `resetArticleList()`를 사용합니다.
 - 저장할 상태를 추가하면 `AppState`와 기본값, 스키마 정규화, 설정 로드·저장,
-  `VaultAdapter`의 저장 변경 감지 대상도 확인합니다. 이동 직전에는 `flushSave()`합니다.
+  `VaultAdapter`의 저장 변경 감지 대상도 확인합니다. 이동 직전에는 `flushSave()`로 변경을 모은 뒤 `flushStorage()` 완료를 기다립니다. 공용 `navigate()`가 이를 처리합니다.
 - 비동기 목록 조회를 추가하면 `captureArticleSession()`으로 오래된 응답을 차단합니다.
 - 경로 별칭은 `@/` → `src/`, `@css/` → `css/`입니다.
   코드 포맷과 린트 규칙은 저장소의 Prettier·ESLint 설정을 따릅니다.

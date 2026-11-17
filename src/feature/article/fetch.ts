@@ -115,7 +115,7 @@ async function fetchAllBatches(
     p.articleList = articles;
 
     if (p.isSeriesMode) {
-      openScrapSeriesArticle(p);
+      await openScrapSeriesArticle(p);
     }
   } finally {
     hideFetchLoader();
@@ -124,7 +124,7 @@ async function fetchAllBatches(
 
 // ── Navigation ─────────────────────────────────────────
 
-function openScrapSeriesArticle(p: VaultAdapter): void {
+async function openScrapSeriesArticle(p: VaultAdapter): Promise<void> {
   const firstIndex = p.articleList.findIndex(
     (path) => !p.skipVisitedArticles || !p.reading.hasVisited(path),
   );
@@ -147,7 +147,7 @@ function openScrapSeriesArticle(p: VaultAdapter): void {
     nextUrl.searchParams.set('articleKey', p.articleKey);
   }
 
-  navigate(p, () => window.location.replace(nextUrl.toString()), {
+  await navigate(p, () => window.location.replace(nextUrl.toString()), {
     patch: { activeIndex: firstIndex },
   });
 }

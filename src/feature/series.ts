@@ -136,7 +136,7 @@ function initSeriesBtnCss(_v: VaultAdapter): void {
   $('.series-control-btn.enable-series').css('opacity', '1');
 }
 
-function initEnableSeries(p: VaultAdapter): void {
+async function initEnableSeries(p: VaultAdapter): Promise<void> {
   if (isNavigating(p)) return;
   const previousTab = openedSeriesTabs.get(p);
   if (previousTab && !previousTab.closed) {
@@ -162,7 +162,7 @@ function initEnableSeries(p: VaultAdapter): void {
   nextUrl.searchParams.set('articleKey', nextKey);
 
   let tab: Window | null = null;
-  navigate(
+  await navigate(
     p,
     () => {
       tab!.location.replace(nextUrl.toString());

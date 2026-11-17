@@ -1,3 +1,4 @@
+import { flushStorage } from '@/vault/indexed-storage';
 import type { VaultAdapter } from '@/vault';
 import type { PromiseFunc, PromiseFuncResult } from '@/types';
 
@@ -44,6 +45,7 @@ export class StepRunner {
     }
 
     p.flushSave();
+    await flushStorage();
   }
 
   private async invoke(

@@ -1,3 +1,4 @@
+import { flushStorage } from '@/vault/indexed-storage';
 import { mergeState } from '@/vault/lazy-state';
 import { OperationError, reportFailure } from '@/utils/operation-error';
 import type { VaultAdapter } from '@/vault';
@@ -34,13 +35,14 @@ export function captureNavigationState(p: VaultAdapter): Partial<AppState> {
   );
 }
 
-export function restoreNavigationState(
+export async function restoreNavigationState(
   p: VaultAdapter,
   previous: Partial<AppState>,
-): void {
+): Promise<void> {
   p.updateState(previous);
   p.invalidateSavedState();
   p.flushSave();
+  await flushStorage();
 }
 
 export function isNavigating(p: VaultAdapter): boolean {
@@ -49,18 +51,18 @@ export function isNavigating(p: VaultAdapter): boolean {
 
 interface NavigationOptions {
   patch?: Partial<AppState>;
-  prepare?: () => void;
+  prepare?: () => void | Promise<void>;
   suspend?: () => () => void;
-  rollback?: () => void;
+  rollback?: () => void | Promise<void>;
   stayOnPage?: boolean;
 }
 
 /** Save first; failed persistence or browser calls leave this page retryable. */
-export function navigate(
+export async function navigate(
   p: VaultAdapter,
   move: () => void,
   options: NavigationOptions = {},
-): boolean {
+): Promise<boolean> {
   if (navigating.has(p)) return false;
   navigating.add(p);
   if (!observed.has(p)) {
@@ -90,9 +92,9 @@ export function navigate(
     restoreSuspension = options.suspend?.();
     if (options.patch) p.updateState(options.patch);
     p.flushSave();
-    saved = true;
     try {
-      options.prepare?.();
+      await options.prepare?.();
+      await flushStorage();
     } catch (error) {
       throw error instanceof OperationError
         ? error
@@ -102,6 +104,7 @@ export function navigate(
             error,
           );
     }
+    saved = true;
     move();
     if (options.stayOnPage) navigating.delete(p);
     return true;
@@ -123,13 +126,14 @@ export function navigate(
       recoveryErrors.push(recovery);
     }
     try {
-      options.rollback?.();
+      await options.rollback?.();
     } catch (recovery) {
       recoveryErrors.push(recovery);
     }
     try {
       p.invalidateSavedState();
       p.flushSave();
+      await flushStorage();
     } catch (recovery) {
       recoveryErrors.push(recovery);
     }

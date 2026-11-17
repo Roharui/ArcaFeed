@@ -47,9 +47,9 @@ function fixture() {
   };
 }
 
-test('skipping visited articles shows one toast on the destination, without delaying navigation', () => {
+test('skipping visited articles shows one toast on the destination, without delaying navigation', async () => {
   const f = fixture();
-  f.toLink('NEXT')(f.p);
+  await f.toLink('NEXT')(f.p);
   assert.deepEqual(f.navigations, ['/b/test/97?arcaFeedSkipped=2']);
   assert.deepEqual(f.messages, []);
   f.toast.showPendingSkippedToast('/b/test/97');
@@ -57,35 +57,38 @@ test('skipping visited articles shows one toast on the destination, without dela
   assert.deepEqual(f.messages, ['최근 본 글 2개를 건너뛰었습니다']);
 });
 
-test('previous navigation and disabled skipping do not report visited skips', () => {
+test('previous navigation and disabled skipping do not report visited skips', async () => {
   for (const mode of ['NEXT', 'PREV']) {
     const f = fixture();
     if (mode === 'NEXT') f.p.skipVisitedArticles = false;
     else f.p.activeIndex = 3;
-    f.toLink(mode)(f.p);
+    await f.toLink(mode)(f.p);
     f.toast.showPendingSkippedToast(f.navigations[0]);
     assert.deepEqual(f.messages, []);
   }
 });
 
-test('a failed navigation clears its pending notification', () => {
+test('a failed navigation clears its pending notification', async () => {
   const f = fixture();
   f.fail();
-  assert.throws(() => f.toLink('NEXT')(f.p), /navigation failed/);
+  await assert.rejects(
+    () => f.toLink('NEXT')(f.p),
+    (error) => error.cause?.message === 'navigation failed',
+  );
   f.toast.showPendingSkippedToast('/b/test/97');
-  assert.deepEqual(f.messages, []);
+  assert.equal(f.messages.length, 1);
   assert.equal(f.p.activeIndex, 0);
 });
 
-test('an all-visited remainder is reported on the current page', () => {
+test('an all-visited remainder is reported on the current page', async () => {
   const f = fixture();
   f.p.reading.hasVisited = () => true;
-  f.toLink('NEXT')(f.p);
+  await f.toLink('NEXT')(f.p);
   assert.deepEqual(f.navigations, []);
   assert.deepEqual(f.messages, ['최근 본 글 3개를 건너뛰었습니다']);
 });
 
-test('pending notifications cannot appear on an unrelated page', () => {
+test('pending notifications cannot appear on an unrelated page', async () => {
   const f = fixture();
   f.toast.queueSkippedToast('/b/test/97', 2);
   f.toast.showPendingSkippedToast('/b/other/97');
@@ -93,7 +96,7 @@ test('pending notifications cannot appear on an unrelated page', () => {
   assert.deepEqual(f.messages, []);
 });
 
-test('subscription feed aliases survive the redirect to the real channel', () => {
+test('subscription feed aliases survive the redirect to the real channel', async () => {
   const f = fixture();
   f.toast.queueSkippedToast('/b/my/97', 2);
   f.toast.showPendingSkippedToast('/b/test/97');
@@ -101,14 +104,14 @@ test('subscription feed aliases survive the redirect to the real channel', () =>
   assert.deepEqual(f.messages, ['최근 본 글 2개를 건너뛰었습니다']);
 });
 
-test('subscription aliases do not match a different article', () => {
+test('subscription aliases do not match a different article', async () => {
   const f = fixture();
   f.toast.queueSkippedToast('/b/my/97', 2);
   f.toast.showPendingSkippedToast('/b/test/98');
   assert.deepEqual(f.messages, []);
 });
 
-test('URL handoff survives cleared storage and is removed before initialization', () => {
+test('URL handoff survives cleared storage and is removed before initialization', async () => {
   const messages = [];
   const storage = memoryStorage();
   const location = {

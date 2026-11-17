@@ -1,5 +1,7 @@
+import { getStorage } from './indexed-storage';
+
 /**
- * Storage Repository - abstracts localStorage access.
+ * Storage Repository - provides cached IndexedDB access.
  * Separates persistence concerns from business logic (previously in Config class).
  */
 
@@ -21,7 +23,7 @@ export class StorageRepository {
   private checkedCacheInventory = false;
   private jsonCache = new Map<string, { raw: string | null; value: unknown }>();
 
-  constructor(storage: Storage = localStorage) {
+  constructor(storage: Storage = getStorage()) {
     this.storage = storage;
   }
 

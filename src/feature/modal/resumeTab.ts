@@ -126,7 +126,7 @@ export function createResumeModal(p: VaultAdapter): JQuery<HTMLElement> {
         const latest = p.reading.sessions.find(
           (item) => item.id === session.id,
         );
-        if (latest) resumeReading(p, latest);
+        if (latest) void resumeReading(p, latest).catch(() => {});
       })
         .addClass('arcafeed-resume-action')
         .attr('aria-label', `${displayName} · ${title} 이어보기`);

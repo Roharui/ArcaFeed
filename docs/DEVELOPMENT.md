@@ -126,3 +126,7 @@ DEV_URL=https://dev.example.com/n npm run dev:live:mobile
 프로덕션 유저스크립트는 `dist/ArcaFeed.user.js`에 생성됩니다. 내부 구조와
 유지보수 규칙은 [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md)를 참고하세요.
 성능 개선 내용과 측정 조건은 [PERFORMANCE.md](./PERFORMANCE.md)에 정리되어 있습니다.
+
+## 저장소 검증
+
+영속 데이터는 IndexedDB `ArcaFeed` → `values`에서 확인합니다. 최초 실행 시 ArcaFeed 소유 localStorage 데이터를 자동 이전합니다. 사이트 방문 기록은 사이트 소유 localStorage에서 읽고, 탭별 이동 전달은 sessionStorage를 사용합니다. `tests/indexed-storage.test.mjs`는 fake-indexeddb로 이전·트랜잭션 실패와 재시도·탭 간 캐시 갱신·이동 전 커밋 대기를 검증합니다.
