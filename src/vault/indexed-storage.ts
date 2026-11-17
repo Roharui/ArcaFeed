@@ -16,8 +16,10 @@ import type {
 } from './record-schema';
 import { importLegacyRecords } from './record-migration';
 import { commitRecords } from './record-transaction';
+import { StorageActivity } from './storage-activity';
 const SMALL = RECORD_STORES.filter((name) => name !== 'lists');
 export class IndexedStorage implements RecordCache {
+  private activity = new StorageActivity();
   private database?: IDBDatabase;
   private opening: Promise<void> | undefined;
   private saving: Promise<void> | undefined;
@@ -47,6 +49,7 @@ export class IndexedStorage implements RecordCache {
     }));
   }
   private async open(): Promise<void> {
+    await this.activity.ready();
     const cleanup: string[] = [];
     this.database = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = this.factory.open('ArcaFeed', 2);
@@ -281,108 +284,120 @@ export class IndexedStorage implements RecordCache {
       { address: RecordAddress; value: DataRow | undefined }
     >();
     const full = !selected;
-    await new Promise<void>((resolve, reject) => {
-      let count = 0;
-      const wanted = new Set((selected ?? []).map(addressId));
-      const requestedLists = new Map(
-        [...this.loadedLists].filter(([, address]) => {
-          if (full || wanted.has(addressId(address))) return true;
-          const [kind, id] = address.key as [string, string];
-          return wanted.has(
-            addressId({
-              store:
-                kind === 'resume' ? 'resumeSessions' : 'navigationSessions',
-              key: id,
+    await this.activity.run(
+      (track) =>
+        new Promise<void>((resolve, reject) => {
+          entries.clear();
+          let count = 0;
+          const wanted = new Set((selected ?? []).map(addressId));
+          const requestedLists = new Map(
+            [...this.loadedLists].filter(([, address]) => {
+              if (full || wanted.has(addressId(address))) return true;
+              const [kind, id] = address.key as [string, string];
+              return wanted.has(
+                addressId({
+                  store:
+                    kind === 'resume' ? 'resumeSessions' : 'navigationSessions',
+                  key: id,
+                }),
+              );
             }),
           );
-        }),
-      );
-      if (
-        this.currentId &&
-        (full ||
-          wanted.has(
-            addressId({ store: 'navigationSessions', key: this.currentId }),
-          ))
-      ) {
-        const address: RecordAddress = {
-          store: 'lists',
-          key: ['navigation', this.currentId],
-        };
-        requestedLists.set(addressId(address), address);
-        this.loadedLists.set(addressId(address), address);
-      }
-      const scope = new Set<RecordStore>(
-        full ? SMALL : selected!.map((address) => address.store),
-      );
-      if (requestedLists.size) scope.add('lists');
-      if (!scope.size) {
-        resolve();
-        return;
-      }
-      const tx = this.database!.transaction([...scope], 'readonly');
-      const readLists = () => {
-        for (const [id, address] of requestedLists) {
-          const [kind, sessionId] = address.key as [string, string];
-          const parent: RecordAddress = {
-            store: kind === 'resume' ? 'resumeSessions' : 'navigationSessions',
-            key: sessionId,
-          };
-          const metadata = entries.has(addressId(parent))
-            ? entries.get(addressId(parent))!.value
-            : this.get(parent.store, parent.key);
           if (
-            metadata?.listVersion === this.get('lists', address.key)?.version &&
-            !selected?.some((item) => addressId(item) === id)
-          )
-            continue;
-          const request = tx.objectStore('lists').get(address.key);
-          request.onsuccess = () =>
-            entries.set(id, { address, value: request.result });
-        }
-      };
-      if (full) {
-        for (const store of SMALL) {
-          count++;
-          const request = tx.objectStore(store).getAll();
-          request.onsuccess = () => {
-            for (const row of request.result) {
-              const address = { store, key: keyOf(store, row) };
-              entries.set(addressId(address), { address, value: row });
-            }
-            for (const entry of this.cache.values())
-              if (
-                entry.address.store === store &&
-                !entries.has(addressId(entry.address))
-              )
-                entries.set(addressId(entry.address), {
-                  address: entry.address,
-                  value: undefined,
-                });
-            if (--count === 0) readLists();
-          };
-        }
-      } else {
-        const small = selected.filter((address) => address.store !== 'lists');
-        for (const address of selected)
-          if (
-            address.store === 'lists' &&
-            this.loadedLists.has(addressId(address))
-          )
+            this.currentId &&
+            (full ||
+              wanted.has(
+                addressId({ store: 'navigationSessions', key: this.currentId }),
+              ))
+          ) {
+            const address: RecordAddress = {
+              store: 'lists',
+              key: ['navigation', this.currentId],
+            };
             requestedLists.set(addressId(address), address);
-        count = small.length;
-        for (const address of small) {
-          const request = tx.objectStore(address.store).get(address.key);
-          request.onsuccess = () => {
-            entries.set(addressId(address), { address, value: request.result });
-            if (--count === 0) readLists();
+            this.loadedLists.set(addressId(address), address);
+          }
+          const scope = new Set<RecordStore>(
+            full ? SMALL : selected!.map((address) => address.store),
+          );
+          if (requestedLists.size) scope.add('lists');
+          if (!scope.size) {
+            resolve();
+            return;
+          }
+          const tx = this.database!.transaction([...scope], 'readonly');
+          track(tx);
+          const readLists = () => {
+            for (const [id, address] of requestedLists) {
+              const [kind, sessionId] = address.key as [string, string];
+              const parent: RecordAddress = {
+                store:
+                  kind === 'resume' ? 'resumeSessions' : 'navigationSessions',
+                key: sessionId,
+              };
+              const metadata = entries.has(addressId(parent))
+                ? entries.get(addressId(parent))!.value
+                : this.get(parent.store, parent.key);
+              if (
+                metadata?.listVersion ===
+                  this.get('lists', address.key)?.version &&
+                !selected?.some((item) => addressId(item) === id)
+              )
+                continue;
+              const request = tx.objectStore('lists').get(address.key);
+              request.onsuccess = () =>
+                entries.set(id, { address, value: request.result });
+            }
           };
-        }
-        if (!count) readLists();
-      }
-      tx.oncomplete = () => resolve();
-      tx.onabort = () => reject(tx.error);
-      tx.onerror = () => {};
-    });
+          if (full) {
+            for (const store of SMALL) {
+              count++;
+              const request = tx.objectStore(store).getAll();
+              request.onsuccess = () => {
+                for (const row of request.result) {
+                  const address = { store, key: keyOf(store, row) };
+                  entries.set(addressId(address), { address, value: row });
+                }
+                for (const entry of this.cache.values())
+                  if (
+                    entry.address.store === store &&
+                    !entries.has(addressId(entry.address))
+                  )
+                    entries.set(addressId(entry.address), {
+                      address: entry.address,
+                      value: undefined,
+                    });
+                if (--count === 0) readLists();
+              };
+            }
+          } else {
+            const small = selected.filter(
+              (address) => address.store !== 'lists',
+            );
+            for (const address of selected)
+              if (
+                address.store === 'lists' &&
+                this.loadedLists.has(addressId(address))
+              )
+                requestedLists.set(addressId(address), address);
+            count = small.length;
+            for (const address of small) {
+              const request = tx.objectStore(address.store).get(address.key);
+              request.onsuccess = () => {
+                entries.set(addressId(address), {
+                  address,
+                  value: request.result,
+                });
+                if (--count === 0) readLists();
+              };
+            }
+            if (!count) readLists();
+          }
+          tx.oncomplete = () => resolve();
+          tx.onabort = () => reject(tx.error);
+          tx.onerror = () => {};
+        }),
+    );
     if (revision !== this.revision) {
       if (selected)
         for (const address of selected)
@@ -418,9 +433,9 @@ export class IndexedStorage implements RecordCache {
           );
         while (this.pending.size) {
           const batch = new Map(this.pending);
-          const committed = await commitRecords(this.database!, [
-            ...batch.values(),
-          ]);
+          const committed = await this.activity.run((track) =>
+            commitRecords(this.database!, [...batch.values()], track),
+          );
           const notifications: RecordAddress[] = [];
           for (const change of committed) {
             const id = addressId(change),

@@ -25,6 +25,7 @@ export interface CommittedRecord extends RecordAddress {
 export function commitRecords(
   database: IDBDatabase,
   batch: readonly RecordEdit[],
+  track: (tx: IDBTransaction) => void = () => {},
 ): Promise<CommittedRecord[]> {
   const scopes = new Set<RecordStore>(batch.map((edit) => edit.store));
   const resumeBudget = batch.some((edit) => edit.store === 'resumeSessions');
@@ -41,6 +42,7 @@ export function commitRecords(
   }
   return new Promise((resolve, reject) => {
     const tx = database.transaction([...scopes], 'readwrite');
+    track(tx);
     const latest = new Map<string, CommittedRecord>();
     const changes = new Map<string, CommittedRecord>();
     let resumes: DataRow[] = [],

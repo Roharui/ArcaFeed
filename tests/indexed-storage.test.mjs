@@ -21,10 +21,11 @@ function fixture(
   legacy = legacyStorage(),
   notify = () => {},
   currentId = '',
+  globals = {},
 ) {
   const failures = [];
   const { IndexedStorage } = sourceLoader({
-    globals: { BroadcastChannel: undefined },
+    globals: { BroadcastChannel: undefined, ...globals },
     mocks: {
       '@/utils/operation-error': {
         OperationError: Error,
@@ -758,3 +759,127 @@ test('reload-time budgeting follows recent progress rather than primary-key orde
   assert.equal(check.get('resumeSessions', 'zRecent').articleCount, 2000);
   assert.equal(check.get('resumeSessions', 'aOlder').articleCount, 1000);
 });
+
+function mobileActivity() {
+  const documentListeners = new Map();
+  const windowListeners = new Map();
+  const document = {
+    visibilityState: 'visible',
+    addEventListener: (name, handler) => documentListeners.set(name, handler),
+  };
+  return {
+    globals: {
+      document,
+      window: {
+        addEventListener: (name, handler) => windowListeners.set(name, handler),
+      },
+    },
+    hide() {
+      document.visibilityState = 'hidden';
+      documentListeners.get('visibilitychange')();
+    },
+    show() {
+      document.visibilityState = 'visible';
+      documentListeners.get('visibilitychange')();
+    },
+    pagehide: () => windowListeners.get('pagehide')(),
+    pageshow: () => windowListeners.get('pageshow')(),
+  };
+}
+
+for (const mode of ['readonly', 'readwrite']) {
+  test(
+    `mobile suspension releases ${mode} locks and retries without losing edits`,
+    { timeout: 5000 },
+    async () => {
+      const activity = mobileActivity();
+      const f = fixture(
+        new IDBFactory(),
+        legacyStorage(),
+        () => {},
+        '',
+        activity.globals,
+      );
+      await f.storage.initialize();
+      f.storage.set('settings', 'a', { id: 'a', local: 0, remote: 0 });
+      await f.storage.flush();
+      const other = await reopen(f);
+      const original = f.storage.database.transaction.bind(f.storage.database);
+      const suspended = deferred();
+      let interrupted = false;
+      f.storage.database.transaction = (...args) => {
+        const tx = original(...args);
+        if (!interrupted && args[1] === mode) {
+          interrupted = true;
+          queueMicrotask(() => {
+            activity.hide();
+            suspended.resolve();
+          });
+        }
+        return tx;
+      };
+      let settled = false;
+      let operation;
+      if (mode === 'readonly') {
+        operation = f.storage.refresh([{ store: 'settings', key: 'a' }]);
+      } else {
+        f.storage.set('settings', 'a', { id: 'a', local: 1, remote: 0 });
+        operation = f.storage.flush();
+      }
+      void operation.then(() => {
+        settled = true;
+      });
+      await suspended.promise;
+      other.set('settings', 'a', { id: 'a', local: 0, remote: 2 });
+      await other.flush(); // A suspended tab must not block another tab's writes.
+      assert.equal(settled, false);
+      assert.equal(other.get('settings', 'a').remote, 2);
+      activity.show();
+      await operation;
+      assert.equal(f.storage.get('settings', 'a').remote, 2);
+      assert.equal(
+        f.storage.get('settings', 'a').local,
+        mode === 'readwrite' ? 1 : 0,
+      );
+      assert.deepEqual(f.failures, []);
+      await other.refresh();
+      assert.equal(
+        other.get('settings', 'a').local,
+        mode === 'readwrite' ? 1 : 0,
+      );
+    },
+  );
+}
+
+test(
+  'hidden and page-hidden mobile tabs defer new reads and writes until restored',
+  { timeout: 5000 },
+  async () => {
+    const activity = mobileActivity();
+    const f = fixture(
+      new IDBFactory(),
+      legacyStorage(),
+      () => {},
+      '',
+      activity.globals,
+    );
+    await f.storage.initialize();
+    const calls = observe(f.storage);
+    let value = 0;
+    for (const [hide, show] of [
+      [activity.hide, activity.show],
+      [activity.pagehide, activity.pageshow],
+    ]) {
+      calls.length = 0;
+      hide();
+      const refresh = f.storage.refresh([{ store: 'settings', key: 'a' }]);
+      f.storage.set('settings', 'a', { id: 'a', value: ++value });
+      const flush = f.storage.flush();
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.equal(calls.length, 0);
+      show();
+      await Promise.all([refresh, flush]);
+      assert.ok(calls.some((call) => call.mode === 'readwrite'));
+    }
+  },
+);
