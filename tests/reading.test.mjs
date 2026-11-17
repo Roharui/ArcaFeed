@@ -750,6 +750,22 @@ for (const quickExit of [false, true])
         storage.writes.map((write) => write.key),
         ['arcaFeed:readingProgress'],
       );
+      // Continuous scroll still checkpoints at the maximum wait deadline.
+      storage.writes.length = 0;
+      for (let index = 0; index < 10; index++) {
+        window.scrollY += 10;
+        listeners.get('scroll')();
+      }
+      const deadlines = [...timers.values()].filter(
+        (timer) => timer.delay === 5000,
+      );
+      assert.equal(deadlines.length, 1);
+      deadlines[0].handler();
+      assert.equal(fullCheckpoints, 1);
+      assert.deepEqual(
+        storage.writes.map((write) => write.key),
+        ['arcaFeed:readingProgress'],
+      );
       storage.writes.length = 0;
       listeners.get('pagehide')();
       assert.equal(storage.writes.length, 0);

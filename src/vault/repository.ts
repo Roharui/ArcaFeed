@@ -1,12 +1,14 @@
 import { getStorage } from './indexed-storage';
+import {
+  ARTICLE_KEY_CACHE_LIMIT,
+  RECENT_ARTICLE_KEYS_KEY,
+} from './storage-keys';
 
 /**
  * Storage Repository - provides cached IndexedDB access.
  * Separates persistence concerns from business logic (previously in Config class).
  */
 
-const ARTICLE_KEY_CACHE_LIMIT = 5;
-const RECENT_ARTICLE_KEYS_KEY = 'arcaFeed:recentArticleKeys';
 const SCOPED_CACHE_SUFFIXES = new Set([
   'articleList',
   'articleFilterConfig',
@@ -40,6 +42,21 @@ export class StorageRepository {
   removeItem(key: string): void {
     this.storage.removeItem(key);
     this.jsonCache.delete(key);
+  }
+
+  private keys(): string[] {
+    const storage = this.storage as Storage & { keys?: () => string[] };
+    if (storage.keys) return storage.keys();
+    return Array.from({ length: storage.length }, (_, index) =>
+      storage.key(index),
+    ).filter((key): key is string => key !== null);
+  }
+
+  prepareKeys(keys: readonly string[]): Promise<void> | undefined {
+    const storage = this.storage as Storage & {
+      prepareKeys?: (keys: readonly string[]) => Promise<void> | undefined;
+    };
+    return storage.prepareKeys?.(keys);
   }
 
   getJSON<T>(key: string): T | null {
@@ -95,8 +112,7 @@ export class StorageRepository {
 
     if (!this.checkedCacheInventory || expiredKeys.length > 0) {
       const retained = new Set(nextKeys);
-      for (let i = this.storage.length - 1; i >= 0; i--) {
-        const key = this.storage.key(i);
+      for (const key of this.keys()) {
         if (!key?.startsWith('arcaFeed:')) continue;
         const separator = key.indexOf(':', 9);
         if (

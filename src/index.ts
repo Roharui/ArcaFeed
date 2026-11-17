@@ -2,6 +2,7 @@ import { initializeStorage } from '@/vault/indexed-storage';
 import { reportFailure } from '@/utils/operation-error';
 import { ArcaFeed, eventBus } from '@/core';
 import { captureSkippedToast } from '@/feature/swiper/skip-toast';
+import { parseHref } from '@/utils/regex';
 
 // Guard against duplicate execution (userscript may be loaded multiple times
 // by the userscript manager on SPA navigations, iframes, etc.)
@@ -14,6 +15,7 @@ if ((window as any)[GUARD_KEY]) {
   captureSkippedToast();
 
   async function start(): Promise<void> {
+    if (parseHref(window.location.href).mode === 'OTHER') return;
     await initializeStorage();
     new ArcaFeed();
     if (

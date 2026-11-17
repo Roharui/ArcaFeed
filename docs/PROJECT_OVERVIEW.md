@@ -46,8 +46,7 @@ Webpack으로 코드와 CSS를 묶으며 jQuery, Swiper, Toastify는 유저스�
 ## 실행 흐름
 
 1. `src/index.ts`가 중복 실행을 확인하고 `ArcaFeed`를 생성합니다.
-2. IndexedDB `ArcaFeed`의 `values` 저장소를 열고 기존 ArcaFeed localStorage 데이터를 이전한 뒤, `VaultAdapter`가 저장 설정의 지연 getter를 준비하고 URL의 페이지 모드를 판단합니다.
-   지원하지 않는 `OTHER` 페이지는 레이아웃 CSS 로드와 이벤트 연결 전에 종료합니다.
+2. URL의 페이지 모드를 먼저 판단하고 지원하지 않는 `OTHER` 페이지는 DB 접근 전에 종료합니다. IndexedDB `ArcaFeed`의 `values` 저장소를 열고 기존 ArcaFeed localStorage 데이터를 이전한 뒤 설정·요약과 현재 탐색 목록을 준비합니다. 다른 탐색 목록과 이어보기 목록은 초기 값 조회에서 제외하며, `VaultAdapter`는 메모리 캐시 위에 지연 getter를 제공합니다.
 3. 지원 페이지에서는 이벤트를 `EventManager`의 단계와 연결하고 `init`을 발행합니다.
 4. 초기화는 개발 버전 표시 → 링크·버튼·키보드·시리즈·UI 병렬 초기화 →
    읽기 이벤트·버튼 연결 → Swiper → 다음 글 prefetch 순서로 실행합니다.
@@ -84,7 +83,7 @@ Webpack으로 코드와 CSS를 묶으며 jQuery, Swiper, Toastify는 유저스�
 [VaultAdapter](../src/vault/index.ts)는 기능 모듈에 상태 접근과 자동 저장을 제공합니다.
 [ConfigService](../src/vault/config.ts)는
 [config-schema.ts](../src/vault/config-schema.ts)로 데이터를 검증한 뒤
-[StorageRepository](../src/vault/repository.ts)를 통해 IndexedDB의 메모리 읽기 캐시에 접근합니다. [IndexedStorage](../src/vault/indexed-storage.ts)가 비동기 초기화, 트랜잭션 저장과 탭 간 캐시 갱신을 담당합니다. JSON 필드는 첫 접근 때만 파싱·정규화하며, 상태 복사와 변경 감지는 사용하지 않은 getter를 실행하지 않습니다. [ConfigStorage](../src/vault/config-storage.ts)는 채널별 필터와 화면·구독·읽기 설정을 별도 키에서 읽고 저장합니다. 설정 모달도 선택한 탭을 처음 열 때 생성합니다.
+[StorageRepository](../src/vault/repository.ts)를 통해 IndexedDB의 메모리 읽기 캐시에 접근합니다. [IndexedStorage](../src/vault/indexed-storage.ts)가 선택적 비동기 초기화, 저장 큐와 변경 키 기반 탭 간 캐시 갱신을 담당합니다. [storage-batch.ts](../src/vault/storage-batch.ts)와 [storage-merge.ts](../src/vault/storage-merge.ts)는 트랜잭션 안에서 공유 컬렉션의 수정분을 병합하며, [storage-keys.ts](../src/vault/storage-keys.ts)는 키와 보관 한도를 공유합니다. JSON 필드는 첫 접근 때만 파싱·정규화하며, 상태 복사와 변경 감지는 사용하지 않은 getter를 실행하지 않습니다. [ConfigStorage](../src/vault/config-storage.ts)는 채널별 필터와 화면·구독·읽기 설정을 별도 키에서 읽고 저장합니다. 설정 모달도 선택한 탭을 처음 열 때 생성합니다.
 
 | 저장 범위        | 주요 키와 내용                                                                                                 |
 | ---------------- | -------------------------------------------------------------------------------------------------------------- |

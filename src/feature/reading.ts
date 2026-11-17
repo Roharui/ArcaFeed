@@ -144,6 +144,17 @@ function saveCheckpoint(p: VaultAdapter): void {
     scrollY: window.scrollY,
     updatedAt: Date.now(),
   };
+  const preparation = p.reading.prepareSession(session);
+  if (preparation) {
+    const tracked = p.reading.hasSession(id);
+    void preparation
+      .then(() => {
+        if (tracked && !p.reading.hasSession(id)) return;
+        saveCheckpoint(p);
+      })
+      .catch(reportFailure);
+    return;
+  }
   if (p.reading.saveSession(session) === false) {
     if (!fullPinnedWarnings.has(p))
       showToast(
@@ -182,7 +193,8 @@ export async function resumeReading(
         if (!wasStopped) stoppedVaults.delete(p);
       };
     },
-    prepare: () => {
+    prepare: async () => {
+      await p.reading.prepareList(session.id);
       p.restoreReadingSession(session, key);
       try {
         previousScroll = sessionStorage.getItem(RESUME_SCROLL_KEY);
@@ -272,8 +284,22 @@ export function initReading(p: VaultAdapter): void {
   };
   window.addEventListener('storage', onStorage);
   window.addEventListener('arcafeed:storage', ((
-    event: CustomEvent<{ key: string }>,
-  ) => onStorage(event.detail)) as EventListener);
+    event: CustomEvent<{ key?: string; keys?: string[] }>,
+  ) => {
+    if (!event.detail.keys) {
+      if (event.detail.key) onStorage({ key: event.detail.key });
+      return;
+    }
+    const keys = new Set(event.detail.keys);
+    const changes: ('entries' | 'sessions' | 'progress')[] = [];
+    if (keys.has(SITE_RECENT_KEY) || keys.has(SITE_RECENT_DISABLED_KEY))
+      changes.push('entries');
+    if (keys.has(READING_HISTORY_KEY)) changes.push('sessions');
+    if (keys.has(READING_PROGRESS_KEY)) changes.push('progress');
+    if ([...keys].some((key) => key.startsWith(READING_LIST_PREFIX)))
+      p.reading.reloadSessionList(changes);
+    else if (changes.length) p.reading.reload(changes);
+  }) as EventListener);
   p.reading.reload();
   window.addEventListener('load', () => p.reading.reload(), { once: true });
   let previousSkip = p.skipVisitedArticles;
@@ -321,6 +347,7 @@ export function initReading(p: VaultAdapter): void {
   if (!p.isCurrentMode('ARTICLE')) return;
 
   let checkpointTimer: ReturnType<typeof setTimeout> | undefined;
+  let checkpointDeadline: ReturnType<typeof setTimeout> | undefined;
   let checkpointRemoved = false;
   let checkpointTracked = p.reading.hasSession(contextId(p));
 
@@ -352,11 +379,14 @@ export function initReading(p: VaultAdapter): void {
   const checkpoint = () => {
     cancelInitialCheckpoint();
     clearTimeout(checkpointTimer);
+    clearTimeout(checkpointDeadline);
+    checkpointDeadline = undefined;
     if (!checkpointRemoved) saveCheckpoint(p);
   };
   const scheduleCheckpoint = () => {
     clearTimeout(checkpointTimer);
     checkpointTimer = setTimeout(checkpoint, 700);
+    checkpointDeadline ??= setTimeout(checkpoint, 5000);
   };
   p.reading.subscribe(() => {
     if (p.reading.hasSession(contextId(p))) {
@@ -365,6 +395,8 @@ export function initReading(p: VaultAdapter): void {
       checkpointRemoved = true;
       cancelInitialCheckpoint();
       clearTimeout(checkpointTimer);
+      clearTimeout(checkpointDeadline);
+      checkpointDeadline = undefined;
     }
   }, ['sessions']);
   let previousList = p.articleList;

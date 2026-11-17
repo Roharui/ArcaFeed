@@ -4,6 +4,22 @@ import { normalizeSessionMetadata } from './reading-session-schema';
 import { readLegacyReadingSessions } from './reading-history-migration';
 import { deferField, mergeState } from './lazy-state';
 import { articleWindow } from './article-window';
+import {
+  READING_HISTORY_KEY,
+  readingListKey,
+  READING_PROGRESS_KEY,
+  SESSION_LIMIT,
+  SESSION_ARTICLE_LIMIT,
+  SESSION_TOTAL_ARTICLE_LIMIT,
+} from './storage-keys';
+export {
+  READING_HISTORY_KEY,
+  READING_LIST_PREFIX,
+  readingListKey,
+  READING_PROGRESS_KEY,
+  SESSION_LIMIT,
+  SESSION_TOTAL_ARTICLE_LIMIT,
+} from './storage-keys';
 
 export interface ReadingEntry {
   path: string;
@@ -31,20 +47,10 @@ interface ReadingData {
   sessions: ReadingSession[];
 }
 
-export const READING_HISTORY_KEY = 'arcaFeed:readingHistory';
-export const READING_LIST_PREFIX = 'arcaFeed:readingList:';
-export function readingListKey(id: string): string {
-  return READING_LIST_PREFIX + encodeURIComponent(id);
-}
-
-export const READING_PROGRESS_KEY = 'arcaFeed:readingProgress';
 export const SITE_RECENT_KEY = 'recent_articles';
 export const SITE_RECENT_DISABLED_KEY = 'recent_disabled';
 export const SITE_RECENT_URL = '/u/recents';
 export const RECENT_ENTRY_LIMIT = 300;
-export const SESSION_LIMIT = 20;
-const SESSION_ARTICLE_LIMIT = 2000;
-export const SESSION_TOTAL_ARTICLE_LIMIT = 5000;
 
 type ReadingChange = 'entries' | 'sessions' | 'progress';
 interface ReadingProgress {
@@ -208,10 +214,41 @@ export class ReadingHistory {
     this.notify(changes);
   }
 
-  reloadSessionList(): void {
+  reloadSessionList(changes: readonly ReadingChange[] = []): void {
     if (!this.contextsLoaded) return;
     this.historyRaw = undefined;
-    this.reload(['sessions']);
+    this.reload(['sessions', ...changes]);
+  }
+
+  prepareList(id: string): Promise<void> | undefined {
+    return this.repo.prepareKeys([readingListKey(id)]);
+  }
+
+  /** Prepare the compared context and only the old lists that need budget trimming. */
+  prepareSession(session: ReadingSession): Promise<void> | undefined {
+    const contexts = this.load().sessions;
+    const existing = contexts.find((item) => item.id === session.id);
+    const next = [
+      { ...session, pinned: !!(existing?.pinned ?? session.pinned) },
+      ...contexts.filter((item) => item.id !== session.id),
+    ]
+      .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned))
+      .slice(0, SESSION_LIMIT);
+    const keys = [readingListKey(session.id)];
+    let remaining = SESSION_TOTAL_ARTICLE_LIMIT;
+    for (const [index, item] of next.entries()) {
+      const count =
+        item.id === session.id
+          ? Math.min(SESSION_ARTICLE_LIMIT, session.articleList.length)
+          : (this.listCounts.get(item) ?? 1);
+      const limit = Math.max(
+        1,
+        Math.min(SESSION_ARTICLE_LIMIT, remaining - (next.length - index - 1)),
+      );
+      if (count > limit) keys.push(readingListKey(item.id));
+      remaining -= Math.min(count, limit);
+    }
+    return this.repo.prepareKeys(keys);
   }
 
   saveSession(session: ReadingSession): boolean {

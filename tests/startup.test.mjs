@@ -117,3 +117,26 @@ test('initialization prepares Swiper and releases the queue before creating navi
   clock.runTimers();
   assert.equal(calls.at(-1), 'navigation');
 });
+
+test('unsupported pages exit before opening IndexedDB or constructing the application', async () => {
+  const calls = [];
+  sourceLoader({
+    globals: { window: { location: { href: 'https://arca.live/u/settings' } } },
+    mocks: {
+      '@/vault/indexed-storage': {
+        initializeStorage: () => calls.push('storage'),
+      },
+      '@/core': {
+        ArcaFeed: class {
+          constructor() {
+            calls.push('app');
+          }
+        },
+        eventBus: { emit: () => calls.push('init') },
+      },
+      '@/feature/swiper/skip-toast': { captureSkippedToast() {} },
+    },
+  })('src/index.ts');
+  await Promise.resolve();
+  assert.deepEqual(calls, []);
+});
