@@ -1,3 +1,4 @@
+import { attachRecordCache } from './record-storage-adapter.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -83,10 +84,11 @@ export function sourceLoader({
   return (entry) => load(path.resolve(root, entry));
 }
 
+let recordLoader;
 export function memoryStorage(initial = {}) {
   const values = new Map(Object.entries(initial));
   const writes = [];
-  return {
+  const storage = {
     values,
     writes,
     get length() {
@@ -106,6 +108,8 @@ export function memoryStorage(initial = {}) {
       values.delete(key);
     },
   };
+  recordLoader ??= sourceLoader();
+  return attachRecordCache(storage, recordLoader);
 }
 
 export function deferred() {

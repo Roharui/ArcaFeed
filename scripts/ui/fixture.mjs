@@ -1,3 +1,14 @@
+import {
+  IndexedStorage,
+  initializeStorage,
+  getStorage,
+  flushStorage,
+} from '@/vault/indexed-storage';
+import { VaultAdapter } from '@/vault';
+import { Store } from '@/vault/store';
+import { initReading } from '@/feature/reading';
+import { StorageRepository } from '@/vault/repository';
+import { ReadingHistory } from '@/vault/reading-history';
 import $ from 'jquery';
 import { showFetchLoader, hideFetchLoader } from '@/feature/article/loading';
 import { initNavigationList } from '@/feature/modal/navigationTab';
@@ -200,3 +211,16 @@ window.uiFixture = {
   },
 };
 render(Object.fromEntries(new URLSearchParams(location.search)));
+
+// Local browser verification of the real storage modules; excluded from userscript builds.
+window.storageFixture = {
+  IndexedStorage,
+  StorageRepository,
+  ReadingHistory,
+  initializeStorage,
+  getStorage,
+  flushStorage,
+  VaultAdapter,
+  Store,
+  initReading,
+};

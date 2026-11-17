@@ -4,23 +4,9 @@ import type {
   UISettings,
 } from '@/types';
 import type { StorageRepository } from './repository';
-import {
-  normalizeFilters,
-  normalizeUISettings,
-  stringList,
-} from './config-schema';
+import { normalizeFilters, normalizeUISettings } from './config-schema';
 import { deferField, sameField } from './lazy-state';
-import {
-  FILTER_CHANNELS_KEY,
-  channelFilterKey,
-  SETTINGS_GROUPS,
-  SETTINGS_VERSION_KEY,
-  LAST_MODAL_TAB_KEY,
-} from './config-storage-keys';
-import {
-  migrateLegacyFilters,
-  migrateLegacySettings,
-} from './config-storage-migration';
+import { SETTINGS_GROUPS } from './config-storage-keys';
 
 const validChannel = (id: string): boolean => /^[a-zA-Z0-9]+$/.test(id);
 
@@ -28,22 +14,12 @@ export class ConfigStorage {
   constructor(private repo: StorageRepository) {}
 
   private channelIds(): string[] {
-    return stringList(this.repo.getJSON<unknown>(FILTER_CHANNELS_KEY)).filter(
-      validChannel,
-    );
+    return this.repo.filterIds().filter(validChannel);
   }
 
-  filters(articleKey: string): ArticleFilterConfigImpl {
-    let checkedMigration = false;
-    const ensureMigrated = () => {
-      if (checkedMigration) return;
-      // Temporary compatibility hook; remove with config-storage-migration.ts.
-      migrateLegacyFilters(this.repo, articleKey);
-      checkedMigration = true;
-    };
+  filters(_articleKey: string): ArticleFilterConfigImpl {
     let ids: string[] | undefined;
     const index = () => {
-      ensureMigrated();
       return (ids ??= this.channelIds());
     };
     const getters = new Map<string, () => ArticleFilterImpl | undefined>();
@@ -53,9 +29,8 @@ export class ConfigStorage {
         let value: ArticleFilterImpl | undefined;
         getters.set(id, () => {
           if (!loaded) {
-            ensureMigrated();
             value = normalizeFilters({
-              [id]: this.repo.getJSON<unknown>(channelFilterKey(id)),
+              [id]: this.repo.readFilter(id),
             })[id];
             loaded = true;
           }
@@ -85,35 +60,24 @@ export class ConfigStorage {
       : this.channelIds();
     const removed = previousIds.filter((id) => !ids.includes(id));
     for (const id of ids) {
-      if (!sameField(previous, next, id))
-        this.repo.setJSON(channelFilterKey(id), next[id]);
+      if (!sameField(previous, next, id)) this.repo.saveFilter(id, next[id]);
     }
-    const retained = this.channelIds().filter((id) => !removed.includes(id));
-    this.repo.setJSON(FILTER_CHANNELS_KEY, [...new Set([...retained, ...ids])]);
-    for (const id of removed) this.repo.removeItem(channelFilterKey(id));
+    for (const id of removed) this.repo.deleteFilter(id);
   }
 
   settings(): UISettings {
     const settings = normalizeUISettings(null);
-    let checkedMigration = false;
-    const ensureMigrated = () => {
-      if (checkedMigration) return;
-      migrateLegacySettings(this.repo);
-      checkedMigration = true;
-    };
     for (const { key, fields } of SETTINGS_GROUPS) {
       let group: UISettings | undefined;
       const load = () => {
-        ensureMigrated();
-        return (group ??= normalizeUISettings(this.repo.getJSON<unknown>(key)));
+        return (group ??= normalizeUISettings(this.repo.readSetting(key)));
       };
       for (const field of fields)
         deferField(settings, field, () => load()[field]);
     }
     deferField(settings, 'lastModalTab', () => {
-      ensureMigrated();
       return normalizeUISettings({
-        lastModalTab: this.repo.getItem(LAST_MODAL_TAB_KEY),
+        lastModalTab: this.repo.readSetting('lastModalTab'),
       }).lastModalTab;
     });
     return settings;
@@ -122,14 +86,13 @@ export class ConfigStorage {
   saveSettings(next: UISettings, previous?: UISettings): void {
     for (const { key, fields } of SETTINGS_GROUPS) {
       if (fields.some((field) => !sameField(previous, next, field))) {
-        this.repo.setJSON(
+        this.repo.saveSetting(
           key,
           Object.fromEntries(fields.map((field) => [field, next[field]])),
         );
       }
     }
     if (!sameField(previous, next, 'lastModalTab'))
-      this.repo.setItem(LAST_MODAL_TAB_KEY, next.lastModalTab);
-    this.repo.setItem(SETTINGS_VERSION_KEY, '2');
+      this.repo.saveSetting('lastModalTab', next.lastModalTab);
   }
 }

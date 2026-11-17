@@ -1,25 +1,17 @@
 import { StorageRepository } from './repository';
 import { normalizeArticles } from './config-schema';
 import { normalizeSessionMetadata } from './reading-session-schema';
-import { readLegacyReadingSessions } from './reading-history-migration';
+import { cleanQuery, contextKey, storedMode } from './navigation-record';
+import { equalData } from './record-schema';
+import type { DataRow } from './record-schema';
 import { deferField, mergeState } from './lazy-state';
 import { articleWindow } from './article-window';
 import {
-  READING_HISTORY_KEY,
-  readingListKey,
-  READING_PROGRESS_KEY,
   SESSION_LIMIT,
   SESSION_ARTICLE_LIMIT,
   SESSION_TOTAL_ARTICLE_LIMIT,
 } from './storage-keys';
-export {
-  READING_HISTORY_KEY,
-  READING_LIST_PREFIX,
-  readingListKey,
-  READING_PROGRESS_KEY,
-  SESSION_LIMIT,
-  SESSION_TOTAL_ARTICLE_LIMIT,
-} from './storage-keys';
+export { SESSION_LIMIT, SESSION_TOTAL_ARTICLE_LIMIT } from './storage-keys';
 
 export interface ReadingEntry {
   path: string;
@@ -110,23 +102,22 @@ export class ReadingHistory {
   private data: ReadingData = { sessions: [] };
   private sessionsLoaded = false;
   private contextsLoaded = false;
-  private legacyContexts = false;
   private listCounts = new WeakMap<ReadingSession, number>();
   private entriesLoaded = false;
   private recentEntries: ReadingEntry[] = [];
   private visibleRecentEntries: ReadingEntry[] = [];
   private visitedPaths = new Set<string>();
   private listeners = new Map<() => void, readonly ReadingChange[]>();
-  private historyRaw: string | null | undefined;
+  private historyRaw: readonly DataRow[] | undefined;
   private cachedData: ReadingData = { sessions: [] };
-  private progressRaw: string | null | undefined;
+  private progressRaw: readonly DataRow[] | undefined;
   private progress: ReadingProgress[] = [];
   private recentRaw: string | null | undefined;
   private recentDisabled: string | null | undefined;
   private savedPositionContext?: {
     id: string;
     path: string;
-    raw: string | null | undefined;
+    raw: DataRow | undefined;
   };
 
   constructor(private repo = new StorageRepository()) {
@@ -137,20 +128,37 @@ export class ReadingHistory {
     if (this.sessionsLoaded) return;
     this.sessionsLoaded = true;
     this.data = this.readData();
-    this.migrateLegacyContexts();
-  }
-
-  /** Temporary migration hook; normal v2 reads never enter the legacy writer. */
-  private migrateLegacyContexts(): void {
-    if (!this.legacyContexts) return;
-    this.persistContexts(this.load());
-    this.data = this.readData();
   }
 
   hasSession(id: string): boolean {
     const contexts = this.load();
-    this.migrateLegacyContexts();
     return contexts.sessions.some((session) => session.id === id);
+  }
+
+  getContextId(
+    mode: string,
+    channelId: string,
+    articleKey: string,
+    query: string,
+  ): string {
+    const key =
+      mode === 'channel'
+        ? ['channel', channelId, cleanQuery(query)]
+        : ['series', articleKey];
+    const found = this.repo
+      .resumes()
+      .find(
+        (row) =>
+          Array.isArray(row.contextKey) &&
+          row.contextKey.length === key.length &&
+          row.contextKey.every(
+            (part: string, index: number) => part === key[index],
+          ),
+      );
+    return (
+      found?.id ??
+      (mode === 'channel' ? JSON.stringify(key) : `series:${articleKey}`)
+    );
   }
 
   private ensureEntries(): void {
@@ -221,20 +229,18 @@ export class ReadingHistory {
   }
 
   prepareList(id: string): Promise<void> | undefined {
-    return this.repo.prepareKeys([readingListKey(id)]);
+    return this.repo.prepareLists([id]);
   }
 
   /** Prepare the compared context and only the old lists that need budget trimming. */
   prepareSession(session: ReadingSession): Promise<void> | undefined {
     const contexts = this.load().sessions;
     const existing = contexts.find((item) => item.id === session.id);
-    const next = [
+    const next = this.sortContexts([
       { ...session, pinned: !!(existing?.pinned ?? session.pinned) },
       ...contexts.filter((item) => item.id !== session.id),
-    ]
-      .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned))
-      .slice(0, SESSION_LIMIT);
-    const keys = [readingListKey(session.id)];
+    ]).slice(0, SESSION_LIMIT);
+    const keys = [session.id];
     let remaining = SESSION_TOTAL_ARTICLE_LIMIT;
     for (const [index, item] of next.entries()) {
       const count =
@@ -245,10 +251,10 @@ export class ReadingHistory {
         1,
         Math.min(SESSION_ARTICLE_LIMIT, remaining - (next.length - index - 1)),
       );
-      if (count > limit) keys.push(readingListKey(item.id));
+      if (count > limit) keys.push(item.id);
       remaining -= Math.min(count, limit);
     }
-    return this.repo.prepareKeys(keys);
+    return this.repo.prepareLists(keys);
   }
 
   saveSession(session: ReadingSession): boolean {
@@ -311,7 +317,7 @@ export class ReadingHistory {
     this.savedPositionContext = {
       id: session.id,
       path: session.path,
-      raw: this.historyRaw,
+      raw: this.repo.resumes().find((row) => row.id === session.id),
     };
     this.notify(
       contextChanged
@@ -366,10 +372,12 @@ export class ReadingHistory {
     updatedAt: number,
   ): boolean {
     const context = this.savedPositionContext;
+    const current = this.repo.resumes().find((row) => row.id === id);
     if (
       context?.id !== id ||
       context.path !== path ||
-      this.repo.getItem(READING_HISTORY_KEY) !== context.raw
+      !current ||
+      !equalData({ ...current, revision: 0 }, { ...context.raw, revision: 0 })
     )
       return false;
     const progress = this.loadProgress();
@@ -398,7 +406,7 @@ export class ReadingHistory {
     this.ensureSessions();
     const next = this.load();
     mutate(next);
-    this.persistContexts(next);
+    this.persistContexts(next, false, false);
     const sessionIds = new Set(next.sessions.map((session) => session.id));
     this.persistProgress(
       this.loadProgress().filter((item) => sessionIds.has(item.id)),
@@ -414,11 +422,30 @@ export class ReadingHistory {
     });
   }
 
-  private persistContexts(data: ReadingData, preserveLists = false): void {
-    data.sessions = [...data.sessions]
-      .sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned))
-      .slice(0, SESSION_LIMIT);
+  private sortContexts(sessions: readonly ReadingSession[]): ReadingSession[] {
+    const positions = new Map(
+      this.repo.resumeProgress().map((row) => [row.id, row]),
+    );
+    const date = (session: ReadingSession) => {
+      const position = positions.get(session.id);
+      return position?.path === session.path &&
+        Number.isFinite(position.updatedAt)
+        ? Math.max(session.updatedAt, position.updatedAt)
+        : session.updatedAt;
+    };
+    return [...sessions].sort(
+      (a, b) => Number(!!b.pinned) - Number(!!a.pinned) || date(b) - date(a),
+    );
+  }
+
+  private persistContexts(
+    data: ReadingData,
+    preserveLists = false,
+    automatic = true,
+  ): void {
+    data.sessions = this.sortContexts(data.sessions).slice(0, SESSION_LIMIT);
     let remaining = SESSION_TOTAL_ARTICLE_LIMIT;
+    const versions = new Map<string, string>();
     const previousIds = new Set(
       this.cachedData.sessions.map((session) => session.id),
     );
@@ -439,7 +466,10 @@ export class ReadingHistory {
           session.path,
           limit,
         );
-        this.repo.setJSON(readingListKey(session.id), articleList);
+        versions.set(
+          session.id,
+          this.repo.saveList('resume', session.id, articleList),
+        );
         bounded = mergeState(session, { articleList });
         articleCount = articleList.length;
       }
@@ -447,42 +477,62 @@ export class ReadingHistory {
       this.listCounts.set(bounded, articleCount);
       return bounded;
     });
-    const summaries = sessions.map((session) => ({
-      id: session.id,
-      label: session.label,
-      ...(session.customName ? { customName: session.customName } : {}),
-      ...(session.pinned ? { pinned: true } : {}),
-      path: session.path,
-      searchQuery: session.searchQuery,
-      isSeriesMode: session.isSeriesMode,
-      isScrapMode: session.isScrapMode,
-      seriesChannels: session.seriesChannels,
-      scrollY: session.scrollY,
-      updatedAt: session.updatedAt,
-      articleCount: this.listCounts.get(session)!,
-    }));
-    const raw = JSON.stringify({ version: 2, sessions: summaries });
-    this.repo.setItem(READING_HISTORY_KEY, raw);
-    this.historyRaw = raw;
-    this.cachedData = { sessions };
-    this.legacyContexts = false;
-    const retained = new Set(sessions.map((session) => session.id));
-    for (const id of previousIds) {
-      if (!retained.has(id)) this.repo.removeItem(readingListKey(id));
+    for (const session of sessions) {
+      const existing = this.repo.resumes().find((row) => row.id === session.id);
+      const listVersion = versions.get(session.id) ?? existing?.listVersion;
+      this.repo.saveResume(
+        {
+          id: session.id,
+          label: session.label,
+          customName: session.customName || '',
+          pinned: !!session.pinned,
+          path: session.path,
+          query: cleanQuery(session.searchQuery),
+          mode: storedMode(
+            session.isSeriesMode,
+            session.isScrapMode,
+            session.seriesChannels,
+          ),
+          channels: [...session.seriesChannels],
+          updatedAt: session.updatedAt,
+          articleCount: this.listCounts.get(session)!,
+          listVersion,
+          contextKey:
+            existing?.contextKey ??
+            contextKey({
+              ...session,
+              mode: storedMode(
+                session.isSeriesMode,
+                session.isScrapMode,
+                session.seriesChannels,
+              ),
+              query: session.searchQuery,
+            }),
+        },
+        !preserveLists,
+      );
     }
+    const retained = new Set(sessions.map((session) => session.id));
+    for (const id of previousIds)
+      if (!retained.has(id))
+        this.repo.deleteSession('resume', id, automatic && !preserveLists);
+    this.historyRaw = this.repo.resumes();
+    this.cachedData = { sessions };
   }
 
   private persistProgress(progress: ReadingProgress[]): void {
-    const raw = JSON.stringify(progress);
-    this.repo.setItem(READING_PROGRESS_KEY, raw);
-    this.progressRaw = raw;
+    const retained = new Set(progress.map((item) => item.id));
+    for (const item of this.repo.resumeProgress())
+      if (!retained.has(item.id)) this.repo.deleteResumePosition(item.id);
+    for (const item of progress) this.repo.savePosition(item);
+    this.progressRaw = this.repo.resumeProgress();
     this.progress = progress;
   }
 
   private loadProgress(): ReadingProgress[] {
-    const raw = this.repo.getItem(READING_PROGRESS_KEY);
+    const raw = this.repo.resumeProgress();
     if (raw === this.progressRaw) return this.progress;
-    const parsed = this.repo.getJSON<unknown>(READING_PROGRESS_KEY);
+    const parsed = raw;
     this.progressRaw = raw;
     this.progress = (Array.isArray(parsed) ? parsed : [])
       .filter(
@@ -537,8 +587,8 @@ export class ReadingHistory {
   }
 
   private loadRecentEntries(): void {
-    const disabled = this.repo.getItem(SITE_RECENT_DISABLED_KEY);
-    const recentRaw = disabled ? null : this.repo.getItem(SITE_RECENT_KEY);
+    const disabled = this.repo.site(SITE_RECENT_DISABLED_KEY);
+    const recentRaw = disabled ? null : this.repo.site(SITE_RECENT_KEY);
     if (recentRaw === this.recentRaw && disabled === this.recentDisabled)
       return;
     this.recentRaw = recentRaw;
@@ -546,7 +596,12 @@ export class ReadingHistory {
     this.recentEntries = [];
     this.visibleRecentEntries = [];
     if (disabled) return;
-    const raw = this.repo.getJSON<unknown>(SITE_RECENT_KEY);
+    let raw: unknown;
+    try {
+      raw = recentRaw ? JSON.parse(recentRaw) : [];
+    } catch {
+      raw = [];
+    }
     const seenIds = new Set<string>();
     for (const item of Array.isArray(raw) ? raw : []) {
       if (!isRecord(item)) continue;
@@ -581,33 +636,21 @@ export class ReadingHistory {
 
   private load(): ReadingData {
     this.contextsLoaded = true;
-    const serialized = this.repo.getItem(READING_HISTORY_KEY);
+    const serialized = this.repo.resumes();
     if (serialized === this.historyRaw)
       return { sessions: [...this.cachedData.sessions] };
     this.historyRaw = serialized;
-    const raw = this.repo.getJSON<unknown>(READING_HISTORY_KEY);
-    if (!isRecord(raw)) {
-      this.cachedData = { sessions: [] };
-      return { sessions: [] };
-    }
     const origin = window.location.origin;
-    // Temporary compatibility branch; remove alongside reading-history-migration.ts.
-    if (raw.version !== 2) {
-      this.legacyContexts = true;
-      const sessions = readLegacyReadingSessions(
-        raw,
-        origin,
-        SESSION_LIMIT,
-        SESSION_ARTICLE_LIMIT,
-      );
-      this.cachedData = { sessions };
-      return { sessions: [...sessions] };
-    }
-    this.legacyContexts = false;
     const sessions: ReadingSession[] = [];
     const seenIds = new Set<string>();
     let remaining = SESSION_TOTAL_ARTICLE_LIMIT;
-    const storedSessions = Array.isArray(raw.sessions) ? raw.sessions : [];
+    const storedSessions: DataRow[] = serialized.map((row) => ({
+      ...row,
+      searchQuery: row.query,
+      isSeriesMode: row.mode !== 'channel',
+      isScrapMode: row.mode === 'scrap',
+      seriesChannels: row.channels,
+    }));
     for (const item of storedSessions) {
       const metadata = normalizeSessionMetadata(item, origin);
       if (!metadata || seenIds.has(metadata.id) || !isRecord(item)) continue;
@@ -626,7 +669,7 @@ export class ReadingHistory {
       this.listCounts.set(session, count);
       deferField(session, 'articleList', () => {
         const list = normalizeArticles(
-          this.repo.getJSON<unknown>(readingListKey(session.id)),
+          this.repo.readList('resume', session.id),
           origin,
         );
         return list.length <= count && list.includes(session.path)

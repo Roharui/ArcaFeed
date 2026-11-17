@@ -12,9 +12,8 @@ function readingFixture(initial = {}) {
     history: { replaceState() {} },
   };
   const load = sourceLoader({ globals: { localStorage: storage, window } });
-  const { ReadingHistory, READING_HISTORY_KEY } = load(
-    'src/vault/reading-history.ts',
-  );
+  const READING_HISTORY_KEY = 'arcaFeed:readingHistory';
+  const { ReadingHistory } = load('src/vault/reading-history.ts');
   return { storage, window, load, ReadingHistory, READING_HISTORY_KEY };
 }
 
@@ -796,8 +795,8 @@ for (const quickExit of [false, true])
   });
 
 test('scroll checkpoints write only small progress data and notify only progress listeners', () => {
-  const { ReadingHistory, storage, load } = readingFixture();
-  const { READING_PROGRESS_KEY } = load('src/vault/reading-history.ts');
+  const { ReadingHistory, storage } = readingFixture();
+  const READING_PROGRESS_KEY = 'arcaFeed:readingProgress';
   const history = new ReadingHistory();
   const checkpoint = session('large', {
     articleList: Array.from({ length: 2000 }, (_, i) => `/b/test/${i + 1}`),
@@ -1079,9 +1078,9 @@ test('malformed split-list metadata stays bounded and missing lists retain the c
       sessions: contexts,
     }),
   });
-  const { SESSION_TOTAL_ARTICLE_LIMIT, readingListKey } = load(
-    'src/vault/reading-history.ts',
-  );
+  const readingListKey = (id) =>
+    `arcaFeed:readingList:${encodeURIComponent(id)}`;
+  const { SESSION_TOTAL_ARTICLE_LIMIT } = load('src/vault/reading-history.ts');
   const links = Array.from({ length: 2100 }, (_, i) => `/b/test/${i + 1}`);
   for (const context of contexts)
     storage.setItem(readingListKey(context.id), JSON.stringify(links));

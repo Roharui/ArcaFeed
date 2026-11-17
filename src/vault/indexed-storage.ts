@@ -1,291 +1,404 @@
-import { reportFailure, OperationError } from '@/utils/operation-error';
-import { mergeStoredValue } from './storage-merge';
-import { writeStorageBatch, STORAGE_REVISION_KEY } from './storage-batch';
-import type { PendingWrite } from './storage-batch';
-import { READING_LIST_PREFIX } from './storage-keys';
-
-const DATABASE = 'ArcaFeed';
-const STORE = 'values';
-const MIGRATED = '__localStorageMigrated__';
-const SITE_KEYS = new Set(['recent_articles', 'recent_disabled']);
-
-/** A synchronous read cache, hydrated before application construction. */
-export class IndexedStorage implements Storage {
-  private values = new Map<string, string>();
-  private pending = new Map<string, PendingWrite>();
-  private inventory = new Set<string>();
+import { OperationError, reportFailure } from '@/utils/operation-error';
+import {
+  RECORD_STORES,
+  addressId,
+  equalData,
+  keyOf,
+  mergeRecord,
+} from './record-schema';
+import type {
+  DataRow,
+  RecordAddress,
+  RecordCache,
+  RecordEdit,
+  RecordKey,
+  RecordStore,
+} from './record-schema';
+import { importLegacyRecords } from './record-migration';
+import { commitRecords } from './record-transaction';
+const SMALL = RECORD_STORES.filter((name) => name !== 'lists');
+export class IndexedStorage implements RecordCache {
   private database?: IDBDatabase;
   private opening: Promise<void> | undefined;
   private saving: Promise<void> | undefined;
-  private scheduled = false;
+  private refreshing: Promise<void> | undefined;
+  private pending = new Map<string, RecordEdit>();
+  private cache = new Map<string, { address: RecordAddress; value: DataRow }>();
+  private arrays = new Map<RecordStore, readonly DataRow[]>();
+  private loadedLists = new Map<string, RecordAddress>();
+  private readyLists = new Set<string>();
+  private requested = new Map<string, RecordAddress>();
+  private refreshAll = false;
   private revision = 0;
   private channel?: BroadcastChannel;
-  private refreshing: Promise<void> | undefined;
-  private refreshAll = false;
-  private refreshKeys = new Set<string>();
-  private checking: Promise<void> | undefined;
-  private syncedRevision: string | null = null;
-  private requestedKeys = new Set<string>();
-
+  private unavailable = false;
   constructor(
     private factory: IDBFactory,
     private legacy: Storage,
-    private notify: (key: string) => void = () => {},
-    private hydrate: (key: string) => boolean = () => true,
-    private notifyBatch?: (keys: readonly string[]) => void,
+    private notify: (changes: readonly RecordAddress[]) => void = () => {},
+    private currentId = '',
+    private origin = 'https://arca.live',
   ) {}
-
   initialize(): Promise<void> {
     return (this.opening ??= this.open().catch((error) => {
-      this.database?.close();
       this.opening = undefined;
+      this.database?.close();
       throw error;
     }));
   }
-
   private async open(): Promise<void> {
+    const cleanup: string[] = [];
     this.database = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = this.factory.open(DATABASE, 1);
-      request.onupgradeneeded = () => request.result.createObjectStore(STORE);
-      request.onerror = () => reject(request.error);
-      request.onblocked = () =>
-        reject(new Error('IndexedDB upgrade is blocked'));
-      request.onsuccess = () => resolve(request.result);
+      const request = this.factory.open('ArcaFeed', 2);
+      let failure: unknown;
+      let blocked = false;
+      request.onupgradeneeded = () => {
+        const db = request.result,
+          tx = request.transaction!;
+        for (const name of RECORD_STORES)
+          if (!db.objectStoreNames.contains(name)) {
+            const store = db.createObjectStore(name, {
+              keyPath:
+                name === 'lists' || name === 'progress' ? ['kind', 'id'] : 'id',
+            });
+            if (name === 'resumeSessions')
+              store.createIndex('context', 'contextKey', { unique: true });
+          }
+        const values = new Map<string, string>();
+        for (let index = 0; index < this.legacy.length; index++) {
+          const key = this.legacy.key(index);
+          if (
+            key &&
+            (key.startsWith('arcaFeed:') || key === 'arca_version_info')
+          ) {
+            const value = this.legacy.getItem(key);
+            if (value !== null) values.set(key, value);
+            cleanup.push(key);
+          }
+        }
+        const convert = () => {
+          try {
+            for (const row of importLegacyRecords(
+              values,
+              this.origin,
+              this.currentId,
+            ))
+              tx.objectStore(row.store).put(row.value);
+            tx.objectStore('meta').put({ id: 'schema', version: 2 });
+            // Clear the old string records only in the transaction that imports them.
+            if (db.objectStoreNames.contains('values'))
+              db.deleteObjectStore('values');
+          } catch (error) {
+            failure = error;
+            tx.abort();
+          }
+        };
+        if (db.objectStoreNames.contains('values')) {
+          const old = tx.objectStore('values');
+          const marker = old.get('__localStorageMigrated__');
+          marker.onsuccess = () => {
+            if (marker.result !== undefined) values.clear();
+            const cursor = old.openCursor();
+            cursor.onsuccess = () => {
+              const entry = cursor.result;
+              if (entry) {
+                if (typeof entry.value === 'string')
+                  values.set(String(entry.key), entry.value);
+                entry.continue();
+              } else convert();
+            };
+          };
+        } else convert();
+      };
+      request.onsuccess = () => {
+        if (blocked) request.result.close();
+        else resolve(request.result);
+      };
+      request.onerror = () => reject(failure ?? request.error);
+      request.onblocked = () => {
+        blocked = true;
+        reject(
+          new Error('데이터 이전을 위해 다른 ArcaFeed 탭을 새로고침해주세요.'),
+        );
+      };
     });
-    this.database.onversionchange = () => this.database?.close();
-    await this.migrate();
+    if (
+      !RECORD_STORES.every((name) =>
+        this.database!.objectStoreNames.contains(name),
+      )
+    )
+      throw new Error('지원하지 않는 저장소 구조입니다.');
+    if (!cleanup.length)
+      for (let index = 0; index < this.legacy.length; index++) {
+        const key = this.legacy.key(index);
+        if (key && (key.startsWith('arcaFeed:') || key === 'arca_version_info'))
+          cleanup.push(key);
+      }
+    for (const key of cleanup) this.legacy.removeItem(key);
+    this.database.onversionchange = () => {
+      this.unavailable = true;
+      this.database?.close();
+    };
     if (typeof BroadcastChannel !== 'undefined') {
-      this.channel = new BroadcastChannel('arcaFeed:storage');
+      this.channel = new BroadcastChannel('arcaFeed:records');
       this.channel.onmessage = (event) => {
-        const keys = event?.data?.keys;
-        void this.refresh(
-          Array.isArray(keys) && keys.every((key) => typeof key === 'string')
-            ? keys
-            : undefined,
-        ).catch((error) => this.report(error));
+        const changes = event?.data?.changes;
+        void this.refresh(Array.isArray(changes) ? changes : undefined).catch(
+          (error) => this.report(error),
+        );
       };
     }
     await this.refresh();
   }
-
-  private async migrate(): Promise<void> {
-    const imported = new Map<string, string>();
-    for (let index = 0; index < this.legacy.length; index++) {
-      const key = this.legacy.key(index);
-      if (!key || !(key.startsWith('arcaFeed:') || key === 'arca_version_info'))
-        continue;
-      const value = this.legacy.getItem(key);
-      if (value !== null) imported.set(key, value);
-    }
-    const migrated = await this.readValue(MIGRATED);
-    if (migrated !== null) {
-      for (const key of imported.keys()) this.legacy.removeItem(key);
-      return;
-    }
-    await new Promise<void>((resolve, reject) => {
-      const transaction = this.database!.transaction(STORE, 'readwrite');
-      const store = transaction.objectStore(STORE);
-      const marker = store.get(MIGRATED);
-      marker.onsuccess = () => {
-        if (marker.result !== undefined) return;
-        for (const [key, value] of imported) {
-          const existing = store.get(key);
-          existing.onsuccess = () => {
-            if (existing.result === undefined) store.put(value, key);
-          };
-        }
-        store.put('1', MIGRATED);
-      };
-      transaction.oncomplete = () => resolve();
-      transaction.onabort = () => reject(transaction.error);
-      transaction.onerror = () => {};
-    });
-    // The marker and every imported value commit together. Other site keys remain.
-    for (const key of imported.keys()) this.legacy.removeItem(key);
+  get<T = DataRow>(store: RecordStore, key: RecordKey): T | undefined {
+    return this.cache.get(addressId({ store, key }))?.value as T | undefined;
   }
-
-  private readValue(key: string): Promise<string | null> {
-    return new Promise((resolve, reject) => {
-      const transaction = this.database!.transaction(STORE, 'readonly');
-      const request = transaction.objectStore(STORE).get(key);
-      transaction.oncomplete = () => resolve(request.result ?? null);
-      transaction.onabort = () => reject(transaction.error);
-      transaction.onerror = () => {};
-    });
+  all<T = DataRow>(store: RecordStore): readonly T[] {
+    if (!this.arrays.has(store))
+      this.arrays.set(
+        store,
+        [...this.cache.values()]
+          .filter((entry) => entry.address.store === store)
+          .map((entry) => entry.value),
+      );
+    return this.arrays.get(store)! as readonly T[];
   }
-
-  /** Missed broadcasts are recovered without scanning an unchanged database. */
-  refreshIfChanged(): Promise<void> {
-    return (this.checking ??= Promise.resolve().then(async () => {
-      try {
-        const revision = await this.readValue(STORAGE_REVISION_KEY);
-        if (revision === null || revision !== this.syncedRevision)
-          await this.refresh();
-      } finally {
-        this.checking = undefined;
+  private apply(address: RecordAddress, value: DataRow | undefined): boolean {
+    const id = addressId(address),
+      old = this.cache.get(id)?.value;
+    if (address.store === 'lists' && !value) {
+      const [kind, sessionId] = address.key as [string, string];
+      if (
+        !this.get(
+          kind === 'resume' ? 'resumeSessions' : 'navigationSessions',
+          sessionId,
+        )
+      ) {
+        this.loadedLists.delete(id);
+        this.readyLists.delete(id);
       }
-    }));
+    }
+    if (equalData(old, value)) return false;
+    if (value) this.cache.set(id, { address, value });
+    else this.cache.delete(id);
+    this.arrays.delete(address.store);
+    return true;
   }
-
-  refresh(keys?: readonly string[]): Promise<void> {
-    if (keys)
-      for (const key of [...keys, STORAGE_REVISION_KEY])
-        this.refreshKeys.add(key);
-    else this.refreshAll = true;
+  set(
+    store: RecordStore,
+    key: RecordKey,
+    value: DataRow,
+    automatic = false,
+  ): void {
+    const address = { store, key },
+      id = addressId(address),
+      old = this.get(store, key);
+    if (old?.revision !== undefined)
+      value = { ...value, revision: old.revision };
+    if (equalData(old, value)) return;
+    const pending = this.pending.get(id);
+    this.pending.set(id, {
+      ...address,
+      base: pending ? pending.base : old,
+      value,
+      automatic,
+    });
+    this.apply(address, value);
+    if (store === 'lists') {
+      this.loadedLists.set(id, address);
+      this.readyLists.add(id);
+    }
+    this.revision++;
+    this.schedule();
+  }
+  delete(store: RecordStore, key: RecordKey, automatic = false): void {
+    const address = { store, key },
+      id = addressId(address),
+      pending = this.pending.get(id),
+      old = this.get(store, key);
+    this.pending.set(id, {
+      ...address,
+      base: pending ? pending.base : old,
+      value: undefined,
+      automatic,
+    });
+    this.apply(address, undefined);
+    this.revision++;
+    this.schedule();
+  }
+  site(key: string): string | null {
+    return this.legacy.getItem(key);
+  }
+  prepare(addresses: readonly RecordAddress[]): Promise<void> | undefined {
+    const missing = addresses.filter((address) => {
+      if (address.store !== 'lists' || this.readyLists.has(addressId(address)))
+        return false;
+      const [kind, id] = address.key as [string, string];
+      return !!this.get(
+        kind === 'resume' ? 'resumeSessions' : 'navigationSessions',
+        id,
+      );
+    });
+    if (!missing.length) return;
+    for (const address of missing)
+      this.loadedLists.set(addressId(address), address);
+    return this.refresh([
+      ...missing,
+      ...missing.map((address): RecordAddress => {
+        const [kind, id] = address.key as [string, string];
+        return {
+          store: kind === 'resume' ? 'resumeSessions' : 'navigationSessions',
+          key: id,
+        };
+      }),
+    ]);
+  }
+  refresh(addresses?: readonly RecordAddress[]): Promise<void> {
+    if (addresses) {
+      for (const address of addresses)
+        if (RECORD_STORES.includes(address.store))
+          this.requested.set(addressId(address), address);
+    } else this.refreshAll = true;
     return (this.refreshing ??= Promise.resolve().then(async () => {
       try {
-        while (this.refreshAll || this.refreshKeys.size) {
-          const selected = this.refreshAll ? undefined : [...this.refreshKeys];
+        while (this.refreshAll || this.requested.size) {
+          const selected = this.refreshAll
+            ? undefined
+            : [...this.requested.values()];
           this.refreshAll = false;
-          this.refreshKeys.clear();
-          await this.readSnapshot(selected);
+          this.requested.clear();
+          await this.snapshot(selected);
         }
       } finally {
         this.refreshing = undefined;
       }
     }));
   }
-
-  /** Hydrate large payloads only before the operation that consumes them. */
-  prepareKeys(keys: readonly string[]): Promise<void> | undefined {
-    const missing = keys.filter(
-      (key) => this.inventory.has(key) && !this.values.has(key),
-    );
-    if (!missing.length) return;
-    for (const key of missing) this.requestedKeys.add(key);
-    return this.refresh(missing);
-  }
-
-  private shouldRead(key: string): boolean {
-    return (
-      this.hydrate(key) || this.requestedKeys.has(key) || this.values.has(key)
-    );
-  }
-
-  private async readSnapshot(keys?: readonly string[]): Promise<void> {
+  private async snapshot(selected?: readonly RecordAddress[]): Promise<void> {
     const revision = this.revision;
-    let inventory: Set<string> | undefined;
-    const presence = new Map<string, boolean>();
-    const snapshot = await new Promise<Map<string, string>>(
-      (resolve, reject) => {
-        const transaction = this.database!.transaction(STORE, 'readonly');
-        const values = new Map<string, string>();
-        const store = transaction.objectStore(STORE);
-        const read = (selected: readonly string[]) => {
-          for (const key of selected) {
-            if (!this.shouldRead(key)) {
-              if (keys) {
-                const request = store.getKey(key);
-                request.onsuccess = () =>
-                  presence.set(key, request.result !== undefined);
-              }
-              continue;
-            }
-            const request = store.get(key);
-            request.onsuccess = () => {
-              if (request.result !== undefined) values.set(key, request.result);
-            };
-          }
+    const entries = new Map<
+      string,
+      { address: RecordAddress; value: DataRow | undefined }
+    >();
+    const full = !selected;
+    await new Promise<void>((resolve, reject) => {
+      let count = 0;
+      const wanted = new Set((selected ?? []).map(addressId));
+      const requestedLists = new Map(
+        [...this.loadedLists].filter(([, address]) => {
+          if (full || wanted.has(addressId(address))) return true;
+          const [kind, id] = address.key as [string, string];
+          return wanted.has(
+            addressId({
+              store:
+                kind === 'resume' ? 'resumeSessions' : 'navigationSessions',
+              key: id,
+            }),
+          );
+        }),
+      );
+      if (
+        this.currentId &&
+        (full ||
+          wanted.has(
+            addressId({ store: 'navigationSessions', key: this.currentId }),
+          ))
+      ) {
+        const address: RecordAddress = {
+          store: 'lists',
+          key: ['navigation', this.currentId],
         };
-        if (keys) read(keys);
-        else {
-          const request = store.getAllKeys();
+        requestedLists.set(addressId(address), address);
+        this.loadedLists.set(addressId(address), address);
+      }
+      const scope = new Set<RecordStore>(
+        full ? SMALL : selected!.map((address) => address.store),
+      );
+      if (requestedLists.size) scope.add('lists');
+      if (!scope.size) {
+        resolve();
+        return;
+      }
+      const tx = this.database!.transaction([...scope], 'readonly');
+      const readLists = () => {
+        for (const [id, address] of requestedLists) {
+          const [kind, sessionId] = address.key as [string, string];
+          const parent: RecordAddress = {
+            store: kind === 'resume' ? 'resumeSessions' : 'navigationSessions',
+            key: sessionId,
+          };
+          const metadata = entries.has(addressId(parent))
+            ? entries.get(addressId(parent))!.value
+            : this.get(parent.store, parent.key);
+          if (
+            metadata?.listVersion === this.get('lists', address.key)?.version &&
+            !selected?.some((item) => addressId(item) === id)
+          )
+            continue;
+          const request = tx.objectStore('lists').get(address.key);
+          request.onsuccess = () =>
+            entries.set(id, { address, value: request.result });
+        }
+      };
+      if (full) {
+        for (const store of SMALL) {
+          count++;
+          const request = tx.objectStore(store).getAll();
           request.onsuccess = () => {
-            inventory = new Set(request.result.map(String));
-            read([...inventory]);
+            for (const row of request.result) {
+              const address = { store, key: keyOf(store, row) };
+              entries.set(addressId(address), { address, value: row });
+            }
+            for (const entry of this.cache.values())
+              if (
+                entry.address.store === store &&
+                !entries.has(addressId(entry.address))
+              )
+                entries.set(addressId(entry.address), {
+                  address: entry.address,
+                  value: undefined,
+                });
+            if (--count === 0) readLists();
           };
         }
-        transaction.oncomplete = () => resolve(values);
-        transaction.onabort = () => reject(transaction.error);
-        transaction.onerror = () => {};
-      },
-    );
+      } else {
+        const small = selected.filter((address) => address.store !== 'lists');
+        for (const address of selected)
+          if (
+            address.store === 'lists' &&
+            this.loadedLists.has(addressId(address))
+          )
+            requestedLists.set(addressId(address), address);
+        count = small.length;
+        for (const address of small) {
+          const request = tx.objectStore(address.store).get(address.key);
+          request.onsuccess = () => {
+            entries.set(addressId(address), { address, value: request.result });
+            if (--count === 0) readLists();
+          };
+        }
+        if (!count) readLists();
+      }
+      tx.oncomplete = () => resolve();
+      tx.onabort = () => reject(tx.error);
+      tx.onerror = () => {};
+    });
     if (revision !== this.revision) {
-      if (keys) for (const key of keys) this.refreshKeys.add(key);
+      if (selected)
+        for (const address of selected)
+          this.requested.set(addressId(address), address);
       else this.refreshAll = true;
       return;
     }
-    if (!keys) this.syncedRevision = snapshot.get(STORAGE_REVISION_KEY) ?? null;
-    const notifications: string[] = [];
-    const changed = keys ?? new Set([...this.inventory, ...snapshot.keys()]);
-    if (inventory) {
-      this.inventory = inventory;
-      for (const [key, edit] of this.pending) {
-        if (edit.value === null) this.inventory.delete(key);
-        else this.inventory.add(key);
-      }
+    const changes: RecordAddress[] = [];
+    for (const [id, { address, value }] of entries) {
+      if (address.store === 'lists') this.readyLists.add(id);
+      if (!this.pending.has(id) && this.apply(address, value))
+        changes.push(address);
     }
-    for (const key of changed) {
-      if (this.pending.has(key)) continue;
-      if (!this.shouldRead(key)) {
-        if (presence.get(key) === true) this.inventory.add(key);
-        else if (presence.get(key) === false) this.inventory.delete(key);
-        continue;
-      }
-      const value = snapshot.get(key);
-      if (value === undefined) this.inventory.delete(key);
-      else this.inventory.add(key);
-      if (this.values.get(key) === value) continue;
-      if (value === undefined) this.values.delete(key);
-      else this.values.set(key, value);
-      notifications.push(key);
-    }
-    this.notifyChanges(notifications);
+    if (changes.length) this.notify(changes);
   }
-
-  private notifyChanges(keys: readonly string[]): void {
-    const changed = keys.filter(
-      (key) => key !== STORAGE_REVISION_KEY && key !== MIGRATED,
-    );
-    if (!changed.length) return;
-    if (this.notifyBatch) this.notifyBatch(changed);
-    else for (const key of changed) this.notify(key);
-  }
-
-  get length(): number {
-    return this.inventory.size;
-  }
-
-  key(index: number): string | null {
-    return [...this.inventory][index] ?? null;
-  }
-
-  keys(): string[] {
-    return [...this.inventory];
-  }
-
-  getItem(key: string): string | null {
-    // These records belong to arca.live. Observe its updates without writing to it.
-    if (SITE_KEYS.has(key)) return this.legacy.getItem(key);
-    return this.values.get(key) ?? null;
-  }
-
-  setItem(key: string, value: string): void {
-    if (this.values.get(key) === value) return;
-    const pending = this.pending.get(key);
-    const base = pending ? pending.base : this.getItem(key);
-    this.revision++;
-    this.values.set(key, value);
-    this.inventory.add(key);
-    this.pending.set(key, { base, value });
-    this.schedule();
-  }
-
-  removeItem(key: string): void {
-    if (!this.inventory.has(key)) return;
-    const pending = this.pending.get(key);
-    const base = pending ? pending.base : this.getItem(key);
-    this.revision++;
-    this.values.delete(key);
-    this.inventory.delete(key);
-    this.pending.set(key, { base, value: null });
-    this.schedule();
-  }
-
-  clear(): void {
-    for (const key of this.inventory) this.removeItem(key);
-  }
-
+  private scheduled = false;
   private schedule(): void {
     if (this.scheduled) return;
     this.scheduled = true;
@@ -296,111 +409,80 @@ export class IndexedStorage implements Storage {
       })
       .catch((error) => this.report(error));
   }
-
-  /** Resolves only after every queued write has committed; failures remain retryable. */
   flush(): Promise<void> {
     return (this.saving ??= Promise.resolve().then(async () => {
       try {
-        while (this.pending.size) await this.commit();
+        if (this.unavailable)
+          throw new Error(
+            '저장소 버전이 변경되었습니다. 페이지를 새로고침해주세요.',
+          );
+        while (this.pending.size) {
+          const batch = new Map(this.pending);
+          const committed = await commitRecords(this.database!, [
+            ...batch.values(),
+          ]);
+          const notifications: RecordAddress[] = [];
+          for (const change of committed) {
+            const id = addressId(change),
+              edit = batch.get(id),
+              pending = this.pending.get(id);
+            if (pending === edit) {
+              this.pending.delete(id);
+              if (this.apply(change, change.value)) notifications.push(change);
+            } else if (pending && edit) {
+              const value = mergeRecord(
+                { ...pending, base: edit.value },
+                change.value,
+              );
+              this.pending.set(id, { ...pending, base: change.value, value });
+              this.apply(change, value);
+            }
+          }
+          this.channel?.postMessage({
+            changes: committed.map(({ store, key }) => ({ store, key })),
+          });
+          if (notifications.length) this.notify(notifications);
+        }
       } finally {
         this.saving = undefined;
       }
     }));
   }
-
-  private commit(): Promise<void> {
-    const batch = new Map(this.pending);
-    return new Promise<void>((resolve, reject) => {
-      const transaction = this.database!.transaction(STORE, 'readwrite');
-      const store = transaction.objectStore(STORE);
-      const committed = writeStorageBatch(store, batch);
-      transaction.oncomplete = () => {
-        const committedRevision = committed.get(STORAGE_REVISION_KEY);
-        if (Number(committedRevision) === Number(this.syncedRevision ?? 0) + 1)
-          this.syncedRevision = committedRevision ?? null;
-        const notifications: string[] = [];
-        for (const [key, value] of committed) {
-          const edit = batch.get(key);
-          const pending = this.pending.get(key);
-          if (pending === edit) {
-            this.pending.delete(key);
-            if (this.getItem(key) !== value) notifications.push(key);
-            if (value === null) this.values.delete(key);
-            else this.values.set(key, value);
-          } else if (pending && edit) {
-            pending.value = mergeStoredValue(
-              key,
-              edit.value,
-              pending.value,
-              value,
-            );
-            pending.base = value;
-            if (pending.value === null) this.values.delete(key);
-            else this.values.set(key, pending.value);
-          }
-          if (this.values.has(key)) this.inventory.add(key);
-          else this.inventory.delete(key);
-        }
-        this.channel?.postMessage({ keys: [...committed.keys()] });
-        this.notifyChanges(notifications);
-        resolve();
-      };
-      transaction.onabort = () => reject(transaction.error);
-      transaction.onerror = () => {};
-    });
-  }
-
   private report(error: unknown): void {
     reportFailure(
       new OperationError(
         'storage',
-        'IndexedDB 저장에 실패했습니다. 다시 시도해주세요.',
+        '저장하지 못했습니다. 다시 시도해주세요.',
         error,
       ),
     );
   }
 }
-
 let storage: IndexedStorage | undefined;
 let observing = false;
-
 export async function initializeStorage(): Promise<void> {
-  const articleKey = new URL(window.location.href).searchParams.get(
-    'articleKey',
-  );
   storage ??= new IndexedStorage(
     indexedDB,
     localStorage,
-    (key) => {
+    (changes) =>
       window.dispatchEvent(
-        new CustomEvent('arcafeed:storage', { detail: { key } }),
-      );
-    },
-    (key) =>
-      !key.startsWith(READING_LIST_PREFIX) &&
-      (!key.endsWith(':articleList') ||
-        key === `arcaFeed:${articleKey}:articleList`),
-    (keys) =>
-      window.dispatchEvent(
-        new CustomEvent('arcafeed:storage', { detail: { keys } }),
+        new CustomEvent('arcafeed:storage', { detail: { changes } }),
       ),
+    new URL(window.location.href).searchParams.get('articleKey') ?? '',
+    window.location.origin,
   );
   await storage.initialize();
   if (!observing) {
     observing = true;
-    const refresh = () => {
-      void storage!.refreshIfChanged().catch((error) => reportFailure(error));
-    };
+    const refresh = () => void storage!.refresh().catch(reportFailure);
     window.addEventListener('focus', refresh);
     window.addEventListener('pageshow', refresh);
   }
 }
-
-export function getStorage(): Storage {
+export function getStorage(): RecordCache {
   if (!storage) throw new Error('IndexedDB has not been initialized');
   return storage;
 }
-
 export function flushStorage(): Promise<void> {
   return storage?.flush() ?? Promise.resolve();
 }

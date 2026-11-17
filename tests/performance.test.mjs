@@ -279,27 +279,32 @@ test('page reload does not rewrite the loaded navigation list or settings', () =
   assert.equal(storage.writes.length, 0);
 });
 
-test('cache pruning removes orphaned legacy caches even when the recency list is unchanged', () => {
+test('navigation pruning removes only expired native sessions and their dependent records', () => {
   const { StorageRepository } = sourceLoader()('src/vault/repository.ts');
-  const storage = memoryStorage({
-    'arcaFeed:recentArticleKeys': JSON.stringify(['current']),
-    'arcaFeed:current:articleList': '[]',
-    'arcaFeed:orphan:articleList': 'large old list',
-    'arcaFeed:orphan:searchQuery': '?q=old',
-    'arcaFeed:readingHistory': '{"sessions":[]}',
-    'arcaFeed:readingProgress': '[]',
-    'arcaFeed:custom:unknown': 'keep',
-    recent_articles: 'native history',
+  const storage = memoryStorage();
+  for (let index = 0; index < 6; index++) {
+    const id = String(index);
+    storage.set('navigationSessions', id, { id, lastUsedAt: index });
+    storage.set('lists', ['navigation', id], {
+      kind: 'navigation',
+      id,
+      paths: [],
+    });
+    storage.set('progress', ['navigation', id], {
+      kind: 'navigation',
+      id,
+      activeIndex: 0,
+    });
+  }
+  storage.set('settings', 'display', {
+    id: 'display',
+    value: { contentWidth: 800 },
   });
-  new StorageRepository(storage).pruneArticleKeyCaches('current');
-  assert.equal(storage.getItem('arcaFeed:orphan:articleList'), null);
-  assert.equal(storage.getItem('arcaFeed:orphan:searchQuery'), null);
-  assert.equal(storage.getItem('arcaFeed:current:articleList'), '[]');
-  assert.equal(storage.getItem('arcaFeed:readingProgress'), '[]');
-  assert.equal(storage.getItem('arcaFeed:readingHistory'), '{"sessions":[]}');
-  assert.equal(storage.getItem('arcaFeed:custom:unknown'), 'keep');
-  assert.equal(storage.getItem('recent_articles'), 'native history');
-  assert.equal(storage.writes.length, 0);
+  new StorageRepository(storage).pruneArticleKeyCaches('5');
+  assert.equal(storage.all('navigationSessions').length, 5);
+  assert.equal(storage.get('lists', ['navigation', '0']), undefined);
+  assert.equal(storage.get('progress', ['navigation', '0']), undefined);
+  assert.equal(storage.get('settings', 'display').value.contentWidth, 800);
 });
 
 test('pages without a session save global settings without creating an empty session cache', () => {
@@ -318,8 +323,6 @@ test('pages without a session save global settings without creating an empty ses
       'arcaFeed:subscriptionSettings',
       'arcaFeed:readingSettings',
       'arcaFeed:lastModalTab',
-      'arcaFeed:settingsVersion',
-      'arcaFeed:filterChannels',
       'arcaFeed:isShuffleMode',
     ].sort(),
   );
@@ -328,27 +331,21 @@ test('pages without a session save global settings without creating an empty ses
   );
 });
 
-test('cache pruning leaves the current recency list alone and removes expired session data', () => {
+test('navigation retention derives from records instead of a redundant recency array', () => {
   const { StorageRepository } = sourceLoader()('src/vault/repository.ts');
-  const keys = ['a', 'b', 'c', 'd', 'e'];
-  const storage = memoryStorage({
-    'arcaFeed:recentArticleKeys': JSON.stringify(keys),
-    'arcaFeed:e:articleList': '[]',
-    unrelated: 'keep',
-  });
+  const storage = memoryStorage();
+  for (let index = 0; index < 5; index++) {
+    const id = String(index);
+    storage.set('navigationSessions', id, { id, lastUsedAt: index });
+  }
   const repo = new StorageRepository(storage);
-  repo.pruneArticleKeyCaches('a');
-  assert.equal(storage.writes.length, 0);
-  repo.pruneArticleKeyCaches('f');
-  assert.equal(storage.getItem('arcaFeed:e:articleList'), null);
-  assert.equal(storage.getItem('unrelated'), 'keep');
-  assert.deepEqual(JSON.parse(storage.getItem('arcaFeed:recentArticleKeys')), [
-    'f',
-    'a',
-    'b',
-    'c',
-    'd',
-  ]);
+  storage.recordWrites.length = 0;
+  repo.pruneArticleKeyCaches('4');
+  assert.equal(storage.recordWrites.length, 0);
+  storage.set('navigationSessions', 'new', { id: 'new', lastUsedAt: 10 });
+  repo.pruneArticleKeyCaches('new');
+  assert.equal(storage.all('navigationSessions').length, 5);
+  assert.equal(storage.get('navigationSessions', '0'), undefined);
 });
 
 test('concurrent mapping caps active requests and preserves channel order', async () => {
@@ -1440,40 +1437,31 @@ test('step execution keeps parallel work, sequential dependencies and follow-ups
   assert.equal(p.saves, 1);
 });
 
-test('JSON getters parse once per raw value and setters invalidate cached payloads', () => {
-  const storage = memoryStorage({ large: '{"items":[1,2]}', broken: '{' });
-  let parses = 0;
+test('repository returns native objects without parsing or serializing payloads', () => {
+  const storage = memoryStorage();
   const load = sourceLoader({
     globals: {
       JSON: {
-        ...JSON,
-        stringify: JSON.stringify,
-        parse(raw) {
-          parses++;
-          return JSON.parse(raw);
+        parse() {
+          assert.fail('payload parse');
+        },
+        stringify() {
+          assert.fail('payload stringify');
         },
       },
     },
   });
   const { StorageRepository } = load('src/vault/repository.ts');
   const repo = new StorageRepository(storage);
-  assert.equal(parses, 0);
-  const first = repo.getJSON('large');
-  assert.equal(repo.getJSON('large'), first);
-  assert.equal(parses, 1);
-  repo.getJSON('broken');
-  repo.getJSON('broken');
-  assert.equal(parses, 2);
-  storage.setItem('large', '{"items":[3]}');
-  assert.deepEqual(repo.getJSON('large'), { items: [3] });
-  repo.setJSON('large', { items: [4] });
-  assert.deepEqual(repo.getJSON('large'), { items: [4] });
-  repo.removeItem('large');
-  assert.equal(repo.getJSON('large'), null);
-  assert.equal(parses, 4);
+  repo.saveSetting('display', { contentWidth: 800 });
+  const first = repo.readSetting('display');
+  assert.equal(repo.readSetting('display'), first);
+  assert.deepEqual(first, { contentWidth: 800 });
+  repo.saveSetting('display', { contentWidth: 900 });
+  assert.deepEqual(repo.readSetting('display'), { contentWidth: 900 });
 });
 
-test('config getters defer unrelated JSON through store updates and setters', () => {
+test('config getters retain lazy normalization without JSON conversion through state updates', () => {
   const storage = memoryStorage({
     'arcaFeed:articleFilterConfig': '{"test":{}}',
     'arcaFeed:displaySettings': '{"contentWidth":800}',
@@ -1503,11 +1491,11 @@ test('config getters defer unrelated JSON through store updates and setters', ()
   store.setState({ readingRevision: 1 });
   assert.deepEqual(parsed, []);
   assert.equal(store.getState().uiSettings.contentWidth, 800);
-  assert.deepEqual(parsed, ['{"contentWidth":800}']);
+  assert.deepEqual(parsed, []);
   assert.equal(store.getState().uiSettings.contentWidth, 800);
   store.setState({ articleList: ['/b/test/101'] });
   assert.deepEqual(store.getState().articleList, ['/b/test/101']);
-  assert.deepEqual(parsed, ['{"contentWidth":800}']);
+  assert.deepEqual(parsed, []);
 });
 
 test('reading payloads load independently on demand and reload leaves unused sessions untouched', () => {
@@ -1538,9 +1526,9 @@ test('reading payloads load independently on demand and reload leaves unused ses
   reading.reload();
   assert.deepEqual(parsed, ['[]']);
   assert.deepEqual(reading.sessions, []);
-  assert.deepEqual(parsed, ['[]', '{"sessions":[]}', '[]']);
+  assert.deepEqual(parsed, ['[]']);
   void reading.sessions;
-  assert.equal(parsed.length, 3);
+  assert.equal(parsed.length, 1);
 });
 
 test('short navigation lists do not load unrelated series channel settings', () => {

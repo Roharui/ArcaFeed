@@ -24,7 +24,3 @@ export function withArticleKey(href: string, articleKey: string): string {
 
   return `${url.pathname}${url.search}`;
 }
-
-export function getStorageKey(articleKey: string, key: string): string {
-  return `arcaFeed:${articleKey}:${key}`;
-}

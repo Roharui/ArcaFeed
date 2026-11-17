@@ -1,131 +1,146 @@
 import { getStorage } from './indexed-storage';
-import {
-  ARTICLE_KEY_CACHE_LIMIT,
-  RECENT_ARTICLE_KEYS_KEY,
-} from './storage-keys';
-
-/**
- * Storage Repository - provides cached IndexedDB access.
- * Separates persistence concerns from business logic (previously in Config class).
- */
-
-const SCOPED_CACHE_SUFFIXES = new Set([
-  'articleList',
-  'articleFilterConfig',
-  'seriesMode',
-  'scrapMode',
-  'seriesChannels',
-  'subscriptionFailures',
-  'searchQuery',
-  'lastActiveIndex',
-]);
-
+import { equalData, nextListVersion } from './record-schema';
+import type { DataRow, RecordCache, RecordStore } from './record-schema';
+import { ARTICLE_KEY_CACHE_LIMIT } from './storage-keys';
+/** Domain records over the hydrated cache; no string-store or JSON facade. */
 export class StorageRepository {
-  private storage: Storage;
-  private checkedCacheInventory = false;
-  private jsonCache = new Map<string, { raw: string | null; value: unknown }>();
-
-  constructor(storage: Storage = getStorage()) {
-    this.storage = storage;
+  constructor(private storage: RecordCache = getStorage()) {}
+  readSetting<T = unknown>(id: string): T | undefined {
+    return this.storage.get<DataRow>('settings', id)?.value as T | undefined;
   }
-
-  getItem(key: string): string | null {
-    return this.storage.getItem(key);
+  saveSetting(id: string, value: unknown): void {
+    this.storage.set('settings', id, { id, value });
   }
-
-  setItem(key: string, value: string): void {
-    if (this.storage.getItem(key) === value) return;
-    this.storage.setItem(key, value);
-    this.jsonCache.delete(key);
+  filterIds(): string[] {
+    return this.storage.all('channelFilters').map((row) => row.id);
   }
-
-  removeItem(key: string): void {
-    this.storage.removeItem(key);
-    this.jsonCache.delete(key);
+  readFilter(id: string): unknown {
+    return this.storage.get('channelFilters', id)?.value;
   }
-
-  private keys(): string[] {
-    const storage = this.storage as Storage & { keys?: () => string[] };
-    if (storage.keys) return storage.keys();
-    return Array.from({ length: storage.length }, (_, index) =>
-      storage.key(index),
-    ).filter((key): key is string => key !== null);
+  saveFilter(id: string, value: unknown): void {
+    this.storage.set('channelFilters', id, { id, value });
   }
-
-  prepareKeys(keys: readonly string[]): Promise<void> | undefined {
-    const storage = this.storage as Storage & {
-      prepareKeys?: (keys: readonly string[]) => Promise<void> | undefined;
-    };
-    return storage.prepareKeys?.(keys);
+  deleteFilter(id: string): void {
+    this.storage.delete('channelFilters', id);
   }
-
-  getJSON<T>(key: string): T | null {
-    const raw = this.getItem(key);
-    const cached = this.jsonCache.get(key);
-    if (cached && cached.raw === raw) return cached.value as T | null;
-    let value: T | null = null;
-    try {
-      value = raw ? (JSON.parse(raw) as T) : null;
-    } catch {
-      // Cache malformed payloads too, until the stored string changes.
+  readNavigation(id: string): DataRow | undefined {
+    return this.storage.get('navigationSessions', id);
+  }
+  saveNavigation(id: string, value: DataRow): void {
+    this.storage.set('navigationSessions', id, { ...value, id });
+  }
+  navigationPosition(id: string): DataRow | undefined {
+    return this.storage.get('progress', ['navigation', id]);
+  }
+  saveNavigationPosition(id: string, activeIndex: number): void {
+    this.storage.set('progress', ['navigation', id], {
+      kind: 'navigation',
+      id,
+      activeIndex,
+      updatedAt: Date.now(),
+    });
+  }
+  pruneArticleKeyCaches(currentId: string): void {
+    if (!currentId) return;
+    let rows = this.storage.all('navigationSessions');
+    const current = rows.find((row) => row.id === currentId);
+    const newest = [...rows].sort((a, b) => b.lastUsedAt - a.lastUsedAt)[0];
+    if (current && newest && newest.id !== currentId) {
+      this.storage.set('navigationSessions', currentId, {
+        ...current,
+        lastUsedAt: Math.max(Date.now(), newest.lastUsedAt + 1),
+      });
+      rows = this.storage.all('navigationSessions');
     }
-    this.jsonCache.set(key, { raw, value });
-    return value;
-  }
-
-  setJSON<T>(key: string, value: T): void {
-    const raw = JSON.stringify(value);
-    this.setItem(key, raw);
-    // Keep the serialized snapshot separate from the caller's mutable object.
-  }
-
-  /**
-   * Build a namespaced key for a given articleKey.
-   */
-  scopedKey(articleKey: string, subKey: string): string {
-    return `arcaFeed:${articleKey}:${subKey}`;
-  }
-
-  /**
-   * Prune expired article key caches, keeping only the most recent N.
-   */
-  pruneArticleKeyCaches(currentArticleKey: string): void {
-    if (!currentArticleKey) return;
-
-    const storedKeys = this.getJSON<unknown>(RECENT_ARTICLE_KEYS_KEY);
-    const recentKeys = Array.isArray(storedKeys)
-      ? [
-          ...new Set(
-            storedKeys.filter(
-              (key): key is string => typeof key === 'string' && key.length > 0,
-            ),
-          ),
-        ]
-      : [];
-
-    const nextKeys = [
-      currentArticleKey,
-      ...recentKeys.filter((key) => key !== currentArticleKey),
+    const ordered = [
+      currentId,
+      ...rows
+        .filter((row) => row.id !== currentId)
+        .sort((a, b) => b.lastUsedAt - a.lastUsedAt)
+        .map((row) => row.id),
     ].slice(0, ARTICLE_KEY_CACHE_LIMIT);
-
-    const expiredKeys = recentKeys.filter((key) => !nextKeys.includes(key));
-
-    if (!this.checkedCacheInventory || expiredKeys.length > 0) {
-      const retained = new Set(nextKeys);
-      for (const key of this.keys()) {
-        if (!key?.startsWith('arcaFeed:')) continue;
-        const separator = key.indexOf(':', 9);
-        if (
-          separator !== -1 &&
-          SCOPED_CACHE_SUFFIXES.has(key.slice(separator + 1)) &&
-          !retained.has(key.slice(9, separator))
-        ) {
-          this.removeItem(key);
-        }
-      }
-      this.checkedCacheInventory = true;
+    const kept = new Set(ordered);
+    for (const row of rows)
+      if (!kept.has(row.id)) this.deleteSession('navigation', row.id);
+  }
+  readList(kind: string, id: string): unknown {
+    return this.storage.get('lists', [kind, id])?.paths;
+  }
+  listVersion(kind: string, id: string): string | undefined {
+    return this.storage.get('lists', [kind, id])?.version;
+  }
+  deleteResumePosition(id: string): void {
+    this.storage.delete('progress', ['resume', id]);
+  }
+  saveList(kind: string, id: string, paths: readonly string[]): string {
+    const previous = this.storage.get('lists', [kind, id]);
+    if (previous && equalData(previous.paths, paths)) return previous.version;
+    const version = nextListVersion();
+    this.storage.set('lists', [kind, id], {
+      kind,
+      id,
+      paths: [...paths],
+      version,
+    });
+    return version;
+  }
+  prepareLists(ids: readonly string[]): Promise<void> | undefined {
+    return this.storage.prepare(
+      ids.map((id) => ({ store: 'lists', key: ['resume', id] })),
+    );
+  }
+  resumes(): readonly DataRow[] {
+    return this.storage.all('resumeSessions');
+  }
+  saveResume(value: DataRow, automatic = false): void {
+    this.storage.set('resumeSessions', value.id, value, automatic);
+  }
+  private progressSource: readonly DataRow[] | undefined;
+  private positions: readonly DataRow[] = [];
+  resumeProgress(): readonly DataRow[] {
+    const source = this.storage.all('progress');
+    if (source !== this.progressSource) {
+      this.progressSource = source;
+      this.positions = source
+        .filter((row) => row.kind === 'resume')
+        .sort(
+          (a, b) =>
+            b.updatedAt - a.updatedAt || (b.sequence ?? 0) - (a.sequence ?? 0),
+        );
     }
+    return this.positions;
+  }
+  savePosition(value: DataRow): void {
+    const previous = this.storage.get('progress', ['resume', value.id]);
+    if (
+      previous &&
+      previous.path === value.path &&
+      previous.scrollY === value.scrollY &&
+      previous.updatedAt === value.updatedAt
+    )
+      return;
+    const sequence =
+      Math.max(
+        0,
+        ...this.storage.all('progress').map((row) => row.sequence ?? 0),
+      ) + 1;
+    this.storage.set('progress', ['resume', value.id], {
+      ...value,
+      kind: 'resume',
+      sequence,
+    });
+  }
+  deleteSession(
+    kind: 'resume' | 'navigation',
+    id: string,
+    automatic = false,
+  ): void {
+    const store: RecordStore =
+      kind === 'resume' ? 'resumeSessions' : 'navigationSessions';
+    this.storage.delete(store, id, automatic);
+  }
 
-    this.setJSON(RECENT_ARTICLE_KEYS_KEY, nextKeys);
+  site(key: string): string | null {
+    return this.storage.site(key);
   }
 }

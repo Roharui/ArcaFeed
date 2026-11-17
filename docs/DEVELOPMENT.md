@@ -129,4 +129,4 @@ DEV_URL=https://dev.example.com/n npm run dev:live:mobile
 
 ## 저장소 검증
 
-영속 데이터는 IndexedDB `ArcaFeed` → `values`에서 확인합니다. 최초 실행 시 ArcaFeed 소유 localStorage 데이터를 자동 이전합니다. 사이트 방문 기록은 사이트 소유 localStorage에서 읽고, 탭별 이동 전달은 sessionStorage를 사용합니다. `tests/indexed-storage.test.mjs`는 fake-indexeddb로 이전·실패 재시도·중복 flush 공유·선택적 목록 로드·변경 키 조회·누락 알림 복구·탭 간 병합과 삭제·링크 보관 한도·이동 전 커밋 대기를 검증합니다. 개별 결과는 `node tests/indexed-storage.test.mjs`로 확인할 수 있습니다.
+영속 데이터는 IndexedDB `ArcaFeed` 버전 2의 settings·channelFilters·navigationSessions·resumeSessions·progress·lists·meta에서 확인합니다. 객체를 직접 저장하며 progress와 lists는 `[kind, id]` 복합 키를 사용합니다. 최초 실행은 v1 values와 ArcaFeed localStorage 데이터를 업그레이드 트랜잭션 안에서 이전합니다. 사이트 방문 기록은 사이트 소유 localStorage, 탭별 이동 전달은 sessionStorage를 사용합니다. `node tests/indexed-storage.test.mjs`는 실제 소스와 fake-indexeddb로 이전·롤백·선택적 로드·레코드별 병합·보관 한도·동시 준비와 커밋 대기를 검증합니다. 실제 브라우저 검증과 목록 저장 비교는 [UI 테스트](UI_TESTING.md)의 저장소 검사 절차를 사용합니다.

@@ -6,9 +6,6 @@ import { extractArticleRows } from './filter';
 import { refreshUnvisitedNavigation } from './article/link';
 import { createArticleKey } from '@/utils/article-key';
 import {
-  READING_HISTORY_KEY,
-  READING_PROGRESS_KEY,
-  READING_LIST_PREFIX,
   SITE_RECENT_KEY,
   SITE_RECENT_DISABLED_KEY,
 } from '@/vault/reading-history';
@@ -17,7 +14,7 @@ import type { VaultAdapter } from '@/vault';
 import { readingContextLabel } from '@/vault/reading-context';
 import { articleWindow } from '@/vault/article-window';
 import { showPendingSkippedToast } from './swiper/skip-toast';
-import { reportFailure } from '@/utils/operation-error';
+import { OperationError, reportFailure } from '@/utils/operation-error';
 import { showToast } from '@/utils/toast';
 import { afterPaint } from '@/utils/after-paint';
 
@@ -93,15 +90,12 @@ function updateSkipButton(p: VaultAdapter): void {
 }
 
 function contextId(p: VaultAdapter): string {
-  if (p.isSeriesMode) return `series:${p.articleKey}`;
-  const params = new URLSearchParams(p.searchQuery);
-  params.delete('articleKey');
-  params.sort();
-  // Keep the storage identifier short even for a long search expression.
-  let hash = 2166136261;
-  for (const char of params.toString())
-    hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
-  return `channel:${p.href.channelId}:${(hash >>> 0).toString(16)}`;
+  return p.reading.getContextId(
+    p.isSeriesMode ? 'series' : 'channel',
+    p.href.channelId,
+    p.articleKey,
+    p.searchQuery,
+  );
 }
 
 function saveCheckpoint(p: VaultAdapter): void {
@@ -195,12 +189,19 @@ export async function resumeReading(
     },
     prepare: async () => {
       await p.reading.prepareList(session.id);
-      p.restoreReadingSession(session, key);
+      p.reading.reload(['sessions', 'progress']);
+      const latest = p.reading.sessions.find((item) => item.id === session.id);
+      if (!latest)
+        throw new OperationError('command', '이미 삭제된 이어보기입니다.');
+      url.pathname = latest.path;
+      url.search = latest.searchQuery;
+      url.searchParams.set('articleKey', key);
+      p.restoreReadingSession(latest, key);
       try {
         previousScroll = sessionStorage.getItem(RESUME_SCROLL_KEY);
         sessionStorage.setItem(
           RESUME_SCROLL_KEY,
-          JSON.stringify({ path: session.path, key, scrollY: session.scrollY }),
+          JSON.stringify({ path: latest.path, key, scrollY: latest.scrollY }),
         );
         wroteScroll = true;
       } catch {
@@ -277,28 +278,36 @@ export function initReading(p: VaultAdapter): void {
       event.key === SITE_RECENT_DISABLED_KEY
     )
       p.reading.reload(['entries']);
-    else if (event.key === READING_PROGRESS_KEY) p.reading.reload(['progress']);
-    else if (event.key === READING_HISTORY_KEY) p.reading.reload(['sessions']);
-    else if (event.key.startsWith(READING_LIST_PREFIX))
-      p.reading.reloadSessionList();
   };
   window.addEventListener('storage', onStorage);
   window.addEventListener('arcafeed:storage', ((
-    event: CustomEvent<{ key?: string; keys?: string[] }>,
+    event: CustomEvent<{
+      changes: { store: string; key: string | string[] }[];
+    }>,
   ) => {
-    if (!event.detail.keys) {
-      if (event.detail.key) onStorage({ key: event.detail.key });
-      return;
-    }
-    const keys = new Set(event.detail.keys);
-    const changes: ('entries' | 'sessions' | 'progress')[] = [];
-    if (keys.has(SITE_RECENT_KEY) || keys.has(SITE_RECENT_DISABLED_KEY))
-      changes.push('entries');
-    if (keys.has(READING_HISTORY_KEY)) changes.push('sessions');
-    if (keys.has(READING_PROGRESS_KEY)) changes.push('progress');
-    if ([...keys].some((key) => key.startsWith(READING_LIST_PREFIX)))
-      p.reading.reloadSessionList(changes);
-    else if (changes.length) p.reading.reload(changes);
+    const changes = event.detail.changes ?? [];
+    const requested: ('sessions' | 'progress')[] = [];
+    if (changes.some((item) => item.store === 'resumeSessions'))
+      requested.push('sessions');
+    if (
+      changes.some(
+        (item) =>
+          item.store === 'progress' &&
+          Array.isArray(item.key) &&
+          item.key[0] === 'resume',
+      )
+    )
+      requested.push('progress');
+    if (
+      changes.some(
+        (item) =>
+          item.store === 'lists' &&
+          Array.isArray(item.key) &&
+          item.key[0] === 'resume',
+      )
+    )
+      p.reading.reloadSessionList(requested);
+    else if (requested.length) p.reading.reload(requested);
   }) as EventListener);
   p.reading.reload();
   window.addEventListener('load', () => p.reading.reload(), { once: true });

@@ -14,8 +14,6 @@ import type { AppState } from '@/vault/store';
 import { createInitialState } from './store';
 import type { ReadingSession } from './reading-history';
 
-const SHUFFLE_MODE_KEY = 'arcaFeed:isShuffleMode';
-
 const CHANNEL_OR_ARTICLE_PAGE_REGEX = /^\/b\/[a-zA-Z0-9]+(\/\d+)?\/?$/;
 
 export class ConfigService {
@@ -65,9 +63,9 @@ export class ConfigService {
     );
 
     // Load shuffle mode (global setting)
-    patch.isShuffleMode = this.repo.getItem(SHUFFLE_MODE_KEY) === 'true';
+    patch.isShuffleMode = this.repo.readSetting('shuffle') === true;
 
-    // Load UI settings (getJSON handles null / parse errors internally)
+    // Settings records are normalized lazily by group.
     deferField(patch, 'uiSettings', () => this.storage.settings());
 
     // Prune old caches
@@ -144,7 +142,7 @@ export class ConfigService {
       );
     }
     if (!sameField(previous, state, 'isShuffleMode')) {
-      this.repo.setItem(SHUFFLE_MODE_KEY, state.isShuffleMode.toString());
+      this.repo.saveSetting('shuffle', state.isShuffleMode);
     }
 
     this.navigation.save(state, previous);

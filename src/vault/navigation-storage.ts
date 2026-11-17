@@ -2,215 +2,133 @@ import { normalizeSubscriptionFailures } from './subscription-failures';
 import { deferField, sameField } from './lazy-state';
 import { normalizeArticles, stringList } from './config-schema';
 import { appendSearchParam } from '@/utils/url';
+import { cleanQuery, storedMode } from './navigation-record';
 import type { StorageRepository } from './repository';
 import type { AppState } from './store';
 import type { ReadingSession } from './reading-history';
-
-/** Persistence for a single navigation session, independent of global preferences. */
+/** Metadata, frequently changed cursor, and large lists have independent records. */
 export class NavigationStorage {
   constructor(private repo: StorageRepository) {}
-
   load(articleKey: string): Partial<AppState> {
+    const record = this.repo.readNavigation(articleKey);
     const patch: Partial<AppState> = { articleKey };
     deferField(patch, 'articleList', () =>
       normalizeArticles(
-        this.repo.getJSON<unknown>(
-          this.repo.scopedKey(articleKey, 'articleList'),
-        ),
+        this.repo.readList('navigation', articleKey),
         window.location.origin,
       ),
     );
-
-    // Load series mode
     patch.isSeriesMode =
-      this.repo.getItem(this.repo.scopedKey(articleKey, 'seriesMode')) ===
-      'true';
-
-    patch.isScrapMode =
-      patch.isSeriesMode &&
-      this.repo.getItem(this.repo.scopedKey(articleKey, 'scrapMode')) ===
-        'true';
-
+      record?.mode === 'series' ||
+      record?.mode === 'scrap' ||
+      record?.mode === 'subscription';
+    patch.isScrapMode = record?.mode === 'scrap';
     deferField(patch, 'seriesChannels', () =>
-      stringList(
-        this.repo.getJSON<unknown>(
-          this.repo.scopedKey(articleKey, 'seriesChannels'),
-        ),
-      ).filter((channel) => /^[a-zA-Z0-9]+$/.test(channel)),
+      stringList(record?.channels).filter((id) => /^[a-zA-Z0-9]+$/.test(id)),
     );
-
     deferField(patch, 'subscriptionFailures', () =>
-      normalizeSubscriptionFailures(
-        this.repo.getJSON<unknown>(
-          this.repo.scopedKey(articleKey, 'subscriptionFailures'),
-        ),
-      ),
+      normalizeSubscriptionFailures(record?.failures),
     );
-
-    // Load search query
     patch.searchQuery =
-      this.repo.getItem(this.repo.scopedKey(articleKey, 'searchQuery')) || '';
-
-    // Load last active index
-    const savedIndex = this.repo.getItem(
-      this.repo.scopedKey(articleKey, 'lastActiveIndex'),
-    );
-    const index = savedIndex === null ? -1 : Number(savedIndex);
+      typeof record?.query === 'string' && record.query
+        ? appendSearchParam(record.query, 'articleKey', articleKey)
+        : '';
+    const index = this.repo.navigationPosition(articleKey)?.activeIndex;
     patch.lastActiveIndex =
       Number.isSafeInteger(index) && index >= -1 ? index : -1;
-
     return patch;
   }
-
   save(state: Readonly<AppState>, previous?: Readonly<AppState>): void {
-    const { articleKey } = state;
-    const newSession = !previous || previous.articleKey !== articleKey;
-    // Per-articleKey scoped storage
-    if (articleKey) {
-      if (newSession || !sameField(previous, state, 'articleList')) {
-        this.repo.setJSON(
-          this.repo.scopedKey(articleKey, 'articleList'),
-          state.articleList,
-        );
-      }
-      if (newSession || !sameField(previous, state, 'isSeriesMode')) {
-        this.repo.setItem(
-          this.repo.scopedKey(articleKey, 'seriesMode'),
-          state.isSeriesMode.toString(),
-        );
-      }
-      if (newSession || !sameField(previous, state, 'isScrapMode')) {
-        this.repo.setItem(
-          this.repo.scopedKey(articleKey, 'scrapMode'),
-          state.isScrapMode.toString(),
-        );
-      }
-      if (newSession || !sameField(previous, state, 'seriesChannels')) {
-        this.repo.setJSON(
-          this.repo.scopedKey(articleKey, 'seriesChannels'),
-          state.seriesChannels,
-        );
-      }
-      if (newSession || !sameField(previous, state, 'subscriptionFailures')) {
-        this.repo.setJSON(
-          this.repo.scopedKey(articleKey, 'subscriptionFailures'),
-          state.subscriptionFailures,
-        );
-      }
-      if (newSession || !sameField(previous, state, 'searchQuery')) {
-        this.repo.setItem(
-          this.repo.scopedKey(articleKey, 'searchQuery'),
-          state.searchQuery,
-        );
-      }
-      if (newSession || !sameField(previous, state, 'activeIndex')) {
-        this.saveLastActiveIndex(articleKey, state.activeIndex);
-      }
-      if (newSession) this.repo.pruneArticleKeyCaches(articleKey);
+    const id = state.articleKey;
+    if (!id) return;
+    const fresh =
+      !previous || previous.articleKey !== id || !this.repo.readNavigation(id);
+    let record = this.repo.readNavigation(id) ?? { id };
+    let changed = false;
+    if (fresh || !sameField(previous, state, 'articleList')) {
+      record = {
+        ...record,
+        listVersion: this.repo.saveList('navigation', id, state.articleList),
+      };
+      changed = true;
     }
+    if (
+      fresh ||
+      (
+        [
+          'isSeriesMode',
+          'isScrapMode',
+          'seriesChannels',
+          'subscriptionFailures',
+          'searchQuery',
+        ] as const
+      ).some((field) => !sameField(previous, state, field))
+    ) {
+      record = {
+        ...record,
+        mode: storedMode(
+          state.isSeriesMode,
+          state.isScrapMode,
+          state.seriesChannels,
+        ),
+        channels: [...state.seriesChannels],
+        failures: state.subscriptionFailures.map((item) => ({ ...item })),
+        query: cleanQuery(state.searchQuery),
+      };
+      changed = true;
+    }
+    if (changed)
+      this.repo.saveNavigation(id, { ...record, lastUsedAt: Date.now() });
+    if (fresh || !sameField(previous, state, 'activeIndex'))
+      this.saveLastActiveIndex(id, state.activeIndex);
+    if (fresh) this.repo.pruneArticleKeyCaches(id);
   }
-
-  /**
-   * Save last active index (called more frequently than full save).
-   */
-  saveLastActiveIndex(articleKey: string, activeIndex: number): void {
-    if (!articleKey) return;
-    this.repo.setItem(
-      this.repo.scopedKey(articleKey, 'lastActiveIndex'),
-      activeIndex.toString(),
-    );
+  saveLastActiveIndex(id: string, index: number): void {
+    if (id) this.repo.saveNavigationPosition(id, index);
   }
-
-  restoreReadingSession(session: ReadingSession, articleKey: string): void {
-    const articleList = [...session.articleList];
-    let index = articleList.indexOf(session.path);
+  restoreReadingSession(session: ReadingSession, id: string): void {
+    const paths = [...session.articleList];
+    let index = paths.indexOf(session.path);
     if (index === -1) {
-      articleList.unshift(session.path);
+      paths.unshift(session.path);
       index = 0;
     }
-    this.repo.setJSON(
-      this.repo.scopedKey(articleKey, 'articleList'),
-      articleList,
-    );
-    this.repo.setItem(
-      this.repo.scopedKey(articleKey, 'seriesMode'),
-      String(session.isSeriesMode),
-    );
-    this.repo.setItem(
-      this.repo.scopedKey(articleKey, 'scrapMode'),
-      String(session.isScrapMode),
-    );
-    this.repo.setJSON(
-      this.repo.scopedKey(articleKey, 'seriesChannels'),
-      session.seriesChannels,
-    );
-    this.repo.setItem(
-      this.repo.scopedKey(articleKey, 'searchQuery'),
-      appendSearchParam(session.searchQuery, 'articleKey', articleKey),
-    );
-    this.repo.setJSON(
-      this.repo.scopedKey(articleKey, 'subscriptionFailures'),
-      [],
-    );
-    this.saveLastActiveIndex(articleKey, index);
-    this.repo.pruneArticleKeyCaches(articleKey);
-  }
-
-  /**
-   * Copy series storage from source articleKey to target articleKey.
-   */
-  copySeriesStorage(
-    sourceArticleKey: string,
-    targetArticleKey: string,
-    articleList: string[],
-    activeIndex: number,
-    searchQuery: string,
-  ): void {
-    // Copy article filter config if exists
-    const filterConfig = this.repo.getItem(
-      this.repo.scopedKey(sourceArticleKey, 'articleFilterConfig'),
-    );
-
-    if (filterConfig !== null) {
-      this.repo.setItem(
-        this.repo.scopedKey(targetArticleKey, 'articleFilterConfig'),
-        filterConfig,
-      );
-    }
-
-    this.repo.setItem(
-      this.repo.scopedKey(targetArticleKey, 'seriesMode'),
-      'true',
-    );
-    this.repo.setItem(
-      this.repo.scopedKey(targetArticleKey, 'scrapMode'),
-      'false',
-    );
-
-    // Normalize article URLs to pathnames
-    const normalizedList = articleList.map((href) => {
-      const url = new URL(href, window.location.origin);
-      return url.pathname;
+    const listVersion = this.repo.saveList('navigation', id, paths);
+    this.repo.saveNavigation(id, {
+      id,
+      mode: storedMode(
+        session.isSeriesMode,
+        session.isScrapMode,
+        session.seriesChannels,
+      ),
+      channels: [...session.seriesChannels],
+      query: cleanQuery(session.searchQuery),
+      failures: [],
+      listVersion,
+      lastUsedAt: Date.now(),
     });
-
-    const normalizedSearch = appendSearchParam(
-      searchQuery,
-      'articleKey',
-      targetArticleKey,
-    );
-
-    this.repo.setJSON(
-      this.repo.scopedKey(targetArticleKey, 'articleList'),
-      normalizedList,
-    );
-    this.repo.setItem(
-      this.repo.scopedKey(targetArticleKey, 'searchQuery'),
-      normalizedSearch,
-    );
-    this.repo.setItem(
-      this.repo.scopedKey(targetArticleKey, 'lastActiveIndex'),
-      activeIndex.toString(),
-    );
-    this.repo.pruneArticleKeyCaches(targetArticleKey);
+    this.saveLastActiveIndex(id, index);
+    this.repo.pruneArticleKeyCaches(id);
+  }
+  copySeriesStorage(
+    _sourceId: string,
+    id: string,
+    articles: string[],
+    activeIndex: number,
+    query: string,
+  ): void {
+    const paths = normalizeArticles(articles, window.location.origin);
+    const listVersion = this.repo.saveList('navigation', id, paths);
+    this.repo.saveNavigation(id, {
+      id,
+      mode: 'series',
+      channels: [],
+      query: cleanQuery(query),
+      failures: [],
+      listVersion,
+      lastUsedAt: Date.now(),
+    });
+    this.saveLastActiveIndex(id, activeIndex);
+    this.repo.pruneArticleKeyCaches(id);
   }
 }

@@ -8,7 +8,7 @@ export function normalizeSessionMetadata(
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const item = value as Record<string, unknown>;
   const path = normalizeArticles([item.path], origin)[0];
-  const id = typeof item.id === 'string' ? item.id.slice(0, 300) : '';
+  const id = typeof item.id === 'string' ? item.id.slice(0, 8000) : '';
   const updatedAt =
     typeof item.updatedAt === 'number' &&
     Number.isFinite(item.updatedAt) &&

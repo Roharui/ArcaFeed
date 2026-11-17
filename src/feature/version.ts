@@ -16,9 +16,13 @@ async function addVersionInfo(p: VaultAdapter): Promise<void> {
     process.env.DEVICE === 'mobile' &&
     process.env.VERSION_RELOAD !== 'false'
   ) {
-    if (getStorage().getItem('arca_version_info') !== versionInfo)
+    if (getStorage().get('settings', 'versionInfo')?.value !== versionInfo)
       await navigate(p, () => window.location.reload(), {
-        prepare: () => getStorage().setItem('arca_version_info', versionInfo),
+        prepare: () =>
+          getStorage().set('settings', 'versionInfo', {
+            id: 'versionInfo',
+            value: versionInfo,
+          }),
       });
   }
 

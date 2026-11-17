@@ -1,4 +1,4 @@
-/** Temporary legacy reader. Remove with ReadingHistory.migrateLegacyContexts after migration support ends. */
+/** Legacy embedded-list reader used only by record-migration.ts during database upgrade. */
 import { normalizeSessionMetadata } from './reading-session-schema';
 import { normalizeArticles } from './config-schema';
 import { articleWindow } from './article-window';
