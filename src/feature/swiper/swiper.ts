@@ -56,7 +56,9 @@ const SLIDE_NEXT_EVENT: Record<string, AppEvent> = {
 function observeSwiperWidth(swiper: Swiper): void {
   if (typeof ResizeObserver !== 'function') return;
 
-  let width = swiper.el.clientWidth;
+  // Swiper already measured the content width. Reading clientWidth here
+  // can force another layout after the constructor writes slide styles.
+  let width = swiper.width;
   let frame: number | null = null;
   const observer = new ResizeObserver((entries) => {
     const entry = entries.find(({ target }) => target === swiper.el);

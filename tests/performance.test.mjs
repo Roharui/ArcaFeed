@@ -732,13 +732,14 @@ test('Swiper ignores article height changes and batches width changes until the 
   const handlers = new Map();
   const frames = new Map();
   let frameId = 0;
-  const element = { clientWidth: 700 };
+  const element = { clientWidth: 720 };
   class FakeSwiper {
     constructor(_selector, options) {
       const { on, ...settings } = options;
       Object.assign(this, settings);
       this.events = on;
       this.el = element;
+      this.width = 700;
     }
     on(name, callback) {
       handlers.set(name, callback);

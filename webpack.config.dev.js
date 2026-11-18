@@ -66,6 +66,7 @@ export default function (env = {}, _args) {
 
     watch: env.WATCH === 'true',
     devtool: env.LIVE ? false : 'inline-source-map',
+    ...(env.LIVE ? { optimization: { minimize: true } } : {}),
 
     output: {
       path: path.resolve(__dirname, 'dist'),
