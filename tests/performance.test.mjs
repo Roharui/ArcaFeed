@@ -716,14 +716,25 @@ test('Swiper is reused and background list changes unlock navigation', () => {
 test('Swiper keeps a single transform write per drag update and releases compositing at rest', () => {
   const handlers = new Map();
   const frames = new Map();
+  let afterPaint;
   let frameId = 0;
-  const { installSwipeCompositing } = sourceLoader({
+  const { installSwipeCompositing, updateAfterSwipe } = sourceLoader({
     globals: {
       requestAnimationFrame: (callback) => {
         frames.set(++frameId, callback);
         return frameId;
       },
       cancelAnimationFrame: (id) => frames.delete(id),
+    },
+    mocks: {
+      '@/utils/after-paint': {
+        afterPaint(callback) {
+          afterPaint = callback;
+          return () => {
+            afterPaint = undefined;
+          };
+        },
+      },
     },
   })('src/feature/swiper/motion.ts');
   const swiper = {
@@ -748,8 +759,14 @@ test('Swiper keeps a single transform write per drag update and releases composi
     }
   };
   installSwipeCompositing(swiper);
+  let uiUpdates = 0;
+  const update = () => uiUpdates++;
+  updateAfterSwipe(swiper, update);
+  assert.equal(uiUpdates, 1);
   assert.equal(move(700, -20), 'translate(700px, -20px)');
   emit('sliderFirstMove');
+  updateAfterSwipe(swiper, update);
+  updateAfterSwipe(swiper, update);
   assert.equal(classList.has('arcafeed-swiper-moving'), true);
   assert.equal(move(650.5), 'translate3d(650.5px, 0px, 0px)');
   emit('touchEnd');
@@ -757,16 +774,22 @@ test('Swiper keeps a single transform write per drag update and releases composi
   assert.equal(move(700), 'translate3d(700px, 0px, 0px)');
   swiper.animating = true;
   flushFrames();
+  assert.equal(afterPaint, undefined);
+  assert.equal(uiUpdates, 1);
   assert.equal(classList.has('arcafeed-swiper-moving'), true);
   swiper.animating = false;
   emit('transitionEnd');
   assert.equal(classList.size, 0);
   assert.equal(style.transform, 'translate(700px, 0px)');
+  assert.equal(uiUpdates, 1);
 
   emit('sliderFirstMove');
+  assert.equal(afterPaint, undefined);
   emit('touchEnd');
   flushFrames();
   assert.equal(classList.size, 0);
+  afterPaint();
+  assert.equal(uiUpdates, 2);
 
   emit('sliderFirstMove');
   emit('touchEnd');

@@ -1,4 +1,17 @@
 import type { Swiper } from 'swiper/types';
+import { afterPaint } from '@/utils/after-paint';
+
+const uiSchedulers = new WeakMap<Swiper, (update: () => void) => void>();
+
+/** Defer cosmetic work while Swiper is following the pointer or settling. */
+export function updateAfterSwipe(
+  swiper: Swiper | null,
+  update: () => void,
+): void {
+  const schedule = swiper && uiSchedulers.get(swiper);
+  if (schedule) schedule(update);
+  else update();
+}
 
 /** Use Swiper's native transform while moving and release the layer at rest. */
 export function installSwipeCompositing(swiper: Swiper): void {
@@ -6,6 +19,13 @@ export function installSwipeCompositing(swiper: Swiper): void {
   let dragging = false;
   let moving = false;
   let releaseFrame: number | undefined;
+  let cancelUiFlush: (() => void) | undefined;
+  const pendingUpdates = new Set<() => void>();
+
+  uiSchedulers.set(swiper, (update) => {
+    if (moving || pendingUpdates.has(update)) pendingUpdates.add(update);
+    else update();
+  });
 
   function useRestingTransform(): void {
     // Keep Swiper's computed coordinates, including RTL and rounding.
@@ -19,6 +39,8 @@ export function installSwipeCompositing(swiper: Swiper): void {
   function startMoving(): void {
     if (moving) return;
     moving = true;
+    cancelUiFlush?.();
+    cancelUiFlush = undefined;
     wrapperEl.classList.add('arcafeed-swiper-moving');
   }
 
@@ -27,6 +49,20 @@ export function installSwipeCompositing(swiper: Swiper): void {
     moving = false;
     wrapperEl.classList.remove('arcafeed-swiper-moving');
     useRestingTransform();
+    if (pendingUpdates.size > 0) {
+      cancelUiFlush = afterPaint(() => {
+        cancelUiFlush = undefined;
+        for (const update of pendingUpdates) {
+          if (moving) break;
+          pendingUpdates.delete(update);
+          try {
+            update();
+          } catch (error) {
+            console.error('[ArcaFeed] Deferred swipe UI update failed:', error);
+          }
+        }
+      });
+    }
   }
 
   function updateTouchAction(): void {
@@ -67,6 +103,9 @@ export function installSwipeCompositing(swiper: Swiper): void {
   swiper.on('transitionEnd', stopMoving);
   swiper.on('destroy', () => {
     if (releaseFrame !== undefined) cancelAnimationFrame(releaseFrame);
+    cancelUiFlush?.();
+    pendingUpdates.clear();
+    uiSchedulers.delete(swiper);
     el.classList.remove('arcafeed-swipe-enabled');
     wrapperEl.classList.remove('arcafeed-swiper-moving');
   });

@@ -14,6 +14,7 @@ import type { VaultAdapter } from '@/vault';
 import { readingContextLabel } from '@/vault/reading-context';
 import { articleWindow } from '@/vault/article-window';
 import { showPendingSkippedToast } from './swiper/skip-toast';
+import { updateAfterSwipe } from './swiper/motion';
 import { OperationError, reportFailure } from '@/utils/operation-error';
 import { showToast } from '@/utils/toast';
 import { afterPaint } from '@/utils/after-paint';
@@ -265,10 +266,11 @@ export function initReading(p: VaultAdapter): void {
   if (initializedVaults.has(p)) return;
   initializedVaults.add(p);
   let indicatorsReady = false;
+  const refreshIndicators = () => updateVisitedIndicators(p);
   afterPaint(() => {
     indicatorsReady = true;
     showPendingSkippedToast(currentPath(p));
-    updateVisitedIndicators(p);
+    updateAfterSwipe(p.swiper, refreshIndicators);
   });
 
   const onStorage = (event: { key: string | null }) => {
@@ -332,7 +334,7 @@ export function initReading(p: VaultAdapter): void {
       previousContext = context;
       previousCanSkip = p.canSkipVisitedArticles;
       previousIndicators = state.uiSettings.showVisitedIndicators;
-      if (indicatorsReady) updateVisitedIndicators(p);
+      if (indicatorsReady) updateAfterSwipe(p.swiper, refreshIndicators);
       else updateSkipButton(p);
     }
     const hasNext = p.isNextPageActive();

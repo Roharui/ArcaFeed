@@ -4,6 +4,7 @@ import { initNavigationList } from '@/feature/modal/navigationTab';
 import { StepRunner } from '@/core/step-runner';
 import { initArticlePrefetch } from '@/feature/article/prefetch';
 import { afterPaint } from '@/utils/after-paint';
+import { updateAfterSwipe } from '@/feature/swiper/motion';
 
 import {
   initLink,
@@ -50,7 +51,7 @@ class EventManager implements Record<AppEvent, () => Step[]> {
       initArticlePrefetch,
       (p: VaultAdapter) => {
         afterPaint(() => {
-          initNavigationList(p);
+          updateAfterSwipe(p.swiper, () => initNavigationList(p));
         });
       },
     ];

@@ -23,6 +23,15 @@
   will-change: transform;
 }
 
+.arcafeed-deferred-section,
+:where(.swiper .board-article .article-body iframe) {
+  content-visibility: auto;
+}
+
+.arcafeed-deferred-section {
+  contain-intrinsic-block-size: auto var(--arcafeed-section-height);
+}
+
 .swiper-slide {
   position: relative;
   flex-shrink: 0;

@@ -8,6 +8,7 @@ import {
   subscribeArticleLoading,
 } from '@/feature/article/loading';
 import { navigateToArticle } from '@/feature/swiper/page';
+import { updateAfterSwipe } from '@/feature/swiper/motion';
 import {
   readingButton,
   readingChannelId,
@@ -288,7 +289,12 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
       body.find('.arcafeed-reading-close')[0],
     );
   };
+  let disposed = false;
   const update = () => {
+    if (disposed) return;
+    trigger
+      .toggleClass('is-loading', loading)
+      .attr('aria-busy', String(loading));
     const current = p.isCurrentMode('ARTICLE')
       ? `/b/${p.href.channelId}/${p.href.articleId}`
       : '';
@@ -327,6 +333,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
       'aria-label',
       `${label}, ${failures ? `실패 채널 ${failures}개, ` : ''}${loading ? '게시글 목록 불러오는 중, ' : ''}불러온 목록 기준, 목록 열기`,
     );
+    schedulePosition();
   };
   control.append(trigger).appendTo('body');
   let previous = p.getState();
@@ -340,10 +347,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
       state.isSeriesMode !== previous.isSeriesMode ||
       state.isScrapMode !== previous.isScrapMode;
     previous = state;
-    if (changed) {
-      update();
-      schedulePosition();
-    }
+    if (changed) updateAfterSwipe(p.swiper, update);
     if (state.uiSettings !== previousSettings) {
       previousSettings = state.uiSettings;
       schedulePosition();
@@ -353,7 +357,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
   let touchTimer: ReturnType<typeof setTimeout> | undefined;
   let frame: number | undefined;
   const position = () => {
-    frame = undefined;
+    if (disposed) return;
     const nativeButton = document.querySelector<HTMLElement>(
       '.nav-control a, .nav-control button',
     );
@@ -391,7 +395,12 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     element.style.bottom = `${window.innerHeight - top - rect.height}px`;
   };
   const schedulePosition = () => {
-    if (frame === undefined) frame = requestAnimationFrame(position);
+    if (frame === undefined) {
+      frame = requestAnimationFrame(() => {
+        frame = undefined;
+        updateAfterSwipe(p.swiper, position);
+      });
+    }
   };
   const hide = () => {
     clearTimeout(touchTimer);
@@ -446,13 +455,10 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
   observeControls();
   const unsubscribeLoading = subscribeArticleLoading((active) => {
     loading = active;
-    trigger
-      .toggleClass('is-loading', loading)
-      .attr('aria-busy', String(loading));
-    update();
-    schedulePosition();
+    updateAfterSwipe(p.swiper, update);
   });
   return () => {
+    disposed = true;
     close();
     clearTimeout(touchTimer);
     if (frame !== undefined) cancelAnimationFrame(frame);

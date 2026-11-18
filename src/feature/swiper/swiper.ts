@@ -12,6 +12,7 @@ import type { VaultAdapter } from '@/vault';
 import { installReducedMotion, installSwipeCompositing } from './motion';
 import { installSwiperVideoPause } from './video';
 import { installSideClick } from './side-click';
+import { deferOffscreenArticleSections } from './rendering';
 
 const swiperOptions: SwiperOptions = {
   speed: 300,
@@ -75,6 +76,8 @@ function observeSwiperWidth(swiper: Swiper): void {
 
 function initSwiper(p: VaultAdapter): void {
   if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
+  const content = $('.content-wrapper')[0];
+  if (!content) return;
 
   const swiper = `<div class="swiper">
   <div class="swiper-wrapper">
@@ -87,8 +90,15 @@ function initSwiper(p: VaultAdapter): void {
   // Insert swiper inside .root-container before the content area,
   // so footer/#bottom stay in flow. Then move content into the active slide.
   const $swiper = $(swiper);
-  $('.content-wrapper').before($swiper);
-  $('.content-wrapper').appendTo('.slide-active');
+  content.before($swiper[0]!);
+  const slide = $swiper.find<
+    HTMLElement & {
+      moveBefore?(node: Node, child: Node | null): void;
+    }
+  >('.slide-active')[0]!;
+  // An atomic move keeps already loaded iframes attached to their documents.
+  if (typeof slide.moveBefore === 'function') slide.moveBefore(content, null);
+  else slide.append(content);
 
   initSwiperPage(p);
 }
@@ -120,6 +130,7 @@ function initSwiperPage(p: VaultAdapter): void {
   });
   installReducedMotion(p.swiper);
   observeSwiperWidth(p.swiper);
+  if (p.isCurrentMode('ARTICLE')) deferOffscreenArticleSections(p.swiper);
   installSwiperVideoPause(p.swiper);
   installSideClick(p, p.swiper);
 
