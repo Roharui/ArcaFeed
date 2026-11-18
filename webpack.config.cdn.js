@@ -13,7 +13,7 @@ export default function (env = {}) {
   baseURL.pathname = `${baseURL.pathname.replace(/\/+$/, '')}/`;
   const downloadURL = new URL('ArcaFeed.dev.user.js', baseURL).href;
   const config = createDevConfig({ ...env, VERSION_RELOAD: 'false' });
-  const headers = getDevHeaders(env.DEVICE || 'desktop', String(Date.now()));
+  const headers = getDevHeaders(String(Date.now()));
 
   // Use release-style packaging while preserving development diagnostics.
   config.mode = 'production';

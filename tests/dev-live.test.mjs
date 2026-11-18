@@ -83,13 +83,11 @@ test('live loader retries an offline server and can recover from a runtime error
   assert.equal(loader.reloads, 1);
 });
 
-test('mobile loader grants its PC address and includes the mobile debugger', () => {
-  const source = createDevLoader('http://100.64.1.2:3000', 'mobile');
+test('loader grants its PC address and starts with the document', () => {
+  const source = createDevLoader('http://100.64.1.2:3000');
   assert.match(source, /@connect 100\.64\.1\.2/);
-  assert.match(
-    source,
-    /@require https:\/\/cdn\.jsdelivr\.net\/npm\/eruda@3\.4\.3/,
-  );
+  assert.match(source, /@run-at document-start/);
+  assert.doesNotMatch(source, /@require .*eruda/);
   assert.ok(source.includes('http://100.64.1.2:3000'));
 });
 
@@ -112,11 +110,7 @@ for (const transport of ['auto', 'fetch']) {
         ? { GM_xmlhttpRequest: () => assert.fail('GM must not be used') }
         : {}),
     });
-    const source = createDevLoader(
-      'https://pc.example.ts.net/n/',
-      'mobile',
-      transport,
-    );
+    const source = createDevLoader('https://pc.example.ts.net/n/', transport);
     if (transport === 'fetch') {
       assert.match(source, /@grant none/);
       assert.doesNotMatch(source, /@connect /);
@@ -159,10 +153,7 @@ test('fetch loader rejects an HTTP endpoint before making mixed-content requests
     setTimeout: () => assert.fail('Invalid configuration must not retry'),
     console: { error: (error) => errors.push(error) },
   });
-  vm.runInContext(
-    createDevLoader('http://100.64.1.2:3000', 'mobile', 'fetch'),
-    context,
-  );
+  vm.runInContext(createDevLoader('http://100.64.1.2:3000', 'fetch'), context);
   assert.match(errors[0], /HTTPS/);
 });
 
@@ -261,6 +252,11 @@ test('live server serves uncached builds, rebuilds on save, and withholds failed
   assert.equal(deniedPreflight.status, 403);
   const first = await waitFor((build) => build.hash);
   assert.match(first.code, /liveBuild = 1/);
+  const compressed = await fetch(`${live.baseURL}/build`, {
+    headers: { 'Accept-Encoding': 'gzip' },
+  });
+  assert.equal(compressed.headers.get('content-encoding'), 'gzip');
+  assert.deepEqual(await compressed.json(), first);
   assert.deepEqual(await getBuild(first.hash), { hash: first.hash });
   await fs.writeFile(entry, 'globalThis.liveBuild = 2;');
   const second = await waitFor(

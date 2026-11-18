@@ -23,7 +23,7 @@ function getBuildDate() {
   return new Date().toISOString().replace('T', '_').replace(/[:.]/g, '-');
 }
 
-export function getDevHeaders(device, version) {
+export function getDevHeaders(version) {
   return {
     name: 'ArcaFeed-dev',
     namespace: 'https://github.com/Roharui/ArcaFeed',
@@ -33,14 +33,10 @@ export function getDevHeaders(device, version) {
     match: 'https://arca.live/*',
     icon: 'https://www.google.com/s2/favicons?sz=64&domain=arca.live',
     require: [
-      'https://code.jquery.com/jquery-3.7.1.min.js',
       'https://cdn.jsdelivr.net/npm/swiper@12.2.0/swiper-bundle.min.js',
       'https://cdn.jsdelivr.net/npm/toastify-js@1.12.0',
-      ...(device === 'mobile'
-        ? ['https://cdn.jsdelivr.net/npm/eruda@3.4.3']
-        : []),
     ],
-    'run-at': 'document-end',
+    'run-at': 'document-start',
     grant: 'none',
   };
 }
@@ -57,7 +53,7 @@ export default function (env = {}, _args) {
     'process.env.VERSION_RELOAD': JSON.stringify(env.VERSION_RELOAD || 'true'),
   });
   const webpackUserscriptPlugin = new UserscriptPlugin({
-    headers: getDevHeaders(device, buildDate),
+    headers: getDevHeaders(buildDate),
   });
 
   const config = {
@@ -69,7 +65,7 @@ export default function (env = {}, _args) {
     entry: './src/index.ts',
 
     watch: env.WATCH === 'true',
-    devtool: 'inline-source-map',
+    devtool: env.LIVE ? false : 'inline-source-map',
 
     output: {
       path: path.resolve(__dirname, 'dist'),
@@ -81,6 +77,7 @@ export default function (env = {}, _args) {
       alias: {
         '@': path.resolve(__dirname, 'src'),
         '@css': path.resolve(__dirname, 'css'),
+        jquery$: 'jquery/dist/jquery.min.js',
       },
     },
 
@@ -106,10 +103,7 @@ export default function (env = {}, _args) {
     },
 
     externals: {
-      $: 'jQuery',
-      jquery: 'jQuery',
       swiper: 'Swiper',
-      eruda: 'eruda',
       'toastify-js': 'Toastify',
     },
 

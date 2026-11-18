@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { gzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import webpack from 'webpack';
 import createDevConfig from '../webpack.config.dev.js';
@@ -11,9 +12,14 @@ export async function startDevServer({
   host = '127.0.0.1',
   publicURL,
   device = 'desktop',
-  config = createDevConfig({ DEVICE: device }),
+  config = createDevConfig({
+    DEVICE: device,
+    LIVE: true,
+    VERSION_RELOAD: 'false',
+  }),
 } = {}) {
   let build = null;
+  let compressedBuild;
   const externalURL = publicURL ? normalizeDevURL(publicURL) : null;
   const configuredPath = externalURL
     ? new URL(externalURL).pathname.replace(/\/+$/, '')
@@ -66,19 +72,24 @@ export async function startDevServer({
       response.end(
         createDevLoader(
           loaderURL,
-          device,
           route === '/ArcaFeed.fetch.user.js' ? 'fetch' : 'auto',
         ),
       );
     } else if (route === '/build') {
       response.setHeader('Content-Type', 'application/json; charset=utf-8');
-      response.end(
-        JSON.stringify(
-          !build || url.searchParams.get('hash') === build.hash
-            ? { hash: build?.hash ?? null }
-            : build,
-        ),
-      );
+      response.setHeader('Vary', 'Origin, Accept-Encoding');
+      if (!build || url.searchParams.get('hash') === build.hash) {
+        response.end(JSON.stringify({ hash: build?.hash ?? null }));
+      } else if (
+        request.headers['accept-encoding']
+          ?.split(',')
+          .some((encoding) => encoding.trim() === 'gzip')
+      ) {
+        response.setHeader('Content-Encoding', 'gzip');
+        response.end(compressedBuild);
+      } else {
+        response.end(JSON.stringify(build));
+      }
     } else {
       response.writeHead(404);
       response.end('Not found');
@@ -113,6 +124,7 @@ export async function startDevServer({
         'utf8',
       );
       build = { hash: stats.hash, code };
+      compressedBuild = gzipSync(JSON.stringify(build));
       console.log(`[ArcaFeed live] 빌드 완료 (${stats.hash})`);
     });
   } catch (error) {

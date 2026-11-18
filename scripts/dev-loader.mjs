@@ -44,7 +44,7 @@ function liveLoader(baseURL, transport) {
         if (build.hash && !currentHash) {
           currentHash = build.hash;
           try {
-            // Direct eval preserves access to jQuery, Swiper and Toastify from @require.
+            // Direct eval preserves access to Swiper and Toastify from @require.
             eval(build.code);
             console.info('[ArcaFeed live] 최신 개발 빌드 로드:', currentHash);
           } catch (error) {
@@ -84,14 +84,10 @@ export function normalizeDevURL(baseURL) {
   return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
 }
 
-export function createDevLoader(
-  baseURL,
-  device = 'desktop',
-  transport = 'auto',
-) {
+export function createDevLoader(baseURL, transport = 'auto') {
   if (baseURL) baseURL = normalizeDevURL(baseURL);
   const headers = {
-    ...getDevHeaders(device, '1.0.0'),
+    ...getDevHeaders('1.0.0'),
     name: transport === 'fetch' ? 'ArcaFeed-live-fetch' : 'ArcaFeed-live',
     description: 'Load local ArcaFeed builds and reload on changes',
     grant: transport === 'fetch' ? 'none' : 'GM_xmlhttpRequest',

@@ -42,7 +42,7 @@ test('CDN mobile initialization displays the version without reloading', () => {
   assert.equal(reloads, 0);
   assert.equal(appended.length, 1);
   assert.match(appended[0].text, /^ArcaFeed Version:/);
-  assert.equal(config.externals.jquery, 'jQuery');
+  assert.equal(config.externals.jquery, undefined);
   assert.equal(config.externals.swiper, 'Swiper');
   assert.equal(config.mode, 'production');
   assert.equal(config.devtool, false);

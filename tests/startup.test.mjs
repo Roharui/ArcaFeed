@@ -152,6 +152,7 @@ test('layout is applied before storage completes while application initializatio
     globals: {
       window: { location: { href: 'https://arca.live/b/test/100' } },
       process: { env: { NODE_ENV: 'production' } },
+      document: { head: {}, readyState: 'interactive' },
     },
     mocks: {
       get '@css/arcalive.css'() {
@@ -176,8 +177,57 @@ test('layout is applied before storage completes while application initializatio
     },
   })('src/index.ts');
   await new Promise(setImmediate);
-  assert.deepEqual(calls, ['layout', 'storage']);
+  assert.deepEqual(calls, ['storage', 'layout']);
   storage.resolve();
   await new Promise(setImmediate);
-  assert.deepEqual(calls, ['layout', 'storage', 'app', 'init']);
+  assert.deepEqual(calls, ['storage', 'layout', 'app', 'init']);
+});
+
+test('storage starts during parsing and DOM initialization waits for the parsed document', async () => {
+  const calls = [];
+  let domReady;
+  let headChanged;
+  const document = { head: null, readyState: 'loading' };
+  sourceLoader({
+    globals: {
+      window: {
+        location: { href: 'https://arca.live/b/test/100' },
+        addEventListener(type, handler, options) {
+          assert.equal(type, 'DOMContentLoaded');
+          assert.equal(options.capture, true);
+          assert.equal(options.once, true);
+          domReady = handler;
+        },
+      },
+      process: { env: { NODE_ENV: 'production' } },
+      document,
+      MutationObserver: class {
+        constructor(callback) {
+          headChanged = callback;
+        }
+
+        observe() {}
+        disconnect() {}
+      },
+    },
+    mocks: {
+      '@css/arcalive.css': {},
+      '@/vault/indexed-storage': {
+        initializeStorage: () => calls.push('storage'),
+      },
+      '@/core': {
+        ArcaFeed: class {},
+        eventBus: { emit: () => calls.push('init') },
+      },
+      '@/feature/swiper/skip-toast': { captureSkippedToast() {} },
+    },
+  })('src/index.ts');
+  assert.deepEqual(calls, []);
+  document.head = {};
+  headChanged();
+  await new Promise(setImmediate);
+  assert.deepEqual(calls, ['storage']);
+  domReady();
+  await new Promise(setImmediate);
+  assert.deepEqual(calls, ['storage', 'init']);
 });
