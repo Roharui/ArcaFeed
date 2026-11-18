@@ -5,6 +5,10 @@
   padding: 0;
 }
 
+.swiper.arcafeed-swipe-enabled {
+  touch-action: pan-y pinch-zoom;
+}
+
 .swiper-wrapper {
   position: relative;
   display: flex;
@@ -13,6 +17,10 @@
   box-sizing: content-box;
   align-items: flex-start;
   transition-property: transform;
+}
+
+.swiper-wrapper.arcafeed-swiper-moving {
+  will-change: transform;
 }
 
 .swiper-slide {

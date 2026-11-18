@@ -703,18 +703,6 @@ test('Swiper is reused and background list changes unlock navigation', () => {
   initSwiperPage(p);
   assert.equal(p.swiper.speed, 300);
   assert.equal(p.swiper.maxBackfaceHiddenSlides, 0);
-  const wrapperEl = { style: {} };
-  // Keep initial centering, drag, RTL and vertical coordinates unchanged.
-  for (const [x, y] of [
-    [-700, 0],
-    [-650.5, 0],
-    [700, 0],
-    [0, -700],
-  ]) {
-    wrapperEl.style.transform = `translate3d(${x}px, ${y}px, 0px)`;
-    p.swiper.events.setTranslate({ wrapperEl });
-    assert.equal(wrapperEl.style.transform, `translate(${x}px, ${y}px)`);
-  }
   assert.equal(p.swiper.allowSlideNext, false);
   p.articleList = [...p.articleList, '/b/test/99'];
   subscriber({ href: p.href, articleFilterConfig: p.articleFilterConfig });
@@ -723,6 +711,68 @@ test('Swiper is reused and background list changes unlock navigation', () => {
   initSwiperPage(p);
   assert.equal(p.swiper.enabled, false);
   assert.equal(constructions, 1);
+});
+
+test('Swiper keeps a single transform write per drag update and releases compositing at rest', () => {
+  const handlers = new Map();
+  const frames = new Map();
+  let frameId = 0;
+  const { installSwipeCompositing } = sourceLoader({
+    globals: {
+      requestAnimationFrame: (callback) => {
+        frames.set(++frameId, callback);
+        return frameId;
+      },
+      cancelAnimationFrame: (id) => frames.delete(id),
+    },
+  })('src/feature/swiper/motion.ts');
+  const swiper = {
+    el: { classList: { toggle() {}, remove() {} } },
+    wrapperEl: { style: {}, classList: new Set() },
+    enabled: true,
+    animating: false,
+    on: (name, callback) => handlers.set(name, callback),
+  };
+  const { classList, style } = swiper.wrapperEl;
+  classList.remove = classList.delete;
+  const emit = (name, ...args) => handlers.get(name)(swiper, ...args);
+  const move = (x, y = 0) => {
+    style.transform = `translate3d(${x}px, ${y}px, 0px)`;
+    emit('setTranslate');
+    return style.transform;
+  };
+  const flushFrames = () => {
+    for (const [id, callback] of frames) {
+      frames.delete(id);
+      callback();
+    }
+  };
+  installSwipeCompositing(swiper);
+  assert.equal(move(700, -20), 'translate(700px, -20px)');
+  emit('sliderFirstMove');
+  assert.equal(classList.has('arcafeed-swiper-moving'), true);
+  assert.equal(move(650.5), 'translate3d(650.5px, 0px, 0px)');
+  emit('touchEnd');
+  emit('setTransition', 300);
+  assert.equal(move(700), 'translate3d(700px, 0px, 0px)');
+  swiper.animating = true;
+  flushFrames();
+  assert.equal(classList.has('arcafeed-swiper-moving'), true);
+  swiper.animating = false;
+  emit('transitionEnd');
+  assert.equal(classList.size, 0);
+  assert.equal(style.transform, 'translate(700px, 0px)');
+
+  emit('sliderFirstMove');
+  emit('touchEnd');
+  flushFrames();
+  assert.equal(classList.size, 0);
+
+  emit('sliderFirstMove');
+  emit('touchEnd');
+  emit('destroy');
+  assert.equal(classList.size, 0);
+  assert.equal(frames.size, 0);
 });
 
 test('Swiper ignores article height changes and batches width changes until the next frame', () => {
