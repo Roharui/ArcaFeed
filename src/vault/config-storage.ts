@@ -7,14 +7,13 @@ import type { StorageRepository } from './repository';
 import { normalizeFilters, normalizeUISettings } from './config-schema';
 import { deferField, sameField } from './lazy-state';
 import { SETTINGS_GROUPS } from './config-storage-keys';
-
-const validChannel = (id: string): boolean => /^[a-zA-Z0-9]+$/.test(id);
+import { isChannelId } from './record-schema';
 
 export class ConfigStorage {
   constructor(private repo: StorageRepository) {}
 
   private channelIds(): string[] {
-    return this.repo.filterIds().filter(validChannel);
+    return this.repo.filterIds().filter(isChannelId);
   }
 
   filters(_articleKey: string): ArticleFilterConfigImpl {
@@ -41,10 +40,10 @@ export class ConfigStorage {
     };
     return new Proxy({} as ArticleFilterConfigImpl, {
       get: (_, id) =>
-        typeof id === 'string' && validChannel(id) ? getter(id)() : undefined,
+        typeof id === 'string' && isChannelId(id) ? getter(id)() : undefined,
       ownKeys: index,
       getOwnPropertyDescriptor: (_, id) =>
-        typeof id === 'string' && validChannel(id) && index().includes(id)
+        typeof id === 'string' && isChannelId(id) && index().includes(id)
           ? { configurable: true, enumerable: true, get: getter(id) }
           : undefined,
     });
@@ -54,9 +53,9 @@ export class ConfigStorage {
     next: ArticleFilterConfigImpl,
     previous?: ArticleFilterConfigImpl,
   ): void {
-    const ids = Object.keys(next).filter(validChannel);
+    const ids = Object.keys(next).filter(isChannelId);
     const previousIds = previous
-      ? Object.keys(previous).filter(validChannel)
+      ? Object.keys(previous).filter(isChannelId)
       : this.channelIds();
     const removed = previousIds.filter((id) => !ids.includes(id));
     for (const id of ids) {

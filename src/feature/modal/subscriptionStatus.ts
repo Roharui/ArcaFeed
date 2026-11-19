@@ -2,6 +2,7 @@ import $ from 'jquery';
 import { retrySubscriptionChannel } from '@/feature/article/subscription-feed';
 import { subscribeArticleLoading } from '@/feature/article/loading';
 import { reportFailure } from '@/utils/operation-error';
+import { activeSubscriptionFailures } from '@/vault/subscription-failures';
 import type { SubscriptionFailure } from '@/types/vault';
 import type { VaultAdapter } from '@/vault';
 import '@css/subscribe.css';
@@ -50,12 +51,7 @@ export function createSubscriptionStatus(p: VaultAdapter) {
   });
   let loading = false;
   const render = () => {
-    const failures =
-      p.isSeriesMode && !p.isScrapMode
-        ? p.subscriptionFailures.filter((failure) =>
-            p.seriesChannels.includes(failure.channelId),
-          )
-        : [];
+    const failures = activeSubscriptionFailures(p);
     element.empty().toggle(failures.length > 0);
     if (!failures.length) return;
     element.append(

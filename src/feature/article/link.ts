@@ -9,6 +9,7 @@ import { parseSearchQuery } from '@/feature/search';
 import { createArticleKey } from '@/utils/article-key';
 import { appendSearchParam } from '@/utils/url';
 import { captureArticleSession } from '@/vault/article-session';
+import { articlePath } from '@/vault/navigation-context';
 import {
   compactNavigationArticles,
   findArticleIndex,
@@ -76,7 +77,7 @@ async function activateArticleLink(
   p: VaultAdapter,
   articleId: string,
 ): Promise<void> {
-  const currentPath = `/b/${p.href.channelId}/${articleId}`;
+  const currentPath = articlePath(p.href.channelId, articleId);
   p.articleList = compactNavigationArticles(
     p.articleList,
     currentPath,

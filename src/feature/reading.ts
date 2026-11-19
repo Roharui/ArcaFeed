@@ -11,8 +11,10 @@ import {
 } from '@/vault/reading-history';
 import type { ReadingSession } from '@/vault/reading-history';
 import type { VaultAdapter } from '@/vault';
+import { articlePath } from '@/vault/navigation-context';
 import { readingContextLabel } from '@/vault/reading-context';
 import { articleWindow } from '@/vault/article-window';
+import { SESSION_ARTICLE_LIMIT } from '@/vault/storage-keys';
 import { showPendingSkippedToast } from './swiper/skip-toast';
 import { updateAfterSwipe } from './swiper/motion';
 import { OperationError, reportFailure } from '@/utils/operation-error';
@@ -31,7 +33,7 @@ const checkpointContexts = new WeakMap<
 >();
 
 function currentPath(p: VaultAdapter): string {
-  return `/b/${p.href.channelId}/${p.href.articleId}`;
+  return articlePath(p.href.channelId, p.href.articleId);
 }
 
 function channelName(p: VaultAdapter): string {
@@ -99,8 +101,7 @@ function contextId(p: VaultAdapter): string {
   );
 }
 
-function saveCheckpoint(p: VaultAdapter): void {
-  if (stoppedVaults.has(p)) return;
+function buildCheckpointMeta(p: VaultAdapter) {
   const path = currentPath(p);
   const params = new URLSearchParams(p.searchQuery);
   params.delete('articleKey');
@@ -113,7 +114,12 @@ function saveCheckpoint(p: VaultAdapter): void {
         ? `구독 피드 · ${p.seriesChannels.length}개 채널`
         : `시리즈 · ${channel}`
       : `${channel}${params.get('q') ? ` · ${params.get('q')}` : ''}${params.get('mode') === 'best' ? ' · 인기글' : ''}`;
-  const id = contextId(p);
+  return { id: contextId(p), path, query, label };
+}
+
+function saveCheckpoint(p: VaultAdapter): void {
+  if (stoppedVaults.has(p)) return;
+  const { id, path, query, label } = buildCheckpointMeta(p);
   const previous = checkpointContexts.get(p);
   if (
     previous?.source === p.articleList &&
@@ -127,12 +133,13 @@ function saveCheckpoint(p: VaultAdapter): void {
     p.reading.savePosition(id, path, window.scrollY, Date.now())
   )
     return;
+
   const session: ReadingSession = {
     id,
     label,
     path,
     searchQuery: query,
-    articleList: articleWindow(p.articleList, path, 2000),
+    articleList: articleWindow(p.articleList, path, SESSION_ARTICLE_LIMIT),
     isSeriesMode: p.isSeriesMode,
     isScrapMode: p.isScrapMode,
     seriesChannels: [...p.seriesChannels],
@@ -151,10 +158,11 @@ function saveCheckpoint(p: VaultAdapter): void {
     return;
   }
   if (p.reading.saveSession(session) === false) {
-    if (!fullPinnedWarnings.has(p))
+    if (!fullPinnedWarnings.has(p)) {
       showToast(
         '이어보기 20개가 모두 고정되어 새 탐색을 저장하지 못했습니다. 이어보기에서 고정을 해제하거나 항목을 정리해주세요.',
       );
+    }
     fullPinnedWarnings.add(p);
     return;
   }
@@ -262,17 +270,7 @@ function restoreScroll(p: VaultAdapter): void {
   }, 5000);
 }
 
-export function initReading(p: VaultAdapter): void {
-  if (initializedVaults.has(p)) return;
-  initializedVaults.add(p);
-  let indicatorsReady = false;
-  const refreshIndicators = () => updateVisitedIndicators(p);
-  afterPaint(() => {
-    indicatorsReady = true;
-    showPendingSkippedToast(currentPath(p));
-    updateAfterSwipe(p.swiper, refreshIndicators);
-  });
-
+function bindStorageSync(p: VaultAdapter): void {
   const onStorage = (event: { key: string | null }) => {
     if (event.key === null) p.reading.reload();
     else if (
@@ -313,12 +311,20 @@ export function initReading(p: VaultAdapter): void {
   }) as EventListener);
   p.reading.reload();
   window.addEventListener('load', () => p.reading.reload(), { once: true });
+}
+
+function bindReadingStateUpdates(
+  p: VaultAdapter,
+  isIndicatorsReady: () => boolean,
+  refreshIndicators: () => void,
+): void {
   let previousSkip = p.skipVisitedArticles;
   let previousCanSkip = p.canSkipVisitedArticles;
   let previousHasNext = p.isNextPageActive();
   let previousReadingRevision = p.getState().readingRevision;
   let previousIndicators = p.uiSettings.showVisitedIndicators;
   let previousContext = readingContextLabel(p);
+
   p.subscribe((state) => {
     const historyChanged = previousReadingRevision !== state.readingRevision;
     previousReadingRevision = state.readingRevision;
@@ -334,7 +340,7 @@ export function initReading(p: VaultAdapter): void {
       previousContext = context;
       previousCanSkip = p.canSkipVisitedArticles;
       previousIndicators = state.uiSettings.showVisitedIndicators;
-      if (indicatorsReady) updateAfterSwipe(p.swiper, refreshIndicators);
+      if (isIndicatorsReady()) updateAfterSwipe(p.swiper, refreshIndicators);
       else updateSkipButton(p);
     }
     const hasNext = p.isNextPageActive();
@@ -352,46 +358,48 @@ export function initReading(p: VaultAdapter): void {
       refreshUnvisitedNavigation(p);
     }
   });
-  if (p.skipVisitedArticles && !p.isNextPageActive())
-    refreshUnvisitedNavigation(p);
+}
 
-  if (!p.isCurrentMode('ARTICLE')) return;
+function mountSkipButton(p: VaultAdapter): void {
+  if (!p.canSkipVisitedArticles) return;
+  const skipButton = $('<button>', {
+    id: 'arcafeed-skip-visited',
+    type: 'button',
+    class: 'arcafeed-skip-setting swiper-no-swiping',
+    'aria-label': '본 글 건너뛰기',
+  });
+  skipButton.on('click', () => {
+    p.skipVisitedArticles = !p.skipVisitedArticles;
+    try {
+      p.flushSave();
+    } catch (error) {
+      reportFailure(error);
+    }
+  });
+  const heading = $(ARTICLE_TITLE_SELECTOR).first();
+  if (heading.length) {
+    heading
+      .addClass('arcafeed-article-heading-text')
+      .wrap('<div class="arcafeed-article-heading"></div>')
+      .parent()
+      .append(skipButton);
+  }
+}
 
+function installCheckpointScheduler(p: VaultAdapter): void {
   let checkpointTimer: ReturnType<typeof setTimeout> | undefined;
   let checkpointDeadline: ReturnType<typeof setTimeout> | undefined;
   let checkpointRemoved = false;
   let checkpointTracked = p.reading.hasSession(contextId(p));
 
-  if (p.canSkipVisitedArticles) {
-    const skipButton = $('<button>', {
-      id: 'arcafeed-skip-visited',
-      type: 'button',
-      class: 'arcafeed-skip-setting swiper-no-swiping',
-      'aria-label': '본 글 건너뛰기',
-    });
-    skipButton.on('click', () => {
-      p.skipVisitedArticles = !p.skipVisitedArticles;
-      try {
-        p.flushSave();
-      } catch (error) {
-        reportFailure(error);
-      }
-    });
-    const heading = $(ARTICLE_TITLE_SELECTOR).first();
-    if (heading.length) {
-      heading
-        .addClass('arcafeed-article-heading-text')
-        .wrap('<div class="arcafeed-article-heading"></div>')
-        .parent()
-        .append(skipButton);
-    }
-  }
-
-  const checkpoint = () => {
-    cancelInitialCheckpoint();
+  const clearTimers = () => {
     clearTimeout(checkpointTimer);
     clearTimeout(checkpointDeadline);
     checkpointDeadline = undefined;
+  };
+  const checkpoint = () => {
+    cancelInitialCheckpoint();
+    clearTimers();
     if (!checkpointRemoved) saveCheckpoint(p);
   };
   const scheduleCheckpoint = () => {
@@ -399,17 +407,17 @@ export function initReading(p: VaultAdapter): void {
     checkpointTimer = setTimeout(checkpoint, 700);
     checkpointDeadline ??= setTimeout(checkpoint, 5000);
   };
+
   p.reading.subscribe(() => {
     if (p.reading.hasSession(contextId(p))) {
       checkpointTracked = true;
     } else if (checkpointTracked) {
       checkpointRemoved = true;
       cancelInitialCheckpoint();
-      clearTimeout(checkpointTimer);
-      clearTimeout(checkpointDeadline);
-      checkpointDeadline = undefined;
+      clearTimers();
     }
   }, ['sessions']);
+
   let previousList = p.articleList;
   let previousQuery = p.searchQuery;
   p.subscribe(() => {
@@ -419,6 +427,7 @@ export function initReading(p: VaultAdapter): void {
       scheduleCheckpoint();
     }
   });
+
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') {
       checkpoint();
@@ -437,6 +446,29 @@ export function initReading(p: VaultAdapter): void {
     checkpoint();
   });
   const cancelInitialCheckpoint = afterPaint(checkpoint);
+}
+
+export function initReading(p: VaultAdapter): void {
+  if (initializedVaults.has(p)) return;
+  initializedVaults.add(p);
+  let indicatorsReady = false;
+  const refreshIndicators = () => updateVisitedIndicators(p);
+  afterPaint(() => {
+    indicatorsReady = true;
+    showPendingSkippedToast(currentPath(p));
+    updateAfterSwipe(p.swiper, refreshIndicators);
+  });
+
+  bindStorageSync(p);
+  bindReadingStateUpdates(p, () => indicatorsReady, refreshIndicators);
+
+  if (p.skipVisitedArticles && !p.isNextPageActive())
+    refreshUnvisitedNavigation(p);
+
+  if (!p.isCurrentMode('ARTICLE')) return;
+
+  mountSkipButton(p);
+  installCheckpointScheduler(p);
   restoreScroll(p);
   updateSkipButton(p);
 }

@@ -1,3 +1,13 @@
+import { SESSION_ARTICLE_LIMIT } from './storage-keys';
+
+/** Compute the per-session article cap while reserving at least one slot per remaining session. */
+export function sessionArticleLimit(
+  remaining: number,
+  reserved: number,
+): number {
+  return Math.max(1, Math.min(SESSION_ARTICLE_LIMIT, remaining - reserved));
+}
+
 /** Keep a bounded resume window that always includes the current article. */
 export function articleWindow(
   articles: readonly string[],

@@ -9,7 +9,32 @@ export const RECORD_STORES = [
 ] as const;
 export type RecordStore = (typeof RECORD_STORES)[number];
 export type RecordKey = string | [string, string];
+export type SessionKind = 'resume' | 'navigation';
+export type SessionStore = 'resumeSessions' | 'navigationSessions';
 export type DataRow = Record<string, any>;
+
+export const CHANNEL_ID_REGEX = /^[a-zA-Z0-9]+$/;
+
+export function isChannelId(value: string): boolean {
+  return CHANNEL_ID_REGEX.test(value);
+}
+
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export const sessionStore = (kind: string): SessionStore =>
+  kind === 'resume' ? 'resumeSessions' : 'navigationSessions';
+
+export const sessionKind = (store: SessionStore): SessionKind =>
+  store === 'resumeSessions' ? 'resume' : 'navigation';
+
+export const parentSessionAddress = (
+  listAddress: RecordAddress,
+): RecordAddress => {
+  const [kind, id] = listAddress.key as [string, string];
+  return { store: sessionStore(kind), key: id };
+};
 export interface RecordAddress {
   store: RecordStore;
   key: RecordKey;

@@ -8,12 +8,12 @@ const scrapPageRegex = /\/u\/scrap_list(?:\/?|\?.+)?$/i;
 
 // Optimized: Use capturing groups instead of lookbehind/lookahead for better performance
 const channelAndArticleIdRegex = /\/b\/([A-Za-z0-9]+)(?:\/([0-9]+))?(\?.+)?/;
-const articelIdRegex = /\/b\/[A-Za-z0-9]+\/([0-9]+)(\?.+)?/;
+const articleIdRegex = /\/b\/[A-Za-z0-9]+\/([0-9]+)(\?.+)?/;
 
 // == FUNCTION ==
 //
 function getArticleId(href: string): string {
-  const articleIdMatch = href.match(articelIdRegex);
+  const articleIdMatch = href.match(articleIdRegex);
 
   return getRegexMatchByIndex(articleIdMatch, 1);
 }

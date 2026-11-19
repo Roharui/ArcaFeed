@@ -2,23 +2,34 @@ import { StorageRepository } from './repository';
 import { normalizeArticles } from './config-schema';
 import { normalizeSessionMetadata } from './reading-session-schema';
 import { cleanQuery, contextKey, storedMode } from './navigation-record';
-import { equalData } from './record-schema';
+import { equalData, isRecord } from './record-schema';
 import type { DataRow } from './record-schema';
 import { deferField, mergeState } from './lazy-state';
-import { articleWindow } from './article-window';
+import { articleWindow, sessionArticleLimit } from './article-window';
+import {
+  SiteRecentHistory,
+  SITE_RECENT_KEY,
+  SITE_RECENT_DISABLED_KEY,
+  SITE_RECENT_URL,
+  RECENT_ENTRY_LIMIT,
+  isVisitedPath,
+} from './site-recent-history';
+import type { ReadingEntry } from './site-recent-history';
 import {
   SESSION_LIMIT,
   SESSION_ARTICLE_LIMIT,
   SESSION_TOTAL_ARTICLE_LIMIT,
 } from './storage-keys';
-export { SESSION_LIMIT, SESSION_TOTAL_ARTICLE_LIMIT } from './storage-keys';
 
-export interface ReadingEntry {
-  path: string;
-  title: string;
-  channelName: string;
-  visitedAt: number;
-}
+export { SESSION_LIMIT, SESSION_TOTAL_ARTICLE_LIMIT } from './storage-keys';
+export {
+  SITE_RECENT_KEY,
+  SITE_RECENT_DISABLED_KEY,
+  SITE_RECENT_URL,
+  RECENT_ENTRY_LIMIT,
+  isVisitedPath,
+};
+export type { ReadingEntry };
 
 export interface ReadingSession {
   id: string;
@@ -39,12 +50,8 @@ interface ReadingData {
   sessions: ReadingSession[];
 }
 
-export const SITE_RECENT_KEY = 'recent_articles';
-export const SITE_RECENT_DISABLED_KEY = 'recent_disabled';
-export const SITE_RECENT_URL = '/u/recents';
-export const RECENT_ENTRY_LIMIT = 300;
-
 type ReadingChange = 'entries' | 'sessions' | 'progress';
+
 interface ReadingProgress {
   id: string;
   path: string;
@@ -73,28 +80,10 @@ function sameContext(a: ReadingSession, b: ReadingSession): boolean {
   );
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === 'object' && !Array.isArray(value);
-}
-
-function timestamp(value: unknown): number {
+function validTimestamp(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0
     ? value
     : 0;
-}
-
-function text(value: unknown, fallback = ''): string {
-  return typeof value === 'string' ? value.slice(0, 300) : fallback;
-}
-
-/** Match aliases from /b/my using the site's globally unique article IDs. */
-export function isVisitedPath(
-  paths: Set<string> | undefined,
-  path: string,
-): boolean {
-  return (
-    !!paths && (paths.has(path) || paths.has(`/b/my/${path.split('/').pop()}`))
-  );
 }
 
 /** Read the site's recent history; persist only ArcaFeed resume positions. */
@@ -103,17 +92,12 @@ export class ReadingHistory {
   private sessionsLoaded = false;
   private contextsLoaded = false;
   private listCounts = new WeakMap<ReadingSession, number>();
-  private entriesLoaded = false;
-  private recentEntries: ReadingEntry[] = [];
-  private visibleRecentEntries: ReadingEntry[] = [];
-  private visitedPaths = new Set<string>();
+  private siteHistory: SiteRecentHistory;
   private listeners = new Map<() => void, readonly ReadingChange[]>();
   private historyRaw: readonly DataRow[] | undefined;
   private cachedData: ReadingData = { sessions: [] };
   private progressRaw: readonly DataRow[] | undefined;
   private progress: ReadingProgress[] = [];
-  private recentRaw: string | null | undefined;
-  private recentDisabled: string | null | undefined;
   private savedPositionContext?: {
     id: string;
     path: string;
@@ -122,6 +106,7 @@ export class ReadingHistory {
 
   constructor(private repo = new StorageRepository()) {
     // Each independent payload is loaded by the first getter or operation that needs it.
+    this.siteHistory = new SiteRecentHistory(this.repo);
   }
 
   private ensureSessions(): void {
@@ -161,16 +146,8 @@ export class ReadingHistory {
     );
   }
 
-  private ensureEntries(): void {
-    if (this.entriesLoaded) return;
-    this.entriesLoaded = true;
-    this.loadRecentEntries();
-    this.updateVisitedPaths();
-  }
-
   get entries(): readonly ReadingEntry[] {
-    this.ensureEntries();
-    return this.visibleRecentEntries;
+    return this.siteHistory.entries;
   }
 
   get sessions(): readonly ReadingSession[] {
@@ -179,13 +156,11 @@ export class ReadingHistory {
   }
 
   hasVisited(path: string): boolean {
-    this.ensureEntries();
-    return isVisitedPath(this.visitedPaths, path);
+    return this.siteHistory.hasVisited(path);
   }
 
   getVisitedPaths(): Set<string> {
-    this.ensureEntries();
-    return new Set(this.visitedPaths);
+    return this.siteHistory.getVisitedPaths();
   }
 
   subscribe(
@@ -201,22 +176,18 @@ export class ReadingHistory {
   ): void {
     const previousData = this.cachedData;
     const previousProgress = this.progress;
-    const previousEntries = this.recentEntries;
     if (this.contextsLoaded && requested.includes('sessions')) {
       if (this.sessionsLoaded) this.data = this.readData();
       else this.load();
     } else if (this.sessionsLoaded && requested.includes('progress')) {
       this.data = this.readData({ sessions: this.cachedData.sessions });
     }
-    if (requested.includes('entries')) {
-      this.entriesLoaded = true;
-      this.loadRecentEntries();
-    }
+    const entriesChanged = requested.includes('entries')
+      ? this.siteHistory.reload()
+      : false;
+
     const changes: ReadingChange[] = [];
-    if (previousEntries !== this.recentEntries) {
-      this.updateVisitedPaths();
-      changes.push('entries');
-    }
+    if (entriesChanged) changes.push('entries');
     if (previousData !== this.cachedData) changes.push('sessions');
     if (previousProgress !== this.progress) changes.push('progress');
     this.notify(changes);
@@ -247,10 +218,7 @@ export class ReadingHistory {
         item.id === session.id
           ? Math.min(SESSION_ARTICLE_LIMIT, session.articleList.length)
           : (this.listCounts.get(item) ?? 1);
-      const limit = Math.max(
-        1,
-        Math.min(SESSION_ARTICLE_LIMIT, remaining - (next.length - index - 1)),
-      );
+      const limit = sessionArticleLimit(remaining, next.length - index - 1);
       if (count > limit) keys.push(item.id);
       remaining -= Math.min(count, limit);
     }
@@ -267,21 +235,8 @@ export class ReadingHistory {
       next.sessions.every((item) => item.pinned)
     )
       return false;
-    const params = new URLSearchParams(session.searchQuery);
-    params.delete('articleKey');
-    const bounded = {
-      ...session,
-      // Automatic checkpoints may not overwrite a name or pin changed in another tab.
-      ...(existing
-        ? { customName: existing.customName || '', pinned: !!existing.pinned }
-        : {}),
-      searchQuery: params.size ? `?${params}` : '',
-      articleList: articleWindow(
-        session.articleList,
-        session.path,
-        SESSION_ARTICLE_LIMIT,
-      ),
-    };
+
+    const bounded = this.boundIncomingSession(session, existing);
     const contextChanged = !existing || !sameContext(existing, bounded);
     if (contextChanged) {
       next.sessions = [
@@ -290,6 +245,7 @@ export class ReadingHistory {
       ];
       this.persistContexts(next);
     }
+
     const progress = this.loadProgress();
     const previous = progress.find((item) => item.id === session.id);
     // Repeated visibility/pagehide checkpoints must not rewrite either payload.
@@ -298,21 +254,16 @@ export class ReadingHistory {
       previous.path !== session.path ||
       previous.scrollY !== session.scrollY;
     if (contextChanged || positionChanged) {
-      const sessionIds = new Set(next.sessions.map((item) => item.id));
-      this.persistProgress(
-        [
-          {
-            id: session.id,
-            path: session.path,
-            scrollY: session.scrollY,
-            updatedAt: session.updatedAt,
-          },
-          ...progress.filter(
-            (item) => item.id !== session.id && sessionIds.has(item.id),
-          ),
-        ].slice(0, SESSION_LIMIT),
+      this.persistSessionPosition(
+        next.sessions,
+        progress,
+        session.id,
+        session.path,
+        session.scrollY,
+        session.updatedAt,
       );
     }
+
     this.data = this.readData();
     this.savedPositionContext = {
       id: session.id,
@@ -383,12 +334,13 @@ export class ReadingHistory {
     const progress = this.loadProgress();
     const previous = progress.find((item) => item.id === id);
     if (previous?.path === path && previous.scrollY === scrollY) return true;
-    const sessionIds = new Set(this.cachedData.sessions.map((item) => item.id));
-    this.persistProgress(
-      [
-        { id, path, scrollY, updatedAt },
-        ...progress.filter((item) => item.id !== id && sessionIds.has(item.id)),
-      ].slice(0, SESSION_LIMIT),
+    this.persistSessionPosition(
+      this.cachedData.sessions,
+      progress,
+      id,
+      path,
+      scrollY,
+      updatedAt,
     );
     this.data = this.readData();
     this.notify(['progress']);
@@ -399,6 +351,44 @@ export class ReadingHistory {
     this.change((data) => {
       data.sessions = [];
     });
+  }
+
+  private boundIncomingSession(
+    session: ReadingSession,
+    existing: ReadingSession | undefined,
+  ): ReadingSession {
+    const params = new URLSearchParams(session.searchQuery);
+    params.delete('articleKey');
+    return {
+      ...session,
+      // Automatic checkpoints may not overwrite a name or pin changed in another tab.
+      ...(existing
+        ? { customName: existing.customName || '', pinned: !!existing.pinned }
+        : {}),
+      searchQuery: params.size ? `?${params}` : '',
+      articleList: articleWindow(
+        session.articleList,
+        session.path,
+        SESSION_ARTICLE_LIMIT,
+      ),
+    };
+  }
+
+  private persistSessionPosition(
+    sessions: readonly ReadingSession[],
+    progress: readonly ReadingProgress[],
+    id: string,
+    path: string,
+    scrollY: number,
+    updatedAt: number,
+  ): void {
+    const sessionIds = new Set(sessions.map((item) => item.id));
+    this.persistProgress(
+      [
+        { id, path, scrollY, updatedAt },
+        ...progress.filter((item) => item.id !== id && sessionIds.has(item.id)),
+      ].slice(0, SESSION_LIMIT),
+    );
   }
 
   /** Merge each checkpoint operation with disk so tabs preserve each other's positions. */
@@ -444,17 +434,35 @@ export class ReadingHistory {
     automatic = true,
   ): void {
     data.sessions = this.sortContexts(data.sessions).slice(0, SESSION_LIMIT);
-    let remaining = SESSION_TOTAL_ARTICLE_LIMIT;
-    const versions = new Map<string, string>();
     const previousIds = new Set(
       this.cachedData.sessions.map((session) => session.id),
     );
-    const sessions = data.sessions.map((session, index) => {
+    const { sessions, versions } = this.trimSessionLists(
+      data.sessions,
+      preserveLists,
+    );
+    this.saveResumeSummaries(sessions, versions, preserveLists);
+
+    const retained = new Set(sessions.map((session) => session.id));
+    for (const id of previousIds) {
+      if (!retained.has(id))
+        this.repo.deleteSession('resume', id, automatic && !preserveLists);
+    }
+    this.historyRaw = this.repo.resumes();
+    this.cachedData = { sessions };
+  }
+
+  private trimSessionLists(
+    orderedSessions: readonly ReadingSession[],
+    preserveLists: boolean,
+  ): { sessions: ReadingSession[]; versions: Map<string, string> } {
+    let remaining = SESSION_TOTAL_ARTICLE_LIMIT;
+    const versions = new Map<string, string>();
+    const sessions = orderedSessions.map((session, index) => {
       const count = this.listCounts.get(session) ?? session.articleList.length;
-      const reserved = data.sessions.length - index - 1;
-      const limit = Math.max(
-        1,
-        Math.min(SESSION_ARTICLE_LIMIT, remaining - reserved),
+      const limit = sessionArticleLimit(
+        remaining,
+        orderedSessions.length - index - 1,
       );
       const lazy = !!Object.getOwnPropertyDescriptor(session, 'articleList')
         ?.get;
@@ -477,9 +485,24 @@ export class ReadingHistory {
       this.listCounts.set(bounded, articleCount);
       return bounded;
     });
+    return { sessions, versions };
+  }
+
+  private saveResumeSummaries(
+    sessions: readonly ReadingSession[],
+    versions: ReadonlyMap<string, string>,
+    preserveLists: boolean,
+  ): void {
+    const existingById = new Map(
+      this.repo.resumes().map((row) => [row.id, row]),
+    );
     for (const session of sessions) {
-      const existing = this.repo.resumes().find((row) => row.id === session.id);
-      const listVersion = versions.get(session.id) ?? existing?.listVersion;
+      const existing = existingById.get(session.id);
+      const mode = storedMode(
+        session.isSeriesMode,
+        session.isScrapMode,
+        session.seriesChannels,
+      );
       this.repo.saveResume(
         {
           id: session.id,
@@ -488,42 +511,29 @@ export class ReadingHistory {
           pinned: !!session.pinned,
           path: session.path,
           query: cleanQuery(session.searchQuery),
-          mode: storedMode(
-            session.isSeriesMode,
-            session.isScrapMode,
-            session.seriesChannels,
-          ),
+          mode,
           channels: [...session.seriesChannels],
           updatedAt: session.updatedAt,
           articleCount: this.listCounts.get(session)!,
-          listVersion,
+          listVersion: versions.get(session.id) ?? existing?.listVersion,
           contextKey:
             existing?.contextKey ??
             contextKey({
               ...session,
-              mode: storedMode(
-                session.isSeriesMode,
-                session.isScrapMode,
-                session.seriesChannels,
-              ),
+              mode,
               query: session.searchQuery,
             }),
         },
         !preserveLists,
       );
     }
-    const retained = new Set(sessions.map((session) => session.id));
-    for (const id of previousIds)
-      if (!retained.has(id))
-        this.repo.deleteSession('resume', id, automatic && !preserveLists);
-    this.historyRaw = this.repo.resumes();
-    this.cachedData = { sessions };
   }
 
   private persistProgress(progress: ReadingProgress[]): void {
     const retained = new Set(progress.map((item) => item.id));
-    for (const item of this.repo.resumeProgress())
+    for (const item of this.repo.resumeProgress()) {
       if (!retained.has(item.id)) this.repo.deleteResumePosition(item.id);
+    }
     for (const item of progress) this.repo.savePosition(item);
     this.progressRaw = this.repo.resumeProgress();
     this.progress = progress;
@@ -532,9 +542,8 @@ export class ReadingHistory {
   private loadProgress(): ReadingProgress[] {
     const raw = this.repo.resumeProgress();
     if (raw === this.progressRaw) return this.progress;
-    const parsed = raw;
     this.progressRaw = raw;
-    this.progress = (Array.isArray(parsed) ? parsed : [])
+    this.progress = (Array.isArray(raw) ? raw : [])
       .filter(
         (item): item is ReadingProgress =>
           isRecord(item) &&
@@ -543,7 +552,7 @@ export class ReadingHistory {
           typeof item.scrollY === 'number' &&
           Number.isFinite(item.scrollY) &&
           item.scrollY >= 0 &&
-          timestamp(item.updatedAt) > 0,
+          validTimestamp(item.updatedAt) > 0,
       )
       .slice(0, SESSION_LIMIT);
     return this.progress;
@@ -575,63 +584,6 @@ export class ReadingHistory {
               (order.get(b.id) ?? SESSION_LIMIT),
         ),
     };
-  }
-
-  private updateVisitedPaths(): void {
-    this.visitedPaths = new Set(
-      this.recentEntries.flatMap((entry) => [
-        entry.path,
-        `/b/my/${entry.path.split('/').pop()}`,
-      ]),
-    );
-  }
-
-  private loadRecentEntries(): void {
-    const disabled = this.repo.site(SITE_RECENT_DISABLED_KEY);
-    const recentRaw = disabled ? null : this.repo.site(SITE_RECENT_KEY);
-    if (recentRaw === this.recentRaw && disabled === this.recentDisabled)
-      return;
-    this.recentRaw = recentRaw;
-    this.recentDisabled = disabled;
-    this.recentEntries = [];
-    this.visibleRecentEntries = [];
-    if (disabled) return;
-    let raw: unknown;
-    try {
-      raw = recentRaw ? JSON.parse(recentRaw) : [];
-    } catch {
-      raw = [];
-    }
-    const seenIds = new Set<string>();
-    for (const item of Array.isArray(raw) ? raw : []) {
-      if (!isRecord(item)) continue;
-      const slug = typeof item.slug === 'string' ? item.slug : '';
-      const id =
-        typeof item.articleId === 'string' || typeof item.articleId === 'number'
-          ? String(item.articleId)
-          : '';
-      const visitedAt =
-        typeof item.regdateAt === 'number'
-          ? timestamp(item.regdateAt * 1000)
-          : 0;
-      if (
-        !/^[a-zA-Z0-9]+$/.test(slug) ||
-        !/^\d+$/.test(id) ||
-        !visitedAt ||
-        seenIds.has(id)
-      )
-        continue;
-      seenIds.add(id);
-      const path = `/b/${slug}/${id}`;
-      this.recentEntries.push({
-        path,
-        title: text(item.title, path),
-        channelName: text(item.boardName, slug),
-        visitedAt,
-      });
-    }
-    this.recentEntries.sort((a, b) => b.visitedAt - a.visitedAt);
-    this.visibleRecentEntries = this.recentEntries.slice(0, RECENT_ENTRY_LIMIT);
   }
 
   private load(): ReadingData {

@@ -1,4 +1,6 @@
 import type { SubscriptionFailure } from '@/types/vault';
+import type { AppState } from './store';
+import { isChannelId } from './record-schema';
 
 /** Stored diagnostics are optional and never trusted as navigation input. */
 export function normalizeSubscriptionFailures(
@@ -12,7 +14,7 @@ export function normalizeSubscriptionFailures(
       const { channelId, reason } = item;
       if (
         typeof channelId !== 'string' ||
-        !/^[a-zA-Z0-9]+$/.test(channelId) ||
+        !isChannelId(channelId) ||
         seen.has(channelId)
       )
         return false;
@@ -21,4 +23,19 @@ export function normalizeSubscriptionFailures(
       return true;
     })
     .map(({ channelId, reason }) => ({ channelId, reason }));
+}
+
+type SubscriptionFailureContext = Pick<
+  AppState,
+  'isSeriesMode' | 'isScrapMode' | 'seriesChannels' | 'subscriptionFailures'
+>;
+
+/** Return failures belonging to the active subscription feed channels. */
+export function activeSubscriptionFailures(
+  context: SubscriptionFailureContext,
+): SubscriptionFailure[] {
+  if (!context.isSeriesMode || context.isScrapMode) return [];
+  return context.subscriptionFailures.filter((failure) =>
+    context.seriesChannels.includes(failure.channelId),
+  );
 }

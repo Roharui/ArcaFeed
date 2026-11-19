@@ -109,13 +109,8 @@ function initCloseModal(_: VaultAdapter): void {
   $('#dialog').remove();
 }
 
-function initCloseModalContent(_: VaultAdapter): void {
-  cleanupModal();
-  $('#dialog .helper-modal-body').remove();
-}
-
 export * from './filterUi';
 export * from './uiTab';
 export * from './subscribeTab';
 
-export { initModal, initCloseModal, initCloseModalContent };
+export { initModal, initCloseModal };

@@ -1,9 +1,6 @@
 import type { ArticleFilterConfigImpl, UISettings } from '@/types';
+import { isChannelId, isRecord } from './record-schema';
 import { createInitialState } from './store';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 export function stringList(value: unknown): string[] {
   return Array.isArray(value)
@@ -19,10 +16,7 @@ export function normalizeFilters(value: unknown): ArticleFilterConfigImpl {
   if (!isRecord(value)) return {};
   return Object.fromEntries(
     Object.entries(value)
-      .filter(
-        ([channel, filter]) =>
-          /^[a-zA-Z0-9]+$/.test(channel) && isRecord(filter),
-      )
+      .filter(([channel, filter]) => isChannelId(channel) && isRecord(filter))
       .map(([channel, raw]) => {
         const filter = raw as Record<string, unknown>;
         const includeTitle = [

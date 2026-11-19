@@ -1,4 +1,5 @@
 import { navigate, isNavigating } from '@/feature/navigation';
+import { articlePath } from '@/vault/navigation-context';
 import type { PageMode, PromiseFunc } from '@/types';
 import type { VaultAdapter } from '@/vault';
 import {
@@ -26,7 +27,7 @@ function toLink(mode: PageMode): PromiseFunc {
     const url = list[nextIdx];
     let skipped = 0;
     if (mode === 'NEXT' && p.skipVisitedArticles) {
-      const currentPath = `/b/${p.href.channelId}/${p.href.articleId}`;
+      const currentPath = articlePath(p.href.channelId, p.href.articleId);
       const end = nextIdx === -1 ? list.length : nextIdx;
       for (let index = idx + 1; index < end; index++) {
         const path = list[index]!;
@@ -51,7 +52,7 @@ export async function navigateToArticle(
   if (isNavigating(p) || !Number.isSafeInteger(index)) return;
   const path = p.articleList[index];
   if (!path || !/^\/b\/[^/?#]+\/\d+$/.test(path)) return;
-  if (path === `/b/${p.href.channelId}/${p.href.articleId}`) return;
+  if (path === articlePath(p.href.channelId, p.href.articleId)) return;
   await navigate(
     p,
     () => {

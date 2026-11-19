@@ -8,6 +8,7 @@ import {
   readingTime,
   readingSearch,
   createReadingSearchMatcher,
+  syncChannelSelect,
 } from './readingUi';
 import type { VaultAdapter } from '@/vault';
 import { SITE_RECENT_URL } from '@/vault/reading-history';
@@ -74,11 +75,10 @@ export function createHistoryModal(p: VaultAdapter): JQuery<HTMLElement> {
           channelId(entry.path),
           entry.channelName || channelId(entry.path),
         );
-      channel.empty().append($('<option>', { value: '', text: '전체 채널' }));
-      for (const [id, name] of channelNames)
-        channel.append($('<option>', { value: id, text: name }));
+      syncChannelSelect(channel, channelNames, selectedChannel);
+    } else {
+      channel.val(channelNames.has(selectedChannel) ? selectedChannel : '');
     }
-    channel.val(channelNames.has(selectedChannel) ? selectedChannel : '');
     const filterChannel = String(channel.val() || '');
     const query = search.getQuery();
 

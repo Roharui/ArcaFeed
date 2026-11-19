@@ -3,6 +3,7 @@ import { deferField, sameField } from './lazy-state';
 import { normalizeArticles, stringList } from './config-schema';
 import { appendSearchParam } from '@/utils/url';
 import { cleanQuery, storedMode } from './navigation-record';
+import { isChannelId } from './record-schema';
 import type { StorageRepository } from './repository';
 import type { AppState } from './store';
 import type { ReadingSession } from './reading-history';
@@ -24,7 +25,7 @@ export class NavigationStorage {
       record?.mode === 'subscription';
     patch.isScrapMode = record?.mode === 'scrap';
     deferField(patch, 'seriesChannels', () =>
-      stringList(record?.channels).filter((id) => /^[a-zA-Z0-9]+$/.test(id)),
+      stringList(record?.channels).filter(isChannelId),
     );
     deferField(patch, 'subscriptionFailures', () =>
       normalizeSubscriptionFailures(record?.failures),

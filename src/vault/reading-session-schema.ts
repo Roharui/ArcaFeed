@@ -1,12 +1,13 @@
 import { normalizeArticles, stringList } from './config-schema';
+import { isChannelId, isRecord } from './record-schema';
 import type { ReadingSession } from './reading-history';
 
 export function normalizeSessionMetadata(
   value: unknown,
   origin: string,
 ): Omit<ReadingSession, 'articleList'> | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-  const item = value as Record<string, unknown>;
+  if (!isRecord(value)) return null;
+  const item = value;
   const path = normalizeArticles([item.path], origin)[0];
   const id = typeof item.id === 'string' ? item.id.slice(0, 8000) : '';
   const updatedAt =
@@ -32,9 +33,7 @@ export function normalizeSessionMetadata(
     searchQuery: params.size ? `?${params}` : '',
     isSeriesMode: item.isSeriesMode === true,
     isScrapMode: item.isScrapMode === true,
-    seriesChannels: stringList(item.seriesChannels).filter((channel) =>
-      /^[a-zA-Z0-9]+$/.test(channel),
-    ),
+    seriesChannels: stringList(item.seriesChannels).filter(isChannelId),
     scrollY:
       typeof item.scrollY === 'number' && Number.isFinite(item.scrollY)
         ? Math.max(0, item.scrollY)

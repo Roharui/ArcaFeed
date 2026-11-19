@@ -59,15 +59,6 @@ function expandTabCategories(tabCategories: string[]): string[] {
   ];
 }
 
-function getTabTypeText($ele: JQuery<HTMLElement>): string {
-  const badgeText = $ele.find('.text-bg-success').text().trim();
-  if (badgeText.length > 0) return badgeText;
-
-  return $ele.find('.media-icon.bi-images').length > 0
-    ? NO_TAB_CATEGORY_WITH_IMAGE
-    : NO_TAB_CATEGORY_WITHOUT_IMAGE;
-}
-
 function buildFilterPredicate(
   filter: ArticleFilterImpl,
 ): (ele: HTMLElement) => boolean {
@@ -188,7 +179,6 @@ export {
   extractArticleHref,
   extractArticleRows,
   filterLink,
-  getTabTypeText,
   LEGACY_NO_TAB_CATEGORY,
   NO_TAB_CATEGORY_WITH_IMAGE,
   NO_TAB_CATEGORY_WITHOUT_IMAGE,

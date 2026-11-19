@@ -8,7 +8,7 @@ import {
 } from './config-schema';
 import { normalizeSessionMetadata } from './reading-session-schema';
 import { readLegacyReadingSessions } from './reading-history-migration';
-import { articleWindow } from './article-window';
+import { articleWindow, sessionArticleLimit } from './article-window';
 import { SETTINGS_GROUPS } from './config-storage-keys';
 import {
   SESSION_LIMIT,
@@ -16,6 +16,7 @@ import {
   SESSION_TOTAL_ARTICLE_LIMIT,
   ARTICLE_KEY_CACHE_LIMIT,
 } from './storage-keys';
+import { isChannelId } from './record-schema';
 import type { DataRow, RecordAddress, RecordStore } from './record-schema';
 export interface ImportedRecord extends RecordAddress {
   value: DataRow;
@@ -95,8 +96,8 @@ export function importLegacyRecords(
     .slice(0, ARTICLE_KEY_CACHE_LIMIT);
   ids.forEach((id, index) => {
     const get = (field: string) => values.get(`arcaFeed:${id}:${field}`);
-    const channels = stringList(json(get('seriesChannels'))).filter((id) =>
-      /^[a-zA-Z0-9]+$/.test(id),
+    const channels = stringList(json(get('seriesChannels'))).filter(
+      isChannelId,
     );
     const paths = normalizeArticles(json(get('articleList')), origin);
     put('navigationSessions', id, {
@@ -194,10 +195,7 @@ export function importLegacyRecords(
     if (seen.has(token)) continue;
     seen.add(token);
     const reserved = Math.min(SESSION_LIMIT, sessions.length) - seen.size;
-    const limit = Math.max(
-      1,
-      Math.min(SESSION_ARTICLE_LIMIT, remaining - reserved),
-    );
+    const limit = sessionArticleLimit(remaining, reserved);
     const links =
       history?.version === 2
         ? json(

@@ -8,8 +8,17 @@ import { readingContextLabel } from '@/vault/reading-context';
 import { readingHeader } from './readingUi';
 
 import type { VaultAdapter } from '@/vault';
+import type { UISettings } from '@/types';
 
-const UI_TOGGLE_ITEMS: { key: string; label: string; description: string }[] = [
+type BooleanUISettingKey = {
+  [K in keyof UISettings]: UISettings[K] extends boolean ? K : never;
+}[keyof UISettings];
+
+const UI_TOGGLE_ITEMS: {
+  key: BooleanUISettingKey;
+  label: string;
+  description: string;
+}[] = [
   {
     key: 'hideScrollbar',
     label: '스크롤바 숨기기',
@@ -32,7 +41,7 @@ const UI_TOGGLE_ITEMS: { key: string; label: string; description: string }[] = [
   },
 ];
 
-const ARTICLE_INFO_TOGGLES: { key: string; label: string }[] = [
+const ARTICLE_INFO_TOGGLES: { key: BooleanUISettingKey; label: string }[] = [
   { key: 'hideArticleTitle', label: '제목' },
   { key: 'hideArticleAuthor', label: '작성자' },
   { key: 'hideArticleTime', label: '작성일' },
@@ -116,9 +125,13 @@ function createUISettingModal(p: VaultAdapter): JQuery<HTMLElement> {
   const $toggleList = $uiTab.find('#ui-toggle-list');
 
   for (const item of UI_TOGGLE_ITEMS) {
-    const value = uiSettings[item.key as keyof typeof uiSettings] as boolean;
     $toggleList.append(
-      createToggleRow(item.key, item.label, value, item.description),
+      createToggleRow(
+        item.key,
+        item.label,
+        uiSettings[item.key],
+        item.description,
+      ),
     );
   }
 
@@ -126,8 +139,9 @@ function createUISettingModal(p: VaultAdapter): JQuery<HTMLElement> {
   if (!p.isSeriesMode) {
     const $articleInfoList = $uiTab.find('#ui-article-info-list');
     for (const item of ARTICLE_INFO_TOGGLES) {
-      const value = uiSettings[item.key as keyof typeof uiSettings] as boolean;
-      $articleInfoList.append(createToggleRow(item.key, item.label, value));
+      $articleInfoList.append(
+        createToggleRow(item.key, item.label, uiSettings[item.key]),
+      );
     }
   } else {
     $uiTab.find('.ui-article-info-group').remove();

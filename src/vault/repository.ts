@@ -1,6 +1,6 @@
 import { getStorage } from './indexed-storage';
-import { equalData, nextListVersion } from './record-schema';
-import type { DataRow, RecordCache, RecordStore } from './record-schema';
+import { equalData, nextListVersion, sessionStore } from './record-schema';
+import type { DataRow, RecordCache, SessionKind } from './record-schema';
 import { ARTICLE_KEY_CACHE_LIMIT } from './storage-keys';
 /** Domain records over the hydrated cache; no string-store or JSON facade. */
 export class StorageRepository {
@@ -130,14 +130,8 @@ export class StorageRepository {
       sequence,
     });
   }
-  deleteSession(
-    kind: 'resume' | 'navigation',
-    id: string,
-    automatic = false,
-  ): void {
-    const store: RecordStore =
-      kind === 'resume' ? 'resumeSessions' : 'navigationSessions';
-    this.storage.delete(store, id, automatic);
+  deleteSession(kind: SessionKind, id: string, automatic = false): void {
+    this.storage.delete(sessionStore(kind), id, automatic);
   }
 
   site(key: string): string | null {

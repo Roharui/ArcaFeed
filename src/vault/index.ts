@@ -11,7 +11,7 @@ import { Store } from './store';
 import { StorageRepository } from './repository';
 import { ConfigService } from './config';
 import { ReadingHistory } from './reading-history';
-import { navigationMode } from './navigation-context';
+import { currentArticlePath, navigationMode } from './navigation-context';
 import { readingPreferenceKey } from './reading-context';
 import type { ReadingSession } from './reading-history';
 import type { PageMode } from '@/types';
@@ -289,9 +289,7 @@ export class VaultAdapter {
   getAdjacentArticleIndex(mode: PageMode): number {
     const state = this.getState();
     const list = state.articleList;
-    const currentPath = this.isCurrentMode('ARTICLE')
-      ? `/b/${state.href.channelId}/${state.href.articleId}`
-      : '';
+    const currentPath = currentArticlePath(state.href);
     const skip = mode === 'NEXT' && this.skipVisitedArticles;
     const cached = this.adjacentCache.get(mode);
     if (
@@ -340,14 +338,6 @@ export class VaultAdapter {
       activeIndex: -1,
       subscriptionFailures: [],
     });
-  }
-
-  /**
-   * @deprecated State is now auto-persisted via Store subscription.
-   * Kept for backward compatibility.
-   */
-  saveConfig(): void {
-    this.flushSave();
   }
 
   saveLastActiveIndex(): void {

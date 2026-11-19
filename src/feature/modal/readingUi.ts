@@ -188,3 +188,19 @@ export function readingEmptyState(
 export function readingChannelId(path: string): string {
   return path.split('/')[2] || '';
 }
+
+export function syncChannelSelect(
+  select: JQuery<HTMLElement>,
+  options: Iterable<readonly [string, string]>,
+  selected: string,
+): string {
+  const validIds = new Set<string>();
+  select.empty().append($('<option>', { value: '', text: '전체 채널' }));
+  for (const [id, label] of options) {
+    validIds.add(id);
+    select.append($('<option>', { value: id, text: label || id }));
+  }
+  const next = validIds.has(selected) ? selected : '';
+  select.val(next);
+  return next;
+}

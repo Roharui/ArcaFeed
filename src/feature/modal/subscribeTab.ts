@@ -46,6 +46,19 @@ const MODAL_SUBSCRIBE_TAB = `
 </div>
 `;
 
+function formatFilterSummary(filter?: ArticleFilterImpl): string {
+  return [
+    filter?.tab.length ? `${filter.tab.length}개 카테고리` : '전체 카테고리',
+    filter?.onlyBest ? '인기글' : '전체글',
+    `차단 키워드 ${filter?.title.length ?? 0}개`,
+    ...(filter?.includeTitle?.length
+      ? [
+          `포함 ${filter.includeTitle.length}개 · ${filter.includeMode === 'all' ? '모두' : '하나 이상'} 일치${filter.includeCaseSensitive ? ' · 대소문자 구분' : ''}`,
+        ]
+      : []),
+  ].join(' · ');
+}
+
 function createSubscribeToggleRow(
   channel: SubscribedChannel,
   checked: boolean,
@@ -59,10 +72,27 @@ function createSubscribeToggleRow(
   $checkbox.prop('checked', checked);
 
   const $name = $('<span>', { class: 'category-span', text: channel.name });
-
   $label.append($checkbox).append($name);
-
   return $label;
+}
+
+async function fetchChannelCategories(
+  channelId: string,
+): Promise<{ categories: string[]; failed: boolean }> {
+  try {
+    const response = await fetchUrl(`/b/${channelId}`);
+    return {
+      categories: extractFilterCategories(
+        $(
+          new DOMParser().parseFromString(response.responseText, 'text/html')
+            .documentElement,
+        ),
+      ),
+      failed: false,
+    };
+  } catch {
+    return { categories: [], failed: true };
+  }
 }
 
 function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
@@ -80,6 +110,7 @@ function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
   let disposed = false;
   let editorRevision = 0;
   let editorOpener: HTMLElement | null = null;
+
   const status = createSubscriptionStatus(p);
   $tab.find('.arcafeed-modal-content').prepend(status.element);
   const unsubscribeLoading = subscribeArticleLoading((active) => {
@@ -92,13 +123,15 @@ function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
     status.cleanup();
     unsubscribeLoading();
   });
+
   const hiddenSet = new Set(p.uiSettings.hiddenChannels);
   const $list = $tab.find('#subscribe-channel-list');
   const $panel = $tab.find('#subscribe-filter-editor');
+  const $header = $tab.children('.arcafeed-reading-header');
   const clearStartResult = () =>
     $tab.find('#subscribe-start-status').empty().prop('hidden', true);
   $tab.on('change', '.subscribe-channel-checkbox', clearStartResult);
-  const $header = $tab.children('.arcafeed-reading-header');
+
   const closeEditor = () => {
     editorRevision++;
     $tab.removeClass('is-editing-filter');
@@ -110,103 +143,92 @@ function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
       editorOpener.focus({ preventScroll: true });
   };
 
-  for (const channel of channels) {
-    const $summary = $('<div>', { class: 'arcafeed-subscribe-summary' });
-    const summarize = (filter?: ArticleFilterImpl) =>
-      $summary.text(
-        [
-          filter?.tab.length
-            ? `${filter.tab.length}개 카테고리`
-            : '전체 카테고리',
-          filter?.onlyBest ? '인기글' : '전체글',
-          `차단 키워드 ${filter?.title.length ?? 0}개`,
-          ...(filter?.includeTitle?.length
-            ? [
-                `포함 ${filter.includeTitle.length}개 · ${filter.includeMode === 'all' ? '모두' : '하나 이상'} 일치${filter.includeCaseSensitive ? ' · 대소문자 구분' : ''}`,
-              ]
-            : []),
-        ].join(' · '),
-      );
-    summarize(p.articleFilterConfig[channel.id]);
-    const openEditor = async () => {
-      if (!$tab.hasClass('is-editing-filter'))
-        editorOpener =
-          document.activeElement instanceof HTMLElement
-            ? document.activeElement
-            : null;
-      const revision = ++editorRevision;
-      $tab.addClass('is-editing-filter');
-      $tab.find('.arcafeed-modal-content').scrollTop(0);
-      $list.hide();
-      $header.hide();
-      $tab.find('.arcafeed-subscribe-controls, #subscribe-buttons').hide();
-      $panel.empty().append(
-        $('<div>', { class: 'arcafeed-subscribe-filter-loading' }).append(
+  const openChannelEditor = async (
+    channel: SubscribedChannel,
+    onSummaryUpdate: (filter: ArticleFilterImpl) => void,
+  ) => {
+    if (!$tab.hasClass('is-editing-filter')) {
+      editorOpener =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+    }
+    const revision = ++editorRevision;
+    $tab.addClass('is-editing-filter');
+    $tab.find('.arcafeed-modal-content').scrollTop(0);
+    $list.hide();
+    $header.hide();
+    $tab.find('.arcafeed-subscribe-controls, #subscribe-buttons').hide();
+    $panel.empty().append(
+      $('<div>', { class: 'arcafeed-subscribe-filter-loading' }).append(
+        $('<p>', {
+          text: `${channel.name} 카테고리를 불러오는 중…`,
+          role: 'status',
+        }),
+        $('<button>', {
+          type: 'button',
+          class: 'arcafeed-modal-button',
+          text: '취소',
+        }).on('click', closeEditor),
+      ),
+    );
+    $panel.find('button').first().trigger('focus');
+
+    const { categories, failed } = await fetchChannelCategories(channel.id);
+    if (disposed || revision !== editorRevision) return;
+
+    const editor = createArticleFilterModal(p, {
+      channelId: channel.id,
+      channelName: channel.name,
+      categories,
+      filter: drafts[channel.id] ?? p.articleFilterConfig[channel.id],
+      onApply: (filter) => {
+        clearStartResult();
+        drafts[channel.id] = filter;
+        onSummaryUpdate(filter);
+        closeEditor();
+      },
+      onCancel: closeEditor,
+    })
+      .removeClass('helper-modal-tab')
+      .addClass('arcafeed-subscribe-filter-editor');
+
+    const focusedLoading = $panel[0]?.contains(document.activeElement);
+    $panel.empty().append(editor);
+    if (focusedLoading && $panel.is(':visible')) {
+      editor
+        .find('input, button, select')
+        .filter(':visible')
+        .first()
+        .trigger('focus');
+    }
+    if (failed) {
+      editor.find('.arcafeed-modal-content').prepend(
+        $('<section>', { class: 'arcafeed-settings-section' }).append(
           $('<p>', {
-            text: `${channel.name} 카테고리를 불러오는 중…`,
+            class: 'arcafeed-settings-description',
             role: 'status',
+            text: '카테고리를 불러오지 못했습니다. 저장된 카테고리와 다른 필터는 수정할 수 있습니다.',
           }),
           $('<button>', {
             type: 'button',
             class: 'arcafeed-modal-button',
-            text: '취소',
-          }).on('click', closeEditor),
+            text: '다시 불러오기',
+          }).on(
+            'click',
+            () => void openChannelEditor(channel, onSummaryUpdate),
+          ),
         ),
       );
-      $panel.find('button').first().trigger('focus');
-      let categories: string[] = [];
-      let failed = false;
-      try {
-        const response = await fetchUrl(`/b/${channel.id}`);
-        categories = extractFilterCategories(
-          $(
-            new DOMParser().parseFromString(response.responseText, 'text/html')
-              .documentElement,
-          ),
-        );
-      } catch {
-        failed = true;
-      }
-      if (disposed || revision !== editorRevision) return;
-      const editor = createArticleFilterModal(p, {
-        channelId: channel.id,
-        channelName: channel.name,
-        categories,
-        filter: drafts[channel.id] ?? p.articleFilterConfig[channel.id],
-        onApply: (filter) => {
-          clearStartResult();
-          drafts[channel.id] = filter;
-          summarize(filter);
-          closeEditor();
-        },
-        onCancel: closeEditor,
-      })
-        .removeClass('helper-modal-tab')
-        .addClass('arcafeed-subscribe-filter-editor');
-      const focusedLoading = $panel[0]?.contains(document.activeElement);
-      $panel.empty().append(editor);
-      if (focusedLoading && $panel.is(':visible'))
-        editor
-          .find('input, button, select')
-          .filter(':visible')
-          .first()
-          .trigger('focus');
-      if (failed)
-        editor.find('.arcafeed-modal-content').prepend(
-          $('<section>', { class: 'arcafeed-settings-section' }).append(
-            $('<p>', {
-              class: 'arcafeed-settings-description',
-              role: 'status',
-              text: '카테고리를 불러오지 못했습니다. 저장된 카테고리와 다른 필터는 수정할 수 있습니다.',
-            }),
-            $('<button>', {
-              type: 'button',
-              class: 'arcafeed-modal-button',
-              text: '다시 불러오기',
-            }).on('click', () => void openEditor()),
-          ),
-        );
+    }
+  };
+
+  for (const channel of channels) {
+    const $summary = $('<div>', { class: 'arcafeed-subscribe-summary' });
+    const updateSummary = (filter?: ArticleFilterImpl) => {
+      $summary.text(formatFilterSummary(filter));
     };
+    updateSummary(p.articleFilterConfig[channel.id]);
     $list.append(
       $('<div>', { class: 'arcafeed-subscribe-row' }).append(
         $('<div>').append(
@@ -218,16 +240,19 @@ function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
           class: 'arcafeed-modal-button',
           text: '필터 수정',
           'aria-label': `${channel.name} 필터 수정`,
-        }).on('click', () => void openEditor()),
+        }).on('click', () => void openChannelEditor(channel, updateSummary)),
       ),
     );
   }
-  if (!channels.length)
+
+  if (!channels.length) {
     $list.append(
       $('<p>', {
         text: '구독 채널이 없습니다. /b/my에서 로그인 상태와 구독 목록을 확인해주세요.',
       }),
     );
+  }
+
   $tab.find('#subscribe-select-all').on('click', () => {
     clearStartResult();
     $tab.find('.subscribe-channel-checkbox').prop('checked', true);
@@ -238,7 +263,7 @@ function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
   });
   $tab.find('#subscribe-save-btn').on('click', () => {
     try {
-      $tab.find('#subscribe-start-status').empty().prop('hidden', true);
+      clearStartResult();
       initCheckSubscribeModal(p);
       refreshUnvisitedNavigation(p);
       p.flushSave();
@@ -248,7 +273,6 @@ function createSubscribeSettingModal(p: VaultAdapter): JQuery<HTMLElement> {
       reportFailure(error);
     }
   });
-
   $tab
     .find('#subscribe-check-btn')
     .on('click', () => eventBus.emit('checkSubscribeModal'));

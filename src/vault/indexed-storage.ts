@@ -5,6 +5,7 @@ import {
   equalData,
   keyOf,
   mergeRecord,
+  parentSessionAddress,
 } from './record-schema';
 import type {
   DataRow,
@@ -17,7 +18,88 @@ import type {
 import { importLegacyRecords } from './record-migration';
 import { commitRecords } from './record-transaction';
 import { StorageActivity } from './storage-activity';
-const SMALL = RECORD_STORES.filter((name) => name !== 'lists');
+
+const SMALL_STORES = RECORD_STORES.filter((name) => name !== 'lists');
+
+type SnapshotEntry = { address: RecordAddress; value: DataRow | undefined };
+
+function isLegacyStorageKey(key: string | null): key is string {
+  return !!key && (key.startsWith('arcaFeed:') || key === 'arca_version_info');
+}
+
+function collectLegacyKeys(legacy: Storage): string[] {
+  const keys: string[] = [];
+  for (let index = 0; index < legacy.length; index++) {
+    const key = legacy.key(index);
+    if (isLegacyStorageKey(key)) keys.push(key);
+  }
+  return keys;
+}
+
+function upgradeDatabase(
+  db: IDBDatabase,
+  tx: IDBTransaction,
+  legacy: Storage,
+  origin: string,
+  currentId: string,
+  cleanup: string[],
+  onFailure: (error: unknown) => void,
+): void {
+  for (const name of RECORD_STORES) {
+    if (!db.objectStoreNames.contains(name)) {
+      const store = db.createObjectStore(name, {
+        keyPath:
+          name === 'lists' || name === 'progress' ? ['kind', 'id'] : 'id',
+      });
+      if (name === 'resumeSessions')
+        store.createIndex('context', 'contextKey', { unique: true });
+    }
+  }
+
+  const values = new Map<string, string>();
+  for (const key of collectLegacyKeys(legacy)) {
+    const value = legacy.getItem(key);
+    if (value !== null) values.set(key, value);
+    cleanup.push(key);
+  }
+
+  const convert = () => {
+    try {
+      for (const row of importLegacyRecords(values, origin, currentId))
+        tx.objectStore(row.store).put(row.value);
+      tx.objectStore('meta').put({ id: 'schema', version: 2 });
+      // Clear the old string records only in the transaction that imports them.
+      if (db.objectStoreNames.contains('values'))
+        db.deleteObjectStore('values');
+    } catch (error) {
+      onFailure(error);
+      tx.abort();
+    }
+  };
+
+  if (!db.objectStoreNames.contains('values')) {
+    convert();
+    return;
+  }
+
+  const old = tx.objectStore('values');
+  const marker = old.get('__localStorageMigrated__');
+  marker.onsuccess = () => {
+    if (marker.result !== undefined) values.clear();
+    const cursor = old.openCursor();
+    cursor.onsuccess = () => {
+      const entry = cursor.result;
+      if (entry) {
+        if (typeof entry.value === 'string')
+          values.set(String(entry.key), entry.value);
+        entry.continue();
+      } else {
+        convert();
+      }
+    };
+  };
+}
+
 export class IndexedStorage implements RecordCache {
   private activity = new StorageActivity();
   private database?: IDBDatabase;
@@ -34,6 +116,8 @@ export class IndexedStorage implements RecordCache {
   private revision = 0;
   private channel?: BroadcastChannel;
   private unavailable = false;
+  private scheduled = false;
+
   constructor(
     private factory: IDBFactory,
     private legacy: Storage,
@@ -41,6 +125,7 @@ export class IndexedStorage implements RecordCache {
     private currentId = '',
     private origin = 'https://arca.live',
   ) {}
+
   initialize(): Promise<void> {
     return (this.opening ??= this.open().catch((error) => {
       this.opening = undefined;
@@ -48,96 +133,23 @@ export class IndexedStorage implements RecordCache {
       throw error;
     }));
   }
+
   private async open(): Promise<void> {
     await this.activity.ready();
     const cleanup: string[] = [];
-    this.database = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = this.factory.open('ArcaFeed', 2);
-      let failure: unknown;
-      let blocked = false;
-      request.onupgradeneeded = () => {
-        const db = request.result,
-          tx = request.transaction!;
-        for (const name of RECORD_STORES)
-          if (!db.objectStoreNames.contains(name)) {
-            const store = db.createObjectStore(name, {
-              keyPath:
-                name === 'lists' || name === 'progress' ? ['kind', 'id'] : 'id',
-            });
-            if (name === 'resumeSessions')
-              store.createIndex('context', 'contextKey', { unique: true });
-          }
-        const values = new Map<string, string>();
-        for (let index = 0; index < this.legacy.length; index++) {
-          const key = this.legacy.key(index);
-          if (
-            key &&
-            (key.startsWith('arcaFeed:') || key === 'arca_version_info')
-          ) {
-            const value = this.legacy.getItem(key);
-            if (value !== null) values.set(key, value);
-            cleanup.push(key);
-          }
-        }
-        const convert = () => {
-          try {
-            for (const row of importLegacyRecords(
-              values,
-              this.origin,
-              this.currentId,
-            ))
-              tx.objectStore(row.store).put(row.value);
-            tx.objectStore('meta').put({ id: 'schema', version: 2 });
-            // Clear the old string records only in the transaction that imports them.
-            if (db.objectStoreNames.contains('values'))
-              db.deleteObjectStore('values');
-          } catch (error) {
-            failure = error;
-            tx.abort();
-          }
-        };
-        if (db.objectStoreNames.contains('values')) {
-          const old = tx.objectStore('values');
-          const marker = old.get('__localStorageMigrated__');
-          marker.onsuccess = () => {
-            if (marker.result !== undefined) values.clear();
-            const cursor = old.openCursor();
-            cursor.onsuccess = () => {
-              const entry = cursor.result;
-              if (entry) {
-                if (typeof entry.value === 'string')
-                  values.set(String(entry.key), entry.value);
-                entry.continue();
-              } else convert();
-            };
-          };
-        } else convert();
-      };
-      request.onsuccess = () => {
-        if (blocked) request.result.close();
-        else resolve(request.result);
-      };
-      request.onerror = () => reject(failure ?? request.error);
-      request.onblocked = () => {
-        blocked = true;
-        reject(
-          new Error('데이터 이전을 위해 다른 ArcaFeed 탭을 새로고침해주세요.'),
-        );
-      };
-    });
+    this.database = await this.openDatabase(cleanup);
     if (
       !RECORD_STORES.every((name) =>
         this.database!.objectStoreNames.contains(name),
       )
     )
       throw new Error('지원하지 않는 저장소 구조입니다.');
-    if (!cleanup.length)
-      for (let index = 0; index < this.legacy.length; index++) {
-        const key = this.legacy.key(index);
-        if (key && (key.startsWith('arcaFeed:') || key === 'arca_version_info'))
-          cleanup.push(key);
-      }
-    for (const key of cleanup) this.legacy.removeItem(key);
+
+    const keysToRemove = cleanup.length
+      ? cleanup
+      : collectLegacyKeys(this.legacy);
+    for (const key of keysToRemove) this.legacy.removeItem(key);
+
     this.database.onversionchange = () => {
       this.unavailable = true;
       this.database?.close();
@@ -153,30 +165,61 @@ export class IndexedStorage implements RecordCache {
     }
     await this.refresh();
   }
+
+  private openDatabase(cleanup: string[]): Promise<IDBDatabase> {
+    return new Promise<IDBDatabase>((resolve, reject) => {
+      const request = this.factory.open('ArcaFeed', 2);
+      let failure: unknown;
+      let blocked = false;
+      request.onupgradeneeded = () => {
+        upgradeDatabase(
+          request.result,
+          request.transaction!,
+          this.legacy,
+          this.origin,
+          this.currentId,
+          cleanup,
+          (error) => {
+            failure = error;
+          },
+        );
+      };
+      request.onsuccess = () => {
+        if (blocked) request.result.close();
+        else resolve(request.result);
+      };
+      request.onerror = () => reject(failure ?? request.error);
+      request.onblocked = () => {
+        blocked = true;
+        reject(
+          new Error('데이터 이전을 위해 다른 ArcaFeed 탭을 새로고침해주세요.'),
+        );
+      };
+    });
+  }
+
   get<T = DataRow>(store: RecordStore, key: RecordKey): T | undefined {
     return this.cache.get(addressId({ store, key }))?.value as T | undefined;
   }
+
   all<T = DataRow>(store: RecordStore): readonly T[] {
-    if (!this.arrays.has(store))
+    if (!this.arrays.has(store)) {
       this.arrays.set(
         store,
         [...this.cache.values()]
           .filter((entry) => entry.address.store === store)
           .map((entry) => entry.value),
       );
+    }
     return this.arrays.get(store)! as readonly T[];
   }
+
   private apply(address: RecordAddress, value: DataRow | undefined): boolean {
-    const id = addressId(address),
-      old = this.cache.get(id)?.value;
+    const id = addressId(address);
+    const old = this.cache.get(id)?.value;
     if (address.store === 'lists' && !value) {
-      const [kind, sessionId] = address.key as [string, string];
-      if (
-        !this.get(
-          kind === 'resume' ? 'resumeSessions' : 'navigationSessions',
-          sessionId,
-        )
-      ) {
+      const parent = parentSessionAddress(address);
+      if (!this.get(parent.store, parent.key)) {
         this.loadedLists.delete(id);
         this.readyLists.delete(id);
       }
@@ -187,15 +230,16 @@ export class IndexedStorage implements RecordCache {
     this.arrays.delete(address.store);
     return true;
   }
+
   set(
     store: RecordStore,
     key: RecordKey,
     value: DataRow,
     automatic = false,
   ): void {
-    const address = { store, key },
-      id = addressId(address),
-      old = this.get(store, key);
+    const address = { store, key };
+    const id = addressId(address);
+    const old = this.get(store, key);
     if (old?.revision !== undefined)
       value = { ...value, revision: old.revision };
     if (equalData(old, value)) return;
@@ -214,11 +258,12 @@ export class IndexedStorage implements RecordCache {
     this.revision++;
     this.schedule();
   }
+
   delete(store: RecordStore, key: RecordKey, automatic = false): void {
-    const address = { store, key },
-      id = addressId(address),
-      pending = this.pending.get(id),
-      old = this.get(store, key);
+    const address = { store, key };
+    const id = addressId(address);
+    const pending = this.pending.get(id);
+    const old = this.get(store, key);
     this.pending.set(id, {
       ...address,
       base: pending ? pending.base : old,
@@ -229,39 +274,33 @@ export class IndexedStorage implements RecordCache {
     this.revision++;
     this.schedule();
   }
+
   site(key: string): string | null {
     return this.legacy.getItem(key);
   }
+
   prepare(addresses: readonly RecordAddress[]): Promise<void> | undefined {
     const missing = addresses.filter((address) => {
       if (address.store !== 'lists' || this.readyLists.has(addressId(address)))
         return false;
-      const [kind, id] = address.key as [string, string];
-      return !!this.get(
-        kind === 'resume' ? 'resumeSessions' : 'navigationSessions',
-        id,
-      );
+      const parent = parentSessionAddress(address);
+      return !!this.get(parent.store, parent.key);
     });
     if (!missing.length) return;
     for (const address of missing)
       this.loadedLists.set(addressId(address), address);
-    return this.refresh([
-      ...missing,
-      ...missing.map((address): RecordAddress => {
-        const [kind, id] = address.key as [string, string];
-        return {
-          store: kind === 'resume' ? 'resumeSessions' : 'navigationSessions',
-          key: id,
-        };
-      }),
-    ]);
+    return this.refresh([...missing, ...missing.map(parentSessionAddress)]);
   }
+
   refresh(addresses?: readonly RecordAddress[]): Promise<void> {
     if (addresses) {
-      for (const address of addresses)
+      for (const address of addresses) {
         if (RECORD_STORES.includes(address.store))
           this.requested.set(addressId(address), address);
-    } else this.refreshAll = true;
+      }
+    } else {
+      this.refreshAll = true;
+    }
     return (this.refreshing ??= Promise.resolve().then(async () => {
       try {
         while (this.refreshAll || this.requested.size) {
@@ -277,48 +316,126 @@ export class IndexedStorage implements RecordCache {
       }
     }));
   }
+
+  private collectSnapshotLists(
+    selected?: readonly RecordAddress[],
+  ): Map<string, RecordAddress> {
+    const full = !selected;
+    const wanted = new Set((selected ?? []).map(addressId));
+    const requestedLists = new Map(
+      [...this.loadedLists].filter(([, address]) => {
+        if (full || wanted.has(addressId(address))) return true;
+        return wanted.has(addressId(parentSessionAddress(address)));
+      }),
+    );
+    if (
+      this.currentId &&
+      (full ||
+        wanted.has(
+          addressId({ store: 'navigationSessions', key: this.currentId }),
+        ))
+    ) {
+      const address: RecordAddress = {
+        store: 'lists',
+        key: ['navigation', this.currentId],
+      };
+      requestedLists.set(addressId(address), address);
+      this.loadedLists.set(addressId(address), address);
+    }
+    if (selected) {
+      for (const address of selected) {
+        if (
+          address.store === 'lists' &&
+          this.loadedLists.has(addressId(address))
+        )
+          requestedLists.set(addressId(address), address);
+      }
+    }
+    return requestedLists;
+  }
+
+  private readSnapshotLists(
+    tx: IDBTransaction,
+    requestedLists: ReadonlyMap<string, RecordAddress>,
+    selected: readonly RecordAddress[] | undefined,
+    entries: Map<string, SnapshotEntry>,
+  ): void {
+    for (const [id, address] of requestedLists) {
+      const parent = parentSessionAddress(address);
+      const metadata = entries.has(addressId(parent))
+        ? entries.get(addressId(parent))!.value
+        : this.get(parent.store, parent.key);
+      if (
+        metadata?.listVersion === this.get('lists', address.key)?.version &&
+        !selected?.some((item) => addressId(item) === id)
+      )
+        continue;
+      const request = tx.objectStore('lists').get(address.key);
+      request.onsuccess = () =>
+        entries.set(id, { address, value: request.result });
+    }
+  }
+
+  private readFullSnapshot(
+    tx: IDBTransaction,
+    entries: Map<string, SnapshotEntry>,
+    onSmallComplete: () => void,
+  ): void {
+    let count = SMALL_STORES.length;
+    for (const store of SMALL_STORES) {
+      const request = tx.objectStore(store).getAll();
+      request.onsuccess = () => {
+        for (const row of request.result) {
+          const address = { store, key: keyOf(store, row) };
+          entries.set(addressId(address), { address, value: row });
+        }
+        for (const entry of this.cache.values()) {
+          if (
+            entry.address.store === store &&
+            !entries.has(addressId(entry.address))
+          ) {
+            entries.set(addressId(entry.address), {
+              address: entry.address,
+              value: undefined,
+            });
+          }
+        }
+        if (--count === 0) onSmallComplete();
+      };
+    }
+  }
+
+  private readSelectedSnapshot(
+    tx: IDBTransaction,
+    small: readonly RecordAddress[],
+    entries: Map<string, SnapshotEntry>,
+    onSmallComplete: () => void,
+  ): void {
+    let count = small.length;
+    if (!count) {
+      onSmallComplete();
+      return;
+    }
+    for (const address of small) {
+      const request = tx.objectStore(address.store).get(address.key);
+      request.onsuccess = () => {
+        entries.set(addressId(address), { address, value: request.result });
+        if (--count === 0) onSmallComplete();
+      };
+    }
+  }
+
   private async snapshot(selected?: readonly RecordAddress[]): Promise<void> {
     const revision = this.revision;
-    const entries = new Map<
-      string,
-      { address: RecordAddress; value: DataRow | undefined }
-    >();
+    const entries = new Map<string, SnapshotEntry>();
     const full = !selected;
     await this.activity.run(
       (track) =>
         new Promise<void>((resolve, reject) => {
           entries.clear();
-          let count = 0;
-          const wanted = new Set((selected ?? []).map(addressId));
-          const requestedLists = new Map(
-            [...this.loadedLists].filter(([, address]) => {
-              if (full || wanted.has(addressId(address))) return true;
-              const [kind, id] = address.key as [string, string];
-              return wanted.has(
-                addressId({
-                  store:
-                    kind === 'resume' ? 'resumeSessions' : 'navigationSessions',
-                  key: id,
-                }),
-              );
-            }),
-          );
-          if (
-            this.currentId &&
-            (full ||
-              wanted.has(
-                addressId({ store: 'navigationSessions', key: this.currentId }),
-              ))
-          ) {
-            const address: RecordAddress = {
-              store: 'lists',
-              key: ['navigation', this.currentId],
-            };
-            requestedLists.set(addressId(address), address);
-            this.loadedLists.set(addressId(address), address);
-          }
+          const requestedLists = this.collectSnapshotLists(selected);
           const scope = new Set<RecordStore>(
-            full ? SMALL : selected!.map((address) => address.store),
+            full ? SMALL_STORES : selected.map((address) => address.store),
           );
           if (requestedLists.size) scope.add('lists');
           if (!scope.size) {
@@ -327,84 +444,32 @@ export class IndexedStorage implements RecordCache {
           }
           const tx = this.database!.transaction([...scope], 'readonly');
           track(tx);
-          const readLists = () => {
-            for (const [id, address] of requestedLists) {
-              const [kind, sessionId] = address.key as [string, string];
-              const parent: RecordAddress = {
-                store:
-                  kind === 'resume' ? 'resumeSessions' : 'navigationSessions',
-                key: sessionId,
-              };
-              const metadata = entries.has(addressId(parent))
-                ? entries.get(addressId(parent))!.value
-                : this.get(parent.store, parent.key);
-              if (
-                metadata?.listVersion ===
-                  this.get('lists', address.key)?.version &&
-                !selected?.some((item) => addressId(item) === id)
-              )
-                continue;
-              const request = tx.objectStore('lists').get(address.key);
-              request.onsuccess = () =>
-                entries.set(id, { address, value: request.result });
-            }
-          };
+          const readLists = () =>
+            this.readSnapshotLists(tx, requestedLists, selected, entries);
           if (full) {
-            for (const store of SMALL) {
-              count++;
-              const request = tx.objectStore(store).getAll();
-              request.onsuccess = () => {
-                for (const row of request.result) {
-                  const address = { store, key: keyOf(store, row) };
-                  entries.set(addressId(address), { address, value: row });
-                }
-                for (const entry of this.cache.values())
-                  if (
-                    entry.address.store === store &&
-                    !entries.has(addressId(entry.address))
-                  )
-                    entries.set(addressId(entry.address), {
-                      address: entry.address,
-                      value: undefined,
-                    });
-                if (--count === 0) readLists();
-              };
-            }
+            this.readFullSnapshot(tx, entries, readLists);
           } else {
             const small = selected.filter(
               (address) => address.store !== 'lists',
             );
-            for (const address of selected)
-              if (
-                address.store === 'lists' &&
-                this.loadedLists.has(addressId(address))
-              )
-                requestedLists.set(addressId(address), address);
-            count = small.length;
-            for (const address of small) {
-              const request = tx.objectStore(address.store).get(address.key);
-              request.onsuccess = () => {
-                entries.set(addressId(address), {
-                  address,
-                  value: request.result,
-                });
-                if (--count === 0) readLists();
-              };
-            }
-            if (!count) readLists();
+            this.readSelectedSnapshot(tx, small, entries, readLists);
           }
           tx.oncomplete = () => resolve();
           tx.onabort = () => reject(tx.error);
           tx.onerror = () => {};
         }),
     );
+
     if (revision !== this.revision) {
-      if (selected)
+      if (selected) {
         for (const address of selected)
           this.requested.set(addressId(address), address);
-      else this.refreshAll = true;
+      } else {
+        this.refreshAll = true;
+      }
       return;
     }
+
     const changes: RecordAddress[] = [];
     for (const [id, { address, value }] of entries) {
       if (address.store === 'lists') this.readyLists.add(id);
@@ -413,7 +478,7 @@ export class IndexedStorage implements RecordCache {
     }
     if (changes.length) this.notify(changes);
   }
-  private scheduled = false;
+
   private schedule(): void {
     if (this.scheduled) return;
     this.scheduled = true;
@@ -424,6 +489,7 @@ export class IndexedStorage implements RecordCache {
       })
       .catch((error) => this.report(error));
   }
+
   flush(): Promise<void> {
     return (this.saving ??= Promise.resolve().then(async () => {
       try {
@@ -438,9 +504,9 @@ export class IndexedStorage implements RecordCache {
           );
           const notifications: RecordAddress[] = [];
           for (const change of committed) {
-            const id = addressId(change),
-              edit = batch.get(id),
-              pending = this.pending.get(id);
+            const id = addressId(change);
+            const edit = batch.get(id);
+            const pending = this.pending.get(id);
             if (pending === edit) {
               this.pending.delete(id);
               if (this.apply(change, change.value)) notifications.push(change);
@@ -463,6 +529,7 @@ export class IndexedStorage implements RecordCache {
       }
     }));
   }
+
   private report(error: unknown): void {
     reportFailure(
       new OperationError(
@@ -473,8 +540,10 @@ export class IndexedStorage implements RecordCache {
     );
   }
 }
+
 let storage: IndexedStorage | undefined;
 let observing = false;
+
 export async function initializeStorage(): Promise<void> {
   storage ??= new IndexedStorage(
     indexedDB,
@@ -494,10 +563,12 @@ export async function initializeStorage(): Promise<void> {
     window.addEventListener('pageshow', refresh);
   }
 }
+
 export function getStorage(): RecordCache {
   if (!storage) throw new Error('IndexedDB has not been initialized');
   return storage;
 }
+
 export function flushStorage(): Promise<void> {
   return storage?.flush() ?? Promise.resolve();
 }

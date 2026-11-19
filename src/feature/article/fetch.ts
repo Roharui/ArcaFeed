@@ -3,6 +3,7 @@ import { OperationError } from '@/utils/operation-error';
 import { shuffle } from '@/utils/func';
 import { showToast, showConfirmToast } from '@/utils/toast';
 import { captureArticleSession } from '@/vault/article-session';
+import { articlePath } from '@/vault/navigation-context';
 import { isVisitedPath } from '@/vault/reading-history';
 import { fetchListingPages } from './listing';
 import { showFetchLoader, hideFetchLoader } from './loading';
@@ -69,7 +70,7 @@ async function fetchFirstBatch(
       if (!isCurrent()) return;
       if (links.length > 0) {
         p.articleList = [...new Set([...p.articleList, ...links])];
-        const currentPath = `/b/${p.href.channelId}/${p.href.articleId}`;
+        const currentPath = articlePath(p.href.channelId, p.href.articleId);
         if (
           !p.skipVisitedArticles ||
           links.some(

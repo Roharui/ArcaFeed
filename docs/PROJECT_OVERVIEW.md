@@ -72,7 +72,7 @@ Webpack으로 코드와 CSS, jQuery를 묶으며 Swiper와 Toastify는 유저스
 사이트 루트는 쿼리·fragment와 무관하게 `HOME`으로 판별하고 검색 조건과 `articleKey`를 유지합니다.
 이벤트 중복, 병렬 실패와 조회 무효화의 상세 동작은 [아키텍처](ARCHITECTURE.md)를 참고하세요.
 
-탐색 목록은 `feature/modal/navigationTab.ts`에서 고정 위치 버튼과 독립 패널을 제공합니다.
+탐색 목록은 `feature/modal/navigationTab.ts`에서 고정 위치 버튼과 독립 패널 열기를 담당하고, `feature/modal/navigationModal.ts`에서 패널 목록 UI를 구성합니다.
 목록 로딩 상태는 `feature/article/loading.ts`에서 동시 요청 수로 관리하고,
 탐색 버튼의 외부 테두리에 표시합니다. 버튼 생성 전 시작된 요청도 구독 시 반영합니다.
 현재 목록·인덱스를 구독하고, 직접 이동은 `feature/swiper/page.ts`의 공용 이동 함수를 사용합니다.
@@ -94,7 +94,7 @@ Webpack으로 코드와 CSS, jQuery를 묶으며 Swiper와 Toastify는 유저스
 | 데이터 이전      | meta의 schema 상태, record-migration.ts의 일회성 구형 변환 |
 | 사이트 방문 기록 | 사이트 소유 recent_articles·recent_disabled를 읽기만 함    |
 
-[ReadingHistory](../src/vault/reading-history.ts)는 사이트 방문 기록과 이어보기를
+[ReadingHistory](../src/vault/reading-history.ts)는 [SiteRecentHistory](../src/vault/site-recent-history.ts)를 통해 사이트 방문 기록을 읽고 이어보기를
 관리하며 방문 기록·세션·위치 변경을 별도로 알립니다.
 보관 한도와 탭 사이 병합 정책은 [아키텍처](ARCHITECTURE.md)의 저장소 경계를 참고하세요.
 
