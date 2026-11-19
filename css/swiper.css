@@ -17,6 +17,7 @@
   box-sizing: content-box;
   align-items: flex-start;
   transition-property: transform;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .swiper-wrapper.arcafeed-swiper-moving {

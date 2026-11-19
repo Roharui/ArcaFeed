@@ -16,6 +16,7 @@ export function updateAfterSwipe(
 /** Use Swiper's native transform while moving and release the layer at rest. */
 export function installSwipeCompositing(swiper: Swiper): void {
   const { el, wrapperEl } = swiper;
+  let touched = false;
   let dragging = false;
   let moving = false;
   let releaseFrame: number | undefined;
@@ -30,9 +31,19 @@ export function installSwipeCompositing(swiper: Swiper): void {
   function useRestingTransform(): void {
     // Keep Swiper's computed coordinates, including RTL and rounding.
     const { style } = wrapperEl;
+    if (!style.transform) return;
     style.transform = style.transform.replace(
       /^translate3d\(([^,]+),\s*([^,]+),\s*[^)]+\)$/,
       'translate($1, $2)',
+    );
+  }
+
+  function useMovingTransform(): void {
+    const { style } = wrapperEl;
+    if (!style.transform) return;
+    style.transform = style.transform.replace(
+      /^translate\(([^,]+),\s*([^)]+)\)$/,
+      'translate3d($1, $2, 0px)',
     );
   }
 
@@ -42,10 +53,11 @@ export function installSwipeCompositing(swiper: Swiper): void {
     cancelUiFlush?.();
     cancelUiFlush = undefined;
     wrapperEl.classList.add('arcafeed-swiper-moving');
+    useMovingTransform();
   }
 
   function stopMoving(): void {
-    if (dragging || !moving) return;
+    if (touched || dragging || !moving) return;
     moving = false;
     wrapperEl.classList.remove('arcafeed-swiper-moving');
     useRestingTransform();
@@ -78,6 +90,19 @@ export function installSwipeCompositing(swiper: Swiper): void {
   onAvailabilityChange('enable', updateTouchAction);
   onAvailabilityChange('disable', () => {
     updateTouchAction();
+    touched = false;
+    dragging = false;
+    if (!swiper.animating) stopMoving();
+  });
+  // Promote the compositing layer on touchStart so the first horizontal drag
+  // frame does not stall rasterizing the article or lose transition time.
+  swiper.on('touchStart', () => {
+    if (!swiper.enabled) return;
+    touched = true;
+    startMoving();
+  });
+  swiper.on('touchMoveOpposite', () => {
+    touched = false;
     dragging = false;
     if (!swiper.animating) stopMoving();
   });
@@ -92,7 +117,8 @@ export function installSwipeCompositing(swiper: Swiper): void {
     if (!moving) useRestingTransform();
   });
   swiper.on('touchEnd', () => {
-    if (!dragging) return;
+    if (!touched && !dragging) return;
+    touched = false;
     dragging = false;
     // Swiper decides whether to start a snap transition after this event.
     releaseFrame ??= requestAnimationFrame(() => {

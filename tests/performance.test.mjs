@@ -1685,9 +1685,17 @@ test('short navigation lists do not load unrelated series channel settings', () 
   assert.ok(!reads.includes('arcaFeed:uiSettings'));
 });
 
-test('prefetch matches skipped navigation URLs and uses speculation rules when supported', () => {
+test('prefetch matches skipped navigation URLs and removes link when Swiper is disabled', () => {
   let subscriber;
-  const scripts = [];
+  const appended = [];
+  const link = {
+    relList: { supports: () => true },
+    setAttribute() {},
+    removed: false,
+    remove() {
+      this.removed = true;
+    },
+  };
   const p = vaultFixture({
     activeIndex: 0,
     searchQuery: '?articleKey=session',
@@ -1700,44 +1708,27 @@ test('prefetch matches skipped navigation URLs and uses speculation rules when s
     },
   });
   p.skipVisitedArticles = true;
-  class MockHTMLScriptElement {
-    static supports(type) {
-      return type === 'speculationrules';
-    }
-  }
   const { initArticlePrefetch } = sourceLoader({
     globals: {
       window: windowFixture,
-      HTMLScriptElement: MockHTMLScriptElement,
       document: {
         createElement: (tag) => {
-          assert.equal(tag, 'script');
-          return {
-            removed: false,
-            remove() {
-              this.removed = true;
-            },
-          };
+          assert.equal(tag, 'link');
+          return link;
         },
         head: {
-          append: (element) => scripts.push(element),
+          append: (element) => {
+            element.removed = false;
+            appended.push(element.href);
+          },
         },
       },
     },
   })('src/feature/article/prefetch.ts');
   initArticlePrefetch(p);
-  assert.equal(scripts.length, 1);
-  assert.equal(scripts[0].type, 'speculationrules');
-  assert.deepEqual(JSON.parse(scripts[0].textContent), {
-    prefetch: [
-      {
-        source: 'list',
-        urls: [
-          'https://arca.live/b/test/98?articleKey=session&arcaFeedSkipped=1',
-        ],
-      },
-    ],
-  });
+  assert.deepEqual(appended, [
+    'https://arca.live/b/test/98?articleKey=session&arcaFeedSkipped=1',
+  ]);
   p.articleFilterConfig = { test: { disableSwiper: true } };
   subscriber({
     articleList: p.articleList,
@@ -1748,8 +1739,69 @@ test('prefetch matches skipped navigation URLs and uses speculation rules when s
     readingRevision: 0,
     uiSettings: p.uiSettings,
   });
-  assert.equal(scripts[0].removed, true);
-  assert.equal(scripts.length, 1);
+  assert.equal(link.removed, true);
+  assert.equal(appended.length, 1);
+});
+
+test('Swiper pre-promotes compositing on touchStart, releases on vertical scroll, and guards mid-transition retouch', () => {
+  const handlers = new Map();
+  const frames = new Map();
+  let frameId = 0;
+  const { installSwipeCompositing } = sourceLoader({
+    globals: {
+      requestAnimationFrame: (callback) => {
+        frames.set(++frameId, callback);
+        return frameId;
+      },
+      cancelAnimationFrame: (id) => frames.delete(id),
+    },
+    mocks: {
+      '@/utils/after-paint': {
+        afterPaint: () => () => {},
+      },
+    },
+  })('src/feature/swiper/motion.ts');
+  const swiper = {
+    el: { classList: { toggle() {}, remove() {} } },
+    wrapperEl: {
+      style: { transform: 'translate(-360px, 0px)' },
+      classList: new Set(),
+    },
+    enabled: true,
+    animating: false,
+    on: (name, callback) => handlers.set(name, callback),
+  };
+  const { classList, style } = swiper.wrapperEl;
+  classList.remove = classList.delete;
+  const emit = (name, ...args) => handlers.get(name)(swiper, ...args);
+
+  installSwipeCompositing(swiper);
+  // Pre-promote on touchStart before horizontal drag threshold is crossed.
+  emit('touchStart');
+  assert.equal(classList.has('arcafeed-swiper-moving'), true);
+  assert.equal(style.transform, 'translate3d(-360px, 0px, 0px)');
+
+  // Release immediately when the gesture turns into a vertical scroll.
+  emit('touchMoveOpposite');
+  assert.equal(classList.has('arcafeed-swiper-moving'), false);
+  assert.equal(style.transform, 'translate(-360px, 0px)');
+
+  // Keep compositing intact when a retouch interrupts an active transition.
+  emit('setTransition', 300);
+  swiper.animating = true;
+  emit('touchStart');
+  swiper.animating = false;
+  emit('transitionEnd');
+  assert.equal(classList.has('arcafeed-swiper-moving'), true);
+  assert.equal(style.transform, 'translate3d(-360px, 0px, 0px)');
+
+  emit('touchEnd');
+  for (const [id, callback] of frames) {
+    frames.delete(id);
+    callback();
+  }
+  assert.equal(classList.has('arcafeed-swiper-moving'), false);
+  assert.equal(style.transform, 'translate(-360px, 0px)');
 });
 
 test('initReading defers parsing recent_articles until needed when visited skipping is off', () => {

@@ -4,32 +4,16 @@ import type { VaultAdapter } from '@/vault';
 
 const initializedVaults = new WeakSet<VaultAdapter>();
 
-function supportsSpeculationRules(): boolean {
-  return (
-    typeof HTMLScriptElement === 'function' &&
-    typeof HTMLScriptElement.supports === 'function' &&
-    HTMLScriptElement.supports('speculationrules')
-  );
-}
-
 /** Warm the browser's navigation cache for just the next article. */
 export function initArticlePrefetch(p: VaultAdapter): void {
   if (!p.isCurrentMode('CHANNEL', 'ARTICLE') || initializedVaults.has(p))
     return;
-
-  const useSpeculationRules = supportsSpeculationRules();
-  let link: HTMLLinkElement | undefined;
-  let speculationScript: HTMLScriptElement | undefined;
-
-  if (!useSpeculationRules) {
-    link = document.createElement('link');
-    if (!link.relList.supports('prefetch')) return;
-    link.rel = 'prefetch';
-    link.as = 'document';
-    link.setAttribute('fetchpriority', 'low');
-  }
-
+  const link = document.createElement('link');
+  if (!link.relList.supports('prefetch')) return;
   initializedVaults.add(p);
+  link.rel = 'prefetch';
+  link.as = 'document';
+  link.setAttribute('fetchpriority', 'low');
 
   let currentUrl = '';
   const update = () => {
@@ -47,24 +31,10 @@ export function initArticlePrefetch(p: VaultAdapter): void {
     const href = url?.origin === window.location.origin ? url.href : '';
     if (href === currentUrl) return;
     currentUrl = href;
-
-    if (useSpeculationRules) {
-      speculationScript?.remove();
-      speculationScript = undefined;
-      if (!href || href === window.location.href) return;
-      speculationScript = document.createElement('script');
-      speculationScript.type = 'speculationrules';
-      speculationScript.textContent = JSON.stringify({
-        prefetch: [{ source: 'list', urls: [href] }],
-      });
-      document.head.append(speculationScript);
-      return;
-    }
-
-    link!.remove();
+    link.remove();
     if (!href || href === window.location.href) return;
-    link!.href = href;
-    document.head.append(link!);
+    link.href = href;
+    document.head.append(link);
   };
 
   let previousList = p.articleList;
