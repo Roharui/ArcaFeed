@@ -20,6 +20,30 @@ export function currentArticlePath(
     : '';
 }
 
+interface SkippedVisitedContext {
+  href: Pick<HrefImpl, 'channelId' | 'articleId'>;
+  activeIndex: number;
+  articleList: readonly string[];
+  skipVisitedArticles: boolean;
+  reading: { hasVisited: (path: string) => boolean };
+}
+
+/** Count visited articles skipped between activeIndex and nextIndex on forward navigation. */
+export function countSkippedVisited(
+  p: SkippedVisitedContext,
+  nextIndex: number,
+): number {
+  if (!p.skipVisitedArticles) return 0;
+  const currentPath = articlePath(p.href.channelId, p.href.articleId);
+  const end = nextIndex === -1 ? p.articleList.length : nextIndex;
+  let skipped = 0;
+  for (let index = p.activeIndex + 1; index < end; index++) {
+    const path = p.articleList[index]!;
+    if (path !== currentPath && p.reading.hasVisited(path)) skipped++;
+  }
+  return skipped;
+}
+
 /** Interpret legacy session flags in one place, including restored sessions. */
 export function navigationMode(p: NavigationContext): NavigationMode {
   if (p.isScrapMode || p.href.mode === 'SCRAP') return 'scrap';

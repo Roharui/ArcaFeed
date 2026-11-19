@@ -47,33 +47,41 @@ function channelName(p: VaultAdapter): string {
   );
 }
 
+function normalizeRowPath(href: string): string {
+  if (href.startsWith('/')) {
+    const end = href.search(/[?#]/);
+    const pathname = end === -1 ? href : href.slice(0, end);
+    return pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
+  }
+  return new URL(href, window.location.origin).pathname.replace(/\/$/, '');
+}
+
 function updateVisitedIndicators(p: VaultAdapter): void {
   const enabled = p.uiSettings.showVisitedIndicators;
   extractArticleRows($('.root-container')).each((_, element) => {
     const href = element.getAttribute('href');
     if (!href) return;
-    const path = new URL(href, window.location.origin).pathname.replace(
-      /\/$/,
-      '',
-    );
+    const show = enabled && p.reading.hasVisited(normalizeRowPath(href));
     const row = $(element);
     const title = row.is('.title')
       ? row
       : row.find('.col-title, .title').first();
     if (!title.length) return;
     let status = title.children('.arcafeed-list-visited-status');
-    if (!status.length) {
-      status = $('<span>', { class: 'arcafeed-list-visited-status' }).appendTo(
-        title,
-      );
-    }
-    const show = enabled && p.reading.hasVisited(path);
-    title.toggleClass('arcafeed-list-title', show);
-    status
-      .attr({
+    if (!show && !status.length && !title.hasClass('arcafeed-list-title'))
+      return;
+    if (show && !status.length) {
+      status = $('<span>', {
+        class: 'arcafeed-list-visited-status',
         'aria-label': '본 글',
-      })
-      .toggle(show);
+      }).appendTo(title);
+    }
+    if (title.hasClass('arcafeed-list-title') !== show) {
+      title.toggleClass('arcafeed-list-title', show);
+    }
+    if (status.length) {
+      status.attr('aria-label', '본 글').toggle(show);
+    }
   });
   updateSkipButton(p);
 }
@@ -309,8 +317,9 @@ function bindStorageSync(p: VaultAdapter): void {
       p.reading.reloadSessionList(requested);
     else if (requested.length) p.reading.reload(requested);
   }) as EventListener);
-  p.reading.reload();
-  window.addEventListener('load', () => p.reading.reload(), { once: true });
+  window.addEventListener('load', () => p.reading.reloadEntriesIfLoaded(), {
+    once: true,
+  });
 }
 
 function bindReadingStateUpdates(

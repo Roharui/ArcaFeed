@@ -33,17 +33,31 @@ function injectArticleKeys(
   articleKey: string,
 ): void {
   if (!articleKey) return;
+  const encodedKey = encodeURIComponent(articleKey);
+  const keyParam = `articleKey=${encodedKey}`;
 
   $rows.each((_, el) => {
-    const $el = $(el);
-    const href = $el.attr('href');
+    const href = el.getAttribute('href');
     if (!href) return;
+
+    if (href.startsWith('/') && !href.includes('#')) {
+      const queryIndex = href.indexOf('?');
+      if (queryIndex === -1) {
+        el.setAttribute('href', `${href}?${keyParam}`);
+        return;
+      }
+      const query = href.slice(queryIndex + 1);
+      if (!query.includes('articleKey=')) {
+        el.setAttribute('href', `${href}&${keyParam}`);
+        return;
+      }
+    }
 
     const url = new URL(href, window.location.origin);
     if (url.searchParams.get('articleKey') === articleKey) return;
 
     url.searchParams.set('articleKey', articleKey);
-    $el.attr('href', `${url.pathname}${url.search}`);
+    el.setAttribute('href', `${url.pathname}${url.search}`);
   });
 }
 

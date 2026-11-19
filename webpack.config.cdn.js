@@ -1,5 +1,10 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { UserscriptPlugin } from 'webpack-userscript';
 import createDevConfig, { getDevHeaders } from './webpack.config.dev.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default function (env = {}) {
   const baseURL = new URL(
@@ -19,6 +24,19 @@ export default function (env = {}) {
   config.mode = 'production';
   config.devtool = false;
   config.optimization = { nodeEnv: false };
+  config.module.rules = config.module.rules.map((rule) =>
+    rule.test instanceof RegExp && rule.test.test('.css')
+      ? {
+          ...rule,
+          use: [
+            ...rule.use,
+            {
+              loader: path.resolve(__dirname, 'scripts/css-minify-loader.cjs'),
+            },
+          ],
+        }
+      : rule,
+  );
 
   // A numeric, increasing version lets userscript managers detect each build.
   config.plugins = config.plugins.map((plugin) =>

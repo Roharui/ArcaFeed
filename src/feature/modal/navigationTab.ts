@@ -14,24 +14,40 @@ import type { VaultAdapter } from '@/vault';
 
 export { createNavigationModal } from './navigationModal';
 
+interface PositionCache {
+  styledNativeButton: HTMLElement | null;
+  baseBottom: number | undefined;
+  appliedBottom: string | undefined;
+}
+
 function positionNavigationControl(
   control: HTMLElement,
   trigger: HTMLElement,
+  cache: PositionCache,
 ): void {
   const nativeButton = document.querySelector<HTMLElement>(
     '.nav-control a, .nav-control button',
   );
-  if (nativeButton) {
+  if (nativeButton && nativeButton !== cache.styledNativeButton) {
+    cache.styledNativeButton = nativeButton;
     const style = getComputedStyle(nativeButton);
     // Keep the native theme while retaining our rounded corners.
     for (const property of ['border', 'box-shadow', 'font-size']) {
       trigger.style.setProperty(property, style.getPropertyValue(property));
     }
   }
-  control.style.bottom = '';
+
+  // Measure baseline CSS bottom once per viewport/settings change to avoid forced reflows.
+  if (cache.baseBottom === undefined) {
+    if (control.style.bottom) {
+      control.style.bottom = '';
+      cache.appliedBottom = undefined;
+    }
+    const baseRect = control.getBoundingClientRect();
+    cache.baseBottom = window.innerHeight - baseRect.bottom;
+  }
+
   const rect = control.getBoundingClientRect();
-  let top = rect.top;
-  // The site's navigation may change size, visibility, or location.
   const obstacles = Array.from(
     document.querySelectorAll<HTMLElement>('.nav-control'),
   )
@@ -44,11 +60,18 @@ function positionNavigationControl(
         box.right > rect.left - 12,
     )
     .sort((a, b) => b.top - a.top);
+
+  let top = window.innerHeight - cache.baseBottom - rect.height;
+  // The site's navigation may change size, visibility, or location.
   for (const box of obstacles) {
     if (top < box.bottom + 12 && top + rect.height > box.top - 12)
       top = box.top - rect.height - 12;
   }
-  control.style.bottom = `${window.innerHeight - top - rect.height}px`;
+  const nextBottom = `${window.innerHeight - top - rect.height}px`;
+  if (nextBottom !== cache.appliedBottom) {
+    cache.appliedBottom = nextBottom;
+    control.style.bottom = nextBottom;
+  }
 }
 
 function installControlPositioning(
@@ -59,11 +82,17 @@ function installControlPositioning(
 ) {
   let touchTimer: ReturnType<typeof setTimeout> | undefined;
   let frame: number | undefined;
+  const cache: PositionCache = {
+    styledNativeButton: null,
+    baseBottom: undefined,
+    appliedBottom: undefined,
+  };
   const position = () => {
     if (isDisposed()) return;
-    positionNavigationControl(control[0]!, trigger[0]!);
+    positionNavigationControl(control[0]!, trigger[0]!, cache);
   };
-  const schedulePosition = () => {
+  const schedulePosition = (resetBase = false) => {
+    if (resetBase) cache.baseBottom = undefined;
     if (frame === undefined) {
       frame = requestAnimationFrame(() => {
         frame = undefined;
@@ -71,6 +100,7 @@ function installControlPositioning(
       });
     }
   };
+  const onResize = () => schedulePosition(true);
   const hide = () => {
     clearTimeout(touchTimer);
     trigger.removeClass('is-hovered');
@@ -94,35 +124,49 @@ function installControlPositioning(
     });
 
   document.addEventListener('scroll', hide, { passive: true, capture: true });
-  window.addEventListener('resize', schedulePosition);
-  const resizeObserver = new ResizeObserver(schedulePosition);
+  window.addEventListener('resize', onResize);
+
+  const resizeObserver = new ResizeObserver(() => schedulePosition());
   resizeObserver.observe(control[0]!);
+
+  // Observe only .nav-control attributes and body direct children to avoid waking on swipe transforms.
+  const observedControls = new WeakSet<Element>();
+  const navAttributeObserver = new MutationObserver(() => schedulePosition());
   const observeControls = () => {
-    document
-      .querySelectorAll('.nav-control')
-      .forEach((navControl) => resizeObserver.observe(navControl));
+    document.querySelectorAll('.nav-control').forEach((navControl) => {
+      if (observedControls.has(navControl)) return;
+      observedControls.add(navControl);
+      resizeObserver.observe(navControl);
+      navAttributeObserver.observe(navControl, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'hidden'],
+      });
+    });
     schedulePosition();
   };
-  const mutationObserver = new MutationObserver((records) => {
+  const hasNavControlNode = (nodes: NodeList): boolean => {
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      if (
+        node instanceof Element &&
+        !node.closest('.arcafeed-navigation-control') &&
+        (node.matches('.nav-control') || !!node.querySelector('.nav-control'))
+      )
+        return true;
+    }
+    return false;
+  };
+  const bodyObserver = new MutationObserver((records) => {
     if (
-      records.some((record) => {
-        const target = record.target;
-        return (
-          target instanceof Element &&
-          !target.closest('.arcafeed-navigation-control') &&
-          (target.matches('body, .nav-control') ||
-            target.closest('.nav-control'))
-        );
-      })
+      records.some(
+        (record) =>
+          hasNavControlNode(record.addedNodes) ||
+          hasNavControlNode(record.removedNodes),
+      )
     )
       observeControls();
   });
-  mutationObserver.observe(document.body, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ['class', 'style', 'hidden'],
-  });
+  bodyObserver.observe(document.body, { childList: true });
   observeControls();
 
   return {
@@ -130,10 +174,11 @@ function installControlPositioning(
     cleanup: () => {
       clearTimeout(touchTimer);
       if (frame !== undefined) cancelAnimationFrame(frame);
-      resizeObserver.disconnect();
-      mutationObserver.disconnect();
+      resizeObserver.disconnect?.();
+      navAttributeObserver.disconnect?.();
+      bodyObserver.disconnect?.();
       document.removeEventListener('scroll', hide, true);
-      window.removeEventListener('resize', schedulePosition);
+      window.removeEventListener('resize', onResize);
     },
   };
 }
@@ -274,7 +319,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     if (changed) updateAfterSwipe(p.swiper, update);
     if (state.uiSettings !== previousSettings) {
       previousSettings = state.uiSettings;
-      positioning.schedulePosition();
+      positioning.schedulePosition(true);
     }
   });
 

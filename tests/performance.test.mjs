@@ -1684,3 +1684,265 @@ test('short navigation lists do not load unrelated series channel settings', () 
   assert.ok(!reads.includes('arcaFeed:articleFilterConfig'));
   assert.ok(!reads.includes('arcaFeed:uiSettings'));
 });
+
+test('prefetch matches skipped navigation URLs and uses speculation rules when supported', () => {
+  let subscriber;
+  const scripts = [];
+  const p = vaultFixture({
+    activeIndex: 0,
+    searchQuery: '?articleKey=session',
+    articleList: ['/b/test/100', '/b/test/99', '/b/test/98'],
+    reading: {
+      hasVisited: (path) => path === '/b/test/99',
+    },
+    subscribe: (fn) => {
+      subscriber = fn;
+    },
+  });
+  p.skipVisitedArticles = true;
+  class MockHTMLScriptElement {
+    static supports(type) {
+      return type === 'speculationrules';
+    }
+  }
+  const { initArticlePrefetch } = sourceLoader({
+    globals: {
+      window: windowFixture,
+      HTMLScriptElement: MockHTMLScriptElement,
+      document: {
+        createElement: (tag) => {
+          assert.equal(tag, 'script');
+          return {
+            removed: false,
+            remove() {
+              this.removed = true;
+            },
+          };
+        },
+        head: {
+          append: (element) => scripts.push(element),
+        },
+      },
+    },
+  })('src/feature/article/prefetch.ts');
+  initArticlePrefetch(p);
+  assert.equal(scripts.length, 1);
+  assert.equal(scripts[0].type, 'speculationrules');
+  assert.deepEqual(JSON.parse(scripts[0].textContent), {
+    prefetch: [
+      {
+        source: 'list',
+        urls: [
+          'https://arca.live/b/test/98?articleKey=session&arcaFeedSkipped=1',
+        ],
+      },
+    ],
+  });
+  p.articleFilterConfig = { test: { disableSwiper: true } };
+  subscriber({
+    articleList: p.articleList,
+    activeIndex: p.activeIndex,
+    searchQuery: p.searchQuery,
+    href: p.href,
+    articleFilterConfig: p.articleFilterConfig,
+    readingRevision: 0,
+    uiSettings: p.uiSettings,
+  });
+  assert.equal(scripts[0].removed, true);
+  assert.equal(scripts.length, 1);
+});
+
+test('initReading defers parsing recent_articles until needed when visited skipping is off', () => {
+  const storage = memoryStorage({
+    recent_articles: JSON.stringify([
+      { slug: 'test', articleId: 99, title: 'Seen', regdateAt: 1700000000 },
+    ]),
+  });
+  const parsed = [];
+  const loadListeners = [];
+  const load = sourceLoader({
+    globals: {
+      window: {
+        ...windowFixture,
+        scrollY: 0,
+        addEventListener(type, fn) {
+          if (type === 'load') loadListeners.push(fn);
+        },
+        removeEventListener() {},
+      },
+      document: {
+        visibilityState: 'visible',
+        addEventListener() {},
+        querySelector: () => null,
+      },
+      localStorage: storage,
+      sessionStorage: memoryStorage(),
+      requestAnimationFrame: () => 1,
+      cancelAnimationFrame() {},
+      JSON: {
+        stringify: JSON.stringify,
+        parse(raw) {
+          parsed.push(raw);
+          return JSON.parse(raw);
+        },
+      },
+    },
+    mocks: {
+      jquery: {
+        default: () => ({
+          length: 0,
+          first() {
+            return this;
+          },
+          text: () => '',
+          prop() {
+            return this;
+          },
+          toggleClass() {
+            return this;
+          },
+          attr() {
+            return this;
+          },
+          on() {
+            return this;
+          },
+          each() {
+            return this;
+          },
+        }),
+      },
+      './filter': { extractArticleRows: () => ({ each() {} }) },
+      './article/link': { refreshUnvisitedNavigation() {} },
+    },
+  });
+  const { VaultAdapter } = load('src/vault/index.ts');
+  const { Store } = load('src/vault/store.ts');
+  const { initReading } = load('src/feature/reading.ts');
+  const vault = new VaultAdapter(
+    new Store({
+      articleKey: 'session',
+      articleList: ['/b/test/100'],
+      uiSettings: { showVisitedIndicators: false },
+    }),
+    { saveConfig() {} },
+    vaultFixture().href,
+  );
+  initReading(vault);
+  for (const fn of loadListeners) fn();
+  assert.deepEqual(parsed, []);
+});
+
+test('equalData compares arrays directly and distinguishes arrays from objects', () => {
+  const { equalData, addressId } = sourceLoader()('src/vault/record-schema.ts');
+  assert.equal(equalData(['/b/a/1', '/b/a/2'], ['/b/a/1', '/b/a/2']), true);
+  assert.equal(equalData(['/b/a/1', '/b/a/2'], ['/b/a/1', '/b/a/3']), false);
+  assert.equal(equalData(['/b/a/1'], { 0: '/b/a/1' }), false);
+  assert.equal(equalData({ 0: '/b/a/1' }, ['/b/a/1']), false);
+  assert.notEqual(
+    addressId({ store: 'lists', key: ['resume', 'a'] }),
+    addressId({ store: 'lists', key: ['navigation', 'a'] }),
+  );
+  assert.notEqual(
+    addressId({ store: 'settings', key: 'a' }),
+    addressId({ store: 'channelFilters', key: 'a' }),
+  );
+});
+
+test('navigation control observes only direct body children instead of subtree mutations', () => {
+  const observations = [];
+  const jquery = () => {
+    const el = {
+      0: { style: {} },
+      append() {
+        return this;
+      },
+      appendTo() {
+        return this;
+      },
+      on() {
+        return this;
+      },
+      attr() {
+        return this;
+      },
+      text() {
+        return this;
+      },
+      toggleClass() {
+        return this;
+      },
+      removeClass() {
+        return this;
+      },
+      addClass() {
+        return this;
+      },
+      remove() {},
+    };
+    return el;
+  };
+  class Observer {
+    observe(target, options) {
+      observations.push({ target, options });
+    }
+    disconnect() {}
+  }
+  const body = { id: 'body' };
+  const { initNavigationList } = sourceLoader({
+    globals: {
+      document: {
+        body,
+        querySelector: () => null,
+        querySelectorAll: () => [],
+        addEventListener() {},
+        removeEventListener() {},
+      },
+      window: {
+        addEventListener() {},
+        removeEventListener() {},
+      },
+      ResizeObserver: Observer,
+      MutationObserver: Observer,
+      requestAnimationFrame: () => 1,
+      cancelAnimationFrame() {},
+    },
+    mocks: {
+      jquery: { default: jquery },
+      './readingUi': {},
+      '@/feature/swiper/page': {},
+      '@/feature/article/loading': {
+        isArticleLoading: () => false,
+        subscribeArticleLoading: () => () => {},
+      },
+    },
+  })('src/feature/modal/navigationTab.ts');
+  initNavigationList(vaultFixture({ subscribe: () => () => {} }));
+  const bodyObservation = observations.find((item) => item.target === body);
+  assert.ok(bodyObservation);
+  assert.deepEqual(bodyObservation.options, { childList: true });
+});
+
+test('css minify loader preserves calc, media queries, pseudo selectors and strings', async () => {
+  const { createRequire } = await import('node:module');
+  const require = createRequire(import.meta.url);
+  const { minifyCss } = require('../scripts/css-minify-loader.cjs');
+  const input = `
+    /* header comment */
+    @media (min-width: 1024px) and (pointer: fine) {
+      .box :where(.item) {
+        width: calc(100% - 12px);
+        content: "a : b ; /* keep */";
+        background: url("data:image/svg+xml;utf8,<svg></svg>");
+      }
+    }
+  `;
+  const output = minifyCss(input);
+  assert.ok(!output.includes('header comment'));
+  assert.ok(output.includes('@media (min-width:1024px) and (pointer:fine){'));
+  assert.ok(output.includes('.box :where(.item){'));
+  assert.ok(output.includes('width:calc(100% - 12px);'));
+  assert.ok(output.includes('content:"a : b ; /* keep */";'));
+  assert.ok(output.includes('url("data:image/svg+xml;utf8,<svg></svg>")'));
+  assert.ok(!output.includes(';}'));
+});

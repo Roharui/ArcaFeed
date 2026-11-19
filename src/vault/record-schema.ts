@@ -60,10 +60,21 @@ export interface RecordCache {
 export const keyOf = (store: RecordStore, row: DataRow): RecordKey =>
   store === 'lists' || store === 'progress' ? [row.kind, row.id] : row.id;
 export const addressId = ({ store, key }: RecordAddress): string =>
-  JSON.stringify([store, key]);
+  typeof key === 'string'
+    ? `${store}\0${key}`
+    : `${store}\0${key[0]}\0${key[1]}`;
+
 export function equalData(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b) || a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (!equalData(a[i], b[i])) return false;
+    }
+    return true;
+  }
+  if (Array.isArray(b)) return false;
   const x = a as DataRow,
     y = b as DataRow;
   const keys = Object.keys(x);

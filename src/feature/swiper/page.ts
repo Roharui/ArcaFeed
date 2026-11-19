@@ -1,5 +1,5 @@
 import { navigate, isNavigating } from '@/feature/navigation';
-import { articlePath } from '@/vault/navigation-context';
+import { articlePath, countSkippedVisited } from '@/vault/navigation-context';
 import type { PageMode, PromiseFunc } from '@/types';
 import type { VaultAdapter } from '@/vault';
 import {
@@ -18,22 +18,11 @@ function nextLinkForce(p: VaultAdapter) {
 function toLink(mode: PageMode): PromiseFunc {
   return async (p: VaultAdapter): Promise<void> => {
     if (isNavigating(p)) return;
-    const { activeIndex, articleList } = p;
-
-    const idx = activeIndex;
-    const list = articleList;
+    const list = p.articleList;
 
     const nextIdx = p.getAdjacentArticleIndex(mode);
     const url = list[nextIdx];
-    let skipped = 0;
-    if (mode === 'NEXT' && p.skipVisitedArticles) {
-      const currentPath = articlePath(p.href.channelId, p.href.articleId);
-      const end = nextIdx === -1 ? list.length : nextIdx;
-      for (let index = idx + 1; index < end; index++) {
-        const path = list[index]!;
-        if (path !== currentPath && p.reading.hasVisited(path)) skipped++;
-      }
-    }
+    const skipped = mode === 'NEXT' ? countSkippedVisited(p, nextIdx) : 0;
     if (!url) {
       p.swiper?.slideTo(1, 0, false);
       if (skipped > 0) showSkippedToast(skipped);

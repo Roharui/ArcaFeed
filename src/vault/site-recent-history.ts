@@ -69,6 +69,12 @@ export class SiteRecentHistory {
     return true;
   }
 
+  /** Refresh only when site history has already been read on this page. */
+  reloadIfLoaded(): boolean {
+    if (!this.loaded) return false;
+    return this.reload();
+  }
+
   private ensureLoaded(): void {
     if (this.loaded) return;
     this.loaded = true;

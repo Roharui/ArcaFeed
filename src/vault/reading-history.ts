@@ -199,6 +199,11 @@ export class ReadingHistory {
     this.reload(['sessions', ...changes]);
   }
 
+  /** Re-read site visits on page load only if something already consumed them. */
+  reloadEntriesIfLoaded(): void {
+    if (this.siteHistory.reloadIfLoaded()) this.notify(['entries']);
+  }
+
   prepareList(id: string): Promise<void> | undefined {
     return this.repo.prepareLists([id]);
   }

@@ -51,6 +51,9 @@ export default function (_env, _args) {
             {
               loader: 'css-loader',
             },
+            {
+              loader: path.resolve(__dirname, 'scripts/css-minify-loader.cjs'),
+            },
           ],
         },
         {
