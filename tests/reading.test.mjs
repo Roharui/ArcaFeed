@@ -1053,12 +1053,19 @@ test('cleared visits are read lazily and storage refresh loads new visits', () =
   assert.equal(reading.hasVisited('/community/board/300143/read/100'), true);
 });
 
-test('visited indicator mounts into mobile info row or desktop subject container and skip button mounts in article header actions', () => {
+test('visited indicator mounts into mobile info row or desktop subject container and skip button mounts inline without adding a new line', () => {
   const dom = domFixture(`
     <div id="board_read">
       <aside class="board_main_top">
         <h4 class="subject"><span class="subject_text"><span class="category_text">[잡담]</span> <span class="subject_inner_text">제목</span></span></h4>
-        <div class="user_view">작성자</div>
+        <div class="user_view">
+          <div class="user_info">
+            <div class="info_wrapper">
+              <div>프로필</div>
+              <div><span class="regdate">26.11.22</span></div>
+            </div>
+          </div>
+        </div>
       </aside>
     </div>
     <div id="board_list">
@@ -1145,8 +1152,9 @@ test('visited indicator mounts into mobile info row or desktop subject container
   const skipButton = dom.document.querySelector('#rulifeed-skip-visited');
   assert.ok(skipButton);
   assert.ok(
-    skipButton.closest('#board_read .board_main_top .rulifeed-article-actions'),
+    skipButton.closest('.user_view .user_info.rulifeed-article-info-slot'),
   );
+  assert.equal(dom.document.querySelector('.rulifeed-article-actions'), null);
   assert.equal(dom.document.querySelector('.rulifeed-article-heading'), null);
   assert.equal(skipButton.getAttribute('aria-pressed'), 'false');
   assert.equal(

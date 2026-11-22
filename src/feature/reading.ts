@@ -15,6 +15,10 @@ import { afterPaint } from '@/utils/after-paint';
 
 const ARTICLE_TITLE_SELECTOR =
   '#board_read .subject_inner_text, #board_read .subject_text';
+const MOBILE_ARTICLE_INFO_SELECTOR =
+  '#board_read .board_main_top .user_view .user_info';
+const PC_ARTICLE_ACTIONS_SELECTOR =
+  '#board_read .board_main_top .share_wrapper .btn_wrapper';
 const ARTICLE_HEADER_SELECTOR = '#board_read .board_main_top';
 const SKIP_ICON =
   '<svg class="rulifeed-skip-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>';
@@ -167,13 +171,19 @@ function bindReadingStateUpdates(
 function mountSkipButton(p: VaultAdapter): void {
   if (!p.canSkipVisitedArticles) return;
   if (document.querySelector('#rulifeed-skip-visited')) return;
-  const header = document.querySelector<HTMLElement>(ARTICLE_HEADER_SELECTOR);
-  const fallbackSubject = header
+  const mobileInfo = document.querySelector<HTMLElement>(
+    MOBILE_ARTICLE_INFO_SELECTOR,
+  );
+  const pcActions = mobileInfo
     ? null
-    : document.querySelector<HTMLElement>(
-        `#board_read h4.subject, ${ARTICLE_TITLE_SELECTOR}`,
-      );
-  if (!header && !fallbackSubject) return;
+    : document.querySelector<HTMLElement>(PC_ARTICLE_ACTIONS_SELECTOR);
+  const fallback =
+    mobileInfo || pcActions
+      ? null
+      : document.querySelector<HTMLElement>(
+          `${ARTICLE_HEADER_SELECTOR}, #board_read h4.subject, ${ARTICLE_TITLE_SELECTOR}`,
+        );
+  if (!mobileInfo && !pcActions && !fallback) return;
 
   const skipButton = createElement(
     'button',
@@ -199,13 +209,16 @@ function mountSkipButton(p: VaultAdapter): void {
     }
   });
 
-  const actions = createElement(
-    'div',
-    { class: 'rulifeed-article-actions swiper-no-swiping' },
-    skipButton,
-  );
-  if (header) header.append(actions);
-  else fallbackSubject?.after(actions);
+  if (mobileInfo) {
+    mobileInfo.classList.add('rulifeed-article-info-slot');
+    skipButton.classList.add('rulifeed-skip-floating-inline');
+    mobileInfo.append(skipButton);
+  } else if (pcActions) {
+    pcActions.classList.add('rulifeed-article-inline-actions');
+    pcActions.prepend(skipButton);
+  } else if (fallback) {
+    fallback.append(skipButton);
+  }
 }
 
 export function initReading(p: VaultAdapter): void {
