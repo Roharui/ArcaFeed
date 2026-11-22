@@ -2,21 +2,12 @@ import { mergeState } from '@/vault/lazy-state';
 import { createElement, fromTemplate } from '@/utils/dom';
 import '@css/filter.css';
 import { eventBus } from '@/core/app-events';
-import { NO_TAB_CATEGORIES, expandTabCategories } from '@/feature/filter';
 import { readingHeader } from './readingUi';
 import type { VaultAdapter } from '@/vault';
 import type { ArticleFilterImpl } from '@/types';
 const MODAL_FILTER_TAB = `
 <div class="helper-modal-tab helper-modal-filter">
   <div class="rulifeed-modal-content">
-    <section class="rulifeed-settings-section">
-      <div class="filter-section-heading">
-        <h3 class="rulifeed-settings-heading">카테고리</h3>
-        <div id="category-all"></div>
-      </div>
-      <p class="rulifeed-settings-description">선택한 카테고리의 글을 탐색합니다. 선택하지 않으면 모두 표시합니다.</p>
-      <div id="category"></div>
-    </section>
     <section class="rulifeed-settings-section filter-best-row">
       <label>
         <input id="filter-best-checkbox" class="category-check" type="checkbox" />
@@ -49,38 +40,13 @@ const MODAL_FILTER_TAB = `
   </div>
 </div>
 `;
-interface FilterTarget {
-  channelId: string;
-  channelName: string;
-  categories: string[];
-  filter?: ArticleFilterImpl | undefined;
-  onApply: (filter: ArticleFilterImpl) => void;
-  onCancel: () => void;
-}
-export function extractFilterCategories(scope: ParentNode | null): string[] {
-  return Array.from(
-    scope?.querySelectorAll('.category_list a, #board_list .category_menu a') ??
-      [],
-  )
-    .map((element) => element.textContent?.trim().replace(/^\[|\]$/g, '') ?? '')
-    .filter((category) => category && category !== '전체');
-}
-
-function createArticleFilterModal(
-  p: VaultAdapter,
-  target?: FilterTarget,
-): HTMLElement {
+function createArticleFilterModal(p: VaultAdapter): HTMLElement {
   const editor = fromTemplate(MODAL_FILTER_TAB);
   editor.prepend(
-    readingHeader(
-      target ? `${target.channelName} 필터` : '필터',
-      '이 채널에서 보고 싶은 글만 골라보세요.',
-    ),
+    readingHeader('필터', '제목 키워드와 베스트 조건을 설정하세요.'),
   );
-  const filter = target
-    ? target.filter
-    : p.articleFilterConfig[p.href.channelId];
-  const { tab = [], title = [], onlyBest = false } = filter ?? {};
+  const filter = p.articleFilterConfig[p.href.channelId];
+  const { title = [], onlyBest = false } = filter ?? {};
   editor.querySelector<HTMLInputElement>('#include-title')!.value = (
     filter?.includeTitle ?? []
   ).join(', ');
@@ -90,52 +56,13 @@ function createArticleFilterModal(
     filter?.includeCaseSensitive === true;
   editor.querySelector<HTMLInputElement>('#filter-best-checkbox')!.checked =
     onlyBest;
-  const categories = [
-    ...new Set([
-      ...NO_TAB_CATEGORIES,
-      ...(target?.categories ??
-        extractFilterCategories(document.querySelector('#board'))),
-      ...expandTabCategories(tab),
-    ]),
-  ];
-  const tabSet = new Set(expandTabCategories(tab));
-  const updateAll = () => {
-    const selected = editor.querySelectorAll('.ele-category:checked').length;
-    all.checked = selected === categories.length;
-    all.indeterminate = selected > 0 && selected < categories.length;
-  };
-  const allRow = createCategoryRow(
-    '전체 선택',
-    'ele-category-all',
-    false,
-    () => {
-      editor
-        .querySelectorAll<HTMLInputElement>('.ele-category')
-        .forEach((checkbox) => {
-          checkbox.checked = all.checked;
-        });
-    },
-  );
-  const all = allRow.querySelector('input')!;
-  editor.querySelector('#category-all')!.append(allRow);
-  editor
-    .querySelector('#category')!
-    .append(
-      ...categories.map((text) =>
-        createCategoryRow(text, 'ele-category', tabSet.has(text), updateAll),
-      ),
-    );
-  updateAll();
   title.forEach((tag) => createExcludeTag(tag, editor));
   editor.querySelector('#filter-check-btn')!.addEventListener('click', () => {
     addTitleExcludeTag(editor);
-    if (target)
-      target.onApply(readArticleFilter(editor, filter, target.channelName));
-    else void eventBus.emit('checkFilterModal');
+    void eventBus.emit('checkFilterModal');
   });
   editor.querySelector('#filter-cancel-btn')!.addEventListener('click', () => {
-    if (target) target.onCancel();
-    else void eventBus.emit('closeModal');
+    void eventBus.emit('closeModal');
   });
   editor
     .querySelector('#exclude-btn')!
@@ -176,27 +103,6 @@ function createExcludeTag(text: string, editor: HTMLElement): void {
   editor.querySelector('.exclude-title-list')!.append(tag);
 }
 
-function createCategoryRow(
-  text: string,
-  className: string,
-  checked: boolean,
-  change: () => void,
-): HTMLLabelElement {
-  const checkbox = createElement('input', {
-    type: 'checkbox',
-    class: `category-check ${className}`,
-    value: text,
-  });
-  checkbox.checked = checked;
-  checkbox.addEventListener('change', change);
-  return createElement(
-    'label',
-    {},
-    checkbox,
-    createElement('span', { class: 'category-span', text }),
-  );
-}
-
 function addTitleExcludeTag(editor: HTMLElement): void {
   const input = editor.querySelector<HTMLInputElement>('#exclude-title')!;
   input.value.split(',').forEach((tag) => createExcludeTag(tag, editor));
@@ -209,10 +115,6 @@ export function readArticleFilter(
   previous?: ArticleFilterImpl,
   channelName?: string,
 ): ArticleFilterImpl {
-  const tab = Array.from(
-    editor.querySelectorAll<HTMLInputElement>('.ele-category:checked'),
-    (input) => input.value,
-  );
   const title = Array.from(
     editor.querySelectorAll<HTMLElement>('.exclude-title-tag'),
     (tag) => tag.dataset.text ?? '',
@@ -226,7 +128,7 @@ export function readArticleFilter(
     ),
   ];
   return {
-    tab,
+    tab: [],
     title,
     ...(includeTitle.length
       ? {

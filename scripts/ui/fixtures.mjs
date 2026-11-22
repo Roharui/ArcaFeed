@@ -1,6 +1,5 @@
 export const MODES = ['channel', 'home', 'series', 'feed', 'scrap'];
 export const SIZES = ['empty', 'short', 'long'];
-export const NETWORKS = ['success', 'slow', 'error'];
 export const THEMES = ['light', 'dark'];
 
 export function normalizeScenario(options = {}) {
@@ -9,13 +8,8 @@ export function normalizeScenario(options = {}) {
   return {
     mode: pick(MODES, options.mode, 'channel'),
     size: pick(SIZES, options.size, 'long'),
-    network: pick(NETWORKS, options.network, 'success'),
     theme: pick(THEMES, options.theme, 'light'),
-    tab: pick(
-      ['filter', 'subscribe', 'ui', 'history', 'resume'],
-      options.tab,
-      'ui',
-    ),
+    tab: pick(['filter', 'history'], options.tab, 'filter'),
   };
 }
 

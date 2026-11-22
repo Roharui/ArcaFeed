@@ -13,7 +13,7 @@ Webpack으로 코드와 CSS를 묶고, 화면과 목록은 표준 DOM API로 처
 | 문서                        | 내용                                                       |
 | --------------------------- | ---------------------------------------------------------- |
 | [README](../README.md)      | 설치, 주요 기능, 기본 사용법                               |
-| [사용 안내](USAGE.md)       | 필터, 구독 피드, 최근 본 글과 이어보기                     |
+| [사용 안내](USAGE.md)       | 필터, 최근 본 글                                           |
 | [개발 안내](DEVELOPMENT.md) | 개발 서버, 로더 설치, 모바일 연결, 검증 명령               |
 | [아키텍처](ARCHITECTURE.md) | 의존성 방향, 이벤트 실행, 비동기 요청과 저장소의 보장 범위 |
 | [UI 테스트](UI_TESTING.md)  | 모달 미리보기와 브라우저 검사                              |
@@ -32,9 +32,9 @@ Webpack으로 코드와 CSS를 묶고, 화면과 목록은 표준 DOM API로 처
 | [src/feature/article/](../src/feature/article/)                                                                             | 게시글 목록 조회, 링크 이동, 다음 글 prefetch           |
 | [src/feature/swiper/](../src/feature/swiper/)                                                                               | Swiper 생성과 이동 가능 상태 갱신                       |
 | [src/feature/filter.ts](../src/feature/filter.ts), [search.ts](../src/feature/search.ts)                                    | 목록 필터와 검색 조건 처리                              |
-| [src/feature/series.ts](../src/feature/series.ts), [subscriptions.ts](../src/feature/subscriptions.ts)                      | 게시글 시리즈와 사이트 구독 채널 파싱                   |
-| [src/feature/reading.ts](../src/feature/reading.ts)                                                                         | 본 글 표시·건너뛰기, 이어보기 복원과 스크롤 저장        |
-| [src/feature/modal/](../src/feature/modal/)                                                                                 | 필터, 화면 설정, 구독 채널, 최근 본 글, 이어보기 탭     |
+| [src/feature/series.ts](../src/feature/series.ts)                                                                           | 게시글 시리즈 파싱                                      |
+| [src/feature/reading.ts](../src/feature/reading.ts)                                                                         | 본 글 표시·건너뛰기 및 방문 기록                        |
+| [src/feature/modal/](../src/feature/modal/)                                                                                 | 필터와 최근 본 글 탭                                    |
 | [src/feature/button.ts](../src/feature/button.ts), [keyEvent.ts](../src/feature/keyEvent.ts), [ui.ts](../src/feature/ui.ts) | 버튼, 키보드와 페이지 레이아웃                          |
 | [src/vault/](../src/vault/)                                                                                                 | 상태, 설정 검증·저장, 읽기 기록과 조회 세션 관리        |
 | [src/types/vault.ts](../src/types/vault.ts)                                                                                 | 페이지 모드, 필터와 UI 설정 타입                        |
@@ -50,7 +50,7 @@ Webpack으로 코드와 CSS를 묶고, 화면과 목록은 표준 DOM API로 처
 3. 지원 페이지에서는 이벤트를 `EventManager`의 단계와 연결하고 `init`을 발행합니다.
 4. 초기화는 개발 버전 표시 → 링크·버튼·키보드·시리즈·UI 병렬 초기화 →
    읽기 이벤트·버튼 연결 → Swiper → 다음 글 prefetch 순서로 실행합니다.
-   목록의 방문 표시, 첫 이어보기 저장과 탐색 버튼 생성은 첫 렌더링 이후로 미루며
+   방문 기록과 탐색 버튼 생성은 첫 렌더링 이후로 미루며
    초기화 명령 큐는 이 작업의 완료를 기다리지 않습니다.
 5. 버튼·키보드·Swiper가 발행한 명령은 `EventQueue`를 거쳐 실행됩니다.
    게시글 이동 전에는 인덱스를 저장하고 새 페이지에서 다시 초기화합니다.
@@ -65,7 +65,7 @@ Webpack으로 코드와 CSS를 묶고, 화면과 목록은 표준 DOM API로 처
 | `OTHER`   | 그 밖의 페이지                                     |
 
 목록 초기화는 현재 HTML과 저장된 목록을 먼저 사용하고 필요한 보충 조회는
-백그라운드에서 수행합니다. 구독 채널의 일괄 탐색·부분 성공·보충·재시도는 `article/subscription-feed.ts`에서 처리합니다.
+백그라운드에서 수행합니다. 이전 구독 탐색 세션의 보충·재시도는 `article/subscription-feed.ts`에서 처리합니다.
 `article/listing.ts`는 목록 파싱과 페이지 순회를 공유합니다.
 조회 결과는 시작 시 캡처한 세션이 여전히 유효할 때만 반영합니다.
 사이트 루트는 쿼리·fragment와 무관하게 `HOME`으로 판별하고 검색 조건과 `articleKey`를 유지합니다.
@@ -84,14 +84,14 @@ Webpack으로 코드와 CSS를 묶고, 화면과 목록은 표준 DOM API로 처
 [config-schema.ts](../src/vault/config-schema.ts)로 데이터를 검증한 뒤
 [StorageRepository](../src/vault/repository.ts)를 통해 IndexedDB의 메모리 읽기 캐시에 접근합니다. [IndexedStorage](../src/vault/indexed-storage.ts)가 선택적 비동기 초기화, 저장 큐와 변경 키 기반 탭 간 캐시 갱신을 담당합니다. [record-transaction.ts](../src/vault/record-transaction.ts)는 트랜잭션 안에서 레코드 변경과 보관 한도를 검증하고, [record-schema.ts](../src/vault/record-schema.ts)는 저장소·주소·변경분 형식을 정의합니다. 일반 객체를 직접 저장하며 필드는 첫 접근 때만 정규화합니다. [storage-keys.ts](../src/vault/storage-keys.ts)는 보관 한도를 공유하며, 상태 복사와 변경 감지는 사용하지 않은 getter를 실행하지 않습니다. [ConfigStorage](../src/vault/config-storage.ts)는 채널별 필터와 화면·구독·읽기 설정을 별도 키에서 읽고 저장합니다. 설정 모달도 선택한 탭을 처음 열 때 생성합니다.
 
-| 저장 범위        | Object store와 내용                                        |
-| ---------------- | ---------------------------------------------------------- |
-| 전역 설정        | settings에 용도별 설정, channelFilters에 채널별 필터 객체  |
-| 탐색 세션        | navigationSessions에 모드·검색 조건·채널·목록 버전         |
-| 이어보기         | resumeSessions에 세션별 요약·이름·고정·목록 버전           |
-| 목록과 위치      | lists와 progress에 `[kind, id]` 복합 키로 개별 저장        |
-| 데이터 이전      | meta의 schema 상태, record-migration.ts의 일회성 구형 변환 |
-| 사이트 방문 기록 | RuliFeed가 작성한 localStorage 최근 본 글                  |
+| 저장 범위            | Object store와 내용                                        |
+| -------------------- | ---------------------------------------------------------- |
+| 전역 설정            | settings에 용도별 설정, channelFilters에 채널별 필터 객체  |
+| 탐색 세션            | navigationSessions에 모드·검색 조건·채널·목록 버전         |
+| 이전 버전의 이어보기 | resumeSessions에 세션별 요약·이름·고정·목록 버전           |
+| 목록과 위치          | lists와 progress에 `[kind, id]` 복합 키로 개별 저장        |
+| 데이터 이전          | meta의 schema 상태, record-migration.ts의 일회성 구형 변환 |
+| 사이트 방문 기록     | RuliFeed가 작성한 localStorage 최근 본 글                  |
 
 [ReadingHistory](../src/vault/reading-history.ts)는 [SiteRecentHistory](../src/vault/site-recent-history.ts)를 통해 RuliFeed 방문 기록을 읽고 이어보기를
 관리하며 방문 기록·세션·위치 변경을 별도로 알립니다.

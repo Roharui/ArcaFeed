@@ -57,9 +57,6 @@ export async function* fetchListingPages({
   continueSearch,
 }: ListingOptions): AsyncGenerator<string[]> {
   let nextUrl: string | null = withBestMode(initialUrl, filter);
-  if (filter?.tab.length && /[?&]view=gallery(?:[&#]|$)/.test(nextUrl)) {
-    nextUrl = nextUrl.replace(/([?&]view=)gallery(?=[&#]|$)/, '$1default');
-  }
   const seen = new Set<string>();
   const visitedPages = new Set<string>();
 

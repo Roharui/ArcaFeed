@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { domFixture, listingFixture } from './dom-fixture.mjs';
+import { listingFixture } from './dom-fixture.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
@@ -53,7 +53,7 @@ test('application commands are queued, awaited, and keep events emitted by an ac
               },
             ];
           }
-          checkUIModal() {
+          checkFilterModal() {
             return [
               () => {
                 calls.push('save UI');
@@ -91,8 +91,8 @@ test('application commands are queued, awaited, and keep events emitted by an ac
   assert.equal(new RuliFeed(), app);
   const init = eventBus.emit('init');
   await tick();
-  const save = eventBus.emit('checkUIModal');
-  const repeatedSave = eventBus.emit('checkUIModal');
+  const save = eventBus.emit('checkFilterModal');
+  const repeatedSave = eventBus.emit('checkFilterModal');
   const close = eventBus.emit('closeModal');
   const slide = eventBus.emit('toNextPage');
   await tick();
@@ -376,82 +376,6 @@ test('resetting a list starts fresh background work and an older completion cann
   assert.equal(p.activeIndex, 1);
   assert.equal(p.saves, 1);
 });
-
-for (const scenario of ['success', 'empty', 'stale']) {
-  test(`home-series startup commits a complete session only on valid nonempty results: ${scenario}`, async () => {
-    const gate = deferred();
-    const navigations = [];
-    const commits = [];
-    const { initStartHomeSeries } = sourceLoader({
-      globals: {
-        ...domFixture(),
-        window: {
-          ...windowFixture,
-          location: {
-            ...windowFixture.location,
-            replace: (url) => navigations.push(url),
-          },
-        },
-      },
-      mocks: {
-        '@/feature/subscriptions': {
-          parseSubscribedChannels: () => [
-            { id: 'community/board/300143', name: 'Test channel' },
-          ],
-        },
-        '@/feature/article/fetch': {
-          showFetchLoader() {},
-          hideFetchLoader() {},
-          fetchChannelFirstPage: () => gate.promise,
-        },
-        '@/utils/toast': { showToast() {} },
-      },
-    })('src/feature/modal/subscribeTab.ts');
-    const p = vaultFixture({
-      href: { ...vaultFixture().href, mode: 'HOME' },
-      uiSettings: { hiddenChannels: [], homeSeriesChannels: [] },
-      updateState(patch) {
-        Object.assign(this, patch);
-        commits.push({ ...this });
-      },
-    });
-    const work = initStartHomeSeries(p);
-    if (scenario === 'stale') p.articleKey = 'newer-session';
-    gate.resolve(
-      scenario === 'empty'
-        ? []
-        : [
-            '/community/board/300143/read/99',
-            '/community/board/300143/read/100',
-            '/community/board/300143/read/99',
-          ],
-    );
-    await work;
-    if (scenario === 'success') {
-      assert.equal(commits.length, 1);
-      assert.deepEqual(commits[0].articleList, [
-        '/community/board/300143/read/100',
-        '/community/board/300143/read/99',
-      ]);
-      assert.equal(commits[0].activeIndex, 0);
-      assert.equal(commits[0].isSeriesMode, true);
-      assert.equal(commits[0].href.articleKey, commits[0].articleKey);
-      assert.equal(
-        commits[0].searchQuery,
-        `?articleKey=${commits[0].articleKey}`,
-      );
-      assert.deepEqual(navigations, [
-        `https://bbs.ruliweb.com/community/board/300143/read/100?articleKey=${p.articleKey}`,
-      ]);
-      assert.equal(p.saves, 1);
-    } else {
-      assert.deepEqual(commits, []);
-      assert.deepEqual(navigations, []);
-      assert.equal(p.isSeriesMode, false);
-      assert.equal(p.saves, 0);
-    }
-  });
-}
 
 test('invalid navigation indices leave the current article and saved index intact', async () => {
   const { toLink, nextLinkForce } = sourceLoader({

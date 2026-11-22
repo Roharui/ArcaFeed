@@ -85,8 +85,7 @@
   outline-offset: 2px;
 }
 
-.helper-modal-history,
-.helper-modal-resume {
+.helper-modal-history {
   user-select: text;
   -webkit-user-select: text;
 }
@@ -276,10 +275,6 @@
   padding: 2px;
 }
 
-.rulifeed-resume-list {
-  padding: 2px var(--rulifeed-modal-padding) var(--rulifeed-modal-padding);
-}
-
 .rulifeed-reading-date {
   padding: 14px 10px 6px;
   font-size: 0.75rem;
@@ -417,96 +412,6 @@
   color: #df6262;
 }
 
-.rulifeed-resume-card {
-  margin-bottom: 10px;
-  padding: 16px;
-  border: 1px solid var(--color-bd-btn);
-  border-radius: 12px;
-  background: var(--color-bg-body);
-}
-
-.rulifeed-resume-card:last-child {
-  margin-bottom: 0;
-}
-
-.rulifeed-resume-context {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.rulifeed-resume-type {
-  flex-shrink: 0;
-  padding: 3px 6px;
-  border-radius: 5px;
-  font-size: 0.7rem;
-  color: #766df4;
-  background: rgba(118, 109, 244, 0.1);
-}
-
-.rulifeed-resume-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.8rem;
-  color: var(--color-text-muted, #888);
-}
-
-.rulifeed-resume-title {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.5;
-  color: var(--color-text);
-}
-
-.rulifeed-resume-bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-.rulifeed-resume-action {
-  flex-shrink: 0;
-  border-color: #766df4;
-  color: #fff;
-  background: #766df4;
-}
-
-.rulifeed-resume-actions {
-  display: flex;
-  flex-shrink: 0;
-  gap: 8px;
-}
-
-.rulifeed-resume-delete:hover {
-  border-color: #d65a6b;
-  color: #d65a6b;
-}
-
-.rulifeed-resume-action:hover {
-  border-color: #655cda;
-  background: #655cda;
-}
-
-@media (max-width: 440px) {
-  .rulifeed-resume-bottom {
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  .rulifeed-resume-actions {
-    margin-left: auto;
-  }
-}
-
 @media (max-height: 480px) {
   .helper-modal-tab > .rulifeed-history-tools {
     grid-template-columns: minmax(0, 1fr) auto auto;
@@ -516,51 +421,4 @@
   .rulifeed-history-tools .rulifeed-reading-search {
     grid-column: auto;
   }
-}
-
-.rulifeed-resume-name-editor {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  width: 100%;
-}
-
-.rulifeed-resume-name-editor input {
-  flex: 1 1 100%;
-  width: 100%;
-  min-width: 0;
-  padding: 8px;
-  color: var(--color-text);
-  background: var(--color-bg-body);
-  border: 1px solid var(--color-bd-btn);
-  border-radius: 8px;
-}
-
-.rulifeed-resume-name {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  min-width: 0;
-  gap: 4px;
-}
-
-.rulifeed-resume-icon {
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border-color: transparent;
-  background: transparent;
-  color: var(--color-text-muted, #888);
-  font-size: 1rem;
-}
-
-.rulifeed-resume-icon[hidden],
-.rulifeed-resume-label[hidden] {
-  display: none;
-}
-
-.rulifeed-resume-pin[aria-pressed='true'] {
-  color: #766df4;
-  background: rgba(118, 109, 244, 0.1);
 }

@@ -588,26 +588,6 @@ test('title-only filters work without selecting tabs and read the title once', (
   );
 });
 
-test('legacy no-tab filters include both media variants and reject other tabs early', () => {
-  const { buildFilterPredicate } = sourceLoader()('src/feature/filter.ts');
-  const predicate = buildFilterPredicate({ tab: ['노탭'], title: [] });
-  const row = (hasImage, category) => ({
-    closest: () => ({
-      querySelector: (selector) =>
-        selector === '.icon-picture'
-          ? hasImage
-            ? {}
-            : null
-          : category
-            ? { textContent: category }
-            : null,
-    }),
-  });
-  assert.equal(predicate(row(false)), true);
-  assert.equal(predicate(row(true)), true);
-  assert.equal(predicate(row(false, '정보')), false);
-});
-
 test('navigation initialization returns while the next batch is still loading', async () => {
   const gate = deferred();
   let fetches = 0;
@@ -1361,110 +1341,6 @@ test('a filter change during a listing request discards its stale result', async
     '/community/board/300143/read/100',
     '/community/board/300143/read/99',
   ]);
-});
-
-test('UI initialization installs one subscription and skips DOM work for article state changes', () => {
-  let domWrites = 0;
-  const subscribers = [];
-  const dom = domFixture('<main class="body"><div id="board"></div></main>');
-  const wrapper = dom.document.querySelector('#board');
-  const nativeStyle = wrapper.style;
-  Object.defineProperty(wrapper, 'style', {
-    value: {
-      setProperty(...args) {
-        domWrites++;
-        nativeStyle.setProperty(...args);
-      },
-    },
-  });
-  const { initUi } = sourceLoader({
-    globals: { ...dom, window: { matchMedia: () => ({ matches: false }) } },
-  })('src/feature/ui.ts');
-  const p = vaultFixture({
-    href: { mode: 'CHANNEL' },
-    subscribe: (fn) => {
-      subscribers.push(fn);
-    },
-  });
-  initUi(p);
-  initUi(p);
-  assert.equal(subscribers.length, 1);
-  domWrites = 0;
-  subscribers[0]({ uiSettings: p.uiSettings, isSeriesMode: p.isSeriesMode });
-  assert.equal(domWrites, 0);
-  subscribers[0]({
-    uiSettings: { ...p.uiSettings, lastModalTab: 'resume' },
-    isSeriesMode: p.isSeriesMode,
-  });
-  assert.equal(domWrites, 0);
-  subscribers[0]({
-    uiSettings: { ...p.uiSettings, contentWidth: 900 },
-    isSeriesMode: p.isSeriesMode,
-  });
-  assert.equal(domWrites, 1);
-});
-
-test('resize events perform one geometry read and style update per animation frame', () => {
-  let geometryReads = 0;
-  let styleWrites = 0;
-  const frames = new Map();
-  let nextFrame = 0;
-  const dom = domFixture('<main class="body"><div id="board"></div></main>');
-  const wrapper = dom.document.querySelector('#board');
-  wrapper.getBoundingClientRect = () => {
-    geometryReads++;
-    return { left: 0, right: 700 };
-  };
-  const nativeStyle = wrapper.style;
-  Object.defineProperty(wrapper, 'style', {
-    value: {
-      setProperty(...args) {
-        styleWrites++;
-        nativeStyle.setProperty(...args);
-      },
-    },
-  });
-  const send = (element, type, clientX) => {
-    const event = new dom.Event(type);
-    Object.defineProperty(event, 'clientX', { value: clientX });
-    element.dispatchEvent(event);
-  };
-  const { initUi } = sourceLoader({
-    globals: {
-      ...dom,
-      window: {
-        matchMedia: (query) => ({ matches: query.includes('min-width') }),
-      },
-      requestAnimationFrame: (fn) => {
-        const id = ++nextFrame;
-        frames.set(id, fn);
-        return id;
-      },
-      cancelAnimationFrame: (id) => frames.delete(id),
-    },
-  })('src/feature/ui.ts');
-  const p = vaultFixture({
-    href: { mode: 'CHANNEL' },
-    uiSettings: { contentWidth: 700 },
-    subscribe() {},
-  });
-  initUi(p);
-  styleWrites = 0;
-  send(
-    wrapper.querySelector('.rulifeed-resize-handle-right'),
-    'mousedown',
-    700,
-  );
-  for (let index = 0; index < 100; index++)
-    send(dom.document, 'mousemove', 800 + index);
-  assert.equal(frames.size, 1);
-  assert.equal(geometryReads, 0);
-  frames.get(1)();
-  assert.equal(geometryReads, 1);
-  assert.equal(styleWrites, 1);
-  send(dom.document, 'mouseup', 899);
-  assert.equal(p.uiSettings.contentWidth, 899);
-  assert.equal(p.saves, 1);
 });
 
 test('a direct article uses its DOM listing while saved sessions keep their existing order', async () => {

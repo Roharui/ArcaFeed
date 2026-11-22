@@ -71,18 +71,14 @@ async function checkUi(page) {
       await page.locator('select[name="mode"]').selectOption('home');
       await page.locator('select[name="size"]').selectOption('empty');
       await page.locator('select[name="theme"]').selectOption('dark');
-      await page.locator('select[name="network"]').selectOption('error');
       await page.locator('select[name="viewport"]').selectOption('844x390');
       await page
         .frameLocator('#preview')
-        .locator('label[for="subscribe"]')
+        .locator('label[for="history"]')
         .click();
       await page
         .frameLocator('#preview')
-        .getByText(
-          '루리웹에서 즐겨찾기 또는 퀵메뉴를 연 뒤 이 탭을 다시 열어주세요.',
-          { exact: true },
-        )
+        .locator('.helper-modal-history')
         .waitFor();
       const frame = page
         .frames()
@@ -116,18 +112,13 @@ async function checkUi(page) {
               `${width}x${height}-${theme}-${mode}-${size}`,
               async () => {
                 await render({ mode, size, theme });
-                const result = await page.evaluate((mode) => {
+                const result = await page.evaluate(() => {
                   const errors = [];
                   const labels = [
                     ...document.querySelectorAll('.helper-modal-tab-label'),
                   ];
                   const actual = labels.map((label) => label.htmlFor);
-                  const expected =
-                    mode === 'home' || mode === 'feed'
-                      ? ['subscribe', 'ui', 'history', 'resume']
-                      : mode === 'series' || mode === 'scrap'
-                        ? ['ui', 'history', 'resume']
-                        : ['filter', 'ui', 'history', 'resume'];
+                  const expected = ['filter', 'history'];
                   if (actual.join() !== expected.join())
                     errors.push(`Unexpected tabs: ${actual}`);
                   if (
@@ -193,7 +184,7 @@ async function checkUi(page) {
                     }
                   }
                   return { errors, count: actual.length };
-                }, mode);
+                });
                 report.tabsChecked += result.count;
                 expect(!result.errors.length, result.errors.join('\n'));
               },
@@ -238,185 +229,28 @@ async function checkUi(page) {
       );
     });
     await check('tab-scroll-reset', async () => {
-      await render({ tab: 'ui' });
+      await render({ tab: 'filter' });
       await page.evaluate(() => {
         document.querySelector(
-          '.helper-modal-ui .rulifeed-modal-content',
+          '.helper-modal-filter .rulifeed-modal-content',
         ).scrollTop = 10000;
       });
       await selectTab('history');
-      await selectTab('ui');
+      await selectTab('filter');
       expect(
         (await page.evaluate(
           () =>
-            document.querySelector('.helper-modal-ui .rulifeed-modal-content')
-              .scrollTop,
+            document.querySelector(
+              '.helper-modal-filter .rulifeed-modal-content',
+            ).scrollTop,
         )) === 0,
         'Tab scroll did not reset',
       );
       expect(
         (await page.evaluate(
           () => window.uiFixture.vault.uiSettings.lastModalTab,
-        )) === 'ui',
+        )) === 'filter',
         'Tab preference was not saved',
-      );
-    });
-    await check('ui-save-and-close', async () => {
-      await render({ tab: 'ui' });
-      await page
-        .locator('input[data-key="hideNavControl"]')
-        .check({ force: true });
-      await page.getByRole('button', { name: '적용', exact: true }).click();
-      expect(
-        (await page.locator('#dialog').count()) === 0,
-        'UI apply did not close the dialog',
-      );
-      expect(
-        await page.evaluate(
-          () => window.uiFixture.vault.uiSettings.hideNavControl,
-        ),
-        'UI setting was not saved',
-      );
-      await page.getByRole('button', { name: '모달 다시 열기' }).click();
-      await page.keyboard.press('Escape');
-      expect(
-        (await page.locator('#dialog').count()) === 0,
-        'Escape did not close the dialog',
-      );
-    });
-    await check('resume-search-delete', async () => {
-      await render({ tab: 'resume' });
-      const search = page.getByRole('searchbox', { name: '이어보기 검색' });
-      await search.fill('게시글 19');
-      expect(
-        (await page.locator('.rulifeed-resume-card').count()) === 1,
-        'Resume search failed',
-      );
-      await page.locator('.rulifeed-resume-delete').click();
-      expect(
-        (await page.locator('.rulifeed-resume-card').count()) === 0,
-        'Resume delete failed',
-      );
-      expect(
-        (await page.evaluate(
-          () => window.uiFixture.vault.reading.sessions.length,
-        )) === 19,
-        'Resume session was not deleted',
-      );
-    });
-    for (const [width, height] of viewports) {
-      await page.setViewportSize({ width, height });
-      await check(`filter-editor-${width}x${height}`, async () => {
-        await render({ mode: 'home', tab: 'subscribe' });
-        await page
-          .getByRole('button', {
-            name: '테스트 채널 1 긴 이름 테스트 필터 수정',
-            exact: true,
-          })
-          .click();
-        await page
-          .locator('.rulifeed-subscribe-filter-editor')
-          .waitFor({ state: 'visible' });
-        expect(
-          await page.evaluate(() => {
-            const editor = document.querySelector(
-              '.rulifeed-subscribe-filter-editor',
-            );
-            return (
-              editor.scrollHeight <= editor.clientHeight + 1 &&
-              editor
-                .querySelector('.rulifeed-modal-actions')
-                .getBoundingClientRect().bottom <=
-                editor.getBoundingClientRect().bottom + 1
-            );
-          }),
-          'Embedded filter editor overflows',
-        );
-        await page
-          .locator('.rulifeed-subscribe-filter-editor #exclude-title')
-          .fill('검증 키워드');
-        await page
-          .locator('.rulifeed-subscribe-filter-editor #exclude-btn')
-          .click();
-        await page
-          .locator('.rulifeed-subscribe-filter-editor #filter-check-btn')
-          .click();
-        expect(
-          (await page.locator('.rulifeed-subscribe-filter-editor').count()) ===
-            0,
-          'Filter editor did not close',
-        );
-        expect(
-          (
-            await page
-              .locator('.rulifeed-subscribe-summary')
-              .nth(1)
-              .textContent()
-          ).includes('차단 키워드 1개'),
-          'Filter draft was not applied',
-        );
-        expect(
-          (await page
-            .locator('#subscribe-buttons')
-            .evaluate((node) => getComputedStyle(node).display)) === 'flex',
-          'Subscription footer layout was not restored',
-        );
-        await page.locator('#subscribe-save-btn').click();
-        expect(
-          (await page.locator('#dialog').count()) === 0,
-          'Subscription save did not close the dialog',
-        );
-        expect(
-          await page.evaluate(() =>
-            window.uiFixture.vault.articleFilterConfig.test1?.title.includes(
-              '검증 키워드',
-            ),
-          ),
-          'Subscription filter was not saved',
-        );
-      });
-    }
-    await page.setViewportSize({ width: 375, height: 667 });
-    await check('filter-fetch-error', async () => {
-      await render({ mode: 'home', tab: 'subscribe', network: 'error' });
-      await page
-        .getByRole('button', {
-          name: '테스트 채널 1 긴 이름 테스트 필터 수정',
-          exact: true,
-        })
-        .click();
-      await page
-        .getByText(
-          '카테고리를 불러오지 못했습니다. 저장된 카테고리와 다른 필터는 수정할 수 있습니다.',
-          { exact: true },
-        )
-        .waitFor();
-      expect(
-        (await page
-          .locator('.rulifeed-modal-content [role="status"]')
-          .count()) === 1,
-        'Error notice is outside the content',
-      );
-      await page.locator('#filter-cancel-btn').click();
-      expect(
-        await page.locator('#subscribe-buttons').isVisible(),
-        'Error cancel did not restore subscriptions',
-      );
-    });
-    await check('filter-fetch-cancel', async () => {
-      await render({ mode: 'home', tab: 'subscribe', network: 'slow' });
-      await page
-        .getByRole('button', {
-          name: '테스트 채널 1 긴 이름 테스트 필터 수정',
-          exact: true,
-        })
-        .click();
-      await page.locator('.rulifeed-subscribe-filter-loading').waitFor();
-      await page.getByRole('button', { name: '취소', exact: true }).click();
-      await page.waitForTimeout(1600);
-      expect(
-        (await page.locator('.rulifeed-subscribe-filter-editor').count()) === 0,
-        'Cancelled request reopened the editor',
       );
     });
     for (const [device, width, height] of [
@@ -425,8 +259,8 @@ async function checkUi(page) {
       ['landscape', 844, 390],
     ]) {
       await page.setViewportSize({ width, height });
-      for (const tab of ['filter', 'ui', 'subscribe', 'history', 'resume']) {
-        await render({ mode: tab === 'subscribe' ? 'home' : 'channel', tab });
+      for (const tab of ['filter', 'history']) {
+        await render({ tab });
         await screenshot(`${device}-${tab}`);
       }
     }

@@ -9,7 +9,6 @@ import { Store } from '@/vault/store';
 import { initReading } from '@/feature/reading';
 import { StorageRepository } from '@/vault/repository';
 import { ReadingHistory } from '@/vault/reading-history';
-import { createElement } from '@/utils/dom';
 import { showFetchLoader, hideFetchLoader } from '@/feature/article/loading';
 import { initNavigationList } from '@/feature/modal/navigationTab';
 import './fixture.css';
@@ -19,12 +18,9 @@ import {
   initModal,
   initCloseModal,
   initCheckFilterModal,
-  initCheckUIModal,
-  initCheckSubscribeModal,
 } from '@/feature/modal';
 import { createFixtureData, normalizeScenario } from './fixtures.mjs';
 
-const nativeFetch = window.fetch.bind(window);
 let scenario;
 let vault;
 let savedCount = 0;
@@ -33,37 +29,6 @@ let cleanupNavigation;
 function notify(message) {
   document.querySelector('#fixture-event').textContent = message;
 }
-
-// Isolate only channel requests; status checks and other local assets use real fetch.
-window.fetch = async (input, options) => {
-  const url = new URL(
-    typeof input === 'string' ? input : input.url,
-    location.href,
-  );
-  if (!/^\/b\/test\d+$/.test(url.pathname)) return nativeFetch(input, options);
-  const requestScenario = { ...scenario };
-  if (requestScenario.network === 'slow') {
-    await new Promise((resolve, reject) => {
-      const done = () => {
-        options?.signal?.removeEventListener('abort', abort);
-        resolve();
-      };
-      const timer = setTimeout(done, 1500);
-      const abort = () => {
-        clearTimeout(timer);
-        reject(options.signal.reason);
-      };
-      if (options?.signal?.aborted) abort();
-      else options?.signal?.addEventListener('abort', abort, { once: true });
-    });
-  }
-  if (requestScenario.network === 'error')
-    return new Response('Fixture fetch failure', { status: 503 });
-  const { categories } = createFixtureData(requestScenario);
-  return new Response(
-    `<div class="board-category">${categories.map((text) => `<span>${text}</span>`).join('')}</div>`,
-  );
-};
 
 function makeVault(data) {
   const listeners = new Set();
@@ -141,20 +106,6 @@ function render(options = scenario) {
   savedCount = 0;
   const data = createFixtureData(scenario);
   document.body.dataset.theme = scenario.theme;
-  document
-    .querySelector('.category_list')
-    .replaceChildren(
-      ...data.categories.map((text) => createElement('a', { text })),
-    );
-  document.querySelector('#nav_favorite').replaceChildren(
-    ...data.channels.map((channel) =>
-      createElement('a', {
-        class: 'channel',
-        href: `/${channel.id}`,
-        text: channel.name,
-      }),
-    ),
-  );
   vault = makeVault(data);
   notify('테스트 데이터가 준비됐습니다.');
   initModal(vault);
@@ -163,17 +114,8 @@ function render(options = scenario) {
 }
 
 eventBus.on('closeModal', () => initCloseModal(vault));
-eventBus.on('checkUIModal', () => {
-  initCheckUIModal(vault);
-  initCloseModal(vault);
-});
 eventBus.on('checkFilterModal', () => {
   initCheckFilterModal(vault);
-  vault.flushSave();
-  initCloseModal(vault);
-});
-eventBus.on('checkSubscribeModal', () => {
-  initCheckSubscribeModal(vault);
   vault.flushSave();
   initCloseModal(vault);
 });
@@ -185,9 +127,7 @@ document.addEventListener(
   'click',
   (event) => {
     const target =
-      event.target instanceof Element
-        ? event.target.closest('a, .rulifeed-resume-action')
-        : null;
+      event.target instanceof Element ? event.target.closest('a') : null;
     if (
       !target ||
       target.closest('#nav_favorite, .rulifeed-navigation-control')

@@ -83,13 +83,7 @@ export function normalizeUISettings(value: unknown): UISettings {
       ),
     );
   }
-  if (
-    value.lastModalTab === 'filter' ||
-    value.lastModalTab === 'ui' ||
-    value.lastModalTab === 'subscribe' ||
-    value.lastModalTab === 'history' ||
-    value.lastModalTab === 'resume'
-  ) {
+  if (value.lastModalTab === 'filter' || value.lastModalTab === 'history') {
     settings.lastModalTab = value.lastModalTab;
   }
   settings.hiddenChannels = stringList(value.hiddenChannels);

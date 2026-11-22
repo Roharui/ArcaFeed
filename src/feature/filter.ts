@@ -2,17 +2,6 @@ import { normalizeArticlePath } from '@/utils/regex';
 import type { VaultAdapter } from '@/vault';
 import type { ArticleFilterImpl } from '@/types';
 
-// ── Constants ──────────────────────────────────────────
-
-const LEGACY_NO_TAB_CATEGORY = '노탭';
-const NO_TAB_CATEGORY_WITHOUT_IMAGE = '노탭(짤X)';
-const NO_TAB_CATEGORY_WITH_IMAGE = '노탭(짤O)';
-
-const NO_TAB_CATEGORIES = [
-  NO_TAB_CATEGORY_WITHOUT_IMAGE,
-  NO_TAB_CATEGORY_WITH_IMAGE,
-];
-
 // ── Row extraction ─────────────────────────────────────
 
 const ARTICLE_ROW =
@@ -61,52 +50,19 @@ function injectArticleKeys(rows: HTMLElement[], articleKey: string): void {
 
 // ── Tab / Title filtering ──────────────────────────────
 
-function expandTabCategories(tabCategories: string[]): string[] {
-  return [
-    ...new Set(
-      tabCategories.flatMap((cat) =>
-        cat === LEGACY_NO_TAB_CATEGORY ? NO_TAB_CATEGORIES : [cat],
-      ),
-    ),
-  ];
-}
-
 function buildFilterPredicate(
   filter: ArticleFilterImpl,
 ): (ele: HTMLElement) => boolean {
-  const { tab: tabFilter, title: titleFilter } = filter;
+  const { title: titleFilter } = filter;
 
   const includeTitle = filter.includeTitle ?? [];
   const includes = filter.includeCaseSensitive
     ? includeTitle
     : includeTitle.map((word) => word.toLocaleLowerCase());
 
-  // No active filters → allow all
-  if (
-    tabFilter.length === 0 &&
-    titleFilter.length === 0 &&
-    includes.length === 0
-  ) {
-    return () => true;
-  }
-
-  const allowedTabs = new Set(expandTabCategories(tabFilter));
+  if (titleFilter.length === 0 && includes.length === 0) return () => true;
 
   return (ele: HTMLElement) => {
-    if (allowedTabs.size > 0) {
-      const badgeText = ele
-        .closest('tr')
-        ?.querySelector('.divsn, .cate_label')
-        ?.textContent?.trim()
-        .replace(/^\[|\]$/g, '');
-      const tab =
-        badgeText ||
-        (ele.closest('tr')?.querySelector('.icon-picture')
-          ? NO_TAB_CATEGORY_WITH_IMAGE
-          : NO_TAB_CATEGORY_WITHOUT_IMAGE);
-      if (!allowedTabs.has(tab)) return false;
-    }
-    if (titleFilter.length === 0 && includes.length === 0) return true;
     const title = ele.textContent?.trim() ?? '';
     if (titleFilter.some((keyword) => title.includes(keyword))) return false;
     if (!includes.length) return true;
@@ -183,12 +139,7 @@ function filterLink(
 
 export {
   buildFilterPredicate,
-  expandTabCategories,
   extractArticleHref,
   extractArticleRows,
   filterLink,
-  LEGACY_NO_TAB_CATEGORY,
-  NO_TAB_CATEGORY_WITH_IMAGE,
-  NO_TAB_CATEGORY_WITHOUT_IMAGE,
-  NO_TAB_CATEGORIES,
 };

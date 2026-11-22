@@ -7,13 +7,9 @@ import { installDialogFocus } from './focus';
 import { eventBus } from '@/core/app-events';
 
 import { createArticleFilterModal } from './filterUi';
-import { createUISettingModal } from './uiTab';
-import { createSubscribeSettingModal } from './subscribeTab';
 import { createHistoryModal } from './historyTab';
-import { createResumeModal } from './resumeTab';
 
 import { mergeState } from '@/vault/lazy-state';
-import { navigationMode } from '@/vault/navigation-context';
 import type { VaultAdapter } from '@/vault';
 
 function resolveModalTab(lastTab: string, availableTabs: string[]): string {
@@ -24,19 +20,10 @@ function resolveModalTab(lastTab: string, availableTabs: string[]): string {
 
 function initModal(p: VaultAdapter) {
   initCloseModal(p);
-  const mode = navigationMode(p);
-  const availableTabs =
-    mode === 'subscription'
-      ? ['subscribe', 'ui', 'history', 'resume']
-      : mode === 'series' || mode === 'scrap'
-        ? ['ui', 'history', 'resume']
-        : ['filter', 'subscribe', 'ui', 'history', 'resume'];
+  const availableTabs = ['filter', 'history'];
   const labels: Record<string, { icon: string; title: string }> = {
     filter: { icon: '🔍', title: '필터' },
-    ui: { icon: '🪟', title: 'UI 설정' },
-    subscribe: { icon: '📡', title: '채널 설정' },
     history: { icon: '🕘', title: '최근 본 글' },
-    resume: { icon: '📖', title: '이어보기' },
   };
   const dialog = fromTemplate(`
     <div id="dialog" class="helper-modal">
@@ -56,10 +43,7 @@ function initModal(p: VaultAdapter) {
 
   const factories: Record<string, () => HTMLElement> = {
     filter: () => createArticleFilterModal(p),
-    ui: () => createUISettingModal(p),
-    subscribe: () => createSubscribeSettingModal(p),
     history: () => createHistoryModal(p),
-    resume: () => createResumeModal(p),
   };
   const created = new Set<string>();
   const ensureTab = (tab: string) => {
@@ -117,7 +101,5 @@ function initCloseModal(_: VaultAdapter): void {
 }
 
 export * from './filterUi';
-export * from './uiTab';
-export * from './subscribeTab';
 
 export { initModal, initCloseModal };

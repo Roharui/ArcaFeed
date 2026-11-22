@@ -46,16 +46,11 @@ body.rulifeed.dark_mode {
 
 @media (min-width: 1024px) {
   .rulifeed #board {
-    max-width: var(--content-max-width, 1024px);
+    max-width: 1024px;
     margin-inline: auto;
   }
 }
 
-body.rulifeed-article-page.hide-included-article-list #board_list,
-body.hide-nav-control #board_read .board_read_top,
-body.hide-article-title #board_read .subject,
-body.hide-article-author #board_read .user_info_wrapper,
-body.hide-article-time #board_read .regdate,
-body.hide-article-view #board_read .hit {
+body.rulifeed-article-page.hide-included-article-list #board_list {
   display: none;
 }

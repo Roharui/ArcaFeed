@@ -79,20 +79,14 @@ input.helper-modal-tab-radio {
 }
 
 #filter:checked + label.helper-modal-tab-label,
-#ui:checked + label.helper-modal-tab-label,
-#subscribe:checked + label.helper-modal-tab-label,
-#history:checked + label.helper-modal-tab-label,
-#resume:checked + label.helper-modal-tab-label {
+#history:checked + label.helper-modal-tab-label {
   background-color: var(--color-bg-main);
   color: var(--color-text);
   border-bottom-color: #766df4;
 }
 
 #filter:checked ~ .helper-modal-filter,
-#ui:checked ~ .helper-modal-ui,
-#subscribe:checked ~ .helper-modal-subscribe,
-#history:checked ~ .helper-modal-history,
-#resume:checked ~ .helper-modal-resume {
+#history:checked ~ .helper-modal-history {
   display: flex;
 }
 

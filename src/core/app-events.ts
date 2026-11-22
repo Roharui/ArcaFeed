@@ -12,8 +12,6 @@ export const APP_EVENTS = [
   'toggleShuffle',
   'showModal',
   'checkFilterModal',
-  'checkUIModal',
-  'checkSubscribeModal',
   'closeModal',
   'toggleSwiper',
 ] as const;

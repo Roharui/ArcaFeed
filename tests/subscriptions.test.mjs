@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { domFixture, listingFixture } from './dom-fixture.mjs';
-import { sourceLoader, vaultFixture } from './source-loader.mjs';
+import { domFixture } from './dom-fixture.mjs';
+import { sourceLoader } from './source-loader.mjs';
 
 test('Ruliweb routes recognize mobile and desktop boards and reject external hosts', () => {
   const { parseHref } = sourceLoader({ globals: { console: { log() {} } } })(
@@ -45,34 +45,6 @@ test('Ruliweb routes recognize mobile and desktop boards and reject external hos
   );
 });
 
-test('subscription discovery reads only the subscription menu and excludes aliases and duplicates', () => {
-  const links = [
-    { href: '/', name: '구독 중인 채널' },
-    { href: '/community/board/300146', name: '첫 번째 채널' },
-    { href: '/community/board/300147?view=all', name: '두 번째 채널' },
-    { href: '/community/board/300146', name: '중복 채널' },
-    { href: '/community/board/300146/read/100', name: '게시글' },
-    { href: 'https://example.com/community/board/300148', name: '외부 채널' },
-  ];
-  const scope = domFixture(
-    `<nav id="nav_favorite">${links
-      .map(
-        ({ href, name }) =>
-          `<a href="${href}"><span class="channel-name">${name}</span></a>`,
-      )
-      .join(
-        '',
-      )}</nav><div class="my-subscribe-channels"><a class="channel" href="/community/board/300150">Outside</a></div>`,
-  ).document;
-  const { parseSubscribedChannels } = sourceLoader()(
-    'src/feature/subscriptions.ts',
-  );
-  assert.deepEqual(parseSubscribedChannels(scope), [
-    { id: 'community/board/300146', name: '첫 번째 채널' },
-    { id: 'community/board/300147', name: '두 번째 채널' },
-  ]);
-});
-
 test('a channel filter reads only its own editor and preserves its navigation setting', () => {
   const { readArticleFilter } = sourceLoader()('src/feature/modal/filterUi.ts');
   const editor = (tab, title, onlyBest) => {
@@ -91,7 +63,7 @@ test('a channel filter reads only its own editor and preserves its navigation se
       '첫 번째',
     ),
     {
-      tab: ['정보'],
+      tab: [],
       title: ['차단'],
       onlyBest: true,
       disableSwiper: true,
@@ -108,6 +80,18 @@ test('a channel filter reads only its own editor and preserves its navigation se
       channelName: '두 번째',
     },
   );
+});
+
+test('saved category selections do not restrict title filtering', () => {
+  const { buildFilterPredicate } = sourceLoader()('src/feature/filter.ts');
+  const predicate = buildFilterPredicate({
+    tab: ['이전 카테고리'],
+    title: ['차단'],
+    includeTitle: ['허용'],
+  });
+  assert.equal(predicate({ textContent: '허용 글' }), true);
+  assert.equal(predicate({ textContent: '허용 차단 글' }), false);
+  assert.equal(predicate({ textContent: '다른 글' }), false);
 });
 
 test('best-only request URLs retain the channel path, cursor and existing search parameters', () => {
@@ -131,210 +115,6 @@ test('best-only request URLs retain the channel path, cursor and existing search
     assert.equal(withBestMode(url, { onlyBest: false }), url);
     assert.equal(withBestMode(url), url);
   }
-});
-
-test('photo-only and best-only subscriptions fetch their own channel listings rather than the current / feed', async () => {
-  const requests = [];
-  const navigations = [];
-  const pages = {
-    '/community/board/300144': [
-      { href: '/community/board/300144/read/100', category: '사진' },
-      { href: '/community/board/300144/read/98', category: '일반' },
-    ],
-    '/community/board/300145': [{ href: '/community/board/300145/read/99' }],
-    '/community/board/300145/read/99': [
-      { href: '/community/board/300145/read/97' },
-    ],
-    // Resolving a query-only best URL here would leak the unfiltered aggregate feed.
-    '/': [
-      { href: '/community/board/300144/read/98', category: '일반' },
-      { href: '/community/board/300145/read/97' },
-    ],
-  };
-  const load = sourceLoader({
-    globals: {
-      ...domFixture(),
-      window: {
-        location: {
-          href: 'https://bbs.ruliweb.com/',
-          origin: 'https://bbs.ruliweb.com',
-          replace: (url) => navigations.push(url),
-        },
-      },
-      DOMParser: class {
-        parseFromString(path) {
-          return listingFixture({ rows: pages[path] });
-        }
-      },
-    },
-    mocks: {
-      '@/feature/subscriptions': {
-        parseSubscribedChannels: () => [
-          { id: 'community/board/300144', name: '블루 아카이브' },
-          { id: 'community/board/300145', name: '젠레스 존 제로' },
-        ],
-      },
-      '@/feature/article/link': { refreshUnvisitedNavigation() {} },
-      '@/utils/fetch': {
-        fetchUrl: async (url) => {
-          const resolved = new URL(url, 'https://bbs.ruliweb.com/');
-          requests.push(`${resolved.pathname}${resolved.search}`);
-          return { responseText: resolved.pathname };
-        },
-      },
-      '@/utils/toast': { showToast: () => assert.fail('unexpected failure') },
-    },
-  });
-  const p = vaultFixture({
-    href: { ...vaultFixture().href, mode: 'HOME', channelId: 'my' },
-    articleFilterConfig: {
-      'community/board/300144': { tab: ['사진'], title: [], onlyBest: false },
-      'community/board/300145': { tab: [], title: [], onlyBest: true },
-    },
-  });
-  await load('src/feature/modal/subscribeTab.ts').initStartHomeSeries(p);
-  assert.deepEqual(requests, [
-    '/community/board/300144',
-    '/community/board/300145?view_best=1',
-  ]);
-  assert.deepEqual(p.articleList, [
-    '/community/board/300144/read/100',
-    '/community/board/300145/read/99',
-  ]);
-  assert.deepEqual(navigations, [
-    `https://bbs.ruliweb.com/community/board/300144/read/100?articleKey=${p.articleKey}`,
-  ]);
-
-  requests.length = 0;
-  const additions = await load(
-    'src/feature/article/fetch.ts',
-  ).fetchChannelArticlesBefore(
-    'community/board/300145',
-    99,
-    p.articleFilterConfig['community/board/300145'],
-  );
-  assert.deepEqual(requests, ['/community/board/300145/read/99?view_best=1']);
-  assert.deepEqual(additions, ['/community/board/300145/read/97']);
-  const existing = new Set(['/community/board/300145/read/97']);
-  existing[Symbol.iterator] = () =>
-    assert.fail('the shared existing-link set must not be copied');
-  for (const fetch of [
-    () =>
-      load('src/feature/article/fetch.ts').fetchChannelArticlesBefore(
-        'community/board/300145',
-        99,
-        undefined,
-        existing,
-      ),
-    () =>
-      load('src/feature/article/fetch.ts').fetchChannelArticles(
-        'community/board/300145',
-        undefined,
-        existing,
-      ),
-  ]) {
-    const result = await fetch();
-    assert.equal(result.includes('/community/board/300145/read/97'), false);
-    assert.equal(existing.size, 1);
-  }
-});
-
-test('bulk subscription startup applies independent channel filters, excludes hidden channels and skips visited articles', async () => {
-  const firstFilter = {
-    tab: ['정보'],
-    title: ['차단'],
-    onlyBest: true,
-    disableSwiper: false,
-  };
-  const secondFilter = {
-    tab: ['짤'],
-    title: [],
-    onlyBest: false,
-    disableSwiper: false,
-  };
-  const calls = [];
-  const navigations = [];
-  const { initStartHomeSeries } = sourceLoader({
-    globals: {
-      ...domFixture(),
-      window: {
-        location: {
-          origin: 'https://bbs.ruliweb.com',
-          replace: (url) => navigations.push(url),
-        },
-      },
-    },
-    mocks: {
-      '@/feature/subscriptions': {
-        parseSubscribedChannels: () => [
-          { id: 'community/board/300146', name: '첫 번째 채널' },
-          { id: 'community/board/300147', name: '두 번째 채널' },
-          { id: 'hidden', name: '숨김' },
-        ],
-      },
-      '@/feature/article/link': { refreshUnvisitedNavigation() {} },
-      '@/feature/article/fetch': {
-        showFetchLoader() {},
-        hideFetchLoader() {},
-        fetchChannelArticlesBefore: async (
-          id,
-          before,
-          filter,
-          _existing,
-          visited,
-        ) => {
-          calls.push({ id, before, filter, visited });
-          return id === 'community/board/300146'
-            ? [
-                '/community/board/300146/read/100',
-                '/community/board/300146/read/98',
-              ]
-            : [
-                '/community/board/300147/read/99',
-                '/community/board/300147/read/97',
-              ];
-        },
-      },
-      '@/utils/toast': { showToast: () => assert.fail('unexpected failure') },
-    },
-  })('src/feature/modal/subscribeTab.ts');
-  const visited = new Set(['/community/board/300146/read/100']);
-  const p = vaultFixture({
-    href: { ...vaultFixture().href, mode: 'HOME', channelId: 'my' },
-    articleFilterConfig: {
-      'community/board/300146': firstFilter,
-      'community/board/300147': secondFilter,
-    },
-    uiSettings: {
-      hiddenChannels: ['hidden'],
-      skipVisitedContexts: { home: true },
-    },
-    reading: { getVisitedPaths: () => visited },
-  });
-  await initStartHomeSeries(p);
-  assert.deepEqual(
-    calls.map((call) => call.id),
-    ['community/board/300146', 'community/board/300147'],
-  );
-  assert.equal(calls[0].filter, firstFilter);
-  assert.equal(calls[1].filter, secondFilter);
-  assert.ok(
-    calls.every((call) => call.before === 0 && call.visited === visited),
-  );
-  assert.deepEqual(p.articleList, [
-    '/community/board/300146/read/100',
-    '/community/board/300147/read/99',
-    '/community/board/300146/read/98',
-    '/community/board/300147/read/97',
-  ]);
-  assert.deepEqual(p.seriesChannels, [
-    'community/board/300146',
-    'community/board/300147',
-  ]);
-  assert.equal(p.activeIndex, 1);
-  assert.deepEqual(navigations, [
-    `https://bbs.ruliweb.com/community/board/300147/read/99?articleKey=${p.articleKey}`,
-  ]);
 });
 
 test('Ruliweb list parsing uses the gallery title link and skips notices and related-board promos', () => {

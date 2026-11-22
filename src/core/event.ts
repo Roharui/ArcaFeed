@@ -23,9 +23,6 @@ import {
   initUi,
   initCloseModal,
   initCheckFilterModal,
-  initCheckUIModal,
-  initCheckSubscribeModal,
-  initStartHomeSeries,
   initReading,
 } from '@/feature';
 
@@ -107,14 +104,6 @@ class EventManager implements Record<AppEvent, () => Step[]> {
 
   checkFilterModal(): Step[] {
     return [initCheckFilterModal, [initLink, initCloseModal], initSwiperPage];
-  }
-
-  checkUIModal(): Step[] {
-    return [initCheckUIModal, initCloseModal];
-  }
-
-  checkSubscribeModal(): Step[] {
-    return [initCheckSubscribeModal, initStartHomeSeries];
   }
 
   closeModal(): Step[] {

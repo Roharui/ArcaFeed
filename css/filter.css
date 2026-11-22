@@ -1,39 +1,5 @@
-/* Category choices shared by the filter and channel settings */
+/* Best-only and title keyword controls */
 
-.f-right {
-  text-align: right;
-}
-
-.helper-modal-btns .button {
-  border: none;
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  background: var(--color-bd-btn);
-  color: var(--color-text-opposite);
-}
-
-.helper-modal-btns .button:hover {
-  background: var(--color-bd-btn-hover);
-  color: var(--color-text);
-}
-
-.filter-section-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-#category {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-#category label,
-#category-all label,
 .filter-best-row label {
   position: relative;
   margin: 0;
@@ -64,22 +30,14 @@ input.category-check {
   opacity: 0;
 }
 
-input.category-check:checked + .category-span,
-input.category-check:indeterminate + .category-span {
+input.category-check:checked + .category-span {
   border-color: #766df4;
   color: var(--color-text);
   background: rgba(118, 109, 244, 0.12);
 }
 
-input.category-check:not(.ele-category):not(.ele-category-all):checked
-  + .category-span::before {
+input.category-check:checked + .category-span::before {
   content: '✓';
-  color: #766df4;
-}
-
-input.category-check:not(.ele-category):not(.ele-category-all):indeterminate
-  + .category-span::before {
-  content: '−';
   color: #766df4;
 }
 
