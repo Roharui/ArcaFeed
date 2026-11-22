@@ -1,4 +1,4 @@
-import $ from 'jquery';
+import { createElement, fromTemplate, setAttributes } from '@/utils/dom';
 
 import { eventBus } from '@/core/app-events';
 
@@ -7,15 +7,13 @@ import type { VaultAdapter } from '@/vault';
 // ── Mode-specific button builders ───────────────────────
 
 function buildHomeButtons(_p: VaultAdapter): void {
-  $('ul.nav.navbar-nav')
-    .last()
-    .before(
-      btnWrapper([
-        createArcaFeedBtn('filter', 'bi-gear-fill', () =>
-          eventBus.emit('showModal'),
-        ),
-      ]),
-    );
+  lastNavbarList()?.before(
+    btnWrapper([
+      createArcaFeedBtn('filter', 'bi-gear-fill', () =>
+        eventBus.emit('showModal'),
+      ),
+    ]),
+  );
 }
 
 function buildScrapButtons(p: VaultAdapter): void {
@@ -23,25 +21,23 @@ function buildScrapButtons(p: VaultAdapter): void {
 
   const shuffleIcon = p.isShuffleMode ? 'bi-shuffle' : 'bi-arrow-down-up';
 
-  $('ul.nav.navbar-nav')
-    .last()
-    .before(
-      btnWrapper([
-        createArcaFeedBtn('shuffle', shuffleIcon, () =>
-          eventBus.emit('toggleShuffle'),
-        ),
-        createArcaFeedBtn('series', 'bi-archive-fill', () =>
-          eventBus.emit('enableScrapSeries'),
-        ),
-        createArcaFeedBtn('filter', 'bi-gear-fill', () =>
-          eventBus.emit('showModal'),
-        ),
-      ]),
-    );
+  lastNavbarList()?.before(
+    btnWrapper([
+      createArcaFeedBtn('shuffle', shuffleIcon, () =>
+        eventBus.emit('toggleShuffle'),
+      ),
+      createArcaFeedBtn('series', 'bi-archive-fill', () =>
+        eventBus.emit('enableScrapSeries'),
+      ),
+      createArcaFeedBtn('filter', 'bi-gear-fill', () =>
+        eventBus.emit('showModal'),
+      ),
+    ]),
+  );
 }
 
 function buildChannelArticleButtons(p: VaultAdapter): void {
-  const btns: JQuery<HTMLElement>[] = [];
+  const btns: HTMLElement[] = [];
 
   if (!p.isSeriesMode) {
     const { disableSwiper } = p.articleFilterConfig[p.href.channelId] || {
@@ -63,7 +59,7 @@ function buildChannelArticleButtons(p: VaultAdapter): void {
     ),
   );
 
-  $('ul.nav.navbar-nav').last().before(btnWrapper(btns));
+  lastNavbarList()?.before(btnWrapper(btns));
 }
 
 const BUTTON_BUILDERS: Record<string, (p: VaultAdapter) => void> = {
@@ -86,7 +82,7 @@ function createArcaFeedBtn(
   display = 'list-item',
 ) {
   const btn =
-    $(`<li class="nav-item dropdown userscript-nav-item ${id}" style="display: ${display};">
+    fromTemplate(`<li class="nav-item dropdown userscript-nav-item ${id}" style="display: ${display};">
   <a class="nav-link">
     <span class="d-none d-sm-inline navbar-top-margin"></span>
     <span class="${icon} h5"></span>
@@ -99,28 +95,36 @@ function createArcaFeedBtn(
     shuffle: '스크랩 순서 전환',
     series: '스크랩 탐색 시작',
   };
-  btn
-    .find('a')
-    .attr({ role: 'button', tabindex: 0, 'aria-label': labels[id] || id })
-    .on('keydown', (event) => {
-      if (
-        (event.key === 'Enter' || event.key === ' ') &&
-        !event.originalEvent?.isComposing
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
-        void callback();
-      }
-    });
-  btn.on('click', () => callback());
+  const link = btn.querySelector('a')!;
+  setAttributes(link, {
+    role: 'button',
+    tabindex: 0,
+    'aria-label': labels[id] || id,
+  });
+  link.addEventListener('keydown', (event) => {
+    if ((event.key === 'Enter' || event.key === ' ') && !event.isComposing) {
+      event.preventDefault();
+      event.stopPropagation();
+      void callback();
+    }
+  });
+  btn.addEventListener('click', () => callback());
 
   return btn;
 }
 
-function btnWrapper(btn: JQuery<HTMLElement>[]): JQuery<HTMLElement> {
-  const ul = $('<ul>', { class: 'nav navbar-nav userscript-nav' });
-  btn.forEach((b) => ul.append(b));
-  return ul;
+function lastNavbarList(): HTMLUListElement | undefined {
+  const lists =
+    document.querySelectorAll<HTMLUListElement>('ul.nav.navbar-nav');
+  return lists[lists.length - 1];
+}
+
+function btnWrapper(buttons: HTMLElement[]): HTMLUListElement {
+  return createElement(
+    'ul',
+    { class: 'nav navbar-nav userscript-nav' },
+    ...buttons,
+  );
 }
 
 export { initButton };

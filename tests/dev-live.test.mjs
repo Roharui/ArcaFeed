@@ -20,7 +20,7 @@ function loaderFixture() {
     setTimeout: (callback) => timers.push(callback),
     window: { location: { reload: () => reloads++ } },
     console: { info() {}, warn() {}, error: (error) => errors.push(error) },
-    jQuery: { version: 'fixture' },
+    fixtureDependency: { version: 'fixture' },
   });
   vm.runInContext(createDevLoader('http://127.0.0.1:3000'), context);
   return {
@@ -49,7 +49,7 @@ test('live loader executes once with @require globals and reloads only on a new 
   loader.poll();
   loader.respond({
     hash: 'first',
-    code: 'globalThis.loaded = jQuery.version;',
+    code: 'globalThis.loaded = fixtureDependency.version;',
   });
   assert.equal(loader.context.loaded, 'fixture');
   loader.poll();
@@ -105,7 +105,7 @@ for (const transport of ['auto', 'fetch']) {
       setTimeout: (callback) => timers.push(callback),
       window: { location: { reload: () => reloads++ } },
       console: { info() {}, warn() {}, error: assert.fail },
-      jQuery: { version: 'fetch-fixture' },
+      fixtureDependency: { version: 'fetch-fixture' },
       ...(transport === 'fetch'
         ? { GM_xmlhttpRequest: () => assert.fail('GM must not be used') }
         : {}),
@@ -130,7 +130,7 @@ for (const transport of ['auto', 'fetch']) {
       text: async () =>
         JSON.stringify({
           hash: 'first',
-          code: 'globalThis.loaded = jQuery.version;',
+          code: 'globalThis.loaded = fixtureDependency.version;',
         }),
     });
     await new Promise((resolve) => setImmediate(resolve));

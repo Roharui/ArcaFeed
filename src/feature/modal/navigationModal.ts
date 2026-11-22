@@ -1,4 +1,5 @@
-import $ from 'jquery';
+import { createElement } from '@/utils/dom';
+import { setDialogCleanup } from './cleanup';
 import { createSubscriptionStatus } from './subscriptionStatus';
 import '@css/modal.css';
 import '@css/reading.css';
@@ -13,38 +14,34 @@ import {
   syncChannelSelect,
 } from './readingUi';
 import type { VaultAdapter } from '@/vault';
-
 interface NavigationItem {
   path: string;
   index: number;
 }
-
 const PAGE_WINDOW = 100;
 const INITIAL_OFFSET = 50;
-
-function centerCurrentRow(list: JQuery<HTMLElement>): void {
-  const container = list[0]!;
-  const current = list.find('[aria-current=page]')[0];
+function centerCurrentRow(list: HTMLElement): void {
+  const current = list.querySelector<HTMLElement>('[aria-current=page]');
   const padding = current
-    ? Math.max(0, (container.clientHeight - current.offsetHeight) / 2)
+    ? Math.max(0, (list.clientHeight - current.offsetHeight) / 2)
     : 0;
-  const spacers = list.find('.arcafeed-navigation-spacer');
-  spacers
-    .first()
-    .height(
-      list.find('.arcafeed-navigation-load-previous:visible').length
-        ? 0
-        : padding,
+  const [before, after] = Array.from(
+    list.querySelectorAll<HTMLElement>('.arcafeed-navigation-spacer'),
+  );
+  if (before && after) {
+    const previous = list.querySelector(
+      '.arcafeed-navigation-load-previous:not([hidden])',
     );
-  spacers.last().height(padding);
+    before.style.height = previous ? '0px' : `${padding}px`;
+    after.style.height = `${padding}px`;
+  }
   if (current) {
-    const bounds = container.getBoundingClientRect();
+    const bounds = list.getBoundingClientRect();
     const row = current.getBoundingClientRect();
-    container.scrollTop +=
-      row.top + row.height / 2 - bounds.top - container.clientHeight / 2;
+    list.scrollTop +=
+      row.top + row.height / 2 - bounds.top - list.clientHeight / 2;
   }
 }
-
 function createNavigationRow(
   p: VaultAdapter,
   entries: ReadonlyMap<string, ReadingEntry>,
@@ -62,41 +59,47 @@ function createNavigationRow(
     const latestIndex = p.articleList.indexOf(path);
     if (latestIndex >= 0)
       void navigateToArticle(p, latestIndex).catch(() => {});
-  })
-    .addClass('arcafeed-navigation-row')
-    .append(
-      ...(showChannels
-        ? [
-            $('<span>', {
-              class: 'arcafeed-navigation-channel',
-              text: name,
-            }),
-          ]
-        : []),
-      $('<span>', { class: 'arcafeed-navigation-title', text: title }),
+  });
+  row.classList.add('arcafeed-navigation-row');
+  if (showChannels)
+    row.append(
+      createElement('span', {
+        class: 'arcafeed-navigation-channel',
+        text: name,
+      }),
     );
+  row.append(
+    createElement('span', { class: 'arcafeed-navigation-title', text: title }),
+  );
   if (index === currentIndex) {
-    row.attr('aria-current', 'page').append(
-      $('<span>', {
+    row.setAttribute('aria-current', 'page');
+    row.append(
+      createElement('span', {
         class: 'arcafeed-navigation-current',
         text: '현재 글',
       }),
     );
   }
-  return row[0]!;
+  return row;
 }
-
 export function createNavigationModal(
   p: VaultAdapter,
   close: () => void,
-): JQuery<HTMLElement> {
-  const tab = $('<div>', { class: 'helper-modal-tab helper-modal-navigation' });
-  const position = $('<span>', { 'aria-live': 'polite' });
-  const channel = $('<select>', { 'aria-label': '탐색 목록 채널 필터' });
-  const tools = $('<div>', { class: 'arcafeed-history-tools' }).append(channel);
-  const list = $('<div>', { class: 'arcafeed-modal-content' });
+): HTMLElement {
+  const tab = createElement('div', {
+    class: 'helper-modal-tab helper-modal-navigation',
+  });
+  const position = createElement('span', { 'aria-live': 'polite' });
+  const channel = createElement('select', {
+    'aria-label': '탐색 목록 채널 필터',
+  });
+  const tools = createElement(
+    'div',
+    { class: 'arcafeed-history-tools' },
+    channel,
+  );
+  const list = createElement('div', { class: 'arcafeed-modal-content' });
   const status = createSubscriptionStatus(p);
-
   let centerFrame: number | undefined;
   const scheduleCenter = () => {
     if (centerFrame !== undefined) cancelAnimationFrame(centerFrame);
@@ -106,20 +109,18 @@ export function createNavigationModal(
     });
   };
   const resizeObserver = new ResizeObserver(scheduleCenter);
-  resizeObserver.observe(list[0]!);
-
+  resizeObserver.observe(list);
   tab.append(
     readingHeader(
       '탐색 목록',
       '불러온 목록 기준입니다. 추가 로딩이나 오래된 목록 정리로 순번과 개수가 바뀔 수 있습니다.',
       position,
+      close,
     ),
     tools,
     status.element,
     list,
   );
-  tab.find('.arcafeed-reading-close').off('click').on('click', close);
-
   const render = () => {
     const paths = p.articleList;
     const currentPath = currentArticlePath(p.href);
@@ -127,21 +128,18 @@ export function createNavigationModal(
       paths[p.activeIndex] === currentPath
         ? p.activeIndex
         : paths.indexOf(currentPath);
-    position.text(
+    position.textContent =
       currentIndex >= 0
         ? `${currentIndex + 1} / ${paths.length}`
-        : `불러온 글 ${paths.length}개`,
-    );
-
-    const selected = String(channel.val() || '');
+        : `불러온 글 ${paths.length}개`;
+    const selected = channel.value;
     const ids = [...new Set(paths.map(readingChannelId))];
     const showChannels =
       ids.length > 1 ||
       p.seriesChannels.length > 0 ||
       p.href.channelId === 'my';
-    if (showChannels) tools.insertBefore(list);
-    else tools.detach();
-
+    if (showChannels) list.before(tools);
+    else tools.remove();
     const selectedChannel = syncChannelSelect(
       channel,
       ids.map((id) => [id, p.articleFilterConfig[id]?.channelName || id]),
@@ -151,7 +149,7 @@ export function createNavigationModal(
     const entries = new Map(
       p.reading.entries.map((entry) => [entry.path, entry]),
     );
-    list.empty();
+    list.replaceChildren();
     if (!paths.length) {
       list.append(
         readingEmptyState(
@@ -161,7 +159,6 @@ export function createNavigationModal(
         ),
       );
     }
-
     // Render in small pages; opening a long series need not create thousands of nodes.
     const items: NavigationItem[] = paths
       .map((path, index) => ({ path, index }))
@@ -172,51 +169,49 @@ export function createNavigationModal(
     let start =
       currentOffset >= 0 ? Math.max(0, currentOffset - INITIAL_OFFSET) : 0;
     let end = Math.min(items.length, start + PAGE_WINDOW);
-
     const buildRow = (item: NavigationItem) =>
       createNavigationRow(p, entries, item, currentIndex, showChannels);
-
-    const before = $('<div>', {
+    const before = createElement('div', {
       class: 'arcafeed-navigation-spacer',
       'aria-hidden': 'true',
     });
-    const after = before.clone();
-    const rows = $('<div>');
+    const after = before.cloneNode(true);
+    const rows = createElement('div');
     const previous = readingButton('이전 목록 더 보기', () => {
-      const anchor = rows.children()[0];
+      const anchor = rows.firstElementChild;
       const top = anchor?.getBoundingClientRect().top ?? 0;
       const nextStart = Math.max(0, start - PAGE_WINDOW);
-      rows.prepend(items.slice(nextStart, start).map(buildRow));
+      rows.prepend(...items.slice(nextStart, start).map(buildRow));
       start = nextStart;
-      previous.toggle(start > 0);
-      if (anchor)
-        list[0]!.scrollTop += anchor.getBoundingClientRect().top - top;
-    })
-      .addClass('arcafeed-navigation-load arcafeed-navigation-load-previous')
-      .prepend($('<span>', { class: 'bi-arrow-up', 'aria-hidden': 'true' }));
+      previous.hidden = start === 0;
+      if (anchor) list.scrollTop += anchor.getBoundingClientRect().top - top;
+    });
+    previous.classList.add(
+      'arcafeed-navigation-load',
+      'arcafeed-navigation-load-previous',
+    );
+    previous.prepend(
+      createElement('span', { class: 'bi-arrow-up', 'aria-hidden': 'true' }),
+    );
     const more = readingButton('더 보기', () => {
-      rows.append(items.slice(end, end + PAGE_WINDOW).map(buildRow));
+      rows.append(...items.slice(end, end + PAGE_WINDOW).map(buildRow));
       end = Math.min(items.length, end + PAGE_WINDOW);
-      more.toggle(end < items.length);
-    })
-      .addClass('arcafeed-navigation-load')
-      .append($('<span>', { class: 'bi-arrow-down', 'aria-hidden': 'true' }));
-
+      more.hidden = end >= items.length;
+    });
+    more.classList.add('arcafeed-navigation-load');
+    more.append(
+      createElement('span', { class: 'bi-arrow-down', 'aria-hidden': 'true' }),
+    );
     if (items.length) {
-      list.append(
-        before,
-        previous.toggle(start > 0),
-        rows,
-        more.toggle(end < items.length),
-        after,
-      );
-      rows.append(items.slice(start, end).map(buildRow));
+      previous.hidden = start === 0;
+      more.hidden = end >= items.length;
+      list.append(before, previous, rows, more, after);
+      rows.append(...items.slice(start, end).map(buildRow));
     }
-    list.scrollTop(0);
+    list.scrollTop = 0;
     scheduleCenter();
   };
-
-  channel.on('change', render);
+  channel.addEventListener('change', render);
   let previous = p.getState();
   const unsubscribeState = p.subscribe((state) => {
     const changed =
@@ -228,7 +223,7 @@ export function createNavigationModal(
     if (changed) render();
   });
   const unsubscribeReading = p.reading.subscribe(render, ['entries']);
-  tab.data('cleanup', () => {
+  setDialogCleanup(tab, () => {
     if (centerFrame !== undefined) cancelAnimationFrame(centerFrame);
     resizeObserver.disconnect();
     status.cleanup();

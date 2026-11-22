@@ -1,4 +1,4 @@
-import $ from 'jquery';
+import { fromTemplate } from '@/utils/dom';
 
 import '@css/swiper.css';
 
@@ -76,7 +76,7 @@ function observeSwiperWidth(swiper: Swiper): void {
 
 function initSwiper(p: VaultAdapter): void {
   if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
-  const content = $('.content-wrapper')[0];
+  const content = document.querySelector<HTMLElement>('.content-wrapper');
   if (!content) return;
 
   const swiper = `<div class="swiper">
@@ -89,13 +89,13 @@ function initSwiper(p: VaultAdapter): void {
 
   // Insert swiper inside .root-container before the content area,
   // so footer/#bottom stay in flow. Then move content into the active slide.
-  const $swiper = $(swiper);
-  content.before($swiper[0]!);
-  const slide = $swiper.find<
+  const container = fromTemplate(swiper);
+  content.before(container);
+  const slide = container.querySelector<
     HTMLElement & {
       moveBefore?(node: Node, child: Node | null): void;
     }
-  >('.slide-active')[0]!;
+  >('.slide-active')!;
   // An atomic move keeps already loaded iframes attached to their documents.
   if (typeof slide.moveBefore === 'function') slide.moveBefore(content, null);
   else slide.append(content);

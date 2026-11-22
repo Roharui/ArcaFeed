@@ -1,4 +1,4 @@
-import $ from 'jquery';
+import { createElement, setAttributes } from '@/utils/dom';
 import { navigate } from '@/feature/navigation';
 import '@css/reading.css';
 
@@ -38,10 +38,9 @@ function currentPath(p: VaultAdapter): string {
 
 function channelName(p: VaultAdapter): string {
   return (
-    $('.board-title .channel-name, .board-title .title')
-      .first()
-      .text()
-      .trim() ||
+    document
+      .querySelector('.board-title .channel-name, .board-title .title')
+      ?.textContent?.trim() ||
     p.articleFilterConfig[p.href.channelId]?.channelName ||
     p.href.channelId
   );
@@ -58,46 +57,48 @@ function normalizeRowPath(href: string): string {
 
 function updateVisitedIndicators(p: VaultAdapter): void {
   const enabled = p.uiSettings.showVisitedIndicators;
-  extractArticleRows($('.root-container')).each((_, element) => {
-    const href = element.getAttribute('href');
-    if (!href) return;
+  for (const row of extractArticleRows()) {
+    const href = row.getAttribute('href');
+    if (!href) continue;
     const show = enabled && p.reading.hasVisited(normalizeRowPath(href));
-    const row = $(element);
-    const title = row.is('.title')
+    const title = row.matches('.title')
       ? row
-      : row.find('.col-title, .title').first();
-    if (!title.length) return;
-    let status = title.children('.arcafeed-list-visited-status');
-    if (!show && !status.length && !title.hasClass('arcafeed-list-title'))
-      return;
-    if (show && !status.length) {
-      status = $('<span>', {
+      : row.querySelector('.col-title, .title');
+    if (!title) continue;
+    let status = title.querySelector<HTMLElement>(
+      ':scope > .arcafeed-list-visited-status',
+    );
+    if (!show && !status && !title.classList.contains('arcafeed-list-title'))
+      continue;
+    if (show && !status) {
+      status = createElement('span', {
         class: 'arcafeed-list-visited-status',
         'aria-label': '본 글',
-      }).appendTo(title);
+      });
+      title.append(status);
     }
-    if (title.hasClass('arcafeed-list-title') !== show) {
-      title.toggleClass('arcafeed-list-title', show);
-    }
-    if (status.length) {
-      status.attr('aria-label', '본 글').toggle(show);
-    }
-  });
+    title.classList.toggle('arcafeed-list-title', show);
+    if (status) status.hidden = !show;
+  }
   updateSkipButton(p);
 }
 
 function updateSkipButton(p: VaultAdapter): void {
   const skip = p.skipVisitedArticles;
-  $('#arcafeed-skip-visited')
-    .prop('disabled', !p.canSkipVisitedArticles)
-    .toggleClass('is-active', skip)
-    .attr({
-      'aria-pressed': String(skip),
-      'aria-label': `${readingContextLabel(p)}에서 본 글 건너뛰기`,
-      title: p.canSkipVisitedArticles
-        ? `${readingContextLabel(p)} · 본 글 건너뛰기: ${skip ? '켜짐 · 클릭하여 끄기' : '꺼짐 · 클릭하여 켜기'}`
-        : '일반 시리즈·스크랩 모드에서는 본 글 건너뛰기를 사용할 수 없습니다.',
-    });
+  const button = document.querySelector<HTMLButtonElement>(
+    '#arcafeed-skip-visited',
+  );
+  if (!button) return;
+  const label = readingContextLabel(p);
+  button.disabled = !p.canSkipVisitedArticles;
+  button.classList.toggle('is-active', skip);
+  setAttributes(button, {
+    'aria-pressed': String(skip),
+    'aria-label': `${label}에서 본 글 건너뛰기`,
+    title: p.canSkipVisitedArticles
+      ? `${label} · 본 글 건너뛰기: ${skip ? '켜짐 · 클릭하여 끄기' : '꺼짐 · 클릭하여 켜기'}`
+      : '일반 시리즈·스크랩 모드에서는 본 글 건너뛰기를 사용할 수 없습니다.',
+  });
 }
 
 function contextId(p: VaultAdapter): string {
@@ -371,13 +372,15 @@ function bindReadingStateUpdates(
 
 function mountSkipButton(p: VaultAdapter): void {
   if (!p.canSkipVisitedArticles) return;
-  const skipButton = $('<button>', {
+  const heading = document.querySelector(ARTICLE_TITLE_SELECTOR);
+  if (!heading) return;
+  const skipButton = createElement('button', {
     id: 'arcafeed-skip-visited',
     type: 'button',
     class: 'arcafeed-skip-setting swiper-no-swiping',
     'aria-label': '본 글 건너뛰기',
   });
-  skipButton.on('click', () => {
+  skipButton.addEventListener('click', () => {
     p.skipVisitedArticles = !p.skipVisitedArticles;
     try {
       p.flushSave();
@@ -385,14 +388,10 @@ function mountSkipButton(p: VaultAdapter): void {
       reportFailure(error);
     }
   });
-  const heading = $(ARTICLE_TITLE_SELECTOR).first();
-  if (heading.length) {
-    heading
-      .addClass('arcafeed-article-heading-text')
-      .wrap('<div class="arcafeed-article-heading"></div>')
-      .parent()
-      .append(skipButton);
-  }
+  const wrapper = createElement('div', { class: 'arcafeed-article-heading' });
+  heading.classList.add('arcafeed-article-heading-text');
+  heading.before(wrapper);
+  wrapper.append(heading, skipButton);
 }
 
 function installCheckpointScheduler(p: VaultAdapter): void {

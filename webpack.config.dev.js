@@ -78,7 +78,6 @@ export default function (env = {}, _args) {
       alias: {
         '@': path.resolve(__dirname, 'src'),
         '@css': path.resolve(__dirname, 'css'),
-        jquery$: 'jquery/dist/jquery.min.js',
       },
     },
 

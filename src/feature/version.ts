@@ -1,5 +1,5 @@
 import { getStorage } from '@/vault/indexed-storage';
-import $ from 'jquery';
+import { createElement } from '@/utils/dom';
 import { navigate } from '@/feature/navigation';
 
 import type { VaultAdapter } from '@/vault';
@@ -26,12 +26,14 @@ async function addVersionInfo(p: VaultAdapter): Promise<void> {
       });
   }
 
-  $('footer').append(
-    $('<div>', {
-      text: versionInfo,
-      style:
-        'font-size: 12px; color: var(--color-text); margin-bottom: 10px; background-color: var(--color-bd-inner); padding: 5px;',
-    }),
+  document.querySelectorAll('footer').forEach((footer) =>
+    footer.append(
+      createElement('div', {
+        text: versionInfo,
+        style:
+          'font-size: 12px; color: var(--color-text); margin-bottom: 10px; background-color: var(--color-bd-inner); padding: 5px;',
+      }),
+    ),
   );
 }
 

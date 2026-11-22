@@ -1,8 +1,8 @@
 # 프로젝트 구조
 
 ArcaFeed는 아카라이브 게시글을 스와이프로 탐색하는 TypeScript 유저스크립트입니다.
-Webpack으로 코드와 CSS, jQuery를 묶으며 Swiper와 Toastify는 유저스크립트의
-`@require`로 로드합니다. 모바일 개발 빌드에는 eruda도 포함합니다.
+Webpack으로 코드와 CSS를 묶고, 화면과 목록은 표준 DOM API로 처리합니다.
+Swiper와 Toastify는 유저스크립트의 `@require`로 로드합니다. 모바일 개발 빌드에는 eruda도 포함합니다.
 버전과 의존성은 [package.json](../package.json)을 기준으로 확인합니다.
 
 이 문서는 코드를 읽기 위한 진입점과 유지보수 규칙을 정리합니다.

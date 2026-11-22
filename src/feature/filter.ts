@@ -1,5 +1,3 @@
-import $ from 'jquery';
-
 import type { VaultAdapter } from '@/vault';
 import type { ArticleFilterImpl } from '@/types';
 
@@ -22,21 +20,27 @@ const ARTICLE_ROW_SELECTOR = [
   'div.scrap-list > div.article-list.admin > div.list-table > a.vrow.column',
 ].join(', ');
 
-function extractArticleRows($scope: JQuery<HTMLElement>): JQuery<HTMLElement> {
-  return $scope.find(ARTICLE_ROW_SELECTOR).not('.notice');
+function extractArticleRows(scope?: ParentNode): HTMLElement[] {
+  if (scope)
+    return Array.from(
+      scope.querySelectorAll<HTMLElement>(ARTICLE_ROW_SELECTOR),
+    ).filter((row) => !row.classList.contains('notice'));
+  const roots = document.querySelectorAll('.root-container');
+  if (!roots.length) return [];
+  if (roots.length === 1) return extractArticleRows(roots[0]!);
+  return Array.from(
+    new Set(Array.from(roots).flatMap((root) => extractArticleRows(root))),
+  );
 }
 
 // ── Article key injection ──────────────────────────────
 
-function injectArticleKeys(
-  $rows: JQuery<HTMLElement>,
-  articleKey: string,
-): void {
+function injectArticleKeys(rows: HTMLElement[], articleKey: string): void {
   if (!articleKey) return;
   const encodedKey = encodeURIComponent(articleKey);
   const keyParam = `articleKey=${encodedKey}`;
 
-  $rows.each((_, el) => {
+  rows.forEach((el) => {
     const href = el.getAttribute('href');
     if (!href) return;
 
@@ -125,8 +129,8 @@ function buildFilterPredicate(
 
 // ── Href extraction ────────────────────────────────────
 
-function extractArticleHref($ele: JQuery<HTMLElement>): string | null {
-  const href = $ele.attr('href');
+function extractArticleHref(element: HTMLElement): string | null {
+  const href = element.getAttribute('href');
   if (!href) return null;
 
   // Normalize: strip origin and query string → "/b/channel/12345"
@@ -142,12 +146,11 @@ function extractArticleHref($ele: JQuery<HTMLElement>): string | null {
 function filterLink(
   p: VaultAdapter,
   applyCss: boolean = false,
-  $html?: JQuery<HTMLElement>,
+  scope?: ParentNode,
 ): string[] {
-  const $scope = $html ?? $('.root-container');
-  const $rows = extractArticleRows($scope);
+  const rows = extractArticleRows(scope);
 
-  if (applyCss) injectArticleKeys($rows, p.href.articleKey);
+  if (applyCss) injectArticleKeys(rows, p.href.articleKey);
 
   const filter = p.articleFilterConfig[p.href.channelId] || {
     tab: [],
@@ -163,17 +166,16 @@ function filterLink(
 
   const result: string[] = [];
 
-  $rows.each((_, ele) => {
+  rows.forEach((ele) => {
     const allowed = predicate(ele);
-    const $ele = $(ele);
-    const href = extractArticleHref($ele);
+    const href = extractArticleHref(ele);
 
     if (applyCss) {
       const matchesBest =
         !filter.onlyBest ||
         bestListing ||
         (href !== null && existingUrls.has(href));
-      $ele.css('opacity', allowed && matchesBest ? '1' : '0.5');
+      ele.style.opacity = allowed && matchesBest ? '1' : '0.5';
     }
 
     if (!allowed) return;

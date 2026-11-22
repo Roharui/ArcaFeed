@@ -1,4 +1,5 @@
-import $ from 'jquery';
+import { createElement } from '@/utils/dom';
+import { setDialogCleanup } from './cleanup';
 import {
   readingButton as button,
   readingChannelId as channelId,
@@ -13,13 +14,13 @@ import {
 import type { VaultAdapter } from '@/vault';
 import { SITE_RECENT_URL } from '@/vault/reading-history';
 import type { ReadingEntry } from '@/vault/reading-history';
-
 const PAGE_SIZE = 50;
-
-export function createHistoryModal(p: VaultAdapter): JQuery<HTMLElement> {
+export function createHistoryModal(p: VaultAdapter): HTMLElement {
   p.reading.reload(['entries']);
-  const tab = $('<div>', { class: 'helper-modal-tab helper-modal-history' });
-  const count = $('<span>', {
+  const tab = createElement('div', {
+    class: 'helper-modal-tab helper-modal-history',
+  });
+  const count = createElement('span', {
     class: 'arcafeed-reading-count',
     'aria-live': 'polite',
   });
@@ -30,8 +31,7 @@ export function createHistoryModal(p: VaultAdapter): JQuery<HTMLElement> {
       count,
     ),
   );
-
-  const tools = $('<div>', { class: 'arcafeed-history-tools' });
+  const tools = createElement('div', { class: 'arcafeed-history-tools' });
   const search = readingSearch(
     '제목 또는 채널 이름으로 검색',
     '최근 본 글 검색',
@@ -40,20 +40,24 @@ export function createHistoryModal(p: VaultAdapter): JQuery<HTMLElement> {
       render();
     },
   );
-  const channel = $('<select>', { 'aria-label': '채널 필터' });
+  const channel = createElement('select', { 'aria-label': '채널 필터' });
   tools.append(
     search.element,
     channel,
-    $('<span>', { class: 'arcafeed-reading-sort', text: '최근 방문 순' }),
+    createElement('span', {
+      class: 'arcafeed-reading-sort',
+      text: '최근 방문 순',
+    }),
   );
-  const entries = $('<div>', {
+  const entries = createElement('div', {
     class: 'arcafeed-reading-list arcafeed-history-list',
   });
-  const total = $('<span>', { class: 'arcafeed-reading-total' });
+  const total = createElement('span', { class: 'arcafeed-reading-total' });
   const more = button('더 보기', () => {
     visibleCount += PAGE_SIZE;
     render();
-  }).addClass('arcafeed-reading-more');
+  });
+  more.classList.add('arcafeed-reading-more');
   let visibleCount = PAGE_SIZE;
   const matchesSearch = createReadingSearchMatcher<ReadingEntry>(
     (entry) => `${entry.title} ${entry.channelName} ${channelId(entry.path)}`,
@@ -64,9 +68,8 @@ export function createHistoryModal(p: VaultAdapter): JQuery<HTMLElement> {
   let previousQuery = '';
   let previousChannel = '';
   let filtered: readonly ReadingEntry[] = [];
-
   const render = () => {
-    const selectedChannel = String(channel.val() || '');
+    const selectedChannel = channel.value;
     if (indexedEntries !== p.reading.entries) {
       indexedEntries = p.reading.entries;
       channelNames.clear();
@@ -77,11 +80,10 @@ export function createHistoryModal(p: VaultAdapter): JQuery<HTMLElement> {
         );
       syncChannelSelect(channel, channelNames, selectedChannel);
     } else {
-      channel.val(channelNames.has(selectedChannel) ? selectedChannel : '');
+      channel.value = channelNames.has(selectedChannel) ? selectedChannel : '';
     }
-    const filterChannel = String(channel.val() || '');
+    const filterChannel = channel.value;
     const query = search.getQuery();
-
     if (
       filteredEntries !== p.reading.entries ||
       previousQuery !== query ||
@@ -96,9 +98,9 @@ export function createHistoryModal(p: VaultAdapter): JQuery<HTMLElement> {
           matchesSearch(entry, query),
       );
     }
-    count.text(String(filtered.length));
-    total.text(`전체 ${p.reading.entries.length}개`);
-    entries.empty();
+    count.textContent = String(filtered.length);
+    total.textContent = `전체 ${p.reading.entries.length}개`;
+    entries.replaceChildren();
     if (!filtered.length)
       entries.append(
         p.reading.entries.length
@@ -118,22 +120,31 @@ export function createHistoryModal(p: VaultAdapter): JQuery<HTMLElement> {
       const date = readingDateLabel(entry.visitedAt);
       if (date !== previousDate) {
         entries.append(
-          $('<div>', { class: 'arcafeed-reading-date', text: date }),
+          createElement('div', { class: 'arcafeed-reading-date', text: date }),
         );
         previousDate = date;
       }
       entries.append(
-        $('<a>', { href: entry.path, class: 'arcafeed-history-row' }).append(
-          $('<div>', { class: 'arcafeed-history-row-heading' }).append(
-            $('<span>', {
+        createElement(
+          'a',
+          { href: entry.path, class: 'arcafeed-history-row' },
+          createElement(
+            'div',
+            { class: 'arcafeed-history-row-heading' },
+            createElement('span', {
               class: 'arcafeed-history-link',
               text: entry.title,
               title: entry.title,
             }),
-            $('<span>', { class: 'bi-arrow-up-right', 'aria-hidden': 'true' }),
+            createElement('span', {
+              class: 'bi-arrow-up-right',
+              'aria-hidden': 'true',
+            }),
           ),
-          $('<div>', { class: 'arcafeed-history-meta' }).append(
-            $('<span>', {
+          createElement(
+            'div',
+            { class: 'arcafeed-history-meta' },
+            createElement('span', {
               class: 'arcafeed-reading-channel',
               text: entry.channelName || channelId(entry.path),
             }),
@@ -142,26 +153,27 @@ export function createHistoryModal(p: VaultAdapter): JQuery<HTMLElement> {
         ),
       );
     }
-    more.toggle(filtered.length > visibleCount);
-    more.text(
-      `더 보기 · ${Math.min(PAGE_SIZE, Math.max(0, filtered.length - visibleCount))}개`,
-    );
+    more.hidden = filtered.length <= visibleCount;
+    more.textContent = `더 보기 · ${Math.min(PAGE_SIZE, Math.max(0, filtered.length - visibleCount))}개`;
   };
-
-  channel.on('change', () => {
+  channel.addEventListener('change', () => {
     visibleCount = PAGE_SIZE;
     render();
   });
   tab.append(
     tools,
-    $('<div>', { class: 'arcafeed-modal-content' }).append(entries, more),
+    createElement('div', { class: 'arcafeed-modal-content' }, entries, more),
   );
   tab.append(
-    $('<div>', { class: 'arcafeed-history-footer' }).append(
+    createElement(
+      'div',
+      { class: 'arcafeed-history-footer' },
       total,
-      $('<div>', { class: 'arcafeed-history-footer-actions' }).append(
+      createElement(
+        'div',
+        { class: 'arcafeed-history-footer-actions' },
         button('새로고침', () => p.reading.reload(['entries'])),
-        $('<a>', {
+        createElement('a', {
           href: SITE_RECENT_URL,
           class: 'arcafeed-reading-button',
           text: '사이트 기록 관리',
@@ -170,7 +182,7 @@ export function createHistoryModal(p: VaultAdapter): JQuery<HTMLElement> {
     ),
   );
   const unsubscribeReading = p.reading.subscribe(render, ['entries']);
-  tab.data('cleanup', unsubscribeReading);
+  setDialogCleanup(tab, unsubscribeReading);
   render();
   return tab;
 }

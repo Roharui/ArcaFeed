@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { domFixture, listingFixture } from './dom-fixture.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
@@ -272,30 +273,6 @@ function listingLoader(
   next = '?p=2',
   navigate = () => assert.fail('stale navigation'),
 ) {
-  const chain = {
-    length: 1,
-    addClass() {
-      return this;
-    },
-    removeClass() {
-      return this;
-    },
-    not() {
-      return this;
-    },
-    each(fn) {
-      fn(0, { href: '/b/test/98' });
-    },
-    next() {
-      return this;
-    },
-    find() {
-      return this;
-    },
-    attr() {
-      return next;
-    },
-  };
   return sourceLoader({
     globals: {
       window: {
@@ -304,14 +281,11 @@ function listingLoader(
       },
       DOMParser: class {
         parseFromString() {
-          return { documentElement: {} };
+          return listingFixture({ rows: [{ href: '/b/test/98' }], next });
         }
       },
     },
     mocks: {
-      jquery: {
-        default: (value) => (value?.href ? { attr: () => value.href } : chain),
-      },
       '@/utils/fetch': { fetchUrl: response },
       '@/utils/toast': { showToast: () => assert.fail('stale toast') },
     },
@@ -398,16 +372,9 @@ for (const scenario of ['success', 'empty', 'stale']) {
     const gate = deferred();
     const navigations = [];
     const commits = [];
-    const channel = {};
-    const jquery = (value) =>
-      value === channel
-        ? {
-            attr: () => '/b/test',
-            find: () => ({ text: () => 'Test channel' }),
-          }
-        : { toArray: () => [channel] };
     const { initStartHomeSeries } = sourceLoader({
       globals: {
+        ...domFixture(),
         window: {
           ...windowFixture,
           location: {
@@ -417,7 +384,6 @@ for (const scenario of ['success', 'empty', 'stale']) {
         },
       },
       mocks: {
-        jquery: { default: jquery },
         '@/feature/subscriptions': {
           parseSubscribedChannels: () => [{ id: 'test', name: 'Test channel' }],
         },

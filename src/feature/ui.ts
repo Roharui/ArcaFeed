@@ -1,5 +1,5 @@
 import { mergeState } from '@/vault/lazy-state';
-import $ from 'jquery';
+import { createElement } from '@/utils/dom';
 
 import { extractChannelId } from '@/utils';
 
@@ -21,10 +21,12 @@ function installResizeHandle(p: VaultAdapter): void {
     p.isCurrentMode('CHANNEL', 'ARTICLE');
   if (!shouldInstall) return;
 
-  const $wrapper = $('.body .content-wrapper');
-  if (!$wrapper.length) return;
-
-  $wrapper.css('position', 'relative');
+  const contentWrapper = document.querySelector<HTMLElement>(
+    '.body .content-wrapper',
+  );
+  if (!contentWrapper) return;
+  const wrapper = contentWrapper;
+  wrapper.style.position = 'relative';
 
   // Shared drag state
   let dragging: 'left' | 'right' | null = null;
@@ -35,7 +37,7 @@ function installResizeHandle(p: VaultAdapter): void {
   function applyResize(): void {
     resizeFrame = null;
     if (!dragging) return;
-    const rect = $wrapper[0]!.getBoundingClientRect();
+    const rect = wrapper.getBoundingClientRect();
     const newWidth =
       dragging === 'right' ? pointerX - rect.left : rect.right - pointerX;
     const width = Math.min(
@@ -44,11 +46,11 @@ function installResizeHandle(p: VaultAdapter): void {
     );
     if (width === currentWidth) return;
     currentWidth = width;
-    $wrapper[0]!.style.setProperty('--content-max-width', `${currentWidth}px`);
+    wrapper.style.setProperty('--content-max-width', `${currentWidth}px`);
   }
 
   function onMouseDown(side: 'left' | 'right') {
-    return (e: JQuery.MouseDownEvent) => {
+    return (e: MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
@@ -56,25 +58,27 @@ function installResizeHandle(p: VaultAdapter): void {
       dragging = side;
       currentWidth = p.uiSettings.contentWidth;
       pointerX = e.clientX;
-      $(`.arca-resize-handle-${side}`).addClass('dragging');
+      (e.currentTarget as HTMLElement).classList.add('dragging');
     };
   }
 
-  $(document).on('mousemove.arcafeed-resize', (e) => {
+  document.addEventListener('mousemove', (e) => {
     if (!dragging) return;
 
     pointerX = e.clientX;
     if (resizeFrame === null) resizeFrame = requestAnimationFrame(applyResize);
   });
 
-  $(document).on('mouseup.arcafeed-resize', () => {
+  document.addEventListener('mouseup', () => {
     if (!dragging) return;
     if (resizeFrame !== null) {
       cancelAnimationFrame(resizeFrame);
       applyResize();
     }
 
-    $(`.arca-resize-handle-${dragging}`).removeClass('dragging');
+    wrapper
+      .querySelector(`.arca-resize-handle-${dragging}`)
+      ?.classList.remove('dragging');
     dragging = null;
 
     p.uiSettings = mergeState(p.uiSettings, { contentWidth: currentWidth });
@@ -83,11 +87,11 @@ function installResizeHandle(p: VaultAdapter): void {
 
   // Create both handles
   for (const side of ['left', 'right'] as const) {
-    const $handle = $('<div>', {
+    const handle = createElement('div', {
       class: `arcafeed-resize-handle arca-resize-handle-${side} swiper-no-swiping`,
     });
-    $handle.on('mousedown', onMouseDown(side));
-    $wrapper.append($handle);
+    handle.addEventListener('mousedown', onMouseDown(side));
+    wrapper.append(handle);
   }
 
   resizeHandleInstalled = true;
@@ -113,40 +117,50 @@ function applyUISettings(settings: UISettings, previous?: UISettings): void {
     )
   )
     return;
-  const $body = $('body');
 
   // CSS class-based toggles (sync with arcalive.css rules)
   if (!previous || previous.hideScrollbar !== settings.hideScrollbar)
-    $('html').toggleClass('hide-scrollbar', settings.hideScrollbar);
+    document.documentElement.classList.toggle(
+      'hide-scrollbar',
+      settings.hideScrollbar,
+    );
   for (const key of Object.keys(bodyClasses) as (keyof typeof bodyClasses)[]) {
     if (!previous || previous[key] !== settings[key])
-      $body.toggleClass(bodyClasses[key], settings[key]);
+      document.body.classList.toggle(bodyClasses[key], settings[key]);
   }
 
   // Content width (CSS variable on content-wrapper)
   if (!previous || previous.contentWidth !== settings.contentWidth)
-    $('.body .content-wrapper').css(
-      '--content-max-width',
-      `${settings.contentWidth}px`,
-    );
+    document
+      .querySelectorAll<HTMLElement>('.body .content-wrapper')
+      .forEach((wrapper) => {
+        wrapper.style.setProperty(
+          '--content-max-width',
+          `${settings.contentWidth}px`,
+        );
+      });
 }
 
 // ── Mode-specific UI initializers ──────────────────────
 
 function initArticleModeUI(p: VaultAdapter): void {
-  $('.nav-control').appendTo('body');
+  document.body.append(
+    ...Array.from(document.querySelectorAll('.nav-control')),
+  );
 
   // Open cross-channel article links in a new tab
   // to avoid disrupting the current slide session.
-  $('.included-article-list a[href]').each((_, el) => {
-    const href = $(el).attr('href');
-    if (!href) return;
-    const targetChannelId = extractChannelId(href);
-    if (targetChannelId && targetChannelId !== p.href.channelId) {
-      $(el).attr('target', '_blank');
-      $(el).attr('rel', 'noopener');
-    }
-  });
+  document
+    .querySelectorAll<HTMLAnchorElement>('.included-article-list a[href]')
+    .forEach((el) => {
+      const href = el.getAttribute('href');
+      if (!href) return;
+      const targetChannelId = extractChannelId(href);
+      if (targetChannelId && targetChannelId !== p.href.channelId) {
+        el.target = '_blank';
+        el.rel = 'noopener';
+      }
+    });
 }
 
 const MODE_UI_INIT: Record<string, (p: VaultAdapter) => void> = {
@@ -160,24 +174,38 @@ const initializedVaults = new WeakSet<VaultAdapter>();
 function initUi(p: VaultAdapter): void {
   if (initializedVaults.has(p)) return;
   initializedVaults.add(p);
-  $('body').addClass('arcafeed');
+  document.body.classList.add('arcafeed');
 
   // Wrap navbar for styling (stays in .root-container outside the swiper)
-  const $navbar = $('nav.navbar').first();
-  if ($navbar.length && !$navbar.parent().hasClass('navbar-wrapper')) {
-    $navbar.wrap('<div class="navbar-wrapper swiper-no-swiping"></div>');
+  const navbar = document.querySelector('nav.navbar');
+  if (navbar && !navbar.parentElement?.classList.contains('navbar-wrapper')) {
+    const wrapper = createElement('div', {
+      class: 'navbar-wrapper swiper-no-swiping',
+    });
+    navbar.before(wrapper);
+    wrapper.append(navbar);
   }
 
-  $('.ad.small-ad').prependTo('.sticky-container');
+  const ads = Array.from(document.querySelectorAll('.ad.small-ad'));
+  const stickyContainers = document.querySelectorAll('.sticky-container');
+  stickyContainers.forEach((container, index) => {
+    container.prepend(
+      ...(index === stickyContainers.length - 1
+        ? ads
+        : ads.map((ad) => ad.cloneNode(true))),
+    );
+  });
 
-  $('.board-category.hide-scrollbar').addClass('swiper-no-swiping');
+  document
+    .querySelectorAll('.board-category.hide-scrollbar')
+    .forEach((category) => category.classList.add('swiper-no-swiping'));
 
   // Apply current UI settings
   applyUISettings(p.uiSettings);
 
   // In series mode, automatically hide the included article list and btns-board
-  $('body').toggleClass('hide-included-article-list', p.isSeriesMode);
-  $('body').toggleClass('hide-btns-board', p.isSeriesMode);
+  document.body.classList.toggle('hide-included-article-list', p.isSeriesMode);
+  document.body.classList.toggle('hide-btns-board', p.isSeriesMode);
 
   // Install resize handle (PC only, once)
   installResizeHandle(p);
@@ -194,10 +222,11 @@ function initUi(p: VaultAdapter): void {
     }
     if (state.isSeriesMode !== lastSeriesMode) {
       lastSeriesMode = state.isSeriesMode;
-      $('body').toggleClass(
-        'hide-included-article-list hide-btns-board',
+      document.body.classList.toggle(
+        'hide-included-article-list',
         lastSeriesMode,
       );
+      document.body.classList.toggle('hide-btns-board', lastSeriesMode);
     }
   });
 }

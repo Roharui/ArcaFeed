@@ -1,74 +1,25 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { domFixture } from './dom-fixture.mjs';
 import { sourceLoader, vaultFixture } from './source-loader.mjs';
 
 for (const pointerType of ['mouse', 'touch']) {
   test(`${pointerType} reveals only through the button area`, () => {
     let idleCallback;
-    let scroll;
-    let control;
-    let trigger;
     let notifyLoading;
-    const jquery = (_, attributes) => {
-      const classes = new Set();
-      const element = {
-        0: {},
-        append() {
-          return this;
-        },
-        appendTo() {
-          return this;
-        },
-        handlers: {},
-        on(event, callback) {
-          this.handlers[event] = callback;
-          return this;
-        },
-        attr() {
-          return this;
-        },
-        text() {
-          return this;
-        },
-        toggleClass(name, active) {
-          if (active) classes.add(name);
-          else classes.delete(name);
-          return this;
-        },
-        removeClass(name) {
-          classes.delete(name);
-          return this;
-        },
-        addClass(name) {
-          classes.add(name);
-          return this;
-        },
-        is(selector) {
-          assert.equal(selector, ':hover');
-          return false;
-        },
-        classes,
-      };
-      if (attributes?.class === 'arcafeed-navigation-trigger')
-        trigger = element;
-      if (attributes?.class === 'arcafeed-navigation-control')
-        control = element;
-      return element;
+    const dom = domFixture();
+    const sendPointer = (element, type) => {
+      const event = new dom.Event(type);
+      Object.defineProperty(event, 'pointerType', { value: pointerType });
+      element.dispatchEvent(event);
     };
+    const scroll = () => dom.document.dispatchEvent(new dom.Event('scroll'));
     class Observer {
       observe() {}
     }
     const { initNavigationList } = sourceLoader({
       globals: {
-        document: {
-          body: {},
-          querySelector: () => null,
-          querySelectorAll: () => [],
-          addEventListener(event, callback) {
-            assert.equal(event, 'scroll');
-            scroll = callback;
-          },
-        },
+        ...dom,
         window: {
           addEventListener() {},
         },
@@ -83,7 +34,6 @@ for (const pointerType of ['mouse', 'touch']) {
         clearTimeout() {},
       },
       mocks: {
-        jquery: { default: jquery },
         './readingUi': {},
         '@/feature/swiper/page': {},
         '@/feature/article/loading': {
@@ -97,28 +47,32 @@ for (const pointerType of ['mouse', 'touch']) {
       },
     })('src/feature/modal/navigationTab.ts');
     initNavigationList(vaultFixture({ subscribe: () => () => {} }));
-    const event = { originalEvent: { pointerType } };
-    assert.equal(trigger.classes.has('is-hovered'), false);
+    const trigger = dom.document.querySelector('.arcafeed-navigation-trigger');
+    const control = dom.document.querySelector('.arcafeed-navigation-control');
+    assert.equal(trigger.classList.contains('is-hovered'), false);
     notifyLoading(true);
-    assert.equal(trigger.classes.has('is-loading'), true);
+    assert.equal(trigger.classList.contains('is-loading'), true);
     scroll();
-    assert.equal(trigger.classes.has('is-loading'), true);
+    assert.equal(trigger.classList.contains('is-loading'), true);
     notifyLoading(false);
-    assert.equal(trigger.classes.has('is-loading'), false);
-    control.handlers.pointerenter(event);
-    control.handlers.pointerdown(event);
-    assert.equal(trigger.classes.has('is-hovered'), true);
+    assert.equal(trigger.classList.contains('is-loading'), false);
+    sendPointer(control, 'pointerenter');
+    sendPointer(control, 'pointerdown');
+    assert.equal(trigger.classList.contains('is-hovered'), true);
     scroll();
-    assert.equal(trigger.classes.has('is-hovered'), false);
-    control.handlers.pointerenter(event);
-    assert.equal(trigger.classes.has('is-hovered'), pointerType === 'mouse');
-    control.handlers.pointerdown(event);
-    assert.equal(trigger.classes.has('is-hovered'), true);
-    control.handlers.pointerleave(event);
+    assert.equal(trigger.classList.contains('is-hovered'), false);
+    sendPointer(control, 'pointerenter');
+    assert.equal(
+      trigger.classList.contains('is-hovered'),
+      pointerType === 'mouse',
+    );
+    sendPointer(control, 'pointerdown');
+    assert.equal(trigger.classList.contains('is-hovered'), true);
+    sendPointer(control, 'pointerleave');
     if (pointerType === 'touch') {
-      assert.equal(trigger.classes.has('is-hovered'), true);
+      assert.equal(trigger.classList.contains('is-hovered'), true);
       idleCallback();
     }
-    assert.equal(trigger.classes.has('is-hovered'), false);
+    assert.equal(trigger.classList.contains('is-hovered'), false);
   });
 }

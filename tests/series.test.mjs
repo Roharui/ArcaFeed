@@ -1,57 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { domFixture } from './dom-fixture.mjs';
 import { sourceLoader, vaultFixture } from './source-loader.mjs';
 
 function seriesFixture() {
-  const buttons = [];
   const events = [];
   const opened = [];
-  const entry = {};
-  function $(selector, attributes) {
-    const node = {
-      length: 1,
-      attributes,
-      first() {
-        return this;
-      },
-      slice() {
-        return this;
-      },
-      remove() {
-        return this;
-      },
-      find() {
-        return this;
-      },
-      css() {
-        return this;
-      },
-      clone() {
-        return this;
-      },
-      append() {
-        return this;
-      },
-      after() {
-        return this;
-      },
-      on(event, callback) {
-        this[event] = callback;
-        return this;
-      },
-      toArray() {
-        return [entry];
-      },
-      attr(name, value) {
-        if (value !== undefined) return this;
-        return name === 'href' ? '/b/test/100' : '';
-      },
-    };
-    if (selector === '<button>') buttons.push(node);
-    return node;
-  }
+  const dom = domFixture(`<div class="article-series">
+    <div class="series-link"><a href="/b/test/100">Post</a></div>
+  </div><div class="article-body"></div>`);
   const load = sourceLoader({
     globals: {
+      ...dom,
       window: {
         location: {
           href: 'https://arca.live/b/test/100?articleKey=scraps',
@@ -70,13 +30,17 @@ function seriesFixture() {
       },
     },
     mocks: {
-      jquery: { default: $ },
       '@/core/app-events': {
         eventBus: { emit: (event) => events.push(event) },
       },
     },
   });
-  return { ...load('src/feature/series.ts'), buttons, events, opened };
+  return {
+    ...load('src/feature/series.ts'),
+    document: dom.document,
+    events,
+    opened,
+  };
 }
 
 for (const [mode, isSeriesMode, isScrapMode, seriesChannels, expected] of [
@@ -91,10 +55,11 @@ for (const [mode, isSeriesMode, isScrapMode, seriesChannels, expected] of [
     fixture.initSeriesContent(
       vaultFixture({ isSeriesMode, isScrapMode, seriesChannels }),
     );
-    assert.equal(fixture.buttons.length, expected);
+    const buttons = fixture.document.querySelectorAll('.enable-series');
+    assert.equal(buttons.length, expected);
     if (expected) {
-      assert.equal(fixture.buttons[0].attributes.type, 'button');
-      fixture.buttons[0].click();
+      assert.equal(buttons[0].type, 'button');
+      buttons[0].click();
       assert.deepEqual(fixture.events, ['enableSeries']);
     }
   });

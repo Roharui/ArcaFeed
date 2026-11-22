@@ -1,4 +1,3 @@
-import $ from 'jquery';
 import {
   buildFilterPredicate,
   extractArticleHref,
@@ -14,27 +13,16 @@ function normalizeUrl(pageUrl: string): string {
   return `${u.pathname}${u.search}`;
 }
 
-async function fetchAndParse(
-  url: string,
-): Promise<{ $html: JQuery<HTMLElement> }> {
+async function fetchAndParse(url: string): Promise<Document> {
   const res = await fetchUrl(url);
-  return {
-    $html: $(
-      new DOMParser().parseFromString(res.responseText, 'text/html')
-        .documentElement,
-    ),
-  };
+  return new DOMParser().parseFromString(res.responseText, 'text/html');
 }
 
-function extractNextPageUrl(
-  $html: JQuery<HTMLElement>,
-  basePath: string,
-): string | null {
-  const nextLink = $html
-    .find('.page-item.active')
-    .next()
-    .find('a')
-    .attr('href');
+function extractNextPageUrl(html: Document, basePath: string): string | null {
+  const nextLink = Array.from(html.querySelectorAll('.page-item.active'))
+    .map((active) => active.nextElementSibling?.querySelector('a'))
+    .find((link) => link)
+    ?.getAttribute('href');
   return nextLink
     ? nextLink.startsWith('?')
       ? `${basePath}${nextLink}`
@@ -75,14 +63,14 @@ export async function* fetchListingPages({
       if (!(await continueSearch?.()) || !isCurrent()) return;
     }
     visitedPages.add(url);
-    const { $html } = await fetchAndParse(url);
+    const html = await fetchAndParse(url);
     if (!isCurrent()) return;
 
-    const links = extractLinks($html, filter, existingUrls, seen);
+    const links = extractLinks(html, filter, existingUrls, seen);
     for (const link of links) seen.add(link);
     yield links;
 
-    nextUrl = extractNextPageUrl($html, basePath);
+    nextUrl = extractNextPageUrl(html, basePath);
   }
 }
 
@@ -106,19 +94,19 @@ export function withBestMode(url: string, filter?: ArticleFilterImpl): string {
  * Shared by default channel fetch and reusable by special channel handlers.
  */
 export function extractLinks(
-  $html: JQuery<HTMLElement>,
+  html: ParentNode,
   filter?: ArticleFilterImpl,
   existingUrls?: ReadonlySet<string>,
   additionalUrls?: ReadonlySet<string>,
 ): string[] {
-  const $rows = extractArticleRows($html);
+  const rows = extractArticleRows(html);
   const predicate = filter ? buildFilterPredicate(filter) : () => true;
 
   const seen = new Set<string>();
   const links: string[] = [];
-  $rows.each((_, ele) => {
+  rows.forEach((ele) => {
     if (!predicate(ele)) return;
-    const href = extractArticleHref($(ele));
+    const href = extractArticleHref(ele);
     if (
       !href ||
       existingUrls?.has(href) ||

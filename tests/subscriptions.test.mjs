@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { domFixture, listingFixture } from './dom-fixture.mjs';
 import { sourceLoader, vaultFixture } from './source-loader.mjs';
 
 test('/b/my and its query variants expose subscription settings while its articles remain articles', () => {
@@ -21,28 +22,19 @@ test('subscription discovery reads only the subscription menu and excludes alias
     { href: '/b/first/100', name: '게시글' },
     { href: 'https://example.com/b/third', name: '외부 채널' },
   ];
-  const menu = {
-    length: 1,
-    find: () => ({
-      each: (fn) => links.forEach((link, index) => fn(index, link)),
-    }),
-  };
-  const scope = {
-    find: (selector) => {
-      assert.equal(selector, 'a[href="/b/my"]');
-      return { first: () => ({ parent: () => menu }) };
-    },
-  };
-  const { parseSubscribedChannels } = sourceLoader({
-    mocks: {
-      jquery: {
-        default: (link) => ({
-          attr: () => link.href,
-          find: () => ({ first: () => ({ text: () => link.name }) }),
-        }),
-      },
-    },
-  })('src/feature/subscriptions.ts');
+  const scope = domFixture(
+    `<nav>${links
+      .map(
+        ({ href, name }) =>
+          `<a href="${href}"><span class="channel-name">${name}</span></a>`,
+      )
+      .join(
+        '',
+      )}</nav><div class="my-subscribe-channels"><a class="channel" href="/b/outside">Outside</a></div>`,
+  ).document;
+  const { parseSubscribedChannels } = sourceLoader()(
+    'src/feature/subscriptions.ts',
+  );
   assert.deepEqual(parseSubscribedChannels(scope), [
     { id: 'first', name: '첫 번째' },
     { id: 'second', name: '두 번째' },
@@ -50,27 +42,16 @@ test('subscription discovery reads only the subscription menu and excludes alias
 });
 
 test('a channel filter reads only its own editor and preserves its navigation setting', () => {
-  const { readArticleFilter } = sourceLoader({
-    mocks: {
-      jquery: {
-        default: (element) => ({
-          val: () => element.value,
-          attr: () => element.text,
-        }),
-      },
-    },
-  })('src/feature/modal/filterUi.ts');
-  const editor = (tab, title, onlyBest) => ({
-    find: (selector) => {
-      if (selector === '#filter-best-checkbox') return { prop: () => onlyBest };
-      return {
-        toArray: () =>
-          selector === '.ele-category:checked'
-            ? tab.map((value) => ({ value }))
-            : title.map((text) => ({ text })),
-      };
-    },
-  });
+  const { readArticleFilter } = sourceLoader()('src/feature/modal/filterUi.ts');
+  const editor = (tab, title, onlyBest) => {
+    const { document } = domFixture(`
+      <input id="filter-best-checkbox" type="checkbox">
+      ${tab.map((value) => `<input class="ele-category" type="checkbox" value="${value}" checked>`).join('')}
+      ${title.map((text) => `<button class="exclude-title-tag" data-text="${text}"></button>`).join('')}
+    `);
+    document.querySelector('#filter-best-checkbox').checked = onlyBest;
+    return document;
+  };
   assert.deepEqual(
     readArticleFilter(
       editor(['정보'], ['차단'], true),
@@ -99,7 +80,7 @@ test('a channel filter reads only its own editor and preserves its navigation se
 
 test('best-only request URLs retain the channel path, cursor and existing search parameters', () => {
   const { withBestMode } = sourceLoader({
-    mocks: { jquery: {}, '@/utils/toast': {} },
+    mocks: { '@/utils/toast': {} },
   })('src/feature/article/fetch.ts');
   for (const [url, expected] of [
     ['/b/zenlesszonezero', '/b/zenlesszonezero?mode=best'],
@@ -133,13 +114,9 @@ test('photo-only and best-only subscriptions fetch their own channel listings ra
       { href: '/b/zenlesszonezero/97' },
     ],
   };
-  const loader = {
-    length: 1,
-    addClass() {},
-    removeClass() {},
-  };
   const load = sourceLoader({
     globals: {
+      ...domFixture(),
       window: {
         location: {
           href: 'https://arca.live/b/my',
@@ -149,38 +126,11 @@ test('photo-only and best-only subscriptions fetch their own channel listings ra
       },
       DOMParser: class {
         parseFromString(path) {
-          return { documentElement: pages[path] };
+          return listingFixture({ rows: pages[path] });
         }
       },
     },
     mocks: {
-      jquery: {
-        default: (value) => {
-          if (typeof value === 'string') return loader;
-          if (value.href) return { attr: () => value.href };
-          return {
-            find: (selector) =>
-              selector === '.page-item.active'
-                ? { next: () => ({ find: () => ({ attr: () => undefined }) }) }
-                : {
-                    not() {
-                      return this;
-                    },
-                    each(fn) {
-                      value.forEach((row, index) =>
-                        fn(index, {
-                          ...row,
-                          querySelector: (selector) =>
-                            selector === '.text-bg-success' && row.category
-                              ? { textContent: row.category }
-                              : null,
-                        }),
-                      );
-                    },
-                  },
-          };
-        },
-      },
       '@/feature/subscriptions': {
         parseSubscribedChannels: () => [
           { id: 'bluearchive', name: '블루 아카이브' },
@@ -269,6 +219,7 @@ test('bulk subscription startup applies independent channel filters, excludes hi
   const navigations = [];
   const { initStartHomeSeries } = sourceLoader({
     globals: {
+      ...domFixture(),
       window: {
         location: {
           origin: 'https://arca.live',
@@ -277,7 +228,6 @@ test('bulk subscription startup applies independent channel filters, excludes hi
       },
     },
     mocks: {
-      jquery: {},
       '@/feature/subscriptions': {
         parseSubscribedChannels: () => [
           { id: 'first', name: '첫 번째' },

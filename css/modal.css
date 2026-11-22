@@ -415,3 +415,7 @@ body .arcafeed-navigation-control {
   outline: 2px solid #766df4;
   outline-offset: 2px;
 }
+
+.helper-modal [hidden] {
+  display: none !important;
+}

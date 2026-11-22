@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { domFixture } from './dom-fixture.mjs';
 import { memoryStorage, sourceLoader, vaultFixture } from './source-loader.mjs';
 
 function readingFixture(initial = {}) {
@@ -109,9 +110,9 @@ test('adjacent navigation reuses scans and invalidates after visits, list, index
 });
 
 test('reading search reuses normalized records while preserving multiword and Unicode matching', () => {
-  const { createReadingSearchMatcher, matchesReadingSearch } = sourceLoader({
-    mocks: { jquery: { default: () => {} } },
-  })('src/feature/modal/readingUi.ts');
+  const { createReadingSearchMatcher, matchesReadingSearch } = sourceLoader({})(
+    'src/feature/modal/readingUi.ts',
+  );
   let textReads = 0;
   const matcher = createReadingSearchMatcher((record) => {
     textReads++;
@@ -396,86 +397,45 @@ test('resume restores session links, selected channels and search without changi
   }
 });
 
-test('history search avoids autocomplete plugin dispatch, waits for Korean composition and clears the query', () => {
-  const elements = [];
-  const jquery = (tag, props = {}) => {
-    const element = {
-      tag,
-      value: '',
-      attributes: {},
-      handlers: new Map(),
-      children: [],
-      autocomplete(method) {
-        throw new Error(
-          `cannot call methods on autocomplete prior to initialization; attempted to call method '${method}'`,
-        );
-      },
-      on(event, handler) {
-        this.handlers.set(event, handler);
-        return this;
-      },
-      addClass() {
-        return this;
-      },
-      attr(attributes) {
-        Object.assign(this.attributes, attributes);
-        return this;
-      },
-      hide() {
-        return this;
-      },
-      toggle() {
-        return this;
-      },
-      append(...children) {
-        this.children.push(...children);
-        return this;
-      },
-      val(value) {
-        if (value === undefined) return this.value;
-        this.value = value;
-        return this;
-      },
-      trigger(event) {
-        this.handlers.get(event)?.();
-        this.lastEvent = event;
-        return this;
-      },
-    };
-    // jQuery's single-tag constructor calls matching methods before setting attributes.
-    for (const [name, value] of Object.entries(props)) {
-      if (typeof element[name] === 'function') element[name](value);
-      else element.attr({ [name]: value });
-    }
-    elements.push(element);
-    return element;
-  };
+test('history search waits for Korean composition, normalizes input and clears the query', () => {
+  const dom = domFixture();
   const { readingSearch, matchesReadingSearch } = sourceLoader({
-    mocks: { jquery: { default: jquery } },
+    globals: dom,
   })('src/feature/modal/readingUi.ts');
   let changes = 0;
   const search = readingSearch('검색', '검색', () => changes++);
-  const input = elements.find((element) => element.tag === '<input>');
-  const clear = elements.find((element) => element.tag === '<button>');
-  assert.equal(input.attributes.autocomplete, 'off');
-  assert.equal(input.attributes.type, 'search');
-  assert.equal(input.attributes['aria-label'], '검색');
-  input.trigger('compositionstart');
-  input.val('테').trigger('input');
+  dom.document.body.append(search.element);
+  const input = search.element.querySelector('input');
+  const clear = search.element.querySelector('button');
+  let focused = false;
+  input.focus = () => {
+    focused = true;
+  };
+  const dispatch = (type) => input.dispatchEvent(new dom.Event(type));
+  assert.equal(input.getAttribute('autocomplete'), 'off');
+  assert.equal(input.type, 'search');
+  assert.equal(input.getAttribute('aria-label'), '검색');
+  assert.equal(clear.hidden, true);
+  dispatch('compositionstart');
+  input.value = '테';
+  dispatch('input');
   assert.equal(changes, 0);
-  input.val('테스트  ＡＢＣ').trigger('compositionend');
+  input.value = '테스트  ＡＢＣ';
+  dispatch('compositionend');
   assert.equal(changes, 1);
-  input.trigger('input');
+  dispatch('input');
   assert.equal(changes, 1);
   assert.equal(
     matchesReadingSearch('abc 채널의 테스트 게시글', search.getQuery()),
     true,
   );
   assert.equal(matchesReadingSearch('테스트 게시글', search.getQuery()), false);
-  clear.trigger('click');
+  assert.equal(clear.hidden, false);
+  clear.click();
   assert.equal(search.getQuery(), '');
-  assert.equal(input.val(), '');
-  assert.equal(input.lastEvent, 'focus');
+  assert.equal(input.value, '');
+  assert.equal(focused, true);
+  assert.equal(clear.hidden, true);
   assert.equal(changes, 2);
 });
 
@@ -639,33 +599,6 @@ for (const quickExit of [false, true])
       scrollY: 120,
       addEventListener: (name, handler) => listeners.set(name, handler),
     };
-    const chain = {
-      length: 0,
-      first() {
-        return this;
-      },
-      text() {
-        return '';
-      },
-      find() {
-        return this;
-      },
-      each() {
-        return this;
-      },
-      toggleClass() {
-        return this;
-      },
-      prop() {
-        return this;
-      },
-      attr() {
-        return this;
-      },
-      on() {
-        return this;
-      },
-    };
     const load = sourceLoader({
       globals: {
         window,
@@ -673,6 +606,7 @@ for (const quickExit of [false, true])
         sessionStorage: { getItem: () => null },
         document: {
           title: '스크랩한 게시글',
+          querySelector: () => null,
           addEventListener: (name, handler) => listeners.set(name, handler),
         },
         setTimeout: (handler, delay) => {
@@ -687,11 +621,10 @@ for (const quickExit of [false, true])
         cancelAnimationFrame: (id) => frames.delete(id),
       },
       mocks: {
-        jquery: { default: () => chain },
         './filter': {
           extractArticleRows: () => {
             indicatorScans++;
-            return chain;
+            return [];
           },
         },
         './article/link': { refreshUnvisitedNavigation() {} },

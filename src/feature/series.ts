@@ -1,4 +1,4 @@
-import $ from 'jquery';
+import { createElement, setAttributes } from '@/utils/dom';
 
 import '@css/series.css';
 
@@ -31,19 +31,19 @@ interface SeriesEntry {
  * Strips target="_blank" and injects articleKey into hrefs.
  */
 function parseSeriesEntries(
-  $links: JQuery<HTMLElement>,
+  links: Iterable<HTMLElement>,
   articleKey: string,
 ): SeriesEntry[] {
-  return $links.toArray().map((el) => {
-    const $a = $(el).find('a');
-    const rawHref = $a.attr('href') || '';
-    const url = withArticleKey(rawHref, articleKey);
-
-    $a.attr('target', '');
-    $a.attr('rel', '');
-    $a.attr('href', url);
-
-    return { url, element: el };
+  return Array.from(links, (element) => {
+    const anchors = element.querySelectorAll('a');
+    const url = withArticleKey(
+      anchors[0]?.getAttribute('href') || '',
+      articleKey,
+    );
+    anchors.forEach((anchor) =>
+      setAttributes(anchor, { target: '', rel: '', href: url }),
+    );
+    return { url, element };
   });
 }
 
@@ -77,63 +77,82 @@ function pickWindow(
 
 // ── DOM Building ───────────────────────────────────────
 
-function buildShortcutDiv(entries: SeriesEntry[]): JQuery<HTMLElement> {
-  return $('<div>', { class: 'article-series' })
-    .css('max-height', 'max-content')
-    .css('margin-top', '1rem')
-    .append(entries.map(({ element }) => $(element).clone()));
+function buildShortcutDiv(entries: SeriesEntry[]): HTMLDivElement {
+  return createElement(
+    'div',
+    {
+      class: 'article-series',
+      style: 'max-height: max-content; margin-top: 1rem',
+    },
+    ...entries.map(({ element }) => element.cloneNode(true)),
+  );
 }
 
-function buildEnableSeriesButton(): JQuery<HTMLElement> {
-  return $('<button>', {
-    type: 'button',
-    title: '이 글의 시리즈를 새 탭에서 열기',
-    class: 'series-control-btn enable-series',
-  })
-    .append(
-      $('<span>', { class: 'bi-collection', 'aria-hidden': 'true' }),
-      $('<span>', { text: '시리즈 모드 열기' }),
-      $('<span>', { class: 'bi-box-arrow-up-right', 'aria-hidden': 'true' }),
-    )
-    .on('click', () => eventBus.emit('enableSeries'));
+function buildEnableSeriesButton(): HTMLButtonElement {
+  const button = createElement(
+    'button',
+    {
+      type: 'button',
+      title: '이 글의 시리즈를 새 탭에서 열기',
+      class: 'series-control-btn enable-series',
+    },
+    createElement('span', { class: 'bi-collection', 'aria-hidden': 'true' }),
+    createElement('span', { text: '시리즈 모드 열기' }),
+    createElement('span', {
+      class: 'bi-box-arrow-up-right',
+      'aria-hidden': 'true',
+    }),
+  );
+  button.addEventListener('click', () => void eventBus.emit('enableSeries'));
+  return button;
 }
 
 // ── Public API ─────────────────────────────────────────
 
 function initSeriesContent(p: VaultAdapter): void {
-  const $series = $('.article-series');
-  if ($series.length === 0) return;
+  const [series, ...duplicates] = Array.from(
+    document.querySelectorAll('.article-series'),
+  );
+  if (!series) return;
+  duplicates.forEach((element) => element.remove());
 
-  // Keep only the first series element, remove duplicates
-  $series.slice(1).remove();
-
-  const $links = $series.first().find('.series-link');
-  $links.css('display', 'block !important');
-
-  // Collapsible toggle
-  $('.series-collapsible').on('click', function () {
-    $(this).parent().toggleClass('extend');
+  const links = series.querySelectorAll<HTMLElement>('.series-link');
+  links.forEach((link) =>
+    link.style.setProperty('display', 'block', 'important'),
+  );
+  document.querySelectorAll('.series-collapsible').forEach((element) => {
+    element.addEventListener('click', () =>
+      element.parentElement?.classList.toggle('extend'),
+    );
   });
 
-  const entries = parseSeriesEntries($links, getCurrentArticleKey());
+  const entries = parseSeriesEntries(Array.from(links), getCurrentArticleKey());
   const currentIndex = findCurrentIndex(entries);
   if (currentIndex === -1) return;
 
   const window_ = pickWindow(entries, currentIndex);
 
-  $('.article-body')!.append(buildShortcutDiv(window_));
+  const bodies = document.querySelectorAll('.article-body');
+  bodies.forEach((body) => body.append(buildShortcutDiv(window_)));
 
   if (navigationMode(p) === 'series') return;
-
-  // Other feeds can open this post's series in a separate tab.
-  const $btnWrapper = $('<div>', { class: 'series-control-btns' }).append(
-    buildEnableSeriesButton(),
+  bodies.forEach((body) =>
+    body.after(
+      createElement(
+        'div',
+        { class: 'series-control-btns' },
+        buildEnableSeriesButton(),
+      ),
+    ),
   );
-  $('.article-body')!.after($btnWrapper);
 }
 
 function initSeriesBtnCss(_v: VaultAdapter): void {
-  $('.series-control-btn.enable-series').css('opacity', '1');
+  document
+    .querySelectorAll<HTMLElement>('.series-control-btn.enable-series')
+    .forEach((button) => {
+      button.style.opacity = '1';
+    });
 }
 
 async function initEnableSeries(p: VaultAdapter): Promise<void> {
@@ -144,7 +163,11 @@ async function initEnableSeries(p: VaultAdapter): Promise<void> {
     return;
   }
   const entries = parseSeriesEntries(
-    $('.article-series').first().find('.series-link'),
+    Array.from(
+      document
+        .querySelector('.article-series')
+        ?.querySelectorAll<HTMLElement>('.series-link') ?? [],
+    ),
     getCurrentArticleKey(),
   );
 

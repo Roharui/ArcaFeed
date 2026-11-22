@@ -1,22 +1,26 @@
-import $ from 'jquery';
+import { createElement, listen, setAttributes } from '@/utils/dom';
 import { reportFailure } from '@/utils/operation-error';
 import { eventBus } from '@/core/app-events';
 
 export function readingButton(
   label: string,
   action: () => unknown,
-): JQuery<HTMLElement> {
-  return $('<button>', {
-    type: 'button',
-    text: label,
-    class: 'arcafeed-reading-button',
-  }).on('click', () => {
-    try {
-      void Promise.resolve(action()).catch(reportFailure);
-    } catch (error) {
-      reportFailure(error);
-    }
-  });
+): HTMLButtonElement {
+  return listen(
+    createElement('button', {
+      type: 'button',
+      text: label,
+      class: 'arcafeed-reading-button',
+    }),
+    'click',
+    () => {
+      try {
+        void Promise.resolve(action()).catch(reportFailure);
+      } catch (error) {
+        reportFailure(error);
+      }
+    },
+  );
 }
 
 function normalizeSearch(value: string): string {
@@ -60,8 +64,7 @@ export function readingSearch(
   label: string,
   onChange: () => void,
 ) {
-  // Constructor properties invoke matching jQuery plugins such as autocomplete.
-  const input = $('<input>').attr({
+  const input = createElement('input', {
     type: 'search',
     placeholder,
     'aria-label': label,
@@ -72,38 +75,43 @@ export function readingSearch(
   let query = '';
   let composing = false;
   const clear = readingButton('×', () => {
-    input.val('');
+    input.value = '';
     commit();
-    input.trigger('focus');
-  })
-    .addClass('arcafeed-search-clear')
-    .attr({ 'aria-label': '검색어 지우기', title: '검색어 지우기' })
-    .hide();
+    input.focus();
+  });
+  clear.classList.add('arcafeed-search-clear');
+  setAttributes(clear, {
+    'aria-label': '검색어 지우기',
+    title: '검색어 지우기',
+  });
+  clear.hidden = true;
   const commit = () => {
-    const value = String(input.val() || '');
-    clear.toggle(value.length > 0);
+    const value = input.value;
+    clear.hidden = value.length === 0;
     const next = normalizeSearch(value);
     if (query === next) return;
     query = next;
     onChange();
   };
-  input.on('compositionstart', () => {
+  input.addEventListener('compositionstart', () => {
     composing = true;
   });
-  input.on('compositionend', () => {
+  input.addEventListener('compositionend', () => {
     composing = false;
     commit();
   });
-  input.on('input', () => {
-    clear.toggle(String(input.val() || '').length > 0);
+  input.addEventListener('input', () => {
+    clear.hidden = input.value.length === 0;
     if (!composing) commit();
   });
   return {
-    element: $('<div>', {
-      class: 'arcafeed-reading-search',
-      role: 'search',
-    }).append(
-      $('<span>', { class: 'bi-search', 'aria-hidden': 'true' }),
+    element: createElement(
+      'div',
+      {
+        class: 'arcafeed-reading-search',
+        role: 'search',
+      },
+      createElement('span', { class: 'bi-search', 'aria-hidden': 'true' }),
       input,
       clear,
     ),
@@ -124,8 +132,8 @@ export function formatReadingTime(timestamp: number): string {
   });
 }
 
-export function readingTime(timestamp: number): JQuery<HTMLElement> {
-  return $('<time>', {
+export function readingTime(timestamp: number): HTMLElement {
+  return createElement('time', {
     class: 'arcafeed-reading-time',
     text: formatReadingTime(timestamp),
     datetime: new Date(timestamp).toISOString(),
@@ -151,20 +159,30 @@ export function readingDateLabel(timestamp: number): string {
 export function readingHeader(
   title: string,
   description: string,
-  count?: JQuery<HTMLElement>,
-): JQuery<HTMLElement> {
-  const close = readingButton('×', () => {
+  count?: HTMLElement,
+  closeDialog = () => {
     void eventBus.emit('closeModal');
-  })
-    .addClass('arcafeed-reading-close')
-    .attr({ 'aria-label': '설정창 닫기', title: '닫기' });
-  return $('<div>', { class: 'arcafeed-reading-header' }).append(
-    $('<div>').append(
-      $('<div>', { class: 'arcafeed-reading-heading' }).append(
-        $('<h2>', { text: title }),
-        count ?? [],
+  },
+): HTMLElement {
+  const close = readingButton('×', closeDialog);
+  close.classList.add('arcafeed-reading-close');
+  setAttributes(close, { 'aria-label': '설정창 닫기', title: '닫기' });
+  return createElement(
+    'div',
+    { class: 'arcafeed-reading-header' },
+    createElement(
+      'div',
+      {},
+      createElement(
+        'div',
+        { class: 'arcafeed-reading-heading' },
+        createElement('h2', { text: title }),
+        ...(count ? [count] : []),
       ),
-      $('<p>', { class: 'arcafeed-history-description', text: description }),
+      createElement('p', {
+        class: 'arcafeed-history-description',
+        text: description,
+      }),
     ),
     close,
   );
@@ -174,14 +192,16 @@ export function readingEmptyState(
   icon: string,
   title: string,
   description: string,
-): JQuery<HTMLElement> {
-  return $('<div>', { class: 'arcafeed-reading-empty' }).append(
-    $('<span>', {
+): HTMLElement {
+  return createElement(
+    'div',
+    { class: 'arcafeed-reading-empty' },
+    createElement('span', {
       class: `arcafeed-reading-empty-icon ${icon}`,
       'aria-hidden': 'true',
     }),
-    $('<strong>', { text: title }),
-    $('<p>', { text: description }),
+    createElement('strong', { text: title }),
+    createElement('p', { text: description }),
   );
 }
 
@@ -190,17 +210,18 @@ export function readingChannelId(path: string): string {
 }
 
 export function syncChannelSelect(
-  select: JQuery<HTMLElement>,
+  select: HTMLSelectElement,
   options: Iterable<readonly [string, string]>,
   selected: string,
 ): string {
   const validIds = new Set<string>();
-  select.empty().append($('<option>', { value: '', text: '전체 채널' }));
+  const children = [createElement('option', { value: '', text: '전체 채널' })];
   for (const [id, label] of options) {
     validIds.add(id);
-    select.append($('<option>', { value: id, text: label || id }));
+    children.push(createElement('option', { value: id, text: label || id }));
   }
   const next = validIds.has(selected) ? selected : '';
-  select.val(next);
+  select.replaceChildren(...children);
+  select.value = next;
   return next;
 }

@@ -9,7 +9,7 @@ import { Store } from '@/vault/store';
 import { initReading } from '@/feature/reading';
 import { StorageRepository } from '@/vault/repository';
 import { ReadingHistory } from '@/vault/reading-history';
-import $ from 'jquery';
+import { createElement } from '@/utils/dom';
 import { showFetchLoader, hideFetchLoader } from '@/feature/article/loading';
 import { initNavigationList } from '@/feature/modal/navigationTab';
 import './fixture.css';
@@ -31,7 +31,7 @@ let savedCount = 0;
 let cleanupNavigation;
 
 function notify(message) {
-  $('#fixture-event').text(message);
+  document.querySelector('#fixture-event').textContent = message;
 }
 
 // Isolate only channel requests; status checks and other local assets use real fetch.
@@ -138,20 +138,20 @@ function render(options = scenario) {
   savedCount = 0;
   const data = createFixtureData(scenario);
   document.body.dataset.theme = scenario.theme;
-  $('.board-category')
-    .empty()
-    .append(data.categories.map((text) => $('<span>', { text })));
-  $('.my-subscribe-channels')
-    .empty()
-    .append(
-      data.channels.map((channel) =>
-        $('<a>', {
-          class: 'channel',
-          href: `/b/${channel.id}`,
-          text: channel.name,
-        }),
-      ),
+  document
+    .querySelector('.board-category')
+    .replaceChildren(
+      ...data.categories.map((text) => createElement('span', { text })),
     );
+  document.querySelector('.my-subscribe-channels').replaceChildren(
+    ...data.channels.map((channel) =>
+      createElement('a', {
+        class: 'channel',
+        href: `/b/${channel.id}`,
+        text: channel.name,
+      }),
+    ),
+  );
   vault = makeVault(data);
   notify('테스트 데이터가 준비됐습니다.');
   initModal(vault);
@@ -174,7 +174,8 @@ eventBus.on('checkSubscribeModal', () => {
   vault.flushSave();
   initCloseModal(vault);
 });
-$('#reopen').on('click', () => initModal(vault));
+const reopen = document.querySelector('#reopen');
+reopen.addEventListener('click', () => initModal(vault));
 
 // Keep navigation inside the preview; layout and setting handlers remain real.
 document.addEventListener(

@@ -1,15 +1,11 @@
 import { mergeState } from '@/vault/lazy-state';
-import $ from 'jquery';
-
+import { createElement, fromTemplate } from '@/utils/dom';
 import '@css/filter.css';
-
 import { eventBus } from '@/core/app-events';
 import { NO_TAB_CATEGORIES, expandTabCategories } from '@/feature/filter';
 import { readingHeader } from './readingUi';
-
 import type { VaultAdapter } from '@/vault';
 import type { ArticleFilterImpl } from '@/types';
-
 const MODAL_FILTER_TAB = `
 <div class="helper-modal-tab helper-modal-filter">
   <div class="arcafeed-modal-content">
@@ -53,7 +49,6 @@ const MODAL_FILTER_TAB = `
   </div>
 </div>
 `;
-
 interface FilterTarget {
   channelId: string;
   channelName: string;
@@ -62,195 +57,171 @@ interface FilterTarget {
   onApply: (filter: ArticleFilterImpl) => void;
   onCancel: () => void;
 }
-
-export function extractFilterCategories($scope: JQuery<HTMLElement>): string[] {
-  return $scope
-    .find('.board-category > span')
-    .toArray()
-    .map((element) => $(element).text().trim())
+export function extractFilterCategories(scope: ParentNode | null): string[] {
+  return Array.from(scope?.querySelectorAll('.board-category > span') ?? [])
+    .map((element) => element.textContent?.trim() ?? '')
     .filter((category) => category && category !== '전체');
 }
 
-function createArticleFilterModal(p: VaultAdapter, target?: FilterTarget) {
-  const $filterTab = $(MODAL_FILTER_TAB);
-  $filterTab.prepend(
+function createArticleFilterModal(
+  p: VaultAdapter,
+  target?: FilterTarget,
+): HTMLElement {
+  const editor = fromTemplate(MODAL_FILTER_TAB);
+  editor.prepend(
     readingHeader(
       target ? `${target.channelName} 필터` : '필터',
       '이 채널에서 보고 싶은 글만 골라보세요.',
     ),
   );
-
   const filter = target
     ? target.filter
     : p.articleFilterConfig[p.href.channelId];
-  const { tab, title, onlyBest } = filter || {
-    tab: [],
-    title: [],
-    onlyBest: false,
-  };
-
-  $filterTab
-    .find('#include-title')
-    .val((filter?.includeTitle ?? []).join(', '));
-  $filterTab.find('#include-mode').val(filter?.includeMode ?? 'any');
-  $filterTab
-    .find('#include-case-sensitive')
-    .prop('checked', filter?.includeCaseSensitive === true);
-
-  // Set best checkbox
-  $filterTab.find('#filter-best-checkbox').prop('checked', onlyBest);
-
-  // get Categories
+  const { tab = [], title = [], onlyBest = false } = filter ?? {};
+  editor.querySelector<HTMLInputElement>('#include-title')!.value = (
+    filter?.includeTitle ?? []
+  ).join(', ');
+  editor.querySelector<HTMLSelectElement>('#include-mode')!.value =
+    filter?.includeMode ?? 'any';
+  editor.querySelector<HTMLInputElement>('#include-case-sensitive')!.checked =
+    filter?.includeCaseSensitive === true;
+  editor.querySelector<HTMLInputElement>('#filter-best-checkbox')!.checked =
+    onlyBest;
   const categories = [
     ...new Set([
       ...NO_TAB_CATEGORIES,
       ...(target?.categories ??
-        extractFilterCategories($('.root-container').first())),
+        extractFilterCategories(document.querySelector('.root-container'))),
       ...expandTabCategories(tab),
     ]),
   ];
-
   const tabSet = new Set(expandTabCategories(tab));
-  const $filterCategory = $filterTab.find('#category');
-
-  // Add Category Checkboxes
   const updateAll = () => {
-    const selected = $filterTab.find('.ele-category:checked').length;
-    $filterTab.find('.ele-category-all').prop({
-      checked: selected === categories.length,
-      indeterminate: selected > 0 && selected < categories.length,
-    });
+    const selected = editor.querySelectorAll('.ele-category:checked').length;
+    all.checked = selected === categories.length;
+    all.indeterminate = selected > 0 && selected < categories.length;
   };
-  categories
-    .map((text) =>
-      createCategorySpan(text, 'ele-category', tabSet.has(text), updateAll),
-    )
-    .forEach((ele) => $filterCategory.append(ele));
-
-  const spanAll = createCategorySpan(
+  const allRow = createCategoryRow(
     '전체 선택',
     'ele-category-all',
-    categories.every((text) => tabSet.has(text)),
-    () =>
-      $filterTab
-        .find('.ele-category')
-        .prop('checked', $filterTab.find('.ele-category-all').prop('checked')),
+    false,
+    () => {
+      editor
+        .querySelectorAll<HTMLInputElement>('.ele-category')
+        .forEach((checkbox) => {
+          checkbox.checked = all.checked;
+        });
+    },
   );
-
-  $filterTab.find('#category-all').append(spanAll);
+  const all = allRow.querySelector('input')!;
+  editor.querySelector('#category-all')!.append(allRow);
+  editor
+    .querySelector('#category')!
+    .append(
+      ...categories.map((text) =>
+        createCategoryRow(text, 'ele-category', tabSet.has(text), updateAll),
+      ),
+    );
   updateAll();
-
-  // Title exclude tags
-  title.forEach((tag) => createExcludeSpan(tag, $filterTab));
-
-  $filterTab.find('#filter-check-btn').on('click', () => {
-    addTitleExcludeTag($filterTab);
+  title.forEach((tag) => createExcludeTag(tag, editor));
+  editor.querySelector('#filter-check-btn')!.addEventListener('click', () => {
+    addTitleExcludeTag(editor);
     if (target)
-      target.onApply(readArticleFilter($filterTab, filter, target.channelName));
+      target.onApply(readArticleFilter(editor, filter, target.channelName));
     else void eventBus.emit('checkFilterModal');
   });
-  $filterTab.find('#filter-cancel-btn').on('click', () => {
+  editor.querySelector('#filter-cancel-btn')!.addEventListener('click', () => {
     if (target) target.onCancel();
     else void eventBus.emit('closeModal');
   });
-  $filterTab
-    .find('#exclude-btn')
-    .on('click', () => addTitleExcludeTag($filterTab));
-  $filterTab.find('#exclude-title').on('keydown', (event) => {
-    if (event.key === 'Enter' && !event.originalEvent?.isComposing) {
-      event.preventDefault();
-      addTitleExcludeTag($filterTab);
-    }
-  });
-
-  return $filterTab;
+  editor
+    .querySelector('#exclude-btn')!
+    .addEventListener('click', () => addTitleExcludeTag(editor));
+  editor
+    .querySelector<HTMLInputElement>('#exclude-title')!
+    .addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.isComposing) {
+        event.preventDefault();
+        addTitleExcludeTag(editor);
+      }
+    });
+  return editor;
 }
 
-function createExcludeSpan(text: string, $$filterTab: JQuery<HTMLElement>) {
+function createExcludeTag(text: string, editor: HTMLElement): void {
   text = text.trim();
   if (
     !text ||
-    $$filterTab
-      .find('.exclude-title-tag')
-      .toArray()
-      .some((el) => $(el).attr('data-text') === text)
+    Array.from(editor.querySelectorAll<HTMLElement>('.exclude-title-tag')).some(
+      (element) => element.dataset.text === text,
+    )
   )
     return;
-  const $ele = $('<button>', {
-    type: 'button',
-    class: 'exclude-title-tag',
-    'data-text': text,
-    'aria-label': `${text} 차단 해제`,
-    title: '클릭하여 차단 해제',
-  }).append(
-    $('<span>', { text }),
-    $('<span>', { text: '×', 'aria-hidden': 'true' }),
+  const tag = createElement(
+    'button',
+    {
+      type: 'button',
+      class: 'exclude-title-tag',
+      'data-text': text,
+      'aria-label': `${text} 차단 해제`,
+      title: '클릭하여 차단 해제',
+    },
+    createElement('span', { text }),
+    createElement('span', { text: '×', 'aria-hidden': 'true' }),
   );
-
-  $ele.on('click', () => $ele.remove());
-
-  $$filterTab.find('.exclude-title-list').append($ele);
+  tag.addEventListener('click', () => tag.remove());
+  editor.querySelector('.exclude-title-list')!.append(tag);
 }
 
-function createCategorySpan(
+function createCategoryRow(
   text: string,
-  clsName: string,
-  prop: boolean,
-  fn: () => void,
-) {
-  const checkBox = $('<input>', {
+  className: string,
+  checked: boolean,
+  change: () => void,
+): HTMLLabelElement {
+  const checkbox = createElement('input', {
     type: 'checkbox',
-    class: `category-check ${clsName}`,
+    class: `category-check ${className}`,
     value: text,
   });
-  checkBox.on('change', fn);
-
-  const tabName = $('<span>', { class: 'category-span', text: text });
-  const span = $('<label>');
-
-  checkBox.prop('checked', prop);
-  span.append(checkBox).append(tabName);
-
-  return span;
+  checkbox.checked = checked;
+  checkbox.addEventListener('change', change);
+  return createElement(
+    'label',
+    {},
+    checkbox,
+    createElement('span', { class: 'category-span', text }),
+  );
 }
 
-function addTitleExcludeTag($filterTab: JQuery<HTMLElement>) {
-  const excludeTagsStr = $filterTab.find('#exclude-title').val() || '';
-  if (typeof excludeTagsStr !== 'string') return;
-
-  const excludeTags = excludeTagsStr.split(',') || [];
-
-  excludeTags.forEach((tag) => createExcludeSpan(tag, $filterTab));
-
-  $filterTab.find('#exclude-title').val('').trigger('focus');
+function addTitleExcludeTag(editor: HTMLElement): void {
+  const input = editor.querySelector<HTMLInputElement>('#exclude-title')!;
+  input.value.split(',').forEach((tag) => createExcludeTag(tag, editor));
+  input.value = '';
+  input.focus();
 }
 
 export function readArticleFilter(
-  $editor: JQuery<HTMLElement>,
+  editor: ParentNode,
   previous?: ArticleFilterImpl,
   channelName?: string,
 ): ArticleFilterImpl {
-  const tab = $editor
-    .find('.ele-category:checked')
-    .toArray()
-    .map((element) => String($(element).val()));
-
-  const title = $editor
-    .find('.exclude-title-tag')
-    .toArray()
-    .map((ele): string => $(ele).attr('data-text') as string);
-
-  const includeInput = $editor.find('#include-title');
-  const includeTitle = includeInput.length
-    ? [
-        ...new Set(
-          String(includeInput.val() || '')
-            .split(',')
-            .map((word) => word.trim())
-            .filter(Boolean),
-        ),
-      ]
-    : [];
+  const tab = Array.from(
+    editor.querySelectorAll<HTMLInputElement>('.ele-category:checked'),
+    (input) => input.value,
+  );
+  const title = Array.from(
+    editor.querySelectorAll<HTMLElement>('.exclude-title-tag'),
+    (tag) => tag.dataset.text ?? '',
+  );
+  const includeTitle = [
+    ...new Set(
+      (editor.querySelector<HTMLInputElement>('#include-title')?.value ?? '')
+        .split(',')
+        .map((word) => word.trim())
+        .filter(Boolean),
+    ),
+  ];
   return {
     tab,
     title,
@@ -258,35 +229,41 @@ export function readArticleFilter(
       ? {
           includeTitle,
           includeMode:
-            $editor.find('#include-mode').val() === 'all'
+            editor.querySelector<HTMLSelectElement>('#include-mode')?.value ===
+            'all'
               ? ('all' as const)
               : ('any' as const),
           includeCaseSensitive:
-            $editor.find('#include-case-sensitive').prop('checked') === true,
+            editor.querySelector<HTMLInputElement>('#include-case-sensitive')
+              ?.checked === true,
         }
       : {}),
     disableSwiper: previous?.disableSwiper ?? false,
-    onlyBest: $editor.find('#filter-best-checkbox').prop('checked') as boolean,
+    onlyBest:
+      editor.querySelector<HTMLInputElement>('#filter-best-checkbox')
+        ?.checked === true,
     ...(channelName ? { channelName } : {}),
   };
 }
 
 function initCheckFilterModal(p: VaultAdapter) {
   const { channelId } = p.href;
+  const editor = document.querySelector('#dialog .helper-modal-filter');
+  if (!editor) return p;
   const pageFilter = readArticleFilter(
-    $('#dialog .helper-modal-filter'),
+    editor,
     p.articleFilterConfig[channelId],
-    $('a.title').attr('data-channel-name')?.replace(' 채널', '') || channelId,
+    document
+      .querySelector('a.title')
+      ?.getAttribute('data-channel-name')
+      ?.replace(' 채널', '') || channelId,
   );
-
   p.updateState({
     articleFilterConfig: mergeState(p.articleFilterConfig, {
       [channelId]: pageFilter,
     }),
     articleList: p.articleList.slice(0, p.activeIndex + 1),
   });
-
   return p;
 }
-
 export { createArticleFilterModal, initCheckFilterModal };

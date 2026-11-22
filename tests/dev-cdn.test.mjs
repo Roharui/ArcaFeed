@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { domFixture } from './dom-fixture.mjs';
 import createCdnConfig from '../webpack.config.cdn.js';
 import { sourceLoader } from './source-loader.mjs';
 
@@ -17,10 +18,11 @@ test('CDN mobile initialization displays the version without reloading', () => {
       JSON.parse(value),
     ]),
   );
-  const appended = [];
+  const dom = domFixture('<footer></footer>');
   let reloads = 0;
   const { addVersionInfo } = sourceLoader({
     globals: {
+      ...dom,
       process: { env },
       window: { location: { reload: () => reloads++ } },
       localStorage: {
@@ -29,20 +31,14 @@ test('CDN mobile initialization displays the version without reloading', () => {
         },
       },
     },
-    mocks: {
-      jquery: {
-        default(selector, attributes) {
-          return attributes || { append: (element) => appended.push(element) };
-        },
-      },
-    },
   })('src/feature/version.ts');
 
   addVersionInfo({});
   assert.equal(reloads, 0);
-  assert.equal(appended.length, 1);
-  assert.match(appended[0].text, /^ArcaFeed Version:/);
-  assert.equal(config.externals.jquery, undefined);
+  assert.match(
+    dom.document.querySelector('footer').textContent,
+    /^ArcaFeed Version:/,
+  );
   assert.equal(config.externals.swiper, 'Swiper');
   assert.equal(config.mode, 'production');
   assert.equal(config.devtool, false);

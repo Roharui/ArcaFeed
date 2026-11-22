@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { domFixture, listingFixture } from './dom-fixture.mjs';
 import {
   deferred,
   memoryStorage,
@@ -509,9 +510,7 @@ test('write requests and GET requests with different timeouts are not coalesced'
 });
 
 test('title-only filters work without selecting tabs and read the title once', () => {
-  const { buildFilterPredicate } = sourceLoader({ mocks: { jquery: {} } })(
-    'src/feature/filter.ts',
-  );
+  const { buildFilterPredicate } = sourceLoader()('src/feature/filter.ts');
   let titleReads = 0;
   const row = {
     matches: () => false,
@@ -539,9 +538,7 @@ test('title-only filters work without selecting tabs and read the title once', (
 });
 
 test('legacy no-tab filters include both media variants and reject other tabs early', () => {
-  const { buildFilterPredicate } = sourceLoader({ mocks: { jquery: {} } })(
-    'src/feature/filter.ts',
-  );
+  const { buildFilterPredicate } = sourceLoader()('src/feature/filter.ts');
   const predicate = buildFilterPredicate({ tab: ['노탭'], title: [] });
   const row = (hasImage) => ({
     querySelector: (selector) =>
@@ -693,7 +690,6 @@ test('Swiper is reused and background list changes unlock navigation', () => {
   });
   const { initSwiperPage } = sourceLoader({
     mocks: {
-      jquery: {},
       swiper: { default: FakeSwiper },
       './video': { installSwiperVideoPause() {} },
       './side-click': { installSideClick() {} },
@@ -841,7 +837,6 @@ test('Swiper ignores article height changes and batches width changes until the 
       cancelAnimationFrame: (id) => frames.delete(id),
     },
     mocks: {
-      jquery: {},
       swiper: { default: FakeSwiper },
       './video': { installSwiperVideoPause() {} },
       './side-click': { installSideClick() {} },
@@ -916,56 +911,23 @@ function listingAdapter(
     showToast = () => {},
   } = {},
 ) {
-  const loader = {
-    length: 1,
-    addClass() {
-      return this;
-    },
-    removeClass() {
-      return this;
-    },
-  };
-  function jquery(value) {
-    if (typeof value === 'string') return loader;
-    if (value.href)
-      return {
-        attr: () => value.href,
-        css() {},
-      };
-    return {
-      find(selector) {
-        if (selector === '.page-item.active')
-          return {
-            next: () => ({ find: () => ({ attr: () => value.next }) }),
-          };
-        return {
-          not() {
-            return this;
-          },
-          each(fn) {
-            value.rows.forEach((row, index) => fn(index, row));
-          },
-        };
-      },
-    };
-  }
   const load = sourceLoader({
     globals: {
+      ...domFixture(),
       window: windowFixture,
       AbortController,
       DOMParser: class {
         parseFromString(text) {
-          return { documentElement: pages[text] };
+          return listingFixture(pages[text]);
         }
       },
     },
     mocks: {
-      jquery: { default: jquery },
       '@/utils/fetch': { fetchUrl: fetchResponse },
       '@/utils/toast': { showToast, showConfirmToast },
     },
   });
-  return { load, jquery };
+  return { load };
 }
 
 test('listing pages deduplicate existing URLs, duplicate rows and repeats across pages', async () => {
@@ -1262,36 +1224,21 @@ test('a filter change during a listing request discards its stale result', async
 test('UI initialization installs one subscription and skips DOM work for article state changes', () => {
   let domWrites = 0;
   const subscribers = [];
-  const empty = {
-    length: 0,
-    first() {
-      return this;
+  const dom = domFixture(
+    '<main class="body"><div class="content-wrapper"></div></main>',
+  );
+  const wrapper = dom.document.querySelector('.content-wrapper');
+  const nativeStyle = wrapper.style;
+  Object.defineProperty(wrapper, 'style', {
+    value: {
+      setProperty(...args) {
+        domWrites++;
+        nativeStyle.setProperty(...args);
+      },
     },
-    each() {
-      return this;
-    },
-    prependTo() {
-      return this;
-    },
-    addClass() {
-      domWrites++;
-      return this;
-    },
-    toggleClass() {
-      domWrites++;
-      return this;
-    },
-    css() {
-      domWrites++;
-      return this;
-    },
-  };
+  });
   const { initUi } = sourceLoader({
-    globals: { window: { matchMedia: () => ({ matches: false }) } },
-    mocks: {
-      jquery: { default: () => empty },
-      '@/utils': { extractChannelId: () => null },
-    },
+    globals: { ...dom, window: { matchMedia: () => ({ matches: false }) } },
   })('src/feature/ui.ts');
   const p = vaultFixture({
     href: { mode: 'CHANNEL' },
@@ -1320,56 +1267,33 @@ test('UI initialization installs one subscription and skips DOM work for article
 test('resize events perform one geometry read and style update per animation frame', () => {
   let geometryReads = 0;
   let styleWrites = 0;
-  const handlers = new Map();
   const frames = new Map();
   let nextFrame = 0;
-  const nativeWrapper = {
-    getBoundingClientRect() {
-      geometryReads++;
-      return { left: 0, right: 700 };
-    },
-    style: {
-      setProperty() {
+  const dom = domFixture(
+    '<main class="body"><div class="content-wrapper"></div></main>',
+  );
+  const wrapper = dom.document.querySelector('.content-wrapper');
+  wrapper.getBoundingClientRect = () => {
+    geometryReads++;
+    return { left: 0, right: 700 };
+  };
+  const nativeStyle = wrapper.style;
+  Object.defineProperty(wrapper, 'style', {
+    value: {
+      setProperty(...args) {
         styleWrites++;
+        nativeStyle.setProperty(...args);
       },
     },
+  });
+  const send = (element, type, clientX) => {
+    const event = new dom.Event(type);
+    Object.defineProperty(event, 'clientX', { value: clientX });
+    element.dispatchEvent(event);
   };
-  const chain = {
-    length: 0,
-    first() {
-      return this;
-    },
-    each() {
-      return this;
-    },
-    prependTo() {
-      return this;
-    },
-    addClass() {
-      return this;
-    },
-    removeClass() {
-      return this;
-    },
-    toggleClass() {
-      return this;
-    },
-    css() {
-      return this;
-    },
-    append() {
-      return this;
-    },
-    on(name, fn) {
-      handlers.set(name, fn);
-      return this;
-    },
-  };
-  const wrapper = { ...chain, length: 1, 0: nativeWrapper };
-  const document = {};
   const { initUi } = sourceLoader({
     globals: {
-      document,
+      ...dom,
       window: {
         matchMedia: (query) => ({ matches: query.includes('min-width') }),
       },
@@ -1380,13 +1304,6 @@ test('resize events perform one geometry read and style update per animation fra
       },
       cancelAnimationFrame: (id) => frames.delete(id),
     },
-    mocks: {
-      jquery: {
-        default: (selector) =>
-          selector === '.body .content-wrapper' ? wrapper : chain,
-      },
-      '@/utils': { extractChannelId: () => null },
-    },
   })('src/feature/ui.ts');
   const p = vaultFixture({
     href: { mode: 'CHANNEL' },
@@ -1394,20 +1311,16 @@ test('resize events perform one geometry read and style update per animation fra
     subscribe() {},
   });
   initUi(p);
-  handlers.get('mousedown')({
-    clientX: 700,
-    preventDefault() {},
-    stopPropagation() {},
-    stopImmediatePropagation() {},
-  });
+  styleWrites = 0;
+  send(wrapper.querySelector('.arca-resize-handle-right'), 'mousedown', 700);
   for (let index = 0; index < 100; index++)
-    handlers.get('mousemove.arcafeed-resize')({ clientX: 800 + index });
+    send(dom.document, 'mousemove', 800 + index);
   assert.equal(frames.size, 1);
   assert.equal(geometryReads, 0);
   frames.get(1)();
   assert.equal(geometryReads, 1);
   assert.equal(styleWrites, 1);
-  handlers.get('mouseup.arcafeed-resize')();
+  send(dom.document, 'mouseup', 899);
   assert.equal(p.uiSettings.contentWidth, 899);
   assert.equal(p.saves, 1);
 });
@@ -1480,33 +1393,17 @@ test('best-only mode never seeds ordinary DOM rows and empty channels initialize
 });
 
 test('best-only opacity follows fetched membership and resets when the option is disabled', () => {
-  const rows = [
-    { href: '/b/test/100?articleKey=session', title: 'best' },
-    { href: '/b/test/99', title: 'ordinary' },
-    { href: '/b/test/98', title: 'excluded best' },
-  ].map((row) => ({
-    ...row,
-    matches: () => true,
-    textContent: row.title,
-  }));
-  const collection = {
-    find: () => collection,
-    not: () => collection,
-    each: (callback) => rows.forEach((row, index) => callback(index, row)),
-  };
-  const jquery = (row) =>
-    typeof row === 'string'
-      ? collection
-      : {
-          attr: () => row.href,
-          css: (name, value) => {
-            assert.equal(name, 'opacity');
-            row.opacity = value;
-          },
-        };
-  const { filterLink } = sourceLoader({
-    mocks: { jquery: { default: jquery } },
-  })('src/feature/filter.ts');
+  const document = listingFixture({
+    rows: [
+      { href: '/b/test/100?articleKey=session', title: 'best' },
+      { href: '/b/test/99', title: 'ordinary' },
+      { href: '/b/test/98', title: 'excluded best' },
+    ],
+  });
+  const rows = Array.from(document.querySelectorAll('a.vrow'));
+  const { filterLink } = sourceLoader({ globals: { document } })(
+    'src/feature/filter.ts',
+  );
   const p = vaultFixture({
     href: { mode: 'CHANNEL', channelId: 'test', articleKey: '', search: '' },
     articleList: [],
@@ -1516,26 +1413,26 @@ test('best-only opacity follows fetched membership and resets when the option is
   });
   filterLink(p, true);
   assert.deepEqual(
-    rows.map((row) => row.opacity),
+    rows.map((row) => row.style.opacity),
     ['0.5', '0.5', '0.5'],
   );
   p.articleList = ['/b/test/100', '/b/test/98'];
   filterLink(p, true);
   assert.deepEqual(
-    rows.map((row) => row.opacity),
+    rows.map((row) => row.style.opacity),
     ['1', '0.5', '0.5'],
   );
   p.href.search = '?mode=best';
   filterLink(p, true);
   assert.deepEqual(
-    rows.map((row) => row.opacity),
+    rows.map((row) => row.style.opacity),
     ['1', '1', '0.5'],
   );
   p.href.search = '';
   p.articleFilterConfig.test.onlyBest = false;
   filterLink(p, true);
   assert.deepEqual(
-    rows.map((row) => row.opacity),
+    rows.map((row) => row.style.opacity),
     ['1', '1', '0.5'],
   );
 });
@@ -1840,31 +1737,7 @@ test('initReading defers parsing recent_articles until needed when visited skipp
       },
     },
     mocks: {
-      jquery: {
-        default: () => ({
-          length: 0,
-          first() {
-            return this;
-          },
-          text: () => '',
-          prop() {
-            return this;
-          },
-          toggleClass() {
-            return this;
-          },
-          attr() {
-            return this;
-          },
-          on() {
-            return this;
-          },
-          each() {
-            return this;
-          },
-        }),
-      },
-      './filter': { extractArticleRows: () => ({ each() {} }) },
+      './filter': { extractArticleRows: () => [] },
       './article/link': { refreshUnvisitedNavigation() {} },
     },
   });
@@ -1903,53 +1776,17 @@ test('equalData compares arrays directly and distinguishes arrays from objects',
 
 test('navigation control observes only direct body children instead of subtree mutations', () => {
   const observations = [];
-  const jquery = () => {
-    const el = {
-      0: { style: {} },
-      append() {
-        return this;
-      },
-      appendTo() {
-        return this;
-      },
-      on() {
-        return this;
-      },
-      attr() {
-        return this;
-      },
-      text() {
-        return this;
-      },
-      toggleClass() {
-        return this;
-      },
-      removeClass() {
-        return this;
-      },
-      addClass() {
-        return this;
-      },
-      remove() {},
-    };
-    return el;
-  };
   class Observer {
     observe(target, options) {
       observations.push({ target, options });
     }
     disconnect() {}
   }
-  const body = { id: 'body' };
+  const dom = domFixture();
+  const body = dom.document.body;
   const { initNavigationList } = sourceLoader({
     globals: {
-      document: {
-        body,
-        querySelector: () => null,
-        querySelectorAll: () => [],
-        addEventListener() {},
-        removeEventListener() {},
-      },
+      ...dom,
       window: {
         addEventListener() {},
         removeEventListener() {},
@@ -1960,7 +1797,6 @@ test('navigation control observes only direct body children instead of subtree m
       cancelAnimationFrame() {},
     },
     mocks: {
-      jquery: { default: jquery },
       './readingUi': {},
       '@/feature/swiper/page': {},
       '@/feature/article/loading': {

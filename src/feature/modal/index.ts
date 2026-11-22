@@ -1,4 +1,5 @@
-import $ from 'jquery';
+import { fromTemplate } from '@/utils/dom';
+import { disposeDialogElement, setDialogCleanup } from './cleanup';
 import { reportFailure } from '@/utils/operation-error';
 
 import '@css/modal.css';
@@ -37,7 +38,7 @@ function initModal(p: VaultAdapter) {
     history: { icon: '🕘', title: '최근 본 글' },
     resume: { icon: '📖', title: '이어보기' },
   };
-  const dialog = $(`
+  const dialog = fromTemplate(`
     <div id="dialog" class="helper-modal">
       <div class="helper-modal-body" style="--arcafeed-modal-tab-count: ${availableTabs.length}" role="dialog" aria-modal="true" aria-label="아카피드 설정">
         ${availableTabs
@@ -51,9 +52,9 @@ function initModal(p: VaultAdapter) {
       </div>
     </div>
   `);
-  const dialogBody = dialog.find('.helper-modal-body');
+  const dialogBody = dialog.querySelector<HTMLElement>('.helper-modal-body')!;
 
-  const factories: Record<string, () => JQuery<HTMLElement>> = {
+  const factories: Record<string, () => HTMLElement> = {
     filter: () => createArticleFilterModal(p),
     ui: () => createUISettingModal(p),
     subscribe: () => createSubscribeSettingModal(p),
@@ -67,46 +68,52 @@ function initModal(p: VaultAdapter) {
     created.add(tab);
   };
   const initialTab = resolveModalTab(p.uiSettings.lastModalTab, availableTabs);
-  dialog.find(`#${initialTab}`).prop('checked', true);
+  const initialRadio = dialog.querySelector<HTMLInputElement>(
+    `#${initialTab}`,
+  )!;
+  initialRadio.checked = true;
   ensureTab(initialTab);
-  dialog.find('.helper-modal-tab-radio').on('change', function () {
-    const selectedTab = $(this).attr('id') as typeof p.uiSettings.lastModalTab;
-    ensureTab(selectedTab);
-    p.uiSettings = mergeState(p.uiSettings, { lastModalTab: selectedTab });
-    dialogBody.find('.arcafeed-modal-content').scrollTop(0);
-    try {
-      p.flushSave();
-    } catch (error) {
-      reportFailure(error);
-    }
+  dialog
+    .querySelectorAll<HTMLInputElement>('.helper-modal-tab-radio')
+    .forEach((radio) => {
+      radio.addEventListener('change', () => {
+        const selectedTab = radio.id as typeof p.uiSettings.lastModalTab;
+        ensureTab(selectedTab);
+        p.uiSettings = mergeState(p.uiSettings, { lastModalTab: selectedTab });
+        dialogBody
+          .querySelectorAll<HTMLElement>('.arcafeed-modal-content')
+          .forEach((content) => {
+            content.scrollTop = 0;
+          });
+        try {
+          p.flushSave();
+        } catch (error) {
+          reportFailure(error);
+        }
+      });
+    });
+  document.body.append(dialog);
+  dialog.addEventListener('click', (event) => {
+    if (event.target === dialog) void eventBus.emit('closeModal');
   });
-  dialog.appendTo('body');
-  dialog.on('click', (event) => {
-    if (event.target === dialog[0]) void eventBus.emit('closeModal');
-  });
-  if (dialogBody[0]?.addEventListener)
-    dialog.data(
-      'cleanupFocus',
-      installDialogFocus(
-        dialogBody[0],
-        () => {
-          void eventBus.emit('closeModal');
-        },
-        dialog.find('.helper-modal-tab-radio:checked')[0],
-      ),
-    );
-}
-
-function cleanupModal(): void {
-  $('#dialog .helper-modal-tab').each((_, element) => {
-    $(element).data('cleanup')?.();
-  });
-  $('#dialog').data('cleanupFocus')?.();
+  setDialogCleanup(
+    dialog,
+    installDialogFocus(
+      dialogBody,
+      () => {
+        void eventBus.emit('closeModal');
+      },
+      initialRadio,
+    ),
+  );
 }
 
 function initCloseModal(_: VaultAdapter): void {
-  cleanupModal();
-  $('#dialog').remove();
+  const dialog = document.getElementById('dialog');
+  if (!dialog) return;
+  dialog.querySelectorAll('.helper-modal-tab').forEach(disposeDialogElement);
+  disposeDialogElement(dialog);
+  dialog.remove();
 }
 
 export * from './filterUi';
