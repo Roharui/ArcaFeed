@@ -9,22 +9,20 @@ export function domFixture(body = '') {
 
 export function listingFixture({ rows = [], next } = {}) {
   return domFixture(`
-    <div class="root-container">
-      <div class="article-list">
-        <div class="list-table table">
-          ${rows
-            .map(
-              ({ href, category, title }) => `
-            <a class="vrow column" href="${href}">
-              ${category ? `<span class="text-bg-success">${category}</span>` : ''}
-              <span class="title">${title ?? ''}</span>
-            </a>
-          `,
-            )
-            .join('')}
-        </div>
-      </div>
-      ${next ? `<ul><li class="page-item active"></li><li class="page-item"><a href="${next}"></a></li></ul>` : ''}
+    <div id="board_list">
+      <table class="board_list_table"><tbody>
+        ${rows
+          .map(
+            ({ href, category, title }) => `
+          <tr class="table_body">
+            <td class="divsn">${category ?? ''}</td>
+            <td class="subject"><a class="subject_link" href="${href}">${title ?? ''}</a></td>
+          </tr>
+        `,
+          )
+          .join('')}
+      </tbody></table>
+      ${next ? `<span class="btn_num active">1</span><a class="btn_num" href="${next}">2</a>` : ''}
     </div>
   `).document;
 }

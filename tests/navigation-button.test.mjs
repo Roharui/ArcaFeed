@@ -47,8 +47,8 @@ for (const pointerType of ['mouse', 'touch']) {
       },
     })('src/feature/modal/navigationTab.ts');
     initNavigationList(vaultFixture({ subscribe: () => () => {} }));
-    const trigger = dom.document.querySelector('.arcafeed-navigation-trigger');
-    const control = dom.document.querySelector('.arcafeed-navigation-control');
+    const trigger = dom.document.querySelector('.rulifeed-navigation-trigger');
+    const control = dom.document.querySelector('.rulifeed-navigation-control');
     assert.equal(trigger.classList.contains('is-hovered'), false);
     notifyLoading(true);
     assert.equal(trigger.classList.contains('is-loading'), true);

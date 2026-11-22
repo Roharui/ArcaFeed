@@ -26,7 +26,7 @@ const initEvent = (p: VaultAdapter) => {
       event.metaKey
     )
       return;
-    if (document.querySelector('#dialog, .arcafeed-navigation-panel')) return;
+    if (document.querySelector('#dialog, .rulifeed-navigation-panel')) return;
     const targets = event.composedPath?.() ?? [event.target];
     if (
       targets.some(

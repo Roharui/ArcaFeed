@@ -1,7 +1,7 @@
 import { afterPaint } from '@/utils/after-paint';
 import { parseHref } from '@/utils/regex';
 
-const GUARD_KEY = '__arcaFeedInitialized__';
+const GUARD_KEY = '__ruliFeedInitialized__';
 
 function waitForHead(): Promise<void> | undefined {
   if (document.head) return;
@@ -32,17 +32,17 @@ async function start(): Promise<void> {
   );
   await Promise.all([
     initializeStorage(),
-    import(/* webpackMode: "eager" */ '@css/arcalive.css'),
+    import(/* webpackMode: "eager" */ '@css/ruliweb.css'),
     ready,
   ]);
-  const { ArcaFeed, eventBus } = await import(
+  const { RuliFeed, eventBus } = await import(
     /* webpackMode: "eager" */ '@/core'
   );
   const { captureSkippedToast } = await import(
     /* webpackMode: "eager" */ '@/feature/swiper/skip-toast'
   );
   captureSkippedToast();
-  new ArcaFeed();
+  new RuliFeed();
   await eventBus.emit('init');
   if (
     process.env.NODE_ENV === 'development' &&
@@ -60,14 +60,14 @@ async function start(): Promise<void> {
       const script = document.createElement('script');
       script.src = 'https://cdn.jsdelivr.net/npm/eruda@3.4.3';
       script.onload = () => page.eruda?.init();
-      script.onerror = () => console.error('[ArcaFeed] Eruda failed to load.');
+      script.onerror = () => console.error('[RuliFeed] Eruda failed to load.');
       document.head.append(script);
     });
   }
 }
 
 if ((window as any)[GUARD_KEY]) {
-  console.log('[ArcaFeed] Already initialized, skipping duplicate execution.');
+  console.log('[RuliFeed] Already initialized, skipping duplicate execution.');
 } else if (parseHref(window.location.href).mode !== 'OTHER') {
   (window as any)[GUARD_KEY] = true;
   void start().catch(async (error) => {

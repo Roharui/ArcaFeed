@@ -8,44 +8,44 @@ import type { VaultAdapter } from '@/vault';
 import type { ArticleFilterImpl } from '@/types';
 const MODAL_FILTER_TAB = `
 <div class="helper-modal-tab helper-modal-filter">
-  <div class="arcafeed-modal-content">
-    <section class="arcafeed-settings-section">
+  <div class="rulifeed-modal-content">
+    <section class="rulifeed-settings-section">
       <div class="filter-section-heading">
-        <h3 class="arcafeed-settings-heading">카테고리</h3>
+        <h3 class="rulifeed-settings-heading">카테고리</h3>
         <div id="category-all"></div>
       </div>
-      <p class="arcafeed-settings-description">선택한 카테고리의 글을 탐색합니다. 선택하지 않으면 모두 표시합니다.</p>
+      <p class="rulifeed-settings-description">선택한 카테고리의 글을 탐색합니다. 선택하지 않으면 모두 표시합니다.</p>
       <div id="category"></div>
     </section>
-    <section class="arcafeed-settings-section filter-best-row">
+    <section class="rulifeed-settings-section filter-best-row">
       <label>
         <input id="filter-best-checkbox" class="category-check" type="checkbox" />
-        <span class="category-span">인기글만 보기</span>
+        <span class="category-span">베스트만 보기</span>
       </label>
-      <p class="arcafeed-settings-description">채널의 인기글 목록에서 글을 불러옵니다.</p>
+      <p class="rulifeed-settings-description">게시판의 베스트 목록에서 글을 불러옵니다.</p>
     </section>
-    <section class="arcafeed-settings-section">
-      <label for="include-title" class="arcafeed-settings-heading">제목 포함 키워드</label>
-      <p id="include-title-help" class="arcafeed-settings-description">입력한 키워드가 포함된 글만 탐색합니다. 여러 개는 쉼표로 구분하며 비우면 제한하지 않습니다. 차단 키워드와 겹치면 차단이 우선합니다.</p>
+    <section class="rulifeed-settings-section">
+      <label for="include-title" class="rulifeed-settings-heading">제목 포함 키워드</label>
+      <p id="include-title-help" class="rulifeed-settings-description">입력한 키워드가 포함된 글만 탐색합니다. 여러 개는 쉼표로 구분하며 비우면 제한하지 않습니다. 차단 키워드와 겹치면 차단이 우선합니다.</p>
       <input type="text" id="include-title" placeholder="포함할 키워드" aria-describedby="include-title-help" autocomplete="off" />
       <div class="filter-include-options">
         <label>일치 방식 <select id="include-mode"><option value="any">하나 이상 일치</option><option value="all">모두 일치</option></select></label>
         <label><input type="checkbox" id="include-case-sensitive" /> 대소문자 구분</label>
       </div>
     </section>
-    <section class="arcafeed-settings-section">
-      <label for="exclude-title" class="arcafeed-settings-heading">제목 키워드 차단</label>
-      <p id="exclude-title-help" class="arcafeed-settings-description">키워드가 포함된 글을 제외합니다. 여러 개는 쉼표로 구분하세요.</p>
+    <section class="rulifeed-settings-section">
+      <label for="exclude-title" class="rulifeed-settings-heading">제목 키워드 차단</label>
+      <p id="exclude-title-help" class="rulifeed-settings-description">키워드가 포함된 글을 제외합니다. 여러 개는 쉼표로 구분하세요.</p>
       <div class="exclude-title-input-wrapper">
         <input type="text" id="exclude-title" placeholder="차단할 키워드" aria-describedby="exclude-title-help" autocomplete="off" />
-        <button type="button" id="exclude-btn" class="arcafeed-modal-button">추가</button>
+        <button type="button" id="exclude-btn" class="rulifeed-modal-button">추가</button>
       </div>
       <div class="exclude-title-list" aria-label="차단 키워드"></div>
     </section>
   </div>
-  <div id="modal-buttons" class="arcafeed-modal-actions">
-    <button id="filter-cancel-btn" class="arcafeed-modal-button" type="button">취소</button>
-    <button id="filter-check-btn" class="arcafeed-modal-button is-primary" type="button">적용</button>
+  <div id="modal-buttons" class="rulifeed-modal-actions">
+    <button id="filter-cancel-btn" class="rulifeed-modal-button" type="button">취소</button>
+    <button id="filter-check-btn" class="rulifeed-modal-button is-primary" type="button">적용</button>
   </div>
 </div>
 `;
@@ -58,8 +58,11 @@ interface FilterTarget {
   onCancel: () => void;
 }
 export function extractFilterCategories(scope: ParentNode | null): string[] {
-  return Array.from(scope?.querySelectorAll('.board-category > span') ?? [])
-    .map((element) => element.textContent?.trim() ?? '')
+  return Array.from(
+    scope?.querySelectorAll('.category_list a, #board_list .category_menu a') ??
+      [],
+  )
+    .map((element) => element.textContent?.trim().replace(/^\[|\]$/g, '') ?? '')
     .filter((category) => category && category !== '전체');
 }
 
@@ -91,7 +94,7 @@ function createArticleFilterModal(
     ...new Set([
       ...NO_TAB_CATEGORIES,
       ...(target?.categories ??
-        extractFilterCategories(document.querySelector('.root-container'))),
+        extractFilterCategories(document.querySelector('#board'))),
       ...expandTabCategories(tab),
     ]),
   ];
@@ -253,10 +256,7 @@ function initCheckFilterModal(p: VaultAdapter) {
   const pageFilter = readArticleFilter(
     editor,
     p.articleFilterConfig[channelId],
-    document
-      .querySelector('a.title')
-      ?.getAttribute('data-channel-name')
-      ?.replace(' 채널', '') || channelId,
+    document.querySelector('#board_name')?.textContent?.trim() || channelId,
   );
   p.updateState({
     articleFilterConfig: mergeState(p.articleFilterConfig, {

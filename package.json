@@ -1,5 +1,5 @@
 {
-  "name": "arcafeed",
+  "name": "rulifeed",
   "version": "4.0.1",
   "main": "main.js",
   "scripts": {
@@ -27,7 +27,7 @@
   },
   "author": "Roharui",
   "license": "ISC",
-  "description": "아카라이브 게시글을 쇼츠처럼 탐색하는 유저스크립트",
+  "description": "루리웹 게시글을 쇼츠처럼 탐색하는 유저스크립트",
   "engines": {
     "node": "^22.13.0 || >=24.0.0",
     "npm": ">=10.9.0"

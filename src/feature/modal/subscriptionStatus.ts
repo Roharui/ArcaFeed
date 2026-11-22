@@ -19,14 +19,14 @@ export function subscriptionFailureRows(
   return failures.map(({ channelId, reason }) =>
     createElement(
       'div',
-      { class: 'arcafeed-subscribe-row' },
+      { class: 'rulifeed-subscribe-row' },
       createElement('span', {
         text: `${p.articleFilterConfig[channelId]?.channelName || channelId} · ${REASONS[reason]}`,
       }),
       listen(
         createElement('button', {
           type: 'button',
-          class: 'arcafeed-modal-button',
+          class: 'rulifeed-modal-button',
           text: '다시 시도',
           'aria-label': `${p.articleFilterConfig[channelId]?.channelName || channelId} 다시 시도`,
         }),
@@ -36,7 +36,7 @@ export function subscriptionFailureRows(
           try {
             await retry(channelId);
           } catch (error) {
-            console.error('[ArcaFeed] Subscription retry failed:', error);
+            console.error('[RuliFeed] Subscription retry failed:', error);
             reportFailure(error);
           } finally {
             button.disabled = false;
@@ -49,7 +49,7 @@ export function subscriptionFailureRows(
 /** Both subscription settings and the independent navigation panel expose retries. */
 export function createSubscriptionStatus(p: VaultAdapter) {
   const element = createElement('section', {
-    class: 'arcafeed-subscription-status arcafeed-settings-section',
+    class: 'rulifeed-subscription-status rulifeed-settings-section',
     'aria-label': '구독 피드 불러오기 상태',
   });
   let loading = false;

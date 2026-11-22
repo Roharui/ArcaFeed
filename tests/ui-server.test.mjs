@@ -26,7 +26,7 @@ test('UI scenarios are deterministic, isolated, and stay within the reading sess
 });
 
 test('UI server reports current builds, rebuilds on changes, and withholds broken bundles', async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'arcafeed-ui-'));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'rulifeed-ui-'));
   const cleanup = { preview: null };
   t.after(async () => {
     await cleanup.preview?.close();
@@ -61,7 +61,7 @@ test('UI server reports current builds, rebuilds on changes, and withholds broke
   const first = await waitFor((status) => status.hash);
   const bundle = await fetch(`${preview.baseURL}/bundle.js`);
   assert.equal(bundle.headers.get('cache-control'), 'no-store');
-  assert.equal(bundle.headers.get('x-arcafeed-build'), first.hash);
+  assert.equal(bundle.headers.get('x-rulifeed-build'), first.hash);
   assert.match(await bundle.text(), /uiBuild = 1/);
   const fixture = await fetch(`${preview.baseURL}/fixture?mode=home`);
   assert.ok((await fixture.text()).includes(first.hash));

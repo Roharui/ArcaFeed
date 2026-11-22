@@ -9,7 +9,7 @@ type NavigationContext = Pick<
 >;
 
 export function articlePath(channelId: string, articleId: string): string {
-  return `/b/${channelId}/${articleId}`;
+  return `/${channelId}/read/${articleId}`;
 }
 
 export function currentArticlePath(
@@ -49,7 +49,5 @@ export function navigationMode(p: NavigationContext): NavigationMode {
   if (p.isScrapMode || p.href.mode === 'SCRAP') return 'scrap';
   if (p.isSeriesMode)
     return p.seriesChannels.length > 0 ? 'subscription' : 'series';
-  return p.href.mode === 'HOME' || p.href.channelId === 'my'
-    ? 'subscription'
-    : 'channel';
+  return p.href.mode === 'HOME' ? 'subscription' : 'channel';
 }

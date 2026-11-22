@@ -1,8 +1,8 @@
 # 프로젝트 구조
 
-ArcaFeed는 아카라이브 게시글을 스와이프로 탐색하는 TypeScript 유저스크립트입니다.
+RuliFeed는 루리웹 게시글을 스와이프로 탐색하는 TypeScript 유저스크립트입니다.
 Webpack으로 코드와 CSS를 묶고, 화면과 목록은 표준 DOM API로 처리합니다.
-Swiper와 Toastify는 유저스크립트의 `@require`로 로드합니다. 모바일 개발 빌드에는 eruda도 포함합니다.
+배포 빌드는 Swiper와 Toastify를 포함합니다. 일반 개발 빌드는 `@require`로 두 라이브러리를 로드하며 모바일 개발 빌드는 eruda도 로드합니다.
 버전과 의존성은 [package.json](../package.json)을 기준으로 확인합니다.
 
 이 문서는 코드를 읽기 위한 진입점과 유지보수 규칙을 정리합니다.
@@ -25,7 +25,7 @@ Swiper와 Toastify는 유저스크립트의 `@require`로 로드합니다. 모�
 | 위치                                                                                                                        | 역할                                                    |
 | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
 | [src/index.ts](../src/index.ts)                                                                                             | 중복 실행을 막고 애플리케이션 생성 후 `init` 발행       |
-| [src/core/index.ts](../src/core/index.ts)                                                                                   | `ArcaFeed` 싱글톤, 상태 저장소와 이벤트 실행기 조립     |
+| [src/core/index.ts](../src/core/index.ts)                                                                                   | `RuliFeed` 싱글톤, 상태 저장소와 이벤트 실행기 조립     |
 | [src/core/app-events.ts](../src/core/app-events.ts)                                                                         | `AppEvent` 타입과 기능 모듈이 사용하는 공용 이벤트 버스 |
 | [src/core/event.ts](../src/core/event.ts)                                                                                   | 이벤트별 실행 단계 정의                                 |
 | [src/core/event-queue.ts](../src/core/event-queue.ts), [step-runner.ts](../src/core/step-runner.ts)                         | 명령 큐와 순차·병렬 단계 실행                           |
@@ -46,7 +46,7 @@ Swiper와 Toastify는 유저스크립트의 `@require`로 로드합니다. 모�
 ## 실행 흐름
 
 1. 유저스크립트는 `document-start`에 시작합니다. `src/index.ts`에서 URL과 중복 실행을 확인하고, 지원하지 않는 `OTHER` 페이지는 스타일이나 저장소를 준비하기 전에 종료합니다.
-2. 문서에 `head`가 생기면 기본 레이아웃 CSS를 적용하고 IndexedDB `ArcaFeed` 버전 2의 용도별 저장소를 엽니다. 문서 파싱과 병행해 기존 localStorage 데이터 이전, 설정·요약과 현재 탐색 목록 준비를 진행합니다. 다른 탐색 목록과 이어보기 목록은 첫 조회에서 제외합니다. 저장소와 DOM이 준비되면 `ArcaFeed`를 생성합니다. `VaultAdapter`는 메모리 캐시 위에 지연 getter를 제공합니다.
+2. 문서에 `head`가 생기면 기본 레이아웃 CSS를 적용하고 IndexedDB `RuliFeed` 버전 2의 용도별 저장소를 엽니다. 문서 파싱과 병행해 기존 localStorage 데이터 이전, 설정·요약과 현재 탐색 목록 준비를 진행합니다. 다른 탐색 목록과 이어보기 목록은 첫 조회에서 제외합니다. 저장소와 DOM이 준비되면 `RuliFeed`를 생성합니다. `VaultAdapter`는 메모리 캐시 위에 지연 getter를 제공합니다.
 3. 지원 페이지에서는 이벤트를 `EventManager`의 단계와 연결하고 `init`을 발행합니다.
 4. 초기화는 개발 버전 표시 → 링크·버튼·키보드·시리즈·UI 병렬 초기화 →
    읽기 이벤트·버튼 연결 → Swiper → 다음 글 prefetch 순서로 실행합니다.
@@ -57,13 +57,12 @@ Swiper와 Toastify는 유저스크립트의 `@require`로 로드합니다. 모�
 
 페이지 모드는 [utils/regex.ts](../src/utils/regex.ts)의 `parseHref()`에서 판별합니다.
 
-| 모드      | 대상                                |
-| --------- | ----------------------------------- |
-| `HOME`    | 사이트 루트와 구독 피드 `/b/my`     |
-| `CHANNEL` | 채널 목록 `/b/{channelId}`          |
-| `ARTICLE` | 게시글 `/b/{channelId}/{articleId}` |
-| `SCRAP`   | 스크랩 목록 `/u/scrap_list`         |
-| `OTHER`   | 그 밖의 페이지                      |
+| 모드      | 대상                                               |
+| --------- | -------------------------------------------------- |
+| `HOME`    | 지원 호스트의 사이트 루트                          |
+| `CHANNEL` | 게시판 목록 `/{group}/board/{boardId}`             |
+| `ARTICLE` | 게시글 `/{group}/board/{boardId}/read/{articleId}` |
+| `OTHER`   | 그 밖의 페이지                                     |
 
 목록 초기화는 현재 HTML과 저장된 목록을 먼저 사용하고 필요한 보충 조회는
 백그라운드에서 수행합니다. 구독 채널의 일괄 탐색·부분 성공·보충·재시도는 `article/subscription-feed.ts`에서 처리합니다.
@@ -92,9 +91,9 @@ Swiper와 Toastify는 유저스크립트의 `@require`로 로드합니다. 모�
 | 이어보기         | resumeSessions에 세션별 요약·이름·고정·목록 버전           |
 | 목록과 위치      | lists와 progress에 `[kind, id]` 복합 키로 개별 저장        |
 | 데이터 이전      | meta의 schema 상태, record-migration.ts의 일회성 구형 변환 |
-| 사이트 방문 기록 | 사이트 소유 recent_articles·recent_disabled를 읽기만 함    |
+| 사이트 방문 기록 | RuliFeed가 작성한 localStorage 최근 본 글                  |
 
-[ReadingHistory](../src/vault/reading-history.ts)는 [SiteRecentHistory](../src/vault/site-recent-history.ts)를 통해 사이트 방문 기록을 읽고 이어보기를
+[ReadingHistory](../src/vault/reading-history.ts)는 [SiteRecentHistory](../src/vault/site-recent-history.ts)를 통해 RuliFeed 방문 기록을 읽고 이어보기를
 관리하며 방문 기록·세션·위치 변경을 별도로 알립니다.
 보관 한도와 탭 사이 병합 정책은 [아키텍처](ARCHITECTURE.md)의 저장소 경계를 참고하세요.
 
@@ -117,8 +116,8 @@ Swiper와 Toastify는 유저스크립트의 `@require`로 로드합니다. 모�
 
 ## 빌드와 릴리즈
 
-[개발 설정](../webpack.config.dev.js)은 `dist/ArcaFeed.dev.user.js`,
-[프로덕션 설정](../webpack.config.prod.js)은 `dist/ArcaFeed.user.js`를 생성합니다.
+[개발 설정](../webpack.config.dev.js)은 `dist/RuliFeed.dev.user.js`,
+[프로덕션 설정](../webpack.config.prod.js)은 `dist/RuliFeed.user.js`를 생성합니다.
 실시간 개발과 모바일 로더 설치는 [개발 안내](DEVELOPMENT.md)에 정리되어 있습니다.
 
 [릴리즈 워크플로](../.github/workflows/release.yml)는 `main` 푸시 시

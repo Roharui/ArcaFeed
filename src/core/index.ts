@@ -7,8 +7,8 @@ import { EventQueue } from './event-queue';
 import type { AppEvent } from './app-events';
 import { VaultAdapter } from '@/vault';
 
-class ArcaFeed {
-  private static instance: ArcaFeed;
+class RuliFeed {
+  private static instance: RuliFeed;
   private events!: EventManager;
   private vault!: VaultAdapter;
   private queue = new EventQueue();
@@ -16,11 +16,11 @@ class ArcaFeed {
   constructor() {
     // Prevent duplicate instantiation: if an instance already exists,
     // skip re-registering EventBus handlers to avoid double execution.
-    if (ArcaFeed.instance) {
+    if (RuliFeed.instance) {
       console.warn(
-        '[ArcaFeed] Instance already exists, skipping duplicate construction.',
+        '[RuliFeed] Instance already exists, skipping duplicate construction.',
       );
-      return ArcaFeed.instance;
+      return RuliFeed.instance;
     }
 
     // ── Page mode detection ─────────────────────────
@@ -31,17 +31,17 @@ class ArcaFeed {
 
     const { mode } = this.vault.href;
 
-    // ArcaFeed only operates on HOME / ARTICLE / CHANNEL / SCRAP pages.
+    // RuliFeed only operates on HOME / ARTICLE / CHANNEL / SCRAP pages.
     // On OTHER pages, exit early without wiring events.
     if (mode === 'OTHER') {
-      ArcaFeed.instance = this;
-      console.log('[ArcaFeed] Unsupported page, exiting.');
+      RuliFeed.instance = this;
+      console.log('[RuliFeed] Unsupported page, exiting.');
       return;
     }
 
     this.events = new EventManager();
     this.wireEventBus();
-    ArcaFeed.instance = this;
+    RuliFeed.instance = this;
   }
 
   /**
@@ -56,7 +56,7 @@ class ArcaFeed {
             await this.events.runner.run(this.vault, this.events[eventName]());
           } catch (err) {
             console.error(
-              `[ArcaFeed] Error running event "${eventName}":`,
+              `[RuliFeed] Error running event "${eventName}":`,
               err,
             );
             throw reportFailure(err);
@@ -74,7 +74,7 @@ class ArcaFeed {
   }
 }
 
-export { ArcaFeed, EventBus, eventBus };
+export { RuliFeed, EventBus, eventBus };
 
 // Re-export Step type
 import type { Step } from './step-runner';

@@ -80,7 +80,7 @@ async function checkUi(page) {
       await page
         .frameLocator('#preview')
         .getByText(
-          '구독 채널이 없습니다. /b/my에서 로그인 상태와 구독 목록을 확인해주세요.',
+          '루리웹에서 즐겨찾기 또는 퀵메뉴를 연 뒤 이 탭을 다시 열어주세요.',
           { exact: true },
         )
         .waitFor();
@@ -142,13 +142,13 @@ async function checkUi(page) {
                     const tab = document.querySelector(`.helper-modal-${id}`);
                     const box = tab.getBoundingClientRect();
                     const content = tab.querySelector(
-                      '.arcafeed-modal-content',
+                      '.rulifeed-modal-content',
                     );
                     const header = tab.querySelector(
-                      '.arcafeed-reading-header',
+                      '.rulifeed-reading-header',
                     );
                     const footer = tab.querySelector(
-                      '.arcafeed-modal-actions, .arcafeed-history-footer',
+                      '.rulifeed-modal-actions, .rulifeed-history-footer',
                     );
                     if (
                       Math.abs(
@@ -185,7 +185,7 @@ async function checkUi(page) {
                     if (id === 'history') {
                       const [a, b] = [
                         ...footer.querySelector(
-                          '.arcafeed-history-footer-actions',
+                          '.rulifeed-history-footer-actions',
                         ).children,
                       ].map((node) => node.getBoundingClientRect());
                       if (Math.abs(b.left - a.right - 8) > 1 || a.top !== b.top)
@@ -207,26 +207,26 @@ async function checkUi(page) {
       const search = page.getByRole('searchbox', { name: '최근 본 글 검색' });
       await search.fill('게시글 69');
       expect(
-        (await page.locator('.arcafeed-history-row').count()) === 1,
+        (await page.locator('.rulifeed-history-row').count()) === 1,
         'History search failed',
       );
       await page.getByRole('button', { name: '검색어 지우기' }).click();
       expect(
-        (await page.locator('.arcafeed-history-row').count()) === 50,
+        (await page.locator('.rulifeed-history-row').count()) === 50,
         'History search clear failed',
       );
       await page
         .getByRole('button', { name: '더 보기 · 20개', exact: true })
         .click();
       expect(
-        (await page.locator('.arcafeed-history-row').count()) === 70,
+        (await page.locator('.rulifeed-history-row').count()) === 70,
         'History pagination failed',
       );
       await page
         .getByRole('combobox', { name: '채널 필터', exact: true })
-        .selectOption('test0');
+        .selectOption('community/board/300152');
       expect(
-        (await page.locator('.arcafeed-history-row').count()) === 1,
+        (await page.locator('.rulifeed-history-row').count()) === 1,
         'History channel filter failed',
       );
       await search.fill('없는 검색어');
@@ -241,7 +241,7 @@ async function checkUi(page) {
       await render({ tab: 'ui' });
       await page.evaluate(() => {
         document.querySelector(
-          '.helper-modal-ui .arcafeed-modal-content',
+          '.helper-modal-ui .rulifeed-modal-content',
         ).scrollTop = 10000;
       });
       await selectTab('history');
@@ -249,7 +249,7 @@ async function checkUi(page) {
       expect(
         (await page.evaluate(
           () =>
-            document.querySelector('.helper-modal-ui .arcafeed-modal-content')
+            document.querySelector('.helper-modal-ui .rulifeed-modal-content')
               .scrollTop,
         )) === 0,
         'Tab scroll did not reset',
@@ -289,12 +289,12 @@ async function checkUi(page) {
       const search = page.getByRole('searchbox', { name: '이어보기 검색' });
       await search.fill('게시글 19');
       expect(
-        (await page.locator('.arcafeed-resume-card').count()) === 1,
+        (await page.locator('.rulifeed-resume-card').count()) === 1,
         'Resume search failed',
       );
-      await page.locator('.arcafeed-resume-delete').click();
+      await page.locator('.rulifeed-resume-delete').click();
       expect(
-        (await page.locator('.arcafeed-resume-card').count()) === 0,
+        (await page.locator('.rulifeed-resume-card').count()) === 0,
         'Resume delete failed',
       );
       expect(
@@ -315,17 +315,17 @@ async function checkUi(page) {
           })
           .click();
         await page
-          .locator('.arcafeed-subscribe-filter-editor')
+          .locator('.rulifeed-subscribe-filter-editor')
           .waitFor({ state: 'visible' });
         expect(
           await page.evaluate(() => {
             const editor = document.querySelector(
-              '.arcafeed-subscribe-filter-editor',
+              '.rulifeed-subscribe-filter-editor',
             );
             return (
               editor.scrollHeight <= editor.clientHeight + 1 &&
               editor
-                .querySelector('.arcafeed-modal-actions')
+                .querySelector('.rulifeed-modal-actions')
                 .getBoundingClientRect().bottom <=
                 editor.getBoundingClientRect().bottom + 1
             );
@@ -333,23 +333,23 @@ async function checkUi(page) {
           'Embedded filter editor overflows',
         );
         await page
-          .locator('.arcafeed-subscribe-filter-editor #exclude-title')
+          .locator('.rulifeed-subscribe-filter-editor #exclude-title')
           .fill('검증 키워드');
         await page
-          .locator('.arcafeed-subscribe-filter-editor #exclude-btn')
+          .locator('.rulifeed-subscribe-filter-editor #exclude-btn')
           .click();
         await page
-          .locator('.arcafeed-subscribe-filter-editor #filter-check-btn')
+          .locator('.rulifeed-subscribe-filter-editor #filter-check-btn')
           .click();
         expect(
-          (await page.locator('.arcafeed-subscribe-filter-editor').count()) ===
+          (await page.locator('.rulifeed-subscribe-filter-editor').count()) ===
             0,
           'Filter editor did not close',
         );
         expect(
           (
             await page
-              .locator('.arcafeed-subscribe-summary')
+              .locator('.rulifeed-subscribe-summary')
               .nth(1)
               .textContent()
           ).includes('차단 키워드 1개'),
@@ -393,7 +393,7 @@ async function checkUi(page) {
         .waitFor();
       expect(
         (await page
-          .locator('.arcafeed-modal-content [role="status"]')
+          .locator('.rulifeed-modal-content [role="status"]')
           .count()) === 1,
         'Error notice is outside the content',
       );
@@ -411,11 +411,11 @@ async function checkUi(page) {
           exact: true,
         })
         .click();
-      await page.locator('.arcafeed-subscribe-filter-loading').waitFor();
+      await page.locator('.rulifeed-subscribe-filter-loading').waitFor();
       await page.getByRole('button', { name: '취소', exact: true }).click();
       await page.waitForTimeout(1600);
       expect(
-        (await page.locator('.arcafeed-subscribe-filter-editor').count()) === 0,
+        (await page.locator('.rulifeed-subscribe-filter-editor').count()) === 0,
         'Cancelled request reopened the editor',
       );
     });

@@ -13,7 +13,7 @@ export type SessionKind = 'resume' | 'navigation';
 export type SessionStore = 'resumeSessions' | 'navigationSessions';
 export type DataRow = Record<string, any>;
 
-export const CHANNEL_ID_REGEX = /^[a-zA-Z0-9]+$/;
+export const CHANNEL_ID_REGEX = /^(?:[a-zA-Z0-9_-]+\/)*board\/\d+$/;
 
 export function isChannelId(value: string): boolean {
   return CHANNEL_ID_REGEX.test(value);

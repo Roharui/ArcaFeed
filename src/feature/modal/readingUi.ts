@@ -10,7 +10,7 @@ export function readingButton(
     createElement('button', {
       type: 'button',
       text: label,
-      class: 'arcafeed-reading-button',
+      class: 'rulifeed-reading-button',
     }),
     'click',
     () => {
@@ -79,7 +79,7 @@ export function readingSearch(
     commit();
     input.focus();
   });
-  clear.classList.add('arcafeed-search-clear');
+  clear.classList.add('rulifeed-search-clear');
   setAttributes(clear, {
     'aria-label': '검색어 지우기',
     title: '검색어 지우기',
@@ -108,7 +108,7 @@ export function readingSearch(
     element: createElement(
       'div',
       {
-        class: 'arcafeed-reading-search',
+        class: 'rulifeed-reading-search',
         role: 'search',
       },
       createElement('span', { class: 'bi-search', 'aria-hidden': 'true' }),
@@ -134,7 +134,7 @@ export function formatReadingTime(timestamp: number): string {
 
 export function readingTime(timestamp: number): HTMLElement {
   return createElement('time', {
-    class: 'arcafeed-reading-time',
+    class: 'rulifeed-reading-time',
     text: formatReadingTime(timestamp),
     datetime: new Date(timestamp).toISOString(),
     title: new Date(timestamp).toLocaleString('ko-KR'),
@@ -165,22 +165,22 @@ export function readingHeader(
   },
 ): HTMLElement {
   const close = readingButton('×', closeDialog);
-  close.classList.add('arcafeed-reading-close');
+  close.classList.add('rulifeed-reading-close');
   setAttributes(close, { 'aria-label': '설정창 닫기', title: '닫기' });
   return createElement(
     'div',
-    { class: 'arcafeed-reading-header' },
+    { class: 'rulifeed-reading-header' },
     createElement(
       'div',
       {},
       createElement(
         'div',
-        { class: 'arcafeed-reading-heading' },
+        { class: 'rulifeed-reading-heading' },
         createElement('h2', { text: title }),
         ...(count ? [count] : []),
       ),
       createElement('p', {
-        class: 'arcafeed-history-description',
+        class: 'rulifeed-history-description',
         text: description,
       }),
     ),
@@ -195,9 +195,9 @@ export function readingEmptyState(
 ): HTMLElement {
   return createElement(
     'div',
-    { class: 'arcafeed-reading-empty' },
+    { class: 'rulifeed-reading-empty' },
     createElement('span', {
-      class: `arcafeed-reading-empty-icon ${icon}`,
+      class: `rulifeed-reading-empty-icon ${icon}`,
       'aria-hidden': 'true',
     }),
     createElement('strong', { text: title }),

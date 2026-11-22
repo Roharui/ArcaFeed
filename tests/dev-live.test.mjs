@@ -158,7 +158,7 @@ test('fetch loader rejects an HTTP endpoint before making mixed-content requests
 });
 
 test('live server serves uncached builds, rebuilds on save, and withholds failed compilations', async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'arcafeed-live-'));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'rulifeed-live-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const entry = path.join(directory, 'entry.js');
   await fs.writeFile(entry, 'globalThis.liveBuild = 1;');
@@ -198,7 +198,7 @@ test('live server serves uncached builds, rebuilds on save, and withholds failed
     }
     assert.fail('Timed out waiting for webpack watch');
   }
-  const loader = await fetch(`${live.baseURL}/ArcaFeed.live.user.js`);
+  const loader = await fetch(`${live.baseURL}/RuliFeed.live.user.js`);
   const source = await loader.text();
   assert.match(source, /@grant GM_xmlhttpRequest/);
   assert.match(source, /@connect 127\.0\.0\.1/);
@@ -206,7 +206,7 @@ test('live server serves uncached builds, rebuilds on save, and withholds failed
   const phoneSource = await new Promise((resolve, reject) => {
     http
       .get(
-        `${live.baseURL}/ArcaFeed.live.user.js`,
+        `${live.baseURL}/RuliFeed.live.user.js`,
         { headers: { Host: '100.64.1.2:3000' } },
         (response) => {
           let source = '';
@@ -222,11 +222,11 @@ test('live server serves uncached builds, rebuilds on save, and withholds failed
   assert.ok(phoneSource.includes('http://100.64.1.2:3000'));
   assert.equal(phoneSource.includes(live.baseURL), false);
   const allowed = await fetch(`${live.baseURL}/build`, {
-    headers: { Origin: 'https://arca.live' },
+    headers: { Origin: 'https://bbs.ruliweb.com' },
   });
   assert.equal(
     allowed.headers.get('access-control-allow-origin'),
-    'https://arca.live',
+    'https://bbs.ruliweb.com',
   );
   const denied = await fetch(`${live.baseURL}/build`, {
     headers: { Origin: 'https://example.com' },
@@ -235,7 +235,7 @@ test('live server serves uncached builds, rebuilds on save, and withholds failed
   const preflight = await fetch(`${live.baseURL}/build`, {
     method: 'OPTIONS',
     headers: {
-      Origin: 'https://arca.live',
+      Origin: 'https://bbs.ruliweb.com',
       'Access-Control-Request-Method': 'GET',
       'Access-Control-Request-Private-Network': 'true',
     },
@@ -273,7 +273,7 @@ test('live server serves uncached builds, rebuilds on save, and withholds failed
 });
 
 test('fetch loader retains its HTTPS proxy path with or without upstream prefix rewriting', async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'arcafeed-https-'));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'rulifeed-https-'));
   const entry = path.join(directory, 'entry.js');
   await fs.writeFile(entry, 'globalThis.liveBuild = 1;');
   let live = null;
@@ -293,7 +293,7 @@ test('fetch loader retains its HTTPS proxy path with or without upstream prefix 
   });
   for (const prefix of ['', '/n']) {
     const response = await fetch(
-      `${live.baseURL}${prefix}/ArcaFeed.fetch.user.js`,
+      `${live.baseURL}${prefix}/RuliFeed.fetch.user.js`,
     );
     const source = await response.text();
     assert.ok(source.includes('https://pc.example.ts.net/n'));
@@ -301,17 +301,17 @@ test('fetch loader retains its HTTPS proxy path with or without upstream prefix 
     assert.equal(source.includes(live.baseURL), false);
     assert.match(source, /@grant none/);
     const build = await fetch(`${live.baseURL}${prefix}/build?hash=old`, {
-      headers: { Origin: 'https://arca.live' },
+      headers: { Origin: 'https://bbs.ruliweb.com' },
     });
     assert.equal(build.status, 200);
     assert.equal(
       build.headers.get('access-control-allow-origin'),
-      'https://arca.live',
+      'https://bbs.ruliweb.com',
     );
     assert.ok(Object.hasOwn(await build.json(), 'hash'));
     const preflight = await fetch(`${live.baseURL}${prefix}/build`, {
       method: 'OPTIONS',
-      headers: { Origin: 'https://arca.live' },
+      headers: { Origin: 'https://bbs.ruliweb.com' },
     });
     assert.equal(preflight.status, 204);
   }

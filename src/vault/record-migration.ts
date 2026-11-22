@@ -30,17 +30,17 @@ const json = (raw: string | undefined): any => {
 };
 export function importLegacyRecords(
   values: ReadonlyMap<string, string>,
-  origin = 'https://arca.live',
+  origin = 'https://bbs.ruliweb.com',
   currentId = '',
 ): ImportedRecord[] {
   const output: ImportedRecord[] = [];
   const put = (store: RecordStore, key: any, value: DataRow) =>
     output.push({ store, key, value });
-  const settings = normalizeUISettings(json(values.get('arcaFeed:uiSettings')));
+  const settings = normalizeUISettings(json(values.get('ruliFeed:uiSettings')));
   for (const group of SETTINGS_GROUPS) {
     const key = group.key;
-    const legacyKey = `arcaFeed:${key}Settings`;
-    if (values.has(legacyKey) || values.has('arcaFeed:uiSettings')) {
+    const legacyKey = `ruliFeed:${key}Settings`;
+    if (values.has(legacyKey) || values.has('ruliFeed:uiSettings')) {
       const source = values.has(legacyKey)
         ? normalizeUISettings(json(values.get(legacyKey)))
         : settings;
@@ -52,29 +52,29 @@ export function importLegacyRecords(
       });
     }
   }
-  if (values.has('arcaFeed:lastModalTab') || values.has('arcaFeed:uiSettings'))
+  if (values.has('ruliFeed:lastModalTab') || values.has('ruliFeed:uiSettings'))
     put('settings', 'lastModalTab', {
       id: 'lastModalTab',
-      value: values.get('arcaFeed:lastModalTab') ?? settings.lastModalTab,
+      value: values.get('ruliFeed:lastModalTab') ?? settings.lastModalTab,
     });
-  if (values.has('arcaFeed:isShuffleMode'))
+  if (values.has('ruliFeed:isShuffleMode'))
     put('settings', 'shuffle', {
       id: 'shuffle',
-      value: values.get('arcaFeed:isShuffleMode') === 'true',
+      value: values.get('ruliFeed:isShuffleMode') === 'true',
     });
-  if (values.has('arca_version_info'))
+  if (values.has('ruli_version_info'))
     put('settings', 'versionInfo', {
       id: 'versionInfo',
-      value: values.get('arca_version_info'),
+      value: values.get('ruli_version_info'),
     });
   const filters: DataRow = {};
-  const global = json(values.get('arcaFeed:articleFilterConfig'));
+  const global = json(values.get('ruliFeed:articleFilterConfig'));
   if (global) Object.assign(filters, normalizeFilters(global));
   for (const [key, raw] of values) {
     if (!global && key.endsWith(':articleFilterConfig'))
       Object.assign(filters, normalizeFilters(json(raw)));
-    if (key.startsWith('arcaFeed:channelFilter:')) {
-      const id = key.slice('arcaFeed:channelFilter:'.length);
+    if (key.startsWith('ruliFeed:channelFilter:')) {
+      const id = key.slice('ruliFeed:channelFilter:'.length);
       Object.assign(filters, normalizeFilters({ [id]: json(raw) }));
     }
   }
@@ -83,19 +83,19 @@ export function importLegacyRecords(
   const navigation = new Set<string>();
   for (const key of values.keys()) {
     const match =
-      /^arcaFeed:(.+):(articleList|seriesMode|scrapMode|seriesChannels|subscriptionFailures|searchQuery|lastActiveIndex)$/.exec(
+      /^ruliFeed:(.+):(articleList|seriesMode|scrapMode|seriesChannels|subscriptionFailures|searchQuery|lastActiveIndex)$/.exec(
         key,
       );
     if (match?.[1]) navigation.add(match[1]);
   }
-  const recent = stringList(json(values.get('arcaFeed:recentArticleKeys')));
+  const recent = stringList(json(values.get('ruliFeed:recentArticleKeys')));
   const ids = [
     ...new Set([...(currentId ? [currentId] : []), ...recent, ...navigation]),
   ]
     .filter((id) => navigation.has(id))
     .slice(0, ARTICLE_KEY_CACHE_LIMIT);
   ids.forEach((id, index) => {
-    const get = (field: string) => values.get(`arcaFeed:${id}:${field}`);
+    const get = (field: string) => values.get(`ruliFeed:${id}:${field}`);
     const channels = stringList(json(get('seriesChannels'))).filter(
       isChannelId,
     );
@@ -130,8 +130,8 @@ export function importLegacyRecords(
       version: 'import',
     });
   });
-  const history = json(values.get('arcaFeed:readingHistory'));
-  const progress = json(values.get('arcaFeed:readingProgress'));
+  const history = json(values.get('ruliFeed:readingHistory'));
+  const progress = json(values.get('ruliFeed:readingProgress'));
   let sessions: any[] =
     history?.version === 2
       ? Array.isArray(history.sessions)
@@ -200,7 +200,7 @@ export function importLegacyRecords(
       history?.version === 2
         ? json(
             values.get(
-              `arcaFeed:readingList:${encodeURIComponent(metadata.id)}`,
+              `ruliFeed:readingList:${encodeURIComponent(metadata.id)}`,
             ),
           )
         : item.articleList;

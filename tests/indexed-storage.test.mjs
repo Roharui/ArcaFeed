@@ -42,7 +42,7 @@ function fixture(
 }
 async function seedLegacy(factory, values) {
   const db = await new Promise((resolve, reject) => {
-    const request = factory.open('ArcaFeed', 1);
+    const request = factory.open('RuliFeed', 1);
     request.onupgradeneeded = () => request.result.createObjectStore('values');
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -113,7 +113,7 @@ function abortWrites(storage) {
 }
 function reading(storage) {
   const load = sourceLoader({
-    globals: { window: { location: { origin: 'https://arca.live' } } },
+    globals: { window: { location: { origin: 'https://bbs.ruliweb.com' } } },
   });
   const { StorageRepository } = load('src/vault/repository.ts');
   const { ReadingHistory } = load('src/vault/reading-history.ts');
@@ -122,9 +122,9 @@ function reading(storage) {
 const session = (id, patch = {}) => ({
   id,
   label: id,
-  path: '/b/test/100',
+  path: '/community/board/300143/read/100',
   searchQuery: '',
-  articleList: ['/b/test/100'],
+  articleList: ['/community/board/300143/read/100'],
   isSeriesMode: true,
   isScrapMode: false,
   seriesChannels: [],
@@ -142,22 +142,25 @@ test('first import stores native objects in separate stores, preserves site data
   const f = fixture(
     undefined,
     legacyStorage({
-      'arcaFeed:displaySettings': '{"contentWidth":800}',
-      'arcaFeed:channelFilter:test': '{"title":["x"]}',
-      'arcaFeed:session:articleList': '["/b/test/100"]',
-      'arcaFeed:session:lastActiveIndex': '0',
+      'ruliFeed:displaySettings': '{"contentWidth":800}',
+      'ruliFeed:channelFilter:community/board/300143': '{"title":["x"]}',
+      'ruliFeed:session:articleList': '["/community/board/300143/read/100"]',
+      'ruliFeed:session:lastActiveIndex': '0',
       recent_articles: 'site',
       unrelated: 'keep',
-      arca_version_info: 'version',
+      ruli_version_info: 'version',
     }),
     () => {},
     'session',
   );
   await f.storage.initialize();
   assert.equal(f.storage.get('settings', 'display').value.contentWidth, 800);
-  assert.deepEqual(f.storage.get('channelFilters', 'test').value.title, ['x']);
+  assert.deepEqual(
+    f.storage.get('channelFilters', 'community/board/300143').value.title,
+    ['x'],
+  );
   assert.deepEqual(f.storage.get('lists', ['navigation', 'session']).paths, [
-    '/b/test/100',
+    '/community/board/300143/read/100',
   ]);
   assert.equal(
     f.storage.get('progress', ['navigation', 'session']).activeIndex,
@@ -187,13 +190,13 @@ test('v1 upgrade favors committed IndexedDB records and clears the obsolete valu
   const factory = new IDBFactory();
   await seedLegacy(factory, {
     __localStorageMigrated__: '1',
-    'arcaFeed:displaySettings': '{"contentWidth":900}',
-    'arcaFeed:recentArticleKeys': '["session"]',
-    'arcaFeed:session:articleList': '["/b/test/100"]',
+    'ruliFeed:displaySettings': '{"contentWidth":900}',
+    'ruliFeed:recentArticleKeys': '["session"]',
+    'ruliFeed:session:articleList': '["/community/board/300143/read/100"]',
   });
   const f = fixture(
     factory,
-    legacyStorage({ 'arcaFeed:displaySettings': '{"contentWidth":700}' }),
+    legacyStorage({ 'ruliFeed:displaySettings': '{"contentWidth":700}' }),
     () => {},
     'session',
   );
@@ -208,7 +211,7 @@ test('v1 upgrade favors committed IndexedDB records and clears the obsolete valu
 test('aborted schema migration preserves localStorage and v1 records for retry', async () => {
   const factory = new IDBFactory();
   await seedLegacy(factory, {
-    'arcaFeed:displaySettings': '{"contentWidth":900}',
+    'ruliFeed:displaySettings': '{"contentWidth":900}',
   });
   const original = factory.open.bind(factory);
   factory.open = (...args) => {
@@ -220,10 +223,10 @@ test('aborted schema migration preserves localStorage and v1 records for retry',
   };
   const f = fixture(
     factory,
-    legacyStorage({ 'arcaFeed:readingSettings': '{"skipVisitedContexts":{}}' }),
+    legacyStorage({ 'ruliFeed:readingSettings': '{"skipVisitedContexts":{}}' }),
   );
   await assert.rejects(f.storage.initialize());
-  assert.notEqual(f.legacy.getItem('arcaFeed:readingSettings'), null);
+  assert.notEqual(f.legacy.getItem('ruliFeed:readingSettings'), null);
   factory.open = original;
   const next = fixture(factory, f.legacy);
   await next.storage.initialize();
@@ -234,19 +237,25 @@ test('aborted schema migration preserves localStorage and v1 records for retry',
 test('failed writes keep the whole batch retryable and never expose partial committed settings', async () => {
   const f = fixture();
   await f.storage.initialize();
-  f.storage.set('settings', 'a', { id: 'a', value: 1 });
+  f.storage.set('settings', 'community/board/300151', {
+    id: 'community/board/300151',
+    value: 1,
+  });
   await f.storage.flush();
   const restore = abortWrites(f.storage);
-  f.storage.set('settings', 'a', { id: 'a', value: 2 });
+  f.storage.set('settings', 'community/board/300151', {
+    id: 'community/board/300151',
+    value: 2,
+  });
   f.storage.set('settings', 'b', { id: 'b', value: 3 });
   await assert.rejects(f.storage.flush());
   const before = await reopen(f);
-  assert.equal(before.get('settings', 'a').value, 1);
+  assert.equal(before.get('settings', 'community/board/300151').value, 1);
   assert.equal(before.get('settings', 'b'), undefined);
   restore();
   await f.storage.flush();
   const after = await reopen(f);
-  assert.equal(after.get('settings', 'a').value, 2);
+  assert.equal(after.get('settings', 'community/board/300151').value, 2);
   assert.equal(after.get('settings', 'b').value, 3);
 });
 
@@ -254,7 +263,10 @@ test('overlapping flushes share one drain and a subsequent edit is committed onc
   const f = fixture();
   await f.storage.initialize();
   const calls = observe(f.storage);
-  f.storage.set('settings', 'a', { id: 'a', value: 1 });
+  f.storage.set('settings', 'community/board/300151', {
+    id: 'community/board/300151',
+    value: 1,
+  });
   const first = f.storage.flush();
   assert.equal(f.storage.flush(), first);
   await Promise.resolve();
@@ -274,12 +286,18 @@ test('metadata and lists have independent records and metadata-only edits never 
   const f = fixture();
   await f.storage.initialize();
   const history = reading(f.storage);
-  history.saveSession(session('a'));
+  history.saveSession(session('community/board/300151'));
   await f.storage.flush();
   const calls = observe(f.storage);
-  history.updateSession('a', { customName: 'new', pinned: true });
+  history.updateSession('community/board/300151', {
+    customName: 'new',
+    pinned: true,
+  });
   await f.storage.flush();
-  assert.equal(f.storage.get('resumeSessions', 'a').customName, 'new');
+  assert.equal(
+    f.storage.get('resumeSessions', 'community/board/300151').customName,
+    'new',
+  );
   assert.ok(
     !calls.some(
       (call) =>
@@ -293,10 +311,18 @@ test('position updates write one small native record without reading lists or wh
   const f = fixture();
   await f.storage.initialize();
   const history = reading(f.storage);
-  history.saveSession(session('a'));
+  history.saveSession(session('community/board/300151'));
   await f.storage.flush();
   const calls = observe(f.storage);
-  assert.equal(history.savePosition('a', '/b/test/100', 300, 3), true);
+  assert.equal(
+    history.savePosition(
+      'community/board/300151',
+      '/community/board/300143/read/100',
+      300,
+      3,
+    ),
+    true,
+  );
   await f.storage.flush();
   assert.deepEqual(
     calls.filter((call) => call.method === 'put').map((call) => call.store),
@@ -310,29 +336,36 @@ test('position updates write one small native record without reading lists or wh
         call.store === 'meta',
     ),
   );
-  assert.equal(f.storage.get('progress', ['resume', 'a']).scrollY, 300);
+  assert.equal(
+    f.storage.get('progress', ['resume', 'community/board/300151']).scrollY,
+    300,
+  );
 });
 
 test('initial hydration and selecting one resume leave unrelated list payloads unread', async () => {
   const f = fixture();
   await f.storage.initialize();
   const history = reading(f.storage);
-  history.saveSession(session('a'));
+  history.saveSession(session('community/board/300151'));
   history.saveSession(session('b', { updatedAt: 2 }));
   await f.storage.flush();
   const reader = await reopen(f);
-  assert.equal(reader.get('lists', ['resume', 'a']), undefined);
+  assert.equal(
+    reader.get('lists', ['resume', 'community/board/300151']),
+    undefined,
+  );
   assert.equal(reader.get('lists', ['resume', 'b']), undefined);
   const calls = observe(reader);
   const saved = reading(reader);
   assert.equal(saved.sessions.length, 2);
-  await saved.prepareList('a');
+  await saved.prepareList('community/board/300151');
   assert.equal(
-    saved.sessions.find((item) => item.id === 'a').articleList.length,
+    saved.sessions.find((item) => item.id === 'community/board/300151')
+      .articleList.length,
     1,
   );
   assert.equal(reader.get('lists', ['resume', 'b']), undefined);
-  assert.equal(saved.prepareList('a'), undefined);
+  assert.equal(saved.prepareList('community/board/300151'), undefined);
   assert.ok(
     !calls.some((call) => call.store === 'lists' && call.key?.[1] === 'b'),
   );
@@ -342,21 +375,26 @@ test('partial refresh merges addresses, applies a whole snapshot before notifica
   const f = fixture();
   await f.storage.initialize();
   const reader = await reopen(f);
-  f.storage.set('settings', 'a', { id: 'a', value: 1 });
+  f.storage.set('settings', 'community/board/300151', {
+    id: 'community/board/300151',
+    value: 1,
+  });
   f.storage.set('settings', 'b', { id: 'b', value: 2 });
   await f.storage.flush();
   const calls = observe(reader);
   await Promise.all([
-    reader.refresh([{ store: 'settings', key: 'a' }]),
+    reader.refresh([{ store: 'settings', key: 'community/board/300151' }]),
     reader.refresh([
       { store: 'settings', key: 'b' },
-      { store: 'settings', key: 'a' },
+      { store: 'settings', key: 'community/board/300151' },
     ]),
   ]);
-  assert.equal(reader.get('settings', 'a').value, 1);
+  assert.equal(reader.get('settings', 'community/board/300151').value, 1);
   assert.equal(reader.get('settings', 'b').value, 2);
   assert.equal(
-    calls.filter((call) => call.method === 'get' && call.key === 'a').length,
+    calls.filter(
+      (call) => call.method === 'get' && call.key === 'community/board/300151',
+    ).length,
     1,
   );
   assert.ok(
@@ -365,9 +403,12 @@ test('partial refresh merges addresses, applies a whole snapshot before notifica
       .every((call) => call.names.length === 1 && call.names[0] === 'settings'),
   );
   reader.schedule = () => {};
-  reader.set('settings', 'a', { id: 'a', value: 3 });
-  await reader.refresh([{ store: 'settings', key: 'a' }]);
-  assert.equal(reader.get('settings', 'a').value, 3);
+  reader.set('settings', 'community/board/300151', {
+    id: 'community/board/300151',
+    value: 3,
+  });
+  await reader.refresh([{ store: 'settings', key: 'community/board/300151' }]);
+  assert.equal(reader.get('settings', 'community/board/300151').value, 3);
   await reader.flush();
 });
 
@@ -389,13 +430,21 @@ test('broadcasts carry native addresses and expose all changes before notifying 
   const changed = deferred();
   const writer = new IndexedStorage(factory, legacyStorage());
   const reader = new IndexedStorage(factory, legacyStorage(), (changes) => {
-    if (!changes.some((c) => c.store === 'settings' && c.key === 'a')) return;
+    if (
+      !changes.some(
+        (c) => c.store === 'settings' && c.key === 'community/board/300151',
+      )
+    )
+      return;
     assert.equal(reader.get('settings', 'b').value, 2);
     changed.resolve();
   });
   await writer.initialize();
   await reader.initialize();
-  writer.set('settings', 'a', { id: 'a', value: 1 });
+  writer.set('settings', 'community/board/300151', {
+    id: 'community/board/300151',
+    value: 1,
+  });
   writer.set('settings', 'b', { id: 'b', value: 2 });
   await writer.flush();
   await changed.promise;
@@ -405,24 +454,30 @@ test('recovery refresh reads small metadata and only fetches loaded lists whose 
   const f = fixture();
   await f.storage.initialize();
   const writer = reading(f.storage);
-  writer.saveSession(session('a'));
+  writer.saveSession(session('community/board/300151'));
   writer.saveSession(session('b', { updatedAt: 2 }));
   await f.storage.flush();
   const reader = await reopen(f);
-  await reading(reader).prepareList('a');
+  await reading(reader).prepareList('community/board/300151');
   const calls = observe(reader);
   await reader.refresh();
   assert.ok(!calls.some((call) => call.store === 'lists'));
   writer.saveSession(
-    session('a', { articleList: ['/b/test/100', '/b/test/99'], updatedAt: 3 }),
+    session('community/board/300151', {
+      articleList: [
+        '/community/board/300143/read/100',
+        '/community/board/300143/read/99',
+      ],
+      updatedAt: 3,
+    }),
   );
   await f.storage.flush();
   calls.length = 0;
   await reader.refresh();
-  assert.deepEqual(reader.get('lists', ['resume', 'a']).paths, [
-    '/b/test/100',
-    '/b/test/99',
-  ]);
+  assert.deepEqual(
+    reader.get('lists', ['resume', 'community/board/300151']).paths,
+    ['/community/board/300143/read/100', '/community/board/300143/read/99'],
+  );
   assert.equal(reader.get('lists', ['resume', 'b']), undefined);
   assert.ok(
     !calls.some((call) => call.store === 'lists' && call.key?.[1] === 'b'),
@@ -435,16 +490,19 @@ test('stale tabs preserve independent sessions and positions without array rebas
   const other = await reopen(f);
   const a = reading(f.storage),
     b = reading(other);
-  a.saveSession(session('a'));
+  a.saveSession(session('community/board/300151'));
   await f.storage.flush();
   b.saveSession(session('b', { scrollY: 200, updatedAt: 2 }));
   await other.flush();
   const check = await reopen(f);
   assert.deepEqual(
     new Set(reading(check).sessions.map((row) => row.id)),
-    new Set(['a', 'b']),
+    new Set(['community/board/300151', 'b']),
   );
-  assert.equal(check.get('progress', ['resume', 'a']).scrollY, 100);
+  assert.equal(
+    check.get('progress', ['resume', 'community/board/300151']).scrollY,
+    100,
+  );
   assert.equal(check.get('progress', ['resume', 'b']).scrollY, 200);
 });
 
@@ -452,64 +510,106 @@ test('stale automatic checkpoints preserve another tabs name and pin', async () 
   const f = fixture();
   await f.storage.initialize();
   const a = reading(f.storage);
-  a.saveSession(session('a'));
+  a.saveSession(session('community/board/300151'));
   await f.storage.flush();
   const other = await reopen(f);
   const b = reading(other);
   void b.sessions;
-  a.updateSession('a', { customName: 'renamed', pinned: true });
+  a.updateSession('community/board/300151', {
+    customName: 'renamed',
+    pinned: true,
+  });
   await f.storage.flush();
-  await b.prepareList('a');
-  b.saveSession(session('a', { scrollY: 300, updatedAt: 3 }));
+  await b.prepareList('community/board/300151');
+  b.saveSession(
+    session('community/board/300151', { scrollY: 300, updatedAt: 3 }),
+  );
   await other.flush();
   const check = await reopen(f);
-  assert.equal(check.get('resumeSessions', 'a').customName, 'renamed');
-  assert.equal(check.get('resumeSessions', 'a').pinned, true);
-  assert.equal(check.get('progress', ['resume', 'a']).scrollY, 300);
+  assert.equal(
+    check.get('resumeSessions', 'community/board/300151').customName,
+    'renamed',
+  );
+  assert.equal(
+    check.get('resumeSessions', 'community/board/300151').pinned,
+    true,
+  );
+  assert.equal(
+    check.get('progress', ['resume', 'community/board/300151']).scrollY,
+    300,
+  );
 });
 
 test('deleting a session wins over a stale checkpoint and cascades to its list and position', async () => {
   const f = fixture();
   await f.storage.initialize();
   const a = reading(f.storage);
-  a.saveSession(session('a'));
+  a.saveSession(session('community/board/300151'));
   await f.storage.flush();
   const other = await reopen(f);
   const b = reading(other);
   void b.sessions;
-  await b.prepareList('a');
-  a.removeSession('a');
+  await b.prepareList('community/board/300151');
+  a.removeSession('community/board/300151');
   await f.storage.flush();
   b.saveSession(
-    session('a', {
-      articleList: ['/b/test/100', '/b/test/99'],
+    session('community/board/300151', {
+      articleList: [
+        '/community/board/300143/read/100',
+        '/community/board/300143/read/99',
+      ],
       scrollY: 300,
       updatedAt: 3,
     }),
   );
   await other.flush();
   const check = await reopen(f);
-  assert.equal(check.get('resumeSessions', 'a'), undefined);
-  assert.equal(check.get('progress', ['resume', 'a']), undefined);
-  await check.prepare([{ store: 'lists', key: ['resume', 'a'] }]);
-  assert.equal(check.get('lists', ['resume', 'a']), undefined);
+  assert.equal(
+    check.get('resumeSessions', 'community/board/300151'),
+    undefined,
+  );
+  assert.equal(
+    check.get('progress', ['resume', 'community/board/300151']),
+    undefined,
+  );
+  await check.prepare([
+    { store: 'lists', key: ['resume', 'community/board/300151'] },
+  ]);
+  assert.equal(
+    check.get('lists', ['resume', 'community/board/300151']),
+    undefined,
+  );
 });
 
 test('a newer stored position wins over an older checkpoint timestamp', async () => {
   const f = fixture();
   await f.storage.initialize();
   const a = reading(f.storage);
-  a.saveSession(session('a'));
+  a.saveSession(session('community/board/300151'));
   await f.storage.flush();
   const other = await reopen(f);
   const b = reading(other);
-  await b.prepareList('a');
-  b.saveSession(session('a'));
-  a.savePosition('a', '/b/test/100', 900, 9);
+  await b.prepareList('community/board/300151');
+  b.saveSession(session('community/board/300151'));
+  a.savePosition(
+    'community/board/300151',
+    '/community/board/300143/read/100',
+    900,
+    9,
+  );
   await f.storage.flush();
-  b.savePosition('a', '/b/test/100', 200, 2);
+  b.savePosition(
+    'community/board/300151',
+    '/community/board/300143/read/100',
+    200,
+    2,
+  );
   await other.flush();
-  assert.equal((await reopen(f)).get('progress', ['resume', 'a']).scrollY, 900);
+  assert.equal(
+    (await reopen(f)).get('progress', ['resume', 'community/board/300151'])
+      .scrollY,
+    900,
+  );
 });
 
 test('combined resume budgets trim only needed lists and retain every current article', async () => {
@@ -520,9 +620,9 @@ test('combined resume budgets trim only needed lists and retain every current ar
     b = reading(other);
   const paths = Array.from(
     { length: 2000 },
-    (_, index) => `/b/test/${index + 1}`,
+    (_, index) => `/community/board/300143/read/${index + 1}`,
   );
-  a.saveSession(session('a', { articleList: paths }));
+  a.saveSession(session('community/board/300151', { articleList: paths }));
   a.saveSession(session('b', { articleList: paths, updatedAt: 2 }));
   await f.storage.flush();
   b.saveSession(session('c', { articleList: paths, updatedAt: 3 }));
@@ -583,11 +683,11 @@ test('context identity uses the canonical full query and reuses migrated identit
   const f = fixture(
     undefined,
     legacyStorage({
-      'arcaFeed:readingHistory': JSON.stringify({
+      'ruliFeed:readingHistory': JSON.stringify({
         sessions: [
           session('old', {
             isSeriesMode: false,
-            searchQuery: '?q=hello&mode=best&articleKey=old',
+            searchQuery: '?q=hello&view_best=1&articleKey=old',
           }),
         ],
       }),
@@ -598,19 +698,24 @@ test('context identity uses the canonical full query and reuses migrated identit
   assert.equal(
     history.getContextId(
       'channel',
-      'test',
+      'community/board/300143',
       'unused',
-      '?mode=best&q=hello&articleKey=new',
+      '?view_best=1&q=hello&articleKey=new',
     ),
     'old',
   );
   assert.notEqual(
-    history.getContextId('channel', 'test', '', '?q=different'),
+    history.getContextId(
+      'channel',
+      'community/board/300143',
+      '',
+      '?q=different',
+    ),
     'old',
   );
   assert.notEqual(
-    history.getContextId('channel', 'test', '', '?q=a'),
-    history.getContextId('channel', 'test', '', '?q=b'),
+    history.getContextId('channel', 'community/board/300143', '', '?q=a'),
+    history.getContextId('channel', 'community/board/300143', '', '?q=b'),
   );
 });
 
@@ -658,45 +763,56 @@ test('overlapping list preparations both wait for hydration before using a saved
   const f = fixture();
   await f.storage.initialize();
   reading(f.storage).saveSession(
-    session('a', { articleList: ['/b/test/100', '/b/test/99'] }),
+    session('community/board/300151', {
+      articleList: [
+        '/community/board/300143/read/100',
+        '/community/board/300143/read/99',
+      ],
+    }),
   );
   await f.storage.flush();
   const reader = await reopen(f);
   const history = reading(reader);
   void history.sessions;
-  const first = history.prepareList('a');
-  const second = history.prepareList('a');
+  const first = history.prepareList('community/board/300151');
+  const second = history.prepareList('community/board/300151');
   assert.ok(first instanceof Promise);
   assert.equal(second, first);
-  assert.equal(reader.get('lists', ['resume', 'a']), undefined);
+  assert.equal(
+    reader.get('lists', ['resume', 'community/board/300151']),
+    undefined,
+  );
   await Promise.all([first, second]);
   assert.equal(history.sessions[0].articleList.length, 2);
-  assert.equal(history.prepareList('a'), undefined);
+  assert.equal(history.prepareList('community/board/300151'), undefined);
 });
 
 test('list preparation refreshes its metadata in the same snapshot', async () => {
   const f = fixture();
   await f.storage.initialize();
   const writer = reading(f.storage);
-  writer.saveSession(session('a'));
+  writer.saveSession(session('community/board/300151'));
   await f.storage.flush();
   const reader = await reopen(f);
   const history = reading(reader);
   void history.sessions;
   writer.saveSession(
-    session('a', {
-      path: '/b/test/99',
-      articleList: ['/b/test/99', '/b/test/98'],
+    session('community/board/300151', {
+      path: '/community/board/300143/read/99',
+      articleList: [
+        '/community/board/300143/read/99',
+        '/community/board/300143/read/98',
+      ],
       updatedAt: 2,
     }),
   );
   await f.storage.flush();
-  await history.prepareList('a');
+  await history.prepareList('community/board/300151');
   history.reload(['sessions', 'progress']);
-  assert.equal(history.sessions[0].path, '/b/test/99');
+  assert.equal(history.sessions[0].path, '/community/board/300143/read/99');
   assert.deepEqual(history.sessions[0].articleList, [
-    '/b/test/99',
-    '/b/test/98',
+    '/community/board/300143/read/99',
+    '/community/board/300143/read/98',
   ]);
 });
 
@@ -706,7 +822,7 @@ test('failed stale record updates retry against the latest committed records', a
   const other = await reopen(f);
   const a = reading(f.storage),
     b = reading(other);
-  a.saveSession(session('a'));
+  a.saveSession(session('community/board/300151'));
   await f.storage.flush();
   const restore = abortWrites(other);
   b.saveSession(session('b', { updatedAt: 2 }));
@@ -718,7 +834,7 @@ test('failed stale record updates retry against the latest committed records', a
   const check = await reopen(f);
   assert.deepEqual(
     new Set(check.all('resumeSessions').map((row) => row.id)),
-    new Set(['a', 'b', 'c']),
+    new Set(['community/board/300151', 'b', 'c']),
   );
 });
 
@@ -738,7 +854,7 @@ test('reload-time budgeting follows recent progress rather than primary-key orde
   const writer = reading(f.storage);
   const paths = Array.from(
     { length: 2000 },
-    (_, index) => `/b/test/${index + 1}`,
+    (_, index) => `/community/board/300143/read/${index + 1}`,
   );
   writer.saveSession(session('aOlder', { articleList: paths, updatedAt: 2 }));
   writer.saveSession(session('zRecent', { articleList: paths, updatedAt: 1 }));
@@ -801,7 +917,11 @@ for (const mode of ['readonly', 'readwrite']) {
         activity.globals,
       );
       await f.storage.initialize();
-      f.storage.set('settings', 'a', { id: 'a', local: 0, remote: 0 });
+      f.storage.set('settings', 'community/board/300151', {
+        id: 'community/board/300151',
+        local: 0,
+        remote: 0,
+      });
       await f.storage.flush();
       const other = await reopen(f);
       const original = f.storage.database.transaction.bind(f.storage.database);
@@ -821,30 +941,43 @@ for (const mode of ['readonly', 'readwrite']) {
       let settled = false;
       let operation;
       if (mode === 'readonly') {
-        operation = f.storage.refresh([{ store: 'settings', key: 'a' }]);
+        operation = f.storage.refresh([
+          { store: 'settings', key: 'community/board/300151' },
+        ]);
       } else {
-        f.storage.set('settings', 'a', { id: 'a', local: 1, remote: 0 });
+        f.storage.set('settings', 'community/board/300151', {
+          id: 'community/board/300151',
+          local: 1,
+          remote: 0,
+        });
         operation = f.storage.flush();
       }
       void operation.then(() => {
         settled = true;
       });
       await suspended.promise;
-      other.set('settings', 'a', { id: 'a', local: 0, remote: 2 });
+      other.set('settings', 'community/board/300151', {
+        id: 'community/board/300151',
+        local: 0,
+        remote: 2,
+      });
       await other.flush(); // A suspended tab must not block another tab's writes.
       assert.equal(settled, false);
-      assert.equal(other.get('settings', 'a').remote, 2);
+      assert.equal(other.get('settings', 'community/board/300151').remote, 2);
       activity.show();
       await operation;
-      assert.equal(f.storage.get('settings', 'a').remote, 2);
       assert.equal(
-        f.storage.get('settings', 'a').local,
+        f.storage.get('settings', 'community/board/300151').remote,
+        2,
+      );
+      assert.equal(
+        f.storage.get('settings', 'community/board/300151').local,
         mode === 'readwrite' ? 1 : 0,
       );
       assert.deepEqual(f.failures, []);
       await other.refresh();
       assert.equal(
-        other.get('settings', 'a').local,
+        other.get('settings', 'community/board/300151').local,
         mode === 'readwrite' ? 1 : 0,
       );
     },
@@ -872,8 +1005,13 @@ test(
     ]) {
       calls.length = 0;
       hide();
-      const refresh = f.storage.refresh([{ store: 'settings', key: 'a' }]);
-      f.storage.set('settings', 'a', { id: 'a', value: ++value });
+      const refresh = f.storage.refresh([
+        { store: 'settings', key: 'community/board/300151' },
+      ]);
+      f.storage.set('settings', 'community/board/300151', {
+        id: 'community/board/300151',
+        value: ++value,
+      });
       const flush = f.storage.flush();
       await new Promise((resolve) => setImmediate(resolve));
       assert.equal(calls.length, 0);

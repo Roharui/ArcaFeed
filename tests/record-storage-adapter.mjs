@@ -19,36 +19,36 @@ export function attachRecordCache(storage, load) {
   const originalRemove = storage.removeItem.bind(storage);
   storage.setItem = (key, value) => {
     originalSet(key, value);
-    if (key.startsWith('arcaFeed:') || key === 'arca_version_info') rebuild();
+    if (key.startsWith('ruliFeed:') || key === 'arca_version_info') rebuild();
   };
   storage.removeItem = (key) => {
     originalRemove(key);
-    if (key.startsWith('arcaFeed:') || key === 'arca_version_info') rebuild();
+    if (key.startsWith('ruliFeed:') || key === 'arca_version_info') rebuild();
   };
   const settingKey = (id) =>
     ({
-      display: 'arcaFeed:displaySettings',
-      subscription: 'arcaFeed:subscriptionSettings',
-      reading: 'arcaFeed:readingSettings',
-      shuffle: 'arcaFeed:isShuffleMode',
-      lastModalTab: 'arcaFeed:lastModalTab',
+      display: 'ruliFeed:displaySettings',
+      subscription: 'ruliFeed:subscriptionSettings',
+      reading: 'ruliFeed:readingSettings',
+      shuffle: 'ruliFeed:isShuffleMode',
+      lastModalTab: 'ruliFeed:lastModalTab',
       versionInfo: 'arca_version_info',
     })[id];
   const legacyKey = (store, key) =>
     store === 'settings'
       ? settingKey(key)
       : store === 'channelFilters'
-        ? `arcaFeed:channelFilter:${key}`
+        ? `ruliFeed:channelFilter:${key}`
         : store === 'resumeSessions'
-          ? 'arcaFeed:readingHistory'
+          ? 'ruliFeed:readingHistory'
           : store === 'lists'
             ? key[0] === 'resume'
-              ? `arcaFeed:readingList:${encodeURIComponent(key[1])}`
-              : `arcaFeed:${key[1]}:articleList`
+              ? `ruliFeed:readingList:${encodeURIComponent(key[1])}`
+              : `ruliFeed:${key[1]}:articleList`
             : store === 'progress'
               ? key[0] === 'resume'
-                ? 'arcaFeed:readingProgress'
-                : `arcaFeed:${key[1]}:lastActiveIndex`
+                ? 'ruliFeed:readingProgress'
+                : `ruliFeed:${key[1]}:lastActiveIndex`
               : undefined;
   const raw = (key, value) => {
     if (storage.values.get(key) === value) return;
@@ -88,11 +88,11 @@ export function attachRecordCache(storage, load) {
       );
     if (store === 'channelFilters') {
       raw(
-        `arcaFeed:channelFilter:${key}`,
+        `ruliFeed:channelFilter:${key}`,
         value ? JSON.stringify(value.value) : undefined,
       );
       storage.values.set(
-        'arcaFeed:filterChannels',
+        'ruliFeed:filterChannels',
         JSON.stringify(all(store).map((row) => row.id)),
       );
     }
@@ -107,7 +107,7 @@ export function attachRecordCache(storage, load) {
           'searchQuery',
           'lastActiveIndex',
         ])
-          raw(`arcaFeed:${key}:${suffix}`, undefined);
+          raw(`ruliFeed:${key}:${suffix}`, undefined);
       } else
         for (const [field, item] of Object.entries({
           seriesMode: String(value.mode !== 'channel'),
@@ -118,7 +118,7 @@ export function attachRecordCache(storage, load) {
             ? `${value.query}${value.query.includes('?') ? '&' : '?'}articleKey=${key}`
             : '',
         }))
-          raw(`arcaFeed:${key}:${field}`, item);
+          raw(`ruliFeed:${key}:${field}`, item);
     }
     if (store === 'lists')
       raw(
@@ -127,7 +127,7 @@ export function attachRecordCache(storage, load) {
       );
     if (store === 'resumeSessions')
       raw(
-        'arcaFeed:readingHistory',
+        'ruliFeed:readingHistory',
         JSON.stringify({
           version: 2,
           sessions: all(store)
@@ -145,7 +145,7 @@ export function attachRecordCache(storage, load) {
     if (store === 'progress') {
       if (key[0] === 'resume')
         raw(
-          'arcaFeed:readingProgress',
+          'ruliFeed:readingProgress',
           JSON.stringify(
             all(store)
               .filter((row) => row.kind === 'resume')
@@ -171,8 +171,8 @@ export function attachRecordCache(storage, load) {
     return rows.get(token(store, key))?.value;
   };
   storage.all = (store) => {
-    if (store === 'resumeSessions') storage.getItem('arcaFeed:readingHistory');
-    if (store === 'progress') storage.getItem('arcaFeed:readingProgress');
+    if (store === 'resumeSessions') storage.getItem('ruliFeed:readingHistory');
+    if (store === 'progress') storage.getItem('ruliFeed:readingProgress');
     if (!arrays.has(store)) arrays.set(store, all(store));
     return arrays.get(store);
   };

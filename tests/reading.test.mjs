@@ -7,13 +7,13 @@ function readingFixture(initial = {}) {
   const storage = memoryStorage(initial);
   const window = {
     location: {
-      origin: 'https://arca.live',
-      href: 'https://arca.live/b/test/100?articleKey=session',
+      origin: 'https://bbs.ruliweb.com',
+      href: 'https://bbs.ruliweb.com/community/board/300143/read/100?articleKey=session',
     },
     history: { replaceState() {} },
   };
   const load = sourceLoader({ globals: { localStorage: storage, window } });
-  const READING_HISTORY_KEY = 'arcaFeed:readingHistory';
+  const READING_HISTORY_KEY = 'ruliFeed:readingHistory';
   const { ReadingHistory } = load('src/vault/reading-history.ts');
   return { storage, window, load, ReadingHistory, READING_HISTORY_KEY };
 }
@@ -26,31 +26,30 @@ const entry = (path, title = '게시글') => ({
 const session = (id, patch = {}) => ({
   id,
   label: '테스트 탐색',
-  path: '/b/test/100',
+  path: '/community/board/300143/read/100',
   searchQuery: '?q=검색&articleKey=old',
-  articleList: ['/b/test/101', '/b/test/100', '/b/test/99'],
+  articleList: [
+    '/community/board/300143/read/101',
+    '/community/board/300143/read/100',
+    '/community/board/300143/read/99',
+  ],
   isSeriesMode: true,
   isScrapMode: false,
-  seriesChannels: ['test', 'other'],
+  seriesChannels: ['community/board/300143', 'community/board/300149'],
   scrollY: 340,
   updatedAt: 1,
   ...patch,
 });
 
 function siteVisit(storage, history, article) {
-  const records = JSON.parse(storage.getItem('recent_articles') || '[]');
-  const [, , slug, articleId] = article.path.split('/');
+  const records = JSON.parse(
+    storage.getItem('rulifeed:recentArticles') || '[]',
+  );
   storage.setItem(
-    'recent_articles',
+    'rulifeed:recentArticles',
     JSON.stringify([
-      {
-        slug,
-        articleId,
-        title: article.title,
-        boardName: article.channelName,
-        regdateAt: Date.now() / 1000 + records.length,
-      },
-      ...records.filter((record) => String(record.articleId) !== articleId),
+      { ...article, visitedAt: Date.now() + records.length },
+      ...records.filter((record) => record.path !== article.path),
     ]),
   );
   history.reload();
@@ -58,19 +57,23 @@ function siteVisit(storage, history, article) {
 
 test('adjacent navigation reuses scans and invalidates after visits, list, index and skip changes', () => {
   const { load, storage } = readingFixture({
-    recent_articles: JSON.stringify(
+    'rulifeed:recentArticles': JSON.stringify(
       Array.from({ length: 1000 }, (_, i) => ({
-        slug: 'test',
-        articleId: i + 1001,
-        regdateAt: i + 1,
+        path: `/community/board/300143/read/${i + 1001}`,
+        title: '게시글',
+        channelName: '게시판',
+        visitedAt: (i + 1) * 1000,
       })),
     ),
   });
   const { VaultAdapter } = load('src/vault/index.ts');
   const { Store } = load('src/vault/store.ts');
   const list = [
-    '/b/test/100',
-    ...Array.from({ length: 1001 }, (_, i) => `/b/test/${i + 1001}`),
+    '/community/board/300143/read/100',
+    ...Array.from(
+      { length: 1001 },
+      (_, i) => `/community/board/300143/read/${i + 1001}`,
+    ),
   ];
   const vault = new VaultAdapter(
     new Store({ articleList: list, activeIndex: 0 }),
@@ -89,12 +92,16 @@ test('adjacent navigation reuses scans and invalidates after visits, list, index
     assert.equal(lookups, 1001);
     for (let i = 0; i < 50; i++) assert.equal(vault.isNextPageActive(), true);
     assert.equal(lookups, 1001);
-    siteVisit(storage, vault.reading, entry('/b/test/2001'));
+    siteVisit(
+      storage,
+      vault.reading,
+      entry('/community/board/300143/read/2001'),
+    );
     assert.equal(vault.getAdjacentArticleIndex('NEXT'), -1);
     const exhaustedLookups = lookups;
     assert.equal(vault.isNextPageActive(), false);
     assert.equal(lookups, exhaustedLookups);
-    vault.articleList = [...list, '/b/test/2002'];
+    vault.articleList = [...list, '/community/board/300143/read/2002'];
     assert.equal(vault.getAdjacentArticleIndex('NEXT'), 1002);
     vault.activeIndex = 1002;
     assert.equal(vault.getAdjacentArticleIndex('NEXT'), -1);
@@ -136,91 +143,107 @@ test('reading search reuses normalized records while preserving multiword and Un
   assert.equal(textReads, 3);
 });
 
-test('recent history reads native records and matches subscription-feed aliases without writing a duplicate list', () => {
+test('recent history reads stored visits and deduplicates article paths', () => {
   const { ReadingHistory, storage } = readingFixture({
-    recent_articles: JSON.stringify([
+    'rulifeed:recentArticles': JSON.stringify([
       {
-        slug: 'test',
-        articleId: 100,
+        path: `/community/board/300143/read/${100}`,
         title: '수정된 제목',
-        boardName: '테스트',
-        regdateAt: 3,
+        channelName: '테스트',
+        visitedAt: 3 * 1000,
       },
-      { slug: 'test', articleId: '99', title: '이전 글', regdateAt: 2 },
-      { slug: 'test', articleId: 100, regdateAt: 1 },
+      {
+        path: `/community/board/300143/read/${'99'}`,
+        title: '이전 글',
+        channelName: '게시판',
+        visitedAt: 2 * 1000,
+      },
+      {
+        path: `/community/board/300143/read/${100}`,
+        title: '게시글',
+        channelName: '게시판',
+        visitedAt: 1 * 1000,
+      },
     ]),
   });
   const history = new ReadingHistory();
   assert.deepEqual(
     history.entries.map((item) => item.path),
-    ['/b/test/100', '/b/test/99'],
+    ['/community/board/300143/read/100', '/community/board/300143/read/99'],
   );
   assert.equal(history.entries[0].visitedAt, 3000);
   assert.equal(history.entries[0].title, '수정된 제목');
   assert.equal(history.entries[0].channelName, '테스트');
-  assert.equal(history.hasVisited('/b/my/100'), true);
+  assert.equal(history.hasVisited('/community/board/300147/read/100'), false);
   const { isVisitedPath } = readingFixture().load(
     'src/vault/reading-history.ts',
   );
-  assert.equal(isVisitedPath(history.getVisitedPaths(), '/b/test/100'), true);
+  assert.equal(
+    isVisitedPath(
+      history.getVisitedPaths(),
+      '/community/board/300143/read/100',
+    ),
+    true,
+  );
   const paths = history.getVisitedPaths();
   paths.clear();
-  assert.equal(history.hasVisited('/b/test/100'), true);
+  assert.equal(history.hasVisited('/community/board/300143/read/100'), true);
   assert.equal(storage.writes.length, 0);
-  history.saveSession(session('first'));
+  history.saveSession(session('community/board/300146'));
   assert.ok(
     storage.writes.every(
       (write) =>
-        ['arcaFeed:readingHistory', 'arcaFeed:readingProgress'].includes(
+        ['ruliFeed:readingHistory', 'ruliFeed:readingProgress'].includes(
           write.key,
-        ) || write.key.startsWith('arcaFeed:readingList:'),
+        ) || write.key.startsWith('ruliFeed:readingList:'),
     ),
   );
   assert.equal(
-    'entries' in JSON.parse(storage.getItem('arcaFeed:readingHistory')),
+    'entries' in JSON.parse(storage.getItem('ruliFeed:readingHistory')),
     false,
   );
 });
 
 test('recent entries retain the latest 300 without changing native history or visited checks', () => {
   const records = Array.from({ length: 350 }, (_, index) => ({
-    slug: 'test',
-    articleId: index + 1,
-    regdateAt: index + 1,
+    path: `/community/board/300143/read/${index + 1}`,
+    title: '게시글',
+    channelName: '게시판',
+    visitedAt: (index + 1) * 1000,
   }));
   const original = JSON.stringify(records);
   const { ReadingHistory, storage } = readingFixture({
-    recent_articles: original,
+    'rulifeed:recentArticles': original,
   });
   const history = new ReadingHistory();
   assert.equal(history.entries.length, 300);
-  assert.equal(history.entries[0].path, '/b/test/350');
-  assert.equal(history.entries.at(-1).path, '/b/test/51');
-  assert.equal(history.hasVisited('/b/test/1'), true);
-  assert.equal(storage.getItem('recent_articles'), original);
+  assert.equal(history.entries[0].path, '/community/board/300143/read/350');
+  assert.equal(history.entries.at(-1).path, '/community/board/300143/read/51');
+  assert.equal(history.hasVisited('/community/board/300143/read/1'), true);
+  assert.equal(storage.getItem('rulifeed:recentArticles'), original);
   assert.equal(storage.writes.length, 0);
 
   const previousEntries = history.entries;
   history.reload();
   assert.equal(history.entries, previousEntries);
-  siteVisit(storage, history, entry('/b/test/351'));
+  siteVisit(storage, history, entry('/community/board/300143/read/351'));
   assert.equal(history.entries.length, 300);
-  assert.equal(history.entries[0].path, '/b/test/351');
-  assert.equal(history.entries.at(-1).path, '/b/test/52');
+  assert.equal(history.entries[0].path, '/community/board/300143/read/351');
+  assert.equal(history.entries.at(-1).path, '/community/board/300143/read/52');
 });
 
 test('native history reloads across tabs while checkpoint updates preserve other tabs positions', () => {
   const { ReadingHistory, storage } = readingFixture();
   const first = new ReadingHistory();
   const second = new ReadingHistory();
-  siteVisit(storage, first, entry('/b/test/100'));
+  siteVisit(storage, first, entry('/community/board/300143/read/100'));
   first.saveSession(session('series:first'));
   second.saveSession(session('series:second'));
-  siteVisit(storage, first, entry('/b/test/99'));
+  siteVisit(storage, first, entry('/community/board/300143/read/99'));
   second.reload();
   assert.deepEqual(
     second.entries.map((item) => item.path),
-    ['/b/test/99', '/b/test/100'],
+    ['/community/board/300143/read/99', '/community/board/300143/read/100'],
   );
   assert.deepEqual(
     second.sessions.map((item) => item.id),
@@ -232,22 +255,23 @@ test('native history reloads across tabs while checkpoint updates preserve other
   assert.equal(second.sessions[0].scrollY, 900);
 });
 
-test('clearing checkpoints preserves native visits, while disabling native history clears only the seen view', () => {
+test('clearing checkpoints preserves visits while clearing visits preserves checkpoints', () => {
   const { ReadingHistory, storage } = readingFixture();
   const history = new ReadingHistory();
-  siteVisit(storage, history, entry('/b/test/100'));
-  history.saveSession(session('first'));
+  siteVisit(storage, history, entry('/community/board/300143/read/100'));
+  history.saveSession(session('community/board/300146'));
   history.clear();
-  assert.equal(history.hasVisited('/b/test/100'), true);
+  assert.equal(history.hasVisited('/community/board/300143/read/100'), true);
   assert.deepEqual(history.sessions, []);
   history.saveSession(session('keep'));
-  storage.setItem('recent_disabled', '1');
+  const visits = storage.getItem('rulifeed:recentArticles');
+  storage.removeItem('rulifeed:recentArticles');
   history.reload();
   assert.deepEqual(history.entries, []);
   assert.equal(history.sessions.length, 1);
-  storage.removeItem('recent_disabled');
+  storage.setItem('rulifeed:recentArticles', visits);
   history.reload();
-  assert.equal(history.hasVisited('/b/test/100'), true);
+  assert.equal(history.hasVisited('/community/board/300143/read/100'), true);
 });
 
 test('legacy duplicate visits are discarded while valid checkpoints survive migration', () => {
@@ -255,24 +279,33 @@ test('legacy duplicate visits are discarded while valid checkpoints survive migr
   storage.setItem(
     READING_HISTORY_KEY,
     JSON.stringify({
-      entries: [{ ...entry('/b/test/100'), visitedAt: 1 }],
+      entries: [{ ...entry('/community/board/300143/read/100'), visitedAt: 1 }],
       sessions: [
         session('valid', {
-          articleList: ['/b/test/100', 'https://example.com/b/test/99'],
-          seriesChannels: ['test', '../invalid'],
+          articleList: [
+            '/community/board/300143/read/100',
+            'https://example.com/community/board/300143/read/99',
+          ],
+          seriesChannels: ['community/board/300143', '../invalid'],
           scrollY: -50,
         }),
-        session('external', { path: 'https://example.com/b/test/99' }),
+        session('external', {
+          path: 'https://example.com/community/board/300143/read/99',
+        }),
         session('bad-time', { updatedAt: 0 }),
       ],
     }),
   );
   const history = new ReadingHistory();
-  assert.equal(history.hasVisited('/b/test/100'), false);
+  assert.equal(history.hasVisited('/community/board/300143/read/100'), false);
   assert.deepEqual(history.entries, []);
   assert.equal(history.sessions.length, 1);
-  assert.deepEqual(history.sessions[0].articleList, ['/b/test/100']);
-  assert.deepEqual(history.sessions[0].seriesChannels, ['test']);
+  assert.deepEqual(history.sessions[0].articleList, [
+    '/community/board/300143/read/100',
+  ]);
+  assert.deepEqual(history.sessions[0].seriesChannels, [
+    'community/board/300143',
+  ]);
   assert.equal(history.sessions[0].scrollY, 0);
   assert.equal(
     new URLSearchParams(history.sessions[0].searchQuery).has('articleKey'),
@@ -287,11 +320,21 @@ test('legacy duplicate visits are discarded while valid checkpoints survive migr
 test('malformed native records are ignored and resume positions stay bounded', () => {
   const { ReadingHistory, storage, load, READING_HISTORY_KEY } = readingFixture(
     {
-      recent_articles: JSON.stringify([
+      'rulifeed:recentArticles': JSON.stringify([
         null,
         { slug: '../external', articleId: 100, regdateAt: 1 },
-        { slug: 'test', articleId: 'bad', regdateAt: 1 },
-        { slug: 'test', articleId: 100, regdateAt: -1 },
+        {
+          path: `/community/board/300143/read/${'bad'}`,
+          title: '게시글',
+          channelName: '게시판',
+          visitedAt: 1 * 1000,
+        },
+        {
+          path: `/community/board/300143/read/${100}`,
+          title: '게시글',
+          channelName: '게시판',
+          visitedAt: -1 * 1000,
+        },
       ]),
     },
   );
@@ -310,7 +353,7 @@ test('malformed native records are ignored and resume positions stay bounded', (
     session('new', {
       articleList: Array.from(
         { length: 2100 },
-        (_, index) => `/b/test/${index + 1}`,
+        (_, index) => `/community/board/300143/read/${index + 1}`,
       ),
     }),
   );
@@ -318,7 +361,7 @@ test('malformed native records are ignored and resume positions stay bounded', (
   assert.equal(reloaded.sessions.length, SESSION_LIMIT);
   assert.equal(reloaded.sessions[0].id, 'new');
   assert.equal(reloaded.sessions[0].articleList.length, 2000);
-  storage.setItem('recent_articles', '{bad');
+  storage.setItem('rulifeed:recentArticles', '{bad');
   reloaded.reload();
   assert.deepEqual(reloaded.entries, []);
 });
@@ -329,24 +372,29 @@ test('next navigation skips seen articles while previous navigation remains avai
   const { Store } = load('src/vault/store.ts');
   const vault = new VaultAdapter(
     new Store({
-      articleList: ['/b/test/100', '/b/test/99', '/b/test/98', '/b/test/97'],
+      articleList: [
+        '/community/board/300143/read/100',
+        '/community/board/300143/read/99',
+        '/community/board/300143/read/98',
+        '/community/board/300143/read/97',
+      ],
       activeIndex: 0,
     }),
     { saveConfig() {} },
     vaultFixture().href,
   );
   try {
-    siteVisit(storage, vault.reading, entry('/b/test/99'));
-    siteVisit(storage, vault.reading, entry('/b/test/98'));
+    siteVisit(storage, vault.reading, entry('/community/board/300143/read/99'));
+    siteVisit(storage, vault.reading, entry('/community/board/300143/read/98'));
     assert.equal(vault.getAdjacentArticleIndex('NEXT'), 1);
     vault.skipVisitedArticles = true;
     assert.equal(vault.getAdjacentArticleIndex('NEXT'), 3);
     assert.equal(vault.isNextPageActive(), true);
     vault.activeIndex = 2;
     assert.equal(vault.getAdjacentArticleIndex('PREV'), 1);
-    siteVisit(storage, vault.reading, entry('/b/test/97'));
+    siteVisit(storage, vault.reading, entry('/community/board/300143/read/97'));
     assert.equal(vault.isNextPageActive(), false);
-    storage.setItem('recent_articles', '[]');
+    storage.setItem('rulifeed:recentArticles', '[]');
     vault.reading.reload();
     assert.equal(vault.getAdjacentArticleIndex('NEXT'), 3);
   } finally {
@@ -363,35 +411,46 @@ test('resume restores session links, selected channels and search without changi
   const vault = new VaultAdapter(
     new Store({
       articleKey: 'session',
-      articleList: ['/b/test/100'],
+      articleList: ['/community/board/300143/read/100'],
       activeIndex: 0,
     }),
     config,
     vaultFixture().href,
   );
   try {
-    siteVisit(storage, vault.reading, entry('/b/test/100'));
+    siteVisit(
+      storage,
+      vault.reading,
+      entry('/community/board/300143/read/100'),
+    );
     vault.restoreReadingSession(session('resume'), 'restored');
-    assert.deepEqual(vault.articleList, ['/b/test/100']);
+    assert.deepEqual(vault.articleList, ['/community/board/300143/read/100']);
     assert.equal(vault.articleKey, 'session');
     assert.deepEqual(
-      JSON.parse(storage.getItem('arcaFeed:session:articleList')),
-      ['/b/test/100'],
+      JSON.parse(storage.getItem('ruliFeed:session:articleList')),
+      ['/community/board/300143/read/100'],
     );
-    window.location.href = 'https://arca.live/b/test/100?articleKey=restored';
+    window.location.href =
+      'https://bbs.ruliweb.com/community/board/300143/read/100?articleKey=restored';
     const restored = config.loadConfig();
     assert.deepEqual(restored.articleList, [
-      '/b/test/101',
-      '/b/test/100',
-      '/b/test/99',
+      '/community/board/300143/read/101',
+      '/community/board/300143/read/100',
+      '/community/board/300143/read/99',
     ]);
     assert.equal(restored.lastActiveIndex, 1);
     assert.equal(restored.isSeriesMode, true);
-    assert.deepEqual(restored.seriesChannels, ['test', 'other']);
+    assert.deepEqual(restored.seriesChannels, [
+      'community/board/300143',
+      'community/board/300149',
+    ]);
     const params = new URLSearchParams(restored.searchQuery);
     assert.equal(params.get('q'), '검색');
     assert.equal(params.get('articleKey'), 'restored');
-    assert.equal(vault.reading.hasVisited('/b/test/100'), true);
+    assert.equal(
+      vault.reading.hasVisited('/community/board/300143/read/100'),
+      true,
+    );
   } finally {
     vault.destroy();
   }
@@ -441,8 +500,13 @@ test('history search waits for Korean composition, normalizes input and clears t
 
 test('subscription feeds allow skipping while ordinary series and scrap preserve preferences', () => {
   const { load } = readingFixture({
-    recent_articles: JSON.stringify([
-      { slug: 'test', articleId: 99, regdateAt: 1 },
+    'rulifeed:recentArticles': JSON.stringify([
+      {
+        path: `/community/board/300143/read/${99}`,
+        title: '게시글',
+        channelName: '게시판',
+        visitedAt: 1 * 1000,
+      },
     ]),
   });
   const { VaultAdapter } = load('src/vault/index.ts');
@@ -450,12 +514,16 @@ test('subscription feeds allow skipping while ordinary series and scrap preserve
   const vault = new VaultAdapter(
     new Store({
       articleKey: 'session',
-      articleList: ['/b/test/100', '/b/test/99', '/b/test/98'],
+      articleList: [
+        '/community/board/300143/read/100',
+        '/community/board/300143/read/99',
+        '/community/board/300143/read/98',
+      ],
       activeIndex: 0,
       uiSettings: {
         ...load('src/vault/store.ts').createInitialState().uiSettings,
         skipVisitedContexts: {
-          'channel:test': true,
+          'channel:community/board/300143': true,
           home: true,
           scrap: true,
           'series:session': true,
@@ -470,7 +538,11 @@ test('subscription feeds allow skipping while ordinary series and scrap preserve
     assert.equal(vault.getAdjacentArticleIndex('NEXT'), 2);
     for (const mode of [
       { isSeriesMode: true, isScrapMode: false, seriesChannels: [] },
-      { isSeriesMode: true, isScrapMode: true, seriesChannels: ['test'] },
+      {
+        isSeriesMode: true,
+        isScrapMode: true,
+        seriesChannels: ['community/board/300143'],
+      },
       { isSeriesMode: true, isScrapMode: true, seriesChannels: [] },
       { isSeriesMode: false, isScrapMode: true, seriesChannels: [] },
     ]) {
@@ -485,7 +557,7 @@ test('subscription feeds allow skipping while ordinary series and scrap preserve
     vault.updateState({
       isSeriesMode: true,
       isScrapMode: false,
-      seriesChannels: ['test', 'other'],
+      seriesChannels: ['community/board/300143', 'community/board/300149'],
     });
     assert.equal(vault.canSkipVisitedArticles, true);
     assert.equal(vault.skipVisitedArticles, true);
@@ -493,12 +565,18 @@ test('subscription feeds allow skipping while ordinary series and scrap preserve
     vault.skipVisitedArticles = false;
     assert.equal(vault.getAdjacentArticleIndex('NEXT'), 1);
     assert.equal(vault.uiSettings.skipVisitedContexts.home, false);
-    assert.equal(vault.uiSettings.skipVisitedContexts['channel:test'], true);
+    assert.equal(
+      vault.uiSettings.skipVisitedContexts['channel:community/board/300143'],
+      true,
+    );
     vault.href = { ...vault.href, mode: 'HOME', channelId: 'my' };
     assert.equal(vault.canSkipVisitedArticles, true);
     assert.equal(vault.skipVisitedArticles, false);
     vault.skipVisitedArticles = true;
-    vault.href = { ...vaultFixture().href, channelId: 'other' };
+    vault.href = {
+      ...vaultFixture().href,
+      channelId: 'community/board/300149',
+    };
     assert.equal(vault.skipVisitedArticles, true);
     assert.equal(vault.uiSettings.skipVisitedContexts.home, true);
     vault.updateState({ isSeriesMode: false, isScrapMode: false });
@@ -525,7 +603,7 @@ test('legacy global skip flags cannot enable unrelated contexts and malformed pr
   assert.deepEqual(legacy.skipVisitedContexts, {});
   const settings = normalizeUISettings({
     skipVisitedContexts: {
-      'channel:test': true,
+      'channel:community/board/300143': true,
       home: false,
       scrap: 'true',
       'series:abc123': true,
@@ -533,7 +611,7 @@ test('legacy global skip flags cannot enable unrelated contexts and malformed pr
     },
   });
   assert.deepEqual(settings.skipVisitedContexts, {
-    'channel:test': true,
+    'channel:community/board/300143': true,
     home: false,
     'series:abc123': true,
   });
@@ -554,7 +632,8 @@ test('scrap checkpoints preserve their mode through history and navigation-cache
   const { ConfigService, StorageRepository } = load('src/vault/index.ts');
   const config = new ConfigService(new StorageRepository(storage));
   config.restoreReadingSession(saved, 'restored');
-  window.location.href = 'https://arca.live/b/test/100?articleKey=restored';
+  window.location.href =
+    'https://bbs.ruliweb.com/community/board/300143/read/100?articleKey=restored';
   const restored = config.loadConfig();
   assert.equal(restored.isSeriesMode, true);
   assert.equal(restored.isScrapMode, true);
@@ -566,19 +645,19 @@ test('deleting one checkpoint keeps visits and other checkpoints in older tabs',
   const { ReadingHistory, storage } = readingFixture();
   const first = new ReadingHistory();
   const second = new ReadingHistory();
-  siteVisit(storage, first, entry('/b/test/100'));
-  first.saveSession(session('first'));
-  second.saveSession(session('second'));
-  first.removeSession('first');
+  siteVisit(storage, first, entry('/community/board/300143/read/100'));
+  first.saveSession(session('community/board/300146'));
+  second.saveSession(session('community/board/300147'));
+  first.removeSession('community/board/300146');
   second.reload();
   assert.deepEqual(
     second.sessions.map((item) => item.id),
-    ['second'],
+    ['community/board/300147'],
   );
-  assert.equal(second.hasVisited('/b/test/100'), true);
+  assert.equal(second.hasVisited('/community/board/300143/read/100'), true);
   assert.deepEqual(
     new ReadingHistory().sessions.map((item) => item.id),
-    ['second'],
+    ['community/board/300147'],
   );
 });
 
@@ -593,8 +672,8 @@ for (const quickExit of [false, true])
     let indicatorScans = 0;
     const window = {
       location: {
-        origin: 'https://arca.live',
-        href: 'https://arca.live/b/test/100?articleKey=session',
+        origin: 'https://bbs.ruliweb.com',
+        href: 'https://bbs.ruliweb.com/community/board/300143/read/100?articleKey=session',
       },
       scrollY: 120,
       addEventListener: (name, handler) => listeners.set(name, handler),
@@ -638,13 +717,17 @@ for (const quickExit of [false, true])
         articleKey: 'session',
         isSeriesMode: true,
         isScrapMode: true,
-        articleList: ['/b/test/100'],
+        articleList: ['/community/board/300143/read/100'],
       }),
       { saveConfig() {} },
       vaultFixture().href,
     );
     try {
-      siteVisit(storage, vault.reading, entry('/b/test/100'));
+      siteVisit(
+        storage,
+        vault.reading,
+        entry('/community/board/300143/read/100'),
+      );
       let fullCheckpoints = 0;
       const saveSession = vault.reading.saveSession.bind(vault.reading);
       vault.reading.saveSession = (checkpoint) => {
@@ -655,7 +738,11 @@ for (const quickExit of [false, true])
       assert.equal(fullCheckpoints, 0);
       assert.equal(indicatorScans, 0);
       // Changes to another session must not cancel our first deferred save.
-      saveSession(session('other', { path: '/b/other/1' }));
+      saveSession(
+        session('community/board/300149', {
+          path: '/community/board/300149/read/1',
+        }),
+      );
       // A quick exit must persist before the deferred initial checkpoint runs.
       if (quickExit) listeners.get('pagehide')();
       assert.equal(fullCheckpoints, quickExit ? 1 : 0);
@@ -680,7 +767,7 @@ for (const quickExit of [false, true])
       assert.equal(fullCheckpoints, 1);
       assert.deepEqual(
         storage.writes.map((write) => write.key),
-        ['arcaFeed:readingProgress'],
+        ['ruliFeed:readingProgress'],
       );
       // Continuous scroll still checkpoints at the maximum wait deadline.
       storage.writes.length = 0;
@@ -696,13 +783,16 @@ for (const quickExit of [false, true])
       assert.equal(fullCheckpoints, 1);
       assert.deepEqual(
         storage.writes.map((write) => write.key),
-        ['arcaFeed:readingProgress'],
+        ['ruliFeed:readingProgress'],
       );
       storage.writes.length = 0;
       listeners.get('pagehide')();
       assert.equal(storage.writes.length, 0);
       assert.equal(fullCheckpoints, 1);
-      vault.articleList = ['/b/test/100', '/b/test/99'];
+      vault.articleList = [
+        '/community/board/300143/read/100',
+        '/community/board/300143/read/99',
+      ];
       listeners.get('pagehide')();
       assert.equal(fullCheckpoints, 2);
       assert.deepEqual(
@@ -719,9 +809,12 @@ for (const quickExit of [false, true])
       listeners.get('pagehide')();
       assert.deepEqual(
         vault.reading.sessions.map(({ id }) => id),
-        ['other'],
+        ['community/board/300149'],
       );
-      assert.equal(vault.reading.hasVisited('/b/test/100'), true);
+      assert.equal(
+        vault.reading.hasVisited('/community/board/300143/read/100'),
+        true,
+      );
     } finally {
       vault.destroy();
     }
@@ -729,14 +822,17 @@ for (const quickExit of [false, true])
 
 test('scroll checkpoints write only small progress data and notify only progress listeners', () => {
   const { ReadingHistory, storage } = readingFixture();
-  const READING_PROGRESS_KEY = 'arcaFeed:readingProgress';
+  const READING_PROGRESS_KEY = 'ruliFeed:readingProgress';
   const history = new ReadingHistory();
   const checkpoint = session('large', {
-    articleList: Array.from({ length: 2000 }, (_, i) => `/b/test/${i + 1}`),
+    articleList: Array.from(
+      { length: 2000 },
+      (_, i) => `/community/board/300143/read/${i + 1}`,
+    ),
   });
   history.saveSession(checkpoint);
-  const contexts = storage.getItem('arcaFeed:readingHistory');
-  const links = storage.getItem('arcaFeed:readingList:large');
+  const contexts = storage.getItem('ruliFeed:readingHistory');
+  const links = storage.getItem('ruliFeed:readingList:large');
   let contextsChanged = 0;
   let visitsChanged = 0;
   let progressChanged = 0;
@@ -750,8 +846,8 @@ test('scroll checkpoints write only small progress data and notify only progress
     [READING_PROGRESS_KEY],
   );
   assert.ok(storage.writes[0].value.length < links.length / 10);
-  assert.equal(storage.getItem('arcaFeed:readingList:large'), links);
-  assert.equal(storage.getItem('arcaFeed:readingHistory'), contexts);
+  assert.equal(storage.getItem('ruliFeed:readingList:large'), links);
+  assert.equal(storage.getItem('ruliFeed:readingHistory'), contexts);
   assert.equal(contextsChanged, 0);
   assert.equal(visitsChanged, 0);
   assert.equal(progressChanged, 1);
@@ -766,47 +862,70 @@ test('scroll checkpoints write only small progress data and notify only progress
 test('position-only checkpoints merge other tabs and reject changed or deleted contexts', () => {
   const { ReadingHistory, storage } = readingFixture();
   const history = new ReadingHistory();
-  const first = session('first');
-  const second = session('second', { path: '/b/test/99' });
+  const first = session('community/board/300146');
+  const second = session('community/board/300147', {
+    path: '/community/board/300143/read/99',
+  });
   history.saveSession(second);
   history.saveSession(first);
   const other = new ReadingHistory();
   other.saveSession({ ...second, scrollY: 900, updatedAt: 2 });
   storage.writes.length = 0;
-  assert.equal(history.savePosition('first', first.path, 500, 3), true);
+  assert.equal(
+    history.savePosition('community/board/300146', first.path, 500, 3),
+    true,
+  );
   assert.deepEqual(
     storage.writes.map((item) => item.key),
-    ['arcaFeed:readingProgress'],
+    ['ruliFeed:readingProgress'],
   );
   assert.equal(
-    history.sessions.find((item) => item.id === 'second').scrollY,
+    history.sessions.find((item) => item.id === 'community/board/300147')
+      .scrollY,
     900,
   );
   storage.writes.length = 0;
-  assert.equal(history.savePosition('first', first.path, 500, 4), true);
+  assert.equal(
+    history.savePosition('community/board/300146', first.path, 500, 4),
+    true,
+  );
   assert.equal(storage.writes.length, 0);
-  assert.equal(history.savePosition('first', '/b/test/98', 500, 4), false);
+  assert.equal(
+    history.savePosition(
+      'community/board/300146',
+      '/community/board/300143/read/98',
+      500,
+      4,
+    ),
+    false,
+  );
   other.saveSession({ ...first, label: '다른 탭에서 바뀐 탐색', updatedAt: 5 });
   storage.writes.length = 0;
-  assert.equal(history.savePosition('first', first.path, 600, 6), false);
+  assert.equal(
+    history.savePosition('community/board/300146', first.path, 600, 6),
+    false,
+  );
   assert.equal(storage.writes.length, 0);
   history.saveSession({ ...first, scrollY: 600, updatedAt: 6 });
-  other.removeSession('first');
-  assert.equal(history.savePosition('first', first.path, 700, 7), false);
+  other.removeSession('community/board/300146');
+  assert.equal(
+    history.savePosition('community/board/300146', first.path, 700, 7),
+    false,
+  );
 });
 
 test('legacy oversized resume lists migrate within a total budget and retain every current article', () => {
   const { ReadingHistory, storage, load } = readingFixture();
   const { SESSION_TOTAL_ARTICLE_LIMIT } = load('src/vault/reading-history.ts');
   storage.setItem(
-    'arcaFeed:readingHistory',
+    'ruliFeed:readingHistory',
     JSON.stringify({
       sessions: Array.from({ length: 20 }, (_, index) =>
         session(`old:${index}`, {
-          path: `/b/test/${4000 + index}`,
+          path: `/community/board/300143/read/${4000 + index}`,
           articleList: Array.from(
             { length: 4100 },
-            (_, i) => `/b/test/${i + 1}`,
+            (_, i) => `/community/board/300143/read/${i + 1}`,
           ),
         }),
       ),
@@ -814,7 +933,7 @@ test('legacy oversized resume lists migrate within a total budget and retain eve
   );
   const history = new ReadingHistory();
   void history.sessions; // Legacy migration runs on first resume access.
-  const stored = JSON.parse(storage.getItem('arcaFeed:readingHistory'));
+  const stored = JSON.parse(storage.getItem('ruliFeed:readingHistory'));
   assert.equal(stored.sessions.length, 20);
   assert.ok(
     stored.sessions.reduce((total, item) => total + item.articleCount, 0) <=
@@ -823,7 +942,7 @@ test('legacy oversized resume lists migrate within a total budget and retain eve
   for (const item of stored.sessions) {
     assert.equal('articleList' in item, false);
     const list = JSON.parse(
-      storage.getItem(`arcaFeed:readingList:${encodeURIComponent(item.id)}`),
+      storage.getItem(`ruliFeed:readingList:${encodeURIComponent(item.id)}`),
     );
     assert.ok(list.includes(item.path));
   }
@@ -838,23 +957,27 @@ test('progress from another tab preserves both sessions and removing a session a
   const { ReadingHistory, storage } = readingFixture();
   const first = new ReadingHistory();
   const second = new ReadingHistory();
-  first.saveSession(session('first', { updatedAt: 1 }));
-  second.saveSession(session('second', { updatedAt: 2 }));
-  first.saveSession(session('first', { scrollY: 700, updatedAt: 3 }));
-  second.saveSession(session('second', { scrollY: 800, updatedAt: 4 }));
+  first.saveSession(session('community/board/300146', { updatedAt: 1 }));
+  second.saveSession(session('community/board/300147', { updatedAt: 2 }));
+  first.saveSession(
+    session('community/board/300146', { scrollY: 700, updatedAt: 3 }),
+  );
+  second.saveSession(
+    session('community/board/300147', { scrollY: 800, updatedAt: 4 }),
+  );
   first.reload();
   assert.deepEqual(
     first.sessions.map((item) => [item.id, item.scrollY]),
     [
-      ['second', 800],
-      ['first', 700],
+      ['community/board/300147', 800],
+      ['community/board/300146', 700],
     ],
   );
-  first.removeSession('first');
-  const progress = JSON.parse(storage.getItem('arcaFeed:readingProgress'));
+  first.removeSession('community/board/300146');
+  const progress = JSON.parse(storage.getItem('ruliFeed:readingProgress'));
   assert.deepEqual(
     progress.map((item) => item.id),
-    ['second'],
+    ['community/board/300147'],
   );
   second.reload();
   assert.equal(second.sessions[0].scrollY, 800);
@@ -866,7 +989,7 @@ test('reading progress and native visit reloads do not schedule config autosaves
   const load = sourceLoader({
     globals: {
       localStorage: storage,
-      window: { location: { origin: 'https://arca.live' } },
+      window: { location: { origin: 'https://bbs.ruliweb.com' } },
       setTimeout() {
         timers++;
         return timers;
@@ -884,10 +1007,16 @@ test('reading progress and native visit reloads do not schedule config autosaves
   try {
     let notifications = 0;
     vault.subscribe(() => notifications++);
-    vault.reading.saveSession(session('first'));
-    vault.reading.saveSession(session('first', { scrollY: 500, updatedAt: 2 }));
+    vault.reading.saveSession(session('community/board/300146'));
+    vault.reading.saveSession(
+      session('community/board/300146', { scrollY: 500, updatedAt: 2 }),
+    );
     assert.equal(notifications, 0);
-    siteVisit(storage, vault.reading, entry('/b/test/100'));
+    siteVisit(
+      storage,
+      vault.reading,
+      entry('/community/board/300143/read/100'),
+    );
     assert.equal(notifications, 1);
     assert.equal(timers, 0);
     vault.activeIndex = 1;
@@ -901,10 +1030,20 @@ test('resume summaries and existence checks read no article lists; selecting one
   const { storage, ReadingHistory, window } = readingFixture();
   const writer = new ReadingHistory();
   writer.saveSession(
-    session('first', { articleList: ['/b/test/100', '/b/test/99'] }),
+    session('community/board/300146', {
+      articleList: [
+        '/community/board/300143/read/100',
+        '/community/board/300143/read/99',
+      ],
+    }),
   );
   writer.saveSession(
-    session('second', { articleList: ['/b/test/100', '/b/test/98'] }),
+    session('community/board/300147', {
+      articleList: [
+        '/community/board/300143/read/100',
+        '/community/board/300143/read/98',
+      ],
+    }),
   );
   const reads = [];
   const getItem = storage.getItem.bind(storage);
@@ -916,15 +1055,22 @@ test('resume summaries and existence checks read no article lists; selecting one
     globals: { localStorage: storage, window },
   })('src/vault/reading-history.ts');
   const reader = new Reader();
-  assert.equal(reader.hasSession('first'), true);
-  assert.ok(reads.every((key) => key === 'arcaFeed:readingHistory'));
+  assert.equal(reader.hasSession('community/board/300146'), true);
+  assert.ok(reads.every((key) => key === 'ruliFeed:readingHistory'));
   const summaries = reader.sessions;
   assert.equal(summaries.length, 2);
-  assert.ok(reads.every((key) => !key.startsWith('arcaFeed:readingList:')));
+  assert.ok(reads.every((key) => !key.startsWith('ruliFeed:readingList:')));
   reads.length = 0;
-  const first = summaries.find((item) => item.id === 'first');
-  assert.deepEqual(first.articleList, ['/b/test/100', '/b/test/99']);
-  assert.ok(reads.every((key) => key === 'arcaFeed:readingList:first'));
+  const first = summaries.find((item) => item.id === 'community/board/300146');
+  assert.deepEqual(first.articleList, [
+    '/community/board/300143/read/100',
+    '/community/board/300143/read/99',
+  ]);
+  assert.ok(
+    reads.every(
+      (key) => key === 'ruliFeed:readingList:community%2Fboard%2F300146',
+    ),
+  );
   reads.length = 0;
   void first.articleList;
   assert.deepEqual(reads, []);
@@ -933,7 +1079,7 @@ test('resume summaries and existence checks read no article lists; selecting one
 test('targeted history refreshes never read unrelated storage payloads', () => {
   const { storage, ReadingHistory } = readingFixture();
   const history = new ReadingHistory();
-  history.saveSession(session('first'));
+  history.saveSession(session('community/board/300146'));
   void history.entries;
   const reads = [];
   const getItem = storage.getItem.bind(storage);
@@ -943,16 +1089,18 @@ test('targeted history refreshes never read unrelated storage payloads', () => {
   };
   history.reload(['entries']);
   assert.ok(
-    reads.every((key) => ['recent_articles', 'recent_disabled'].includes(key)),
+    reads.every((key) =>
+      ['rulifeed:recentArticles', 'recent_disabled'].includes(key),
+    ),
   );
   reads.length = 0;
   history.reload(['progress']);
-  assert.deepEqual(reads, ['arcaFeed:readingProgress']);
+  assert.deepEqual(reads, ['ruliFeed:readingProgress']);
   reads.length = 0;
   history.reload(['sessions']);
   assert.ok(
     reads.every((key) =>
-      ['arcaFeed:readingHistory', 'arcaFeed:readingProgress'].includes(key),
+      ['ruliFeed:readingHistory', 'ruliFeed:readingProgress'].includes(key),
     ),
   );
 });
@@ -960,8 +1108,8 @@ test('targeted history refreshes never read unrelated storage payloads', () => {
 test('saving and removing one resumed context leaves other session lists unloaded', () => {
   const { storage, ReadingHistory, window } = readingFixture();
   const writer = new ReadingHistory();
-  writer.saveSession(session('first'));
-  writer.saveSession(session('second'));
+  writer.saveSession(session('community/board/300146'));
+  writer.saveSession(session('community/board/300147'));
   const reads = [];
   const getItem = storage.getItem.bind(storage);
   storage.getItem = (key) => {
@@ -973,29 +1121,49 @@ test('saving and removing one resumed context leaves other session lists unloade
   })('src/vault/reading-history.ts');
   const reader = new Reader();
   reader.saveSession(
-    session('first', { articleList: ['/b/test/100', '/b/test/99'] }),
+    session('community/board/300146', {
+      articleList: [
+        '/community/board/300143/read/100',
+        '/community/board/300143/read/99',
+      ],
+    }),
   );
-  assert.ok(!reads.includes('arcaFeed:readingList:second'));
+  assert.ok(!reads.includes('ruliFeed:readingList:community%2Fboard%2F300147'));
   reads.length = 0;
-  reader.removeSession('first');
-  assert.ok(reads.every((key) => !key.startsWith('arcaFeed:readingList:')));
-  assert.equal(storage.getItem('arcaFeed:readingList:first'), null);
-  assert.notEqual(storage.getItem('arcaFeed:readingList:second'), null);
+  reader.removeSession('community/board/300146');
+  assert.ok(reads.every((key) => !key.startsWith('ruliFeed:readingList:')));
+  assert.equal(
+    storage.getItem('ruliFeed:readingList:community%2Fboard%2F300146'),
+    null,
+  );
+  assert.notEqual(
+    storage.getItem('ruliFeed:readingList:community%2Fboard%2F300147'),
+    null,
+  );
 });
 
 test('cross-tab list changes invalidate deferred lists without loading other lists', () => {
   const { storage, ReadingHistory } = readingFixture();
   const writer = new ReadingHistory();
-  writer.saveSession(session('first'));
-  writer.saveSession(session('second'));
+  writer.saveSession(session('community/board/300146'));
+  writer.saveSession(session('community/board/300147'));
   const reader = new ReadingHistory();
-  const first = reader.sessions.find((item) => item.id === 'first');
+  const first = reader.sessions.find(
+    (item) => item.id === 'community/board/300146',
+  );
   void first.articleList;
-  const updated = ['/b/test/100', '/b/test/77'];
-  storage.setItem('arcaFeed:readingList:first', JSON.stringify(updated));
+  const updated = [
+    '/community/board/300143/read/100',
+    '/community/board/300143/read/77',
+  ];
+  storage.setItem(
+    'ruliFeed:readingList:community%2Fboard%2F300146',
+    JSON.stringify(updated),
+  );
   reader.reloadSessionList();
   assert.deepEqual(
-    reader.sessions.find((item) => item.id === 'first').articleList,
+    reader.sessions.find((item) => item.id === 'community/board/300146')
+      .articleList,
     updated,
   );
 });
@@ -1006,15 +1174,18 @@ test('malformed split-list metadata stays bounded and missing lists retain the c
     articleCount: 2000,
   }));
   const { storage, ReadingHistory, load } = readingFixture({
-    'arcaFeed:readingHistory': JSON.stringify({
+    'ruliFeed:readingHistory': JSON.stringify({
       version: 2,
       sessions: contexts,
     }),
   });
   const readingListKey = (id) =>
-    `arcaFeed:readingList:${encodeURIComponent(id)}`;
+    `ruliFeed:readingList:${encodeURIComponent(id)}`;
   const { SESSION_TOTAL_ARTICLE_LIMIT } = load('src/vault/reading-history.ts');
-  const links = Array.from({ length: 2100 }, (_, i) => `/b/test/${i + 1}`);
+  const links = Array.from(
+    { length: 2100 },
+    (_, i) => `/community/board/300143/read/${i + 1}`,
+  );
   for (const context of contexts)
     storage.setItem(readingListKey(context.id), JSON.stringify(links));
   const history = new ReadingHistory();
@@ -1029,27 +1200,14 @@ test('malformed split-list metadata stays bounded and missing lists retain the c
   history.reloadSessionList();
   assert.deepEqual(
     history.sessions.find((item) => item.id === id).articleList,
-    ['/b/test/100'],
+    ['/community/board/300143/read/100'],
   );
 });
 
-test('disabled native history never reads or parses its records and enabling it loads fresh visits', () => {
-  const { storage, ReadingHistory } = readingFixture({
-    recent_disabled: 'true',
-    recent_articles: '[{"slug":"test","articleId":100,"regdateAt":1}]',
-  });
-  const reads = [];
-  const getItem = storage.getItem.bind(storage);
-  storage.getItem = (key) => {
-    reads.push(key);
-    return getItem(key);
-  };
+test('cleared visits are read lazily and storage refresh loads new visits', () => {
+  const { storage, ReadingHistory } = readingFixture();
   const reading = new ReadingHistory();
   assert.deepEqual(reading.entries, []);
-  assert.equal(reading.hasVisited('/b/test/100'), false);
-  reading.reload(['entries']);
-  assert.ok(reads.every((key) => key === 'recent_disabled'));
-  storage.removeItem('recent_disabled');
-  reading.reload(['entries']);
-  assert.equal(reading.hasVisited('/b/test/100'), true);
+  siteVisit(storage, reading, entry('/community/board/300143/read/100'));
+  assert.equal(reading.hasVisited('/community/board/300143/read/100'), true);
 });

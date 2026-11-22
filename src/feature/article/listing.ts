@@ -19,8 +19,14 @@ async function fetchAndParse(url: string): Promise<Document> {
 }
 
 function extractNextPageUrl(html: Document, basePath: string): string | null {
-  const nextLink = Array.from(html.querySelectorAll('.page-item.active'))
-    .map((active) => active.nextElementSibling?.querySelector('a'))
+  const nextLink = Array.from(
+    html.querySelectorAll('#board_list .btn_num.active'),
+  )
+    .map((active) =>
+      active.nextElementSibling?.matches('a.btn_num, a.btn_next')
+        ? active.nextElementSibling
+        : null,
+    )
     .find((link) => link)
     ?.getAttribute('href');
   return nextLink
@@ -51,6 +57,9 @@ export async function* fetchListingPages({
   continueSearch,
 }: ListingOptions): AsyncGenerator<string[]> {
   let nextUrl: string | null = withBestMode(initialUrl, filter);
+  if (filter?.tab.length && /[?&]view=gallery(?:[&#]|$)/.test(nextUrl)) {
+    nextUrl = nextUrl.replace(/([?&]view=)gallery(?=[&#]|$)/, '$1default');
+  }
   const seen = new Set<string>();
   const visitedPages = new Set<string>();
 
@@ -75,7 +84,7 @@ export async function* fetchListingPages({
 }
 
 /**
- * Append ?mode=best if the filter has onlyBest enabled.
+ * Append ?view_best=1 if the filter has onlyBest enabled.
  * Safe to call on URLs that already have query params.
  */
 export function withBestMode(url: string, filter?: ArticleFilterImpl): string {
@@ -86,7 +95,7 @@ export function withBestMode(url: string, filter?: ArticleFilterImpl): string {
   const queryIndex = base.indexOf('?');
   const path = queryIndex === -1 ? base : base.slice(0, queryIndex);
   const query = queryIndex === -1 ? '' : base.slice(queryIndex);
-  return `${path}${appendSearchParam(query, 'mode', 'best')}${fragment}`;
+  return `${path}${appendSearchParam(query, 'view_best', '1')}${fragment}`;
 }
 
 /**

@@ -20,9 +20,11 @@ function fetchArticlePages(
   continueSearch?: () => Promise<boolean>,
 ): AsyncGenerator<string[]> {
   const scrap = p.isCurrentMode('SCRAP');
-  const basePath = scrap ? '/u/scrap_list' : articleId;
+  const basePath = scrap ? window.location.pathname : `/${p.href.channelId}`;
+  const path =
+    articleId && !scrap ? articlePath(p.href.channelId, articleId) : basePath;
   return fetchListingPages({
-    url: `${basePath}${p.searchQuery}`,
+    url: `${path}${p.href.search}`,
     basePath,
     filter: p.articleFilterConfig[p.href.channelId],
     existingUrls: new Set(p.articleList),
@@ -160,7 +162,7 @@ async function fetchChannelFirstPage(
   filter?: ArticleFilterImpl,
   isCurrent: () => boolean = () => true,
 ): Promise<string[]> {
-  const basePath = `/b/${channelId}`;
+  const basePath = `/${channelId}`;
   for await (const links of fetchListingPages({
     url: basePath,
     basePath,
@@ -177,7 +179,7 @@ async function fetchChannelArticles(
   filter?: ArticleFilterImpl,
   existingUrls?: ReadonlySet<string>,
 ): Promise<string[]> {
-  const basePath = `/b/${channelId}`;
+  const basePath = `/${channelId}`;
   const results: string[] = [];
   for await (const links of fetchListingPages({
     url: basePath,
@@ -198,10 +200,10 @@ async function fetchChannelArticlesBefore(
   visitedPaths?: Set<string>,
   isCurrent: () => boolean = () => true,
 ): Promise<string[]> {
-  const basePath = `/b/${channelId}`;
+  const basePath = `/${channelId}`;
   const results: string[] = [];
   for await (const links of fetchListingPages({
-    url: beforeArticleId > 0 ? `${basePath}/${beforeArticleId}` : basePath,
+    url: beforeArticleId > 0 ? `${basePath}/read/${beforeArticleId}` : basePath,
     basePath,
     filter,
     existingUrls,

@@ -26,11 +26,11 @@ function centerCurrentRow(list: HTMLElement): void {
     ? Math.max(0, (list.clientHeight - current.offsetHeight) / 2)
     : 0;
   const [before, after] = Array.from(
-    list.querySelectorAll<HTMLElement>('.arcafeed-navigation-spacer'),
+    list.querySelectorAll<HTMLElement>('.rulifeed-navigation-spacer'),
   );
   if (before && after) {
     const previous = list.querySelector(
-      '.arcafeed-navigation-load-previous:not([hidden])',
+      '.rulifeed-navigation-load-previous:not([hidden])',
     );
     before.style.height = previous ? '0px' : `${padding}px`;
     after.style.height = `${padding}px`;
@@ -60,22 +60,22 @@ function createNavigationRow(
     if (latestIndex >= 0)
       void navigateToArticle(p, latestIndex).catch(() => {});
   });
-  row.classList.add('arcafeed-navigation-row');
+  row.classList.add('rulifeed-navigation-row');
   if (showChannels)
     row.append(
       createElement('span', {
-        class: 'arcafeed-navigation-channel',
+        class: 'rulifeed-navigation-channel',
         text: name,
       }),
     );
   row.append(
-    createElement('span', { class: 'arcafeed-navigation-title', text: title }),
+    createElement('span', { class: 'rulifeed-navigation-title', text: title }),
   );
   if (index === currentIndex) {
     row.setAttribute('aria-current', 'page');
     row.append(
       createElement('span', {
-        class: 'arcafeed-navigation-current',
+        class: 'rulifeed-navigation-current',
         text: '현재 글',
       }),
     );
@@ -95,10 +95,10 @@ export function createNavigationModal(
   });
   const tools = createElement(
     'div',
-    { class: 'arcafeed-history-tools' },
+    { class: 'rulifeed-history-tools' },
     channel,
   );
-  const list = createElement('div', { class: 'arcafeed-modal-content' });
+  const list = createElement('div', { class: 'rulifeed-modal-content' });
   const status = createSubscriptionStatus(p);
   let centerFrame: number | undefined;
   const scheduleCenter = () => {
@@ -134,10 +134,7 @@ export function createNavigationModal(
         : `불러온 글 ${paths.length}개`;
     const selected = channel.value;
     const ids = [...new Set(paths.map(readingChannelId))];
-    const showChannels =
-      ids.length > 1 ||
-      p.seriesChannels.length > 0 ||
-      p.href.channelId === 'my';
+    const showChannels = ids.length > 1 || p.seriesChannels.length > 0;
     if (showChannels) list.before(tools);
     else tools.remove();
     const selectedChannel = syncChannelSelect(
@@ -172,7 +169,7 @@ export function createNavigationModal(
     const buildRow = (item: NavigationItem) =>
       createNavigationRow(p, entries, item, currentIndex, showChannels);
     const before = createElement('div', {
-      class: 'arcafeed-navigation-spacer',
+      class: 'rulifeed-navigation-spacer',
       'aria-hidden': 'true',
     });
     const after = before.cloneNode(true);
@@ -187,8 +184,8 @@ export function createNavigationModal(
       if (anchor) list.scrollTop += anchor.getBoundingClientRect().top - top;
     });
     previous.classList.add(
-      'arcafeed-navigation-load',
-      'arcafeed-navigation-load-previous',
+      'rulifeed-navigation-load',
+      'rulifeed-navigation-load-previous',
     );
     previous.prepend(
       createElement('span', { class: 'bi-arrow-up', 'aria-hidden': 'true' }),
@@ -198,7 +195,7 @@ export function createNavigationModal(
       end = Math.min(items.length, end + PAGE_WINDOW);
       more.hidden = end >= items.length;
     });
-    more.classList.add('arcafeed-navigation-load');
+    more.classList.add('rulifeed-navigation-load');
     more.append(
       createElement('span', { class: 'bi-arrow-down', 'aria-hidden': 'true' }),
     );

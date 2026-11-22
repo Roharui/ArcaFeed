@@ -1,3 +1,4 @@
+import { normalizeArticlePath } from '@/utils/regex';
 import type { ArticleFilterConfigImpl, UISettings } from '@/types';
 import { isChannelId, isRecord } from './record-schema';
 import { createInitialState } from './store';
@@ -76,7 +77,7 @@ export function normalizeUISettings(value: unknown): UISettings {
     settings.skipVisitedContexts = Object.fromEntries(
       Object.entries(value.skipVisitedContexts).filter(
         (entry): entry is [string, boolean] =>
-          /^(home|scrap|channel:[a-zA-Z0-9]+|series:[a-zA-Z0-9_-]+)$/.test(
+          /^(home|scrap|channel:(?:[a-zA-Z0-9_-]+\/)*board\/\d+|series:[a-zA-Z0-9_-]+)$/.test(
             entry[0],
           ) && typeof entry[1] === 'boolean',
       ),
@@ -107,31 +108,18 @@ export function normalizeUISettings(value: unknown): UISettings {
 
 export function normalizeArticles(value: unknown, origin: string): string[] {
   if (!Array.isArray(value)) return [];
-  let canonicalOrigin = false;
   try {
-    canonicalOrigin = new URL(origin).origin === origin;
+    new URL(origin);
   } catch {
     return [];
   }
-  const articles = new Set<string>();
-  for (const href of value) {
-    if (typeof href !== 'string') continue;
-    // Native records normally contain validated, origin-relative pathnames.
-    // Check those directly; retain URL resolution for older/external input.
-    if (canonicalOrigin && /^\/b\/[a-zA-Z0-9]+\/\d+\/?(?![\s\S])/.test(href)) {
-      articles.add(href.endsWith('/') ? href.slice(0, -1) : href);
-      continue;
-    }
-    try {
-      const url = new URL(href, origin);
-      if (
-        url.origin === origin &&
-        /^\/b\/[a-zA-Z0-9]+\/\d+\/?$/.test(url.pathname)
-      )
-        articles.add(url.pathname.replace(/\/$/, ''));
-    } catch {
-      // Ignore malformed stored links.
-    }
-  }
-  return [...articles];
+  return [
+    ...new Set(
+      value.flatMap((href) => {
+        const path =
+          typeof href === 'string' ? normalizeArticlePath(href) : null;
+        return path ? [path] : [];
+      }),
+    ),
+  ];
 }

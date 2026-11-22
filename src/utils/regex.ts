@@ -1,104 +1,59 @@
 import type { HrefImpl } from '@/types';
 
-import { getRegexMatchByIndex, getRegexMatchByIndexTry } from './type';
+export const BOARD_PATH =
+  /^\/(?:(?:[a-z0-9_-]+\/)*board\/\d+)(?:\/read\/\d+)?\/?$/i;
+const articlePathPattern =
+  /^\/(?:[a-z0-9_-]+\/)*board\/\d+\/read\/\d+\/?(?![\s\S])/i;
+const boardRoute = /^\/((?:[a-z0-9_-]+\/)*board\/\d+)(?:\/read\/(\d+))?\/?$/i;
 
-const channelPageRegex = /b\/[a-zA-Z0-9]+(\?|\?.+)?$/;
-const articlePageRegex = /b\/([A-Za-z0-9])+\/[0-9]+(\?|\?.+)?$/;
-const scrapPageRegex = /\/u\/scrap_list(?:\/?|\?.+)?$/i;
-
-// Optimized: Use capturing groups instead of lookbehind/lookahead for better performance
-const channelAndArticleIdRegex = /\/b\/([A-Za-z0-9]+)(?:\/([0-9]+))?(\?.+)?/;
-const articleIdRegex = /\/b\/[A-Za-z0-9]+\/([0-9]+)(\?.+)?/;
-
-// == FUNCTION ==
-//
-function getArticleId(href: string): string {
-  const articleIdMatch = href.match(articleIdRegex);
-
-  return getRegexMatchByIndex(articleIdMatch, 1);
+export function isRuliwebOrigin(url: URL): boolean {
+  return (
+    url.origin === 'https://bbs.ruliweb.com' ||
+    url.origin === 'https://m.ruliweb.com'
+  );
 }
 
-function parseHref(href?: string) {
-  const realHref = href || window.location.href;
-  const realUrl = new URL(realHref);
-  const search = realUrl.search;
-  const articleKey = new URLSearchParams(search).get('articleKey') || '';
-
-  console.log('Checking page mode for href:', realHref);
-
-  let hrefObj: HrefImpl;
-
-  // HOME: the site root, regardless of query parameters or fragment.
-  if (realUrl.hostname === 'arca.live' && realUrl.pathname === '/') {
-    hrefObj = {
-      mode: 'HOME',
-      channelId: '',
-      articleId: '',
-      articleKey,
-      search,
-    };
-  }
-  // ARTICLE : /b/{channelId}/{articleId}
-  else if (articlePageRegex.test(realHref)) {
-    const matchArr = realHref.match(channelAndArticleIdRegex);
-
-    const channelId = getRegexMatchByIndex(matchArr, 1);
-    const articleId = getRegexMatchByIndex(matchArr, 2);
-    const search = getRegexMatchByIndexTry(matchArr, 3, '');
-
-    hrefObj = { mode: 'ARTICLE', channelId, articleId, articleKey, search };
-  }
-  // /b/my is the subscription feed, not an individual channel.
-  else if (realUrl.pathname.replace(/\/$/, '') === '/b/my') {
-    hrefObj = {
-      mode: 'HOME',
-      channelId: 'my',
-      articleId: '',
-      articleKey,
-      search,
-    };
-  }
-  // CHANNEL: /b/{channelId}
-  else if (channelPageRegex.test(realHref)) {
-    const matchArr = realHref.match(channelAndArticleIdRegex);
-
-    const channelId = getRegexMatchByIndex(matchArr, 1);
-    const search = getRegexMatchByIndexTry(matchArr, 3, '');
-
-    hrefObj = { mode: 'CHANNEL', channelId, articleId: '', articleKey, search };
-  }
-  // SCRAP: /scrap or related scrap list pages
-  else if (scrapPageRegex.test(realUrl.pathname)) {
-    hrefObj = {
-      mode: 'SCRAP',
-      channelId: '',
-      articleId: '',
-      articleKey,
-      search,
-    };
-  }
-  // OTHER: other pages
-  else {
-    hrefObj = {
-      mode: 'OTHER',
-      channelId: '',
-      articleId: '',
-      articleKey,
-      search: '',
-    };
-  }
-
-  return hrefObj;
-}
-
-function extractChannelId(url: string): string | null {
-  const match = url.match(channelAndArticleIdRegex);
-  if (!match) return null;
+function resolve(href: string): URL | null {
   try {
-    return getRegexMatchByIndex(match, 1);
+    const url = new URL(href, 'https://bbs.ruliweb.com');
+    return isRuliwebOrigin(url) ? url : null;
   } catch {
     return null;
   }
 }
 
-export { getArticleId, parseHref, extractChannelId };
+export function parseHref(href = window.location.href): HrefImpl {
+  const url = resolve(href);
+  const match = url?.pathname.match(boardRoute);
+  const articleId = match?.[2] ?? '';
+  return {
+    mode: match
+      ? articleId
+        ? 'ARTICLE'
+        : 'CHANNEL'
+      : url?.pathname === '/'
+        ? 'HOME'
+        : 'OTHER',
+    channelId: match?.[1] ?? '',
+    articleId,
+    articleKey: url?.searchParams.get('articleKey') ?? '',
+    search: url?.search ?? '',
+  };
+}
+
+export function getArticleId(href: string): string {
+  return parseHref(href).articleId;
+}
+
+export function extractChannelId(href: string): string | null {
+  return parseHref(href).channelId || null;
+}
+
+export function normalizeArticlePath(href: string): string | null {
+  if (articlePathPattern.test(href))
+    return href.endsWith('/') ? href.slice(0, -1) : href;
+  const url = resolve(href);
+  return url && articlePathPattern.test(url.pathname)
+    ? url.pathname.replace(/\/$/, '')
+    : null;
+}

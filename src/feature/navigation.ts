@@ -140,7 +140,7 @@ export async function navigate(
     navigating.delete(p);
     if (recoveryErrors.length)
       console.error(
-        '[ArcaFeed] Navigation recovery could not finish persistence:',
+        '[RuliFeed] Navigation recovery could not finish persistence:',
         recoveryErrors,
       );
     throw reportFailure(

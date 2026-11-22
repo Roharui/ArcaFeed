@@ -24,7 +24,7 @@
 .helper-modal-body {
   display: grid;
   grid-template-columns: repeat(
-    var(--arcafeed-modal-tab-count, 4),
+    var(--rulifeed-modal-tab-count, 4),
     minmax(0, 1fr)
   );
   grid-template-rows: auto minmax(0, 1fr);
@@ -97,7 +97,7 @@ input.helper-modal-tab-radio {
 }
 
 .helper-modal-tab {
-  --arcafeed-modal-padding: 22px;
+  --rulifeed-modal-padding: 22px;
   grid-column: 1 / -1;
   min-width: 0;
   min-height: 0;
@@ -110,22 +110,22 @@ input.helper-modal-tab-radio {
   background-color: var(--color-bg-main);
 }
 
-.helper-modal-tab > .arcafeed-reading-header {
+.helper-modal-tab > .rulifeed-reading-header {
   flex-shrink: 0;
-  margin: var(--arcafeed-modal-padding) var(--arcafeed-modal-padding) 18px;
+  margin: var(--rulifeed-modal-padding) var(--rulifeed-modal-padding) 18px;
 }
 
-.arcafeed-modal-content {
+.rulifeed-modal-content {
   flex: 1;
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 0 var(--arcafeed-modal-padding) var(--arcafeed-modal-padding);
+  padding: 0 var(--rulifeed-modal-padding) var(--rulifeed-modal-padding);
   scrollbar-width: thin;
 }
 
-.arcafeed-settings-section {
+.rulifeed-settings-section {
   margin: 0 0 16px;
   padding: 16px;
   border: 1px solid var(--color-bd-btn);
@@ -133,7 +133,7 @@ input.helper-modal-tab-radio {
   background: var(--color-bg-body);
 }
 
-.arcafeed-settings-heading {
+.rulifeed-settings-heading {
   display: block;
   margin: 0;
   font-size: 0.88rem;
@@ -141,26 +141,26 @@ input.helper-modal-tab-radio {
   color: var(--color-text);
 }
 
-.arcafeed-settings-description {
+.rulifeed-settings-description {
   margin: 6px 0 0;
   font-size: 0.77rem;
   line-height: 1.6;
   color: var(--color-text-muted, #888);
 }
 
-.arcafeed-modal-actions {
+.rulifeed-modal-actions {
   display: flex;
   flex-shrink: 0;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
   margin: 0;
-  padding: 14px var(--arcafeed-modal-padding) var(--arcafeed-modal-padding);
+  padding: 14px var(--rulifeed-modal-padding) var(--rulifeed-modal-padding);
   border-top: 1px solid var(--color-bd-btn);
   background: var(--color-bg-main);
 }
 
-.arcafeed-modal-button {
+.rulifeed-modal-button {
   flex-shrink: 0;
   min-height: 40px;
   padding: 9px 18px;
@@ -173,35 +173,35 @@ input.helper-modal-tab-radio {
   cursor: pointer;
 }
 
-.arcafeed-modal-button:hover {
+.rulifeed-modal-button:hover {
   border-color: #766df4;
 }
 
-.arcafeed-modal-button.is-primary {
+.rulifeed-modal-button.is-primary {
   border-color: #766df4;
   color: #fff;
   background: #766df4;
 }
 
-.arcafeed-modal-button.is-primary:hover {
+.rulifeed-modal-button.is-primary:hover {
   background: #655cda;
 }
 
-.arcafeed-modal-button:focus-visible {
+.rulifeed-modal-button:focus-visible {
   outline: 2px solid #766df4;
   outline-offset: 3px;
 }
 
 @media (max-width: 440px) {
   .helper-modal-tab {
-    --arcafeed-modal-padding: 16px;
+    --rulifeed-modal-padding: 16px;
   }
 
-  .arcafeed-settings-section {
+  .rulifeed-settings-section {
     padding: 12px;
   }
 
-  .arcafeed-modal-actions {
+  .rulifeed-modal-actions {
     padding-top: 12px;
   }
 }
@@ -215,19 +215,19 @@ input.helper-modal-tab-radio {
 
 @media (max-height: 480px) {
   .helper-modal-tab {
-    --arcafeed-modal-padding: 12px;
+    --rulifeed-modal-padding: 12px;
   }
 
-  .helper-modal-tab > .arcafeed-reading-header {
+  .helper-modal-tab > .rulifeed-reading-header {
     margin-bottom: 10px;
   }
 
-  .arcafeed-modal-actions {
+  .rulifeed-modal-actions {
     padding-top: 10px;
   }
 }
 
-.arcafeed-navigation-row {
+.rulifeed-navigation-row {
   display: block;
   width: 100%;
   margin-bottom: 8px;
@@ -237,36 +237,36 @@ input.helper-modal-tab-radio {
   overflow-wrap: anywhere;
 }
 
-.arcafeed-navigation-channel,
-.arcafeed-navigation-title,
-.arcafeed-navigation-current {
+.rulifeed-navigation-channel,
+.rulifeed-navigation-title,
+.rulifeed-navigation-current {
   display: block;
 }
 
-.arcafeed-navigation-channel {
+.rulifeed-navigation-channel {
   margin-bottom: 4px;
   font-size: 0.75rem;
   font-weight: 400;
   color: var(--color-text-muted, #888);
 }
 
-.arcafeed-navigation-title {
+.rulifeed-navigation-title {
   line-height: 1.5;
 }
 
-.arcafeed-navigation-current {
+.rulifeed-navigation-current {
   margin-top: 6px;
   font-size: 0.75rem;
   color: #766df4;
 }
 
-.arcafeed-navigation-row[aria-current='page'] {
+.rulifeed-navigation-row[aria-current='page'] {
   border: 2px solid #766df4;
   font-weight: 600;
 }
 
 /* Keep the control independent of site navigation selectors. */
-body .arcafeed-navigation-control {
+body .rulifeed-navigation-control {
   position: fixed;
   top: auto;
   right: auto;
@@ -276,13 +276,13 @@ body .arcafeed-navigation-control {
   display: block;
 }
 
-.arcafeed-navigation-control::before {
+.rulifeed-navigation-control::before {
   content: '';
   position: absolute;
   inset: -12px;
 }
 
-.arcafeed-navigation-control > .arcafeed-navigation-trigger {
+.rulifeed-navigation-control > .rulifeed-navigation-trigger {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -305,51 +305,51 @@ body .arcafeed-navigation-control {
     visibility 0.35s;
 }
 
-.arcafeed-navigation-trigger > .bi-list-ul {
+.rulifeed-navigation-trigger > .bi-list-ul {
   font-size: 1rem;
   line-height: 1;
 }
 
-.arcafeed-navigation-count {
+.rulifeed-navigation-count {
   font-size: 0.65rem;
   line-height: 1.2;
 }
 
-.arcafeed-navigation-spacer {
+.rulifeed-navigation-spacer {
   pointer-events: none;
 }
 
-.arcafeed-navigation-trigger.is-hovered {
+.rulifeed-navigation-trigger.is-hovered {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .arcafeed-navigation-trigger {
+  .rulifeed-navigation-trigger {
     transition: none;
   }
 }
 
-.arcafeed-navigation-panel .helper-modal-navigation {
+.rulifeed-navigation-panel .helper-modal-navigation {
   display: flex;
 }
 
-.arcafeed-navigation-panel .helper-modal-body {
+.rulifeed-navigation-panel .helper-modal-body {
   display: flex;
   flex-direction: column;
 }
 
-.arcafeed-navigation-panel .helper-modal-navigation {
+.rulifeed-navigation-panel .helper-modal-navigation {
   flex: 1;
 }
 
 /* The moving stroke stays on the button perimeter; its contents do not rotate. */
-.arcafeed-navigation-trigger {
+.rulifeed-navigation-trigger {
   position: relative;
 }
 
-.arcafeed-navigation-loading-ring {
+.rulifeed-navigation-loading-ring {
   position: absolute;
   inset: -5px;
   width: calc(100% + 10px);
@@ -359,34 +359,34 @@ body .arcafeed-navigation-control {
   display: none;
 }
 
-.arcafeed-navigation-trigger.is-loading .arcafeed-navigation-loading-ring {
+.rulifeed-navigation-trigger.is-loading .rulifeed-navigation-loading-ring {
   display: block;
 }
 
-.arcafeed-navigation-loading-ring rect {
+.rulifeed-navigation-loading-ring rect {
   fill: none;
   stroke: #766df4;
   stroke-width: 3px;
   vector-effect: non-scaling-stroke;
   stroke-linecap: round;
   stroke-dasharray: 28 72;
-  animation: arcafeed-navigation-loading 1s linear infinite;
+  animation: rulifeed-navigation-loading 1s linear infinite;
 }
 
-@keyframes arcafeed-navigation-loading {
+@keyframes rulifeed-navigation-loading {
   to {
     stroke-dashoffset: -100;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .arcafeed-navigation-loading-ring rect {
+  .rulifeed-navigation-loading-ring rect {
     animation: none;
     stroke-dasharray: none;
   }
 }
 
-.arcafeed-reading-button.arcafeed-navigation-load {
+.rulifeed-reading-button.rulifeed-navigation-load {
   display: flex;
   justify-content: center;
   width: 100%;
@@ -402,7 +402,7 @@ body .arcafeed-navigation-control {
 @media (prefers-reduced-motion: reduce) {
   .helper-modal *,
   .custom-loader,
-  .arcafeed-navigation-control * {
+  .rulifeed-navigation-control * {
     animation: none !important;
     transition: none !important;
     scroll-behavior: auto !important;

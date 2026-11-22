@@ -44,7 +44,7 @@ export async function startUiServer({
   resultsDirectory = path.join(root, '.cache/ui-results'),
   onBuild = (status) => {
     if (status.error) console.error(status.error);
-    else console.log(`[ArcaFeed UI] 빌드 완료 (${status.hash})`);
+    else console.log(`[RuliFeed UI] 빌드 완료 (${status.hash})`);
   },
 } = {}) {
   mkdirSync(resultsDirectory, { recursive: true });
@@ -98,7 +98,7 @@ export async function startUiServer({
           'throw new Error("UI preview is building; check /status");',
         );
       } else {
-        response.setHeader('X-ArcaFeed-Build', status.hash);
+        response.setHeader('X-RuliFeed-Build', status.hash);
         response.end(bundle);
       }
     } else if (url.pathname === '/' || url.pathname === '/fixture') {
@@ -133,7 +133,7 @@ export async function startUiServer({
   let watcher;
   try {
     compiler = webpack(config);
-    compiler.hooks.invalid.tap('ArcaFeedUi', () => {
+    compiler.hooks.invalid.tap('RuliFeedUi', () => {
       bundle = null;
       status = { ...status, hash: null, building: true, error: null };
     });
@@ -185,7 +185,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const preview = await startUiServer({
     port: Number(process.env.PORT || 4317),
   });
-  console.log(`[ArcaFeed UI] ${preview.baseURL} (소스 변경 시 자동 갱신)`);
+  console.log(`[RuliFeed UI] ${preview.baseURL} (소스 변경 시 자동 갱신)`);
   const stop = async () => {
     await preview.close();
     process.exit(0);

@@ -91,17 +91,20 @@ function makeVault(data) {
     href: {
       ...initial.href,
       mode: mode === 'home' ? 'HOME' : mode === 'scrap' ? 'SCRAP' : 'CHANNEL',
-      channelId: mode === 'home' ? 'my' : 'test0',
+      channelId: mode === 'home' ? 'my' : 'community/board/300152',
       articleId: '100',
     },
     isSeriesMode: mode === 'series' || mode === 'feed',
     isScrapMode: mode === 'scrap',
-    seriesChannels: mode === 'feed' ? ['test0', 'test1'] : [],
+    seriesChannels:
+      mode === 'feed'
+        ? ['community/board/300152', 'community/board/300153']
+        : [],
     articleKey: 'ui-preview',
     articleList: data.entries.map((entry) => entry.path),
     activeIndex: 0,
     articleFilterConfig: {
-      test0: {
+      'community/board/300152': {
         tab: [],
         title: data.keywords,
         onlyBest: false,
@@ -139,15 +142,15 @@ function render(options = scenario) {
   const data = createFixtureData(scenario);
   document.body.dataset.theme = scenario.theme;
   document
-    .querySelector('.board-category')
+    .querySelector('.category_list')
     .replaceChildren(
-      ...data.categories.map((text) => createElement('span', { text })),
+      ...data.categories.map((text) => createElement('a', { text })),
     );
-  document.querySelector('.my-subscribe-channels').replaceChildren(
+  document.querySelector('#nav_favorite').replaceChildren(
     ...data.channels.map((channel) =>
       createElement('a', {
         class: 'channel',
-        href: `/b/${channel.id}`,
+        href: `/${channel.id}`,
         text: channel.name,
       }),
     ),
@@ -183,11 +186,11 @@ document.addEventListener(
   (event) => {
     const target =
       event.target instanceof Element
-        ? event.target.closest('a, .arcafeed-resume-action')
+        ? event.target.closest('a, .rulifeed-resume-action')
         : null;
     if (
       !target ||
-      target.closest('.my-subscribe-channels, .arcafeed-navigation-control')
+      target.closest('#nav_favorite, .rulifeed-navigation-control')
     )
       return;
     event.preventDefault();
@@ -208,7 +211,7 @@ window.uiFixture = {
     return vault;
   },
   get buildHash() {
-    return document.querySelector('meta[name="arcafeed-build"]').content;
+    return document.querySelector('meta[name="rulifeed-build"]').content;
   },
 };
 render(Object.fromEntries(new URLSearchParams(location.search)));

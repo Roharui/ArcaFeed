@@ -24,7 +24,7 @@ const SMALL_STORES = RECORD_STORES.filter((name) => name !== 'lists');
 type SnapshotEntry = { address: RecordAddress; value: DataRow | undefined };
 
 function isLegacyStorageKey(key: string | null): key is string {
-  return !!key && (key.startsWith('arcaFeed:') || key === 'arca_version_info');
+  return !!key && (key.startsWith('ruliFeed:') || key === 'ruli_version_info');
 }
 
 function collectLegacyKeys(legacy: Storage): string[] {
@@ -123,7 +123,7 @@ export class IndexedStorage implements RecordCache {
     private legacy: Storage,
     private notify: (changes: readonly RecordAddress[]) => void = () => {},
     private currentId = '',
-    private origin = 'https://arca.live',
+    private origin = 'https://bbs.ruliweb.com',
   ) {}
 
   initialize(): Promise<void> {
@@ -155,7 +155,7 @@ export class IndexedStorage implements RecordCache {
       this.database?.close();
     };
     if (typeof BroadcastChannel !== 'undefined') {
-      this.channel = new BroadcastChannel('arcaFeed:records');
+      this.channel = new BroadcastChannel('ruliFeed:records');
       this.channel.onmessage = (event) => {
         const changes = event?.data?.changes;
         void this.refresh(Array.isArray(changes) ? changes : undefined).catch(
@@ -168,7 +168,7 @@ export class IndexedStorage implements RecordCache {
 
   private openDatabase(cleanup: string[]): Promise<IDBDatabase> {
     return new Promise<IDBDatabase>((resolve, reject) => {
-      const request = this.factory.open('ArcaFeed', 2);
+      const request = this.factory.open('RuliFeed', 2);
       let failure: unknown;
       let blocked = false;
       request.onupgradeneeded = () => {
@@ -192,7 +192,7 @@ export class IndexedStorage implements RecordCache {
       request.onblocked = () => {
         blocked = true;
         reject(
-          new Error('데이터 이전을 위해 다른 ArcaFeed 탭을 새로고침해주세요.'),
+          new Error('데이터 이전을 위해 다른 RuliFeed 탭을 새로고침해주세요.'),
         );
       };
     });
@@ -550,7 +550,7 @@ export async function initializeStorage(): Promise<void> {
     localStorage,
     (changes) =>
       window.dispatchEvent(
-        new CustomEvent('arcafeed:storage', { detail: { changes } }),
+        new CustomEvent('rulifeed:storage', { detail: { changes } }),
       ),
     new URL(window.location.href).searchParams.get('articleKey') ?? '',
     window.location.origin,

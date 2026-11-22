@@ -132,7 +132,7 @@ function initSeriesContent(p: VaultAdapter): void {
 
   const window_ = pickWindow(entries, currentIndex);
 
-  const bodies = document.querySelectorAll('.article-body');
+  const bodies = document.querySelectorAll('.view_content');
   bodies.forEach((body) => body.append(buildShortcutDiv(window_)));
 
   if (navigationMode(p) === 'series') return;

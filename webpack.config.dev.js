@@ -25,13 +25,13 @@ function getBuildDate() {
 
 export function getDevHeaders(version) {
   return {
-    name: 'ArcaFeed-dev',
-    namespace: 'https://github.com/Roharui/ArcaFeed',
+    name: 'RuliFeed-dev',
+    namespace: 'https://github.com/Roharui/RuliFeed',
     version,
-    description: 'Use ArcaLive as Shorts',
+    description: 'Use Ruliweb as Shorts',
     author: 'https://github.com/Roharui',
-    match: 'https://arca.live/*',
-    icon: 'https://www.google.com/s2/favicons?sz=64&domain=arca.live',
+    match: ['https://bbs.ruliweb.com/*', 'https://m.ruliweb.com/*'],
+    icon: 'https://www.google.com/s2/favicons?sz=64&domain=bbs.ruliweb.com',
     require: [
       'https://cdn.jsdelivr.net/npm/swiper@12.2.0/swiper-bundle.min.js',
       'https://cdn.jsdelivr.net/npm/toastify-js@1.12.0',
@@ -70,7 +70,7 @@ export default function (env = {}, _args) {
 
     output: {
       path: path.resolve(__dirname, 'dist'),
-      filename: 'ArcaFeed.dev.js',
+      filename: 'RuliFeed.dev.js',
     },
 
     resolve: {

@@ -127,7 +127,7 @@ const backgroundLoads = new WeakMap<
 
 function startBackgroundLoad(p: VaultAdapter, load: () => Promise<void>): void {
   void getArticleLoad(p, load).catch((error) => {
-    console.error('[ArcaFeed] Background article load failed:', error);
+    console.error('[RuliFeed] Background article load failed:', error);
   });
 }
 
@@ -179,7 +179,7 @@ async function initEnableScrapSeries(p: VaultAdapter): Promise<void> {
         await restoreNavigationState(p, previous);
       } catch (recovery) {
         console.error(
-          '[ArcaFeed] Scrap recovery persistence failed:',
+          '[RuliFeed] Scrap recovery persistence failed:',
           recovery,
         );
       }

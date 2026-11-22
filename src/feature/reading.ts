@@ -5,10 +5,8 @@ import '@css/reading.css';
 import { extractArticleRows } from './filter';
 import { refreshUnvisitedNavigation } from './article/link';
 import { createArticleKey } from '@/utils/article-key';
-import {
-  SITE_RECENT_KEY,
-  SITE_RECENT_DISABLED_KEY,
-} from '@/vault/reading-history';
+import { SITE_RECENT_KEY } from '@/vault/reading-history';
+import { recordVisit } from '@/vault/site-recent-history';
 import type { ReadingSession } from '@/vault/reading-history';
 import type { VaultAdapter } from '@/vault';
 import { articlePath } from '@/vault/navigation-context';
@@ -21,9 +19,9 @@ import { OperationError, reportFailure } from '@/utils/operation-error';
 import { showToast } from '@/utils/toast';
 import { afterPaint } from '@/utils/after-paint';
 
-const RESUME_SCROLL_KEY = 'arcaFeed:resumeScroll';
+const RESUME_SCROLL_KEY = 'ruliFeed:resumeScroll';
 const ARTICLE_TITLE_SELECTOR =
-  '.article-head .title, .board-article > .title, .board-article > .arcafeed-article-heading > .title';
+  '#board_read .subject_inner_text, #board_read .subject_text';
 const initializedVaults = new WeakSet<VaultAdapter>();
 const stoppedVaults = new WeakSet<VaultAdapter>();
 const fullPinnedWarnings = new WeakSet<VaultAdapter>();
@@ -38,9 +36,7 @@ function currentPath(p: VaultAdapter): string {
 
 function channelName(p: VaultAdapter): string {
   return (
-    document
-      .querySelector('.board-title .channel-name, .board-title .title')
-      ?.textContent?.trim() ||
+    document.querySelector('#board_name')?.textContent?.trim() ||
     p.articleFilterConfig[p.href.channelId]?.channelName ||
     p.href.channelId
   );
@@ -61,23 +57,21 @@ function updateVisitedIndicators(p: VaultAdapter): void {
     const href = row.getAttribute('href');
     if (!href) continue;
     const show = enabled && p.reading.hasVisited(normalizeRowPath(href));
-    const title = row.matches('.title')
-      ? row
-      : row.querySelector('.col-title, .title');
+    const title = row;
     if (!title) continue;
     let status = title.querySelector<HTMLElement>(
-      ':scope > .arcafeed-list-visited-status',
+      ':scope > .rulifeed-list-visited-status',
     );
-    if (!show && !status && !title.classList.contains('arcafeed-list-title'))
+    if (!show && !status && !title.classList.contains('rulifeed-list-title'))
       continue;
     if (show && !status) {
       status = createElement('span', {
-        class: 'arcafeed-list-visited-status',
+        class: 'rulifeed-list-visited-status',
         'aria-label': '본 글',
       });
       title.append(status);
     }
-    title.classList.toggle('arcafeed-list-title', show);
+    title.classList.toggle('rulifeed-list-title', show);
     if (status) status.hidden = !show;
   }
   updateSkipButton(p);
@@ -86,7 +80,7 @@ function updateVisitedIndicators(p: VaultAdapter): void {
 function updateSkipButton(p: VaultAdapter): void {
   const skip = p.skipVisitedArticles;
   const button = document.querySelector<HTMLButtonElement>(
-    '#arcafeed-skip-visited',
+    '#rulifeed-skip-visited',
   );
   if (!button) return;
   const label = readingContextLabel(p);
@@ -269,7 +263,7 @@ function restoreScroll(p: VaultAdapter): void {
   // Images can expand the page after DOM-ready. Follow their layout for up to 5s.
   const observer =
     typeof ResizeObserver === 'function' ? new ResizeObserver(restore) : null;
-  const body = document.querySelector('.article-body');
+  const body = document.querySelector('.view_content');
   if (body) observer?.observe(body);
   window.addEventListener('load', restore, { once: true });
   setTimeout(() => {
@@ -282,14 +276,10 @@ function restoreScroll(p: VaultAdapter): void {
 function bindStorageSync(p: VaultAdapter): void {
   const onStorage = (event: { key: string | null }) => {
     if (event.key === null) p.reading.reload();
-    else if (
-      event.key === SITE_RECENT_KEY ||
-      event.key === SITE_RECENT_DISABLED_KEY
-    )
-      p.reading.reload(['entries']);
+    else if (event.key === SITE_RECENT_KEY) p.reading.reload(['entries']);
   };
   window.addEventListener('storage', onStorage);
-  window.addEventListener('arcafeed:storage', ((
+  window.addEventListener('rulifeed:storage', ((
     event: CustomEvent<{
       changes: { store: string; key: string | string[] }[];
     }>,
@@ -375,9 +365,9 @@ function mountSkipButton(p: VaultAdapter): void {
   const heading = document.querySelector(ARTICLE_TITLE_SELECTOR);
   if (!heading) return;
   const skipButton = createElement('button', {
-    id: 'arcafeed-skip-visited',
+    id: 'rulifeed-skip-visited',
     type: 'button',
-    class: 'arcafeed-skip-setting swiper-no-swiping',
+    class: 'rulifeed-skip-setting swiper-no-swiping',
     'aria-label': '본 글 건너뛰기',
   });
   skipButton.addEventListener('click', () => {
@@ -388,8 +378,8 @@ function mountSkipButton(p: VaultAdapter): void {
       reportFailure(error);
     }
   });
-  const wrapper = createElement('div', { class: 'arcafeed-article-heading' });
-  heading.classList.add('arcafeed-article-heading-text');
+  const wrapper = createElement('div', { class: 'rulifeed-article-heading' });
+  heading.classList.add('rulifeed-article-heading-text');
   heading.before(wrapper);
   wrapper.append(heading, skipButton);
 }
@@ -462,6 +452,15 @@ export function initReading(p: VaultAdapter): void {
   let indicatorsReady = false;
   const refreshIndicators = () => updateVisitedIndicators(p);
   afterPaint(() => {
+    if (p.isCurrentMode('ARTICLE')) {
+      recordVisit(
+        currentPath(p),
+        document.querySelector(ARTICLE_TITLE_SELECTOR)?.textContent?.trim() ||
+          document.title,
+        channelName(p),
+      );
+      p.reading.reload(['entries']);
+    }
     indicatorsReady = true;
     showPendingSkippedToast(currentPath(p));
     updateAfterSwipe(p.swiper, refreshIndicators);

@@ -10,7 +10,7 @@ async function addVersionInfo(p: VaultAdapter): Promise<void> {
   const version = process.env.GIT_HASH || 'unknown';
   const date = process.env.BUILD_DATE || 'unknown';
 
-  const versionInfo = `ArcaFeed Version: ${version} (Build Date: ${date})`;
+  const versionInfo = `RuliFeed Version: ${version} (Build Date: ${date})`;
 
   if (
     process.env.DEVICE === 'mobile' &&

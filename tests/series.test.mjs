@@ -7,16 +7,16 @@ function seriesFixture() {
   const events = [];
   const opened = [];
   const dom = domFixture(`<div class="article-series">
-    <div class="series-link"><a href="/b/test/100">Post</a></div>
-  </div><div class="article-body"></div>`);
+    <div class="series-link"><a href="/community/board/300143/read/100">Post</a></div>
+  </div><div class="view_content"></div>`);
   const load = sourceLoader({
     globals: {
       ...dom,
       window: {
         location: {
-          href: 'https://arca.live/b/test/100?articleKey=scraps',
-          pathname: '/b/test/100',
-          origin: 'https://arca.live',
+          href: 'https://bbs.ruliweb.com/community/board/300143/read/100?articleKey=scraps',
+          pathname: '/community/board/300143/read/100',
+          origin: 'https://bbs.ruliweb.com',
         },
         crypto: { randomUUID: () => 'newseries' },
         open: (...args) => {
@@ -46,8 +46,14 @@ function seriesFixture() {
 for (const [mode, isSeriesMode, isScrapMode, seriesChannels, expected] of [
   ['channel', false, false, [], 1],
   ['scrap', true, true, [], 1],
-  ['subscriptions', true, false, ['test', 'other'], 1],
-  ['single subscription', true, false, ['test'], 1],
+  [
+    'subscriptions',
+    true,
+    false,
+    ['community/board/300143', 'community/board/300149'],
+    1,
+  ],
+  ['single subscription', true, false, ['community/board/300143'], 1],
   ['series', true, false, [], 0],
 ]) {
   test(`series open button availability in ${mode} mode`, () => {
@@ -67,7 +73,11 @@ for (const [mode, isSeriesMode, isScrapMode, seriesChannels, expected] of [
 
 for (const [feed, isScrapMode, seriesChannels] of [
   ['scraps', true, []],
-  ['subscriptions', false, ['test', 'other']],
+  [
+    'subscriptions',
+    false,
+    ['community/board/300143', 'community/board/300149'],
+  ],
 ]) {
   test(`opening a series from ${feed} creates a separate session in a new tab`, async () => {
     const fixture = seriesFixture();
@@ -83,12 +93,14 @@ for (const [feed, isScrapMode, seriesChannels] of [
     assert.deepEqual(copies[0].slice(0, 4), [
       'scraps',
       'newserie',
-      ['/b/test/100?articleKey=scraps'],
+      ['/community/board/300143/read/100?articleKey=scraps'],
       0,
     ]);
     assert.deepEqual(fixture.opened, [
       ['about:blank', '_blank'],
-      ['https://arca.live/b/test/100?articleKey=newserie'],
+      [
+        'https://bbs.ruliweb.com/community/board/300143/read/100?articleKey=newserie',
+      ],
     ]);
     assert.equal(p.isScrapMode, isScrapMode);
     assert.deepEqual(p.seriesChannels, seriesChannels);

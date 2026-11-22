@@ -30,7 +30,7 @@ function initModal(p: VaultAdapter) {
       ? ['subscribe', 'ui', 'history', 'resume']
       : mode === 'series' || mode === 'scrap'
         ? ['ui', 'history', 'resume']
-        : ['filter', 'ui', 'history', 'resume'];
+        : ['filter', 'subscribe', 'ui', 'history', 'resume'];
   const labels: Record<string, { icon: string; title: string }> = {
     filter: { icon: '🔍', title: '필터' },
     ui: { icon: '🪟', title: 'UI 설정' },
@@ -40,7 +40,7 @@ function initModal(p: VaultAdapter) {
   };
   const dialog = fromTemplate(`
     <div id="dialog" class="helper-modal">
-      <div class="helper-modal-body" style="--arcafeed-modal-tab-count: ${availableTabs.length}" role="dialog" aria-modal="true" aria-label="아카피드 설정">
+      <div class="helper-modal-body" style="--rulifeed-modal-tab-count: ${availableTabs.length}" role="dialog" aria-modal="true" aria-label="루리피드 설정">
         ${availableTabs
           .map(
             (tab) => `
@@ -81,7 +81,7 @@ function initModal(p: VaultAdapter) {
         ensureTab(selectedTab);
         p.uiSettings = mergeState(p.uiSettings, { lastModalTab: selectedTab });
         dialogBody
-          .querySelectorAll<HTMLElement>('.arcafeed-modal-content')
+          .querySelectorAll<HTMLElement>('.rulifeed-modal-content')
           .forEach((content) => {
             content.scrollTop = 0;
           });

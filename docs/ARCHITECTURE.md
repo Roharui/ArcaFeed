@@ -1,6 +1,6 @@
 # 아키텍처와 실행 보장
 
-ArcaFeed는 페이지마다 실행되는 유저스크립트입니다. `core/index.ts`는 상태 저장소와 이벤트 실행기를 조립하고, 기능 모듈은 `core/app-events.ts`의 타입이 지정된 이벤트 버스에 명령을 발행합니다.
+RuliFeed는 페이지마다 실행되는 유저스크립트입니다. `core/index.ts`는 상태 저장소와 이벤트 실행기를 조립하고, 기능 모듈은 `core/app-events.ts`의 타입이 지정된 이벤트 버스에 명령을 발행합니다.
 
 ## 의존성 방향
 
@@ -37,7 +37,7 @@ EventBus는 모든 구독자의 완료를 기다리고 `CommandResult`를 반환
 
 ## 저장소 경계
 
-ArcaFeed 소유 영속 데이터는 IndexedDB `ArcaFeed` 버전 2에 일반 객체로 저장합니다. 문자열 `Storage` API와 JSON 캐시를 사용하지 않습니다. `record-schema.ts`는 저장소 이름·레코드 주소·변경분 형식을, `StorageRepository`는 설정·탐색·이어보기 도메인 API를 제공합니다. 앱의 동기 `Store`와 지연 getter는 유지하며 저장소 경계에서 필요한 데이터만 준비합니다. 앱 상태의 Proxy·getter·Swiper 객체를 직접 저장하지 않고 필드가 명시된 객체·배열을 만듭니다.
+RuliFeed 소유 영속 데이터는 IndexedDB `RuliFeed` 버전 2에 일반 객체로 저장합니다. 문자열 `Storage` API와 JSON 캐시를 사용하지 않습니다. `record-schema.ts`는 저장소 이름·레코드 주소·변경분 형식을, `StorageRepository`는 설정·탐색·이어보기 도메인 API를 제공합니다. 앱의 동기 `Store`와 지연 getter는 유지하며 저장소 경계에서 필요한 데이터만 준비합니다. 앱 상태의 Proxy·getter·Swiper 객체를 직접 저장하지 않고 필드가 명시된 객체·배열을 만듭니다.
 
 | Object store         | 기본 키      | 내용                                                          |
 | -------------------- | ------------ | ------------------------------------------------------------- |
@@ -61,11 +61,11 @@ ArcaFeed 소유 영속 데이터는 IndexedDB `ArcaFeed` 버전 2에 일반 객�
 
 `storage-activity.ts`는 문서가 숨겨지거나 pagehide·freeze로 중단될 때 진행 중인 읽기·쓰기 트랜잭션을 abort하여 다른 탭의 저장 잠금을 해제합니다. 숨겨진 동안 새 조회·커밋은 대기하고, visibilitychange·pageshow·resume으로 복귀하면 중단된 작업을 최신 DB 값에 다시 적용합니다. 중단된 쓰기 변경분은 저장 큐에 유지하고, 일반적인 저장 오류는 기존대로 호출자에게 전달합니다. 페이지 종료 시 아직 커밋하지 못한 변경의 영속화는 보장하지 않습니다.
 
-`BroadcastChannel`은 `{store, key}` 주소 배열을 알립니다. 수신 탭은 알림을 모아 변경한 작은 레코드와 이미 사용 중인 목록만 조회합니다. 캐시 전체 반영 후 `arcafeed:storage`의 `detail.changes`로 한 번 알립니다. 아직 커밋하지 않은 로컬 변경은 덮어쓰지 않습니다. 포커스·pageshow에서는 작은 레코드를 다시 읽고 listVersion이 바뀐 사용 중 목록만 복구합니다. 전체 키 목록이나 아직 사용하지 않는 목록 값은 열거하지 않습니다.
+`BroadcastChannel`은 `{store, key}` 주소 배열을 알립니다. 수신 탭은 알림을 모아 변경한 작은 레코드와 이미 사용 중인 목록만 조회합니다. 캐시 전체 반영 후 `rulifeed:storage`의 `detail.changes`로 한 번 알립니다. 아직 커밋하지 않은 로컬 변경은 덮어쓰지 않습니다. 포커스·pageshow에서는 작은 레코드를 다시 읽고 listVersion이 바뀐 사용 중 목록만 복구합니다. 전체 키 목록이나 아직 사용하지 않는 목록 값은 열거하지 않습니다.
 
 `ReadingHistory`는 사이트 방문 기록(entries), 이어보기 탐색 정보(sessions), 위치(progress)를 독립적으로 알립니다. 스크롤 저장은 방문 표시·건너뛰기 revision이나 기록 모달 전체 렌더링을 유발하지 않습니다. 존재 확인과 이어보기 모달은 요약만 사용하며 목록 getter는 선택한 목록만 정규화합니다. 최대 20개 세션, 세션별 2,000개·전체 5,000개 링크 한도를 트랜잭션 안에서도 적용합니다. 고정 항목을 우선하고 정리하는 목록에도 각 세션의 현재 글을 보존합니다. 20개가 모두 고정된 것을 이미 알고 있으면 새 세션 저장은 false를 반환하며, 다른 탭에서 뒤늦게 한도가 찬 경우 커밋 결과를 캐시에 반영합니다.
 
-사이트가 소유한 `recent_articles`·`recent_disabled`는 localStorage에서 읽기만 합니다. 방문 판정은 전체 유효 기록, 최근 본 글 표시는 최신 300개를 사용합니다. 방문 기록이 비활성화되면 큰 원본 기록은 읽지 않습니다. 탭 전용 스크롤·토스트 전달은 sessionStorage를 사용합니다. 스크롤 체크포인트는 700ms debounce와 최대 5초 대기를 사용하며 페이지 종료만으로 비동기 준비·저장 완료를 보장하지 않습니다.
+RuliFeed는 출처별 localStorage에 최신 300개 방문 기록을 보관합니다. 탭 전용 스크롤·토스트 전달은 sessionStorage를 사용합니다. 스크롤 체크포인트는 700ms debounce와 최대 5초 대기를 사용하며 페이지 종료만으로 비동기 준비·저장 완료를 보장하지 않습니다.
 
 저장 객체도 신뢰할 수 있는 입력으로 간주하지 않습니다. `config-schema.ts`와 `reading-session-schema.ts`가 필드·pathname·인덱스와 기본값을 검증합니다. 상태 배열과 객체는 새 참조로 갱신하고 캐시된 값을 직접 수정하지 않습니다. 설정의 용도별 정규화와 모달 탭 생성도 첫 접근까지 미루며 상태 복사는 미사용 getter를 실행하지 않습니다.
 
@@ -79,9 +79,9 @@ ArcaFeed 소유 영속 데이터는 IndexedDB `ArcaFeed` 버전 2에 일반 객�
 
 ## 구형 데이터 이전
 
-`record-migration.ts`는 DB versionchange 트랜잭션에서만 실행합니다. v1 values 문자열과 아직 이전하지 않은 ArcaFeed localStorage 키를 읽어 검증·분리하고 새 레코드와 meta.schema를 기록합니다. v1 이전 완료 마커가 있으면 IndexedDB 값을 우선하고 오래된 localStorage 값은 다시 가져오지 않습니다. 구형 통합 설정과 이어보기 목록도 이 경계에서 함께 변환합니다. 동일 문맥은 정리하고 이름·고정·위치·순서와 보관 한도를 보존합니다.
+`record-migration.ts`는 DB versionchange 트랜잭션에서만 실행합니다. v1 values 문자열과 아직 이전하지 않은 RuliFeed localStorage 키를 읽어 검증·분리하고 새 레코드와 meta.schema를 기록합니다. v1 이전 완료 마커가 있으면 IndexedDB 값을 우선하고 오래된 localStorage 값은 다시 가져오지 않습니다. 구형 통합 설정과 이어보기 목록도 이 경계에서 함께 변환합니다. 동일 문맥은 정리하고 이름·고정·위치·순서와 보관 한도를 보존합니다.
 
-새 레코드 쓰기와 구형 values 저장소 삭제는 같은 업그레이드 트랜잭션에 속합니다. 실패하면 DB 버전과 원본이 복구되며 localStorage도 남깁니다. 성공한 뒤에만 ArcaFeed 소유 localStorage 키를 삭제합니다. versionchange를 받은 기존 연결은 닫고 이후 저장을 중단하여 새로고침을 요구합니다. 다른 탭 때문에 업그레이드가 blocked면 원인을 안내합니다. 구형 형식 지원 종료 시 record-migration.ts와 reading-history-migration.ts를 정리하되 DB 스키마 생성과 실패 복구 검증은 유지합니다. 일반 조회·저장 경로에는 JSON 형식 호환 분기를 두지 않습니다.
+새 레코드 쓰기와 구형 values 저장소 삭제는 같은 업그레이드 트랜잭션에 속합니다. 실패하면 DB 버전과 원본이 복구되며 localStorage도 남깁니다. 성공한 뒤에만 RuliFeed 소유 localStorage 키를 삭제합니다. versionchange를 받은 기존 연결은 닫고 이후 저장을 중단하여 새로고침을 요구합니다. 다른 탭 때문에 업그레이드가 blocked면 원인을 안내합니다. 구형 형식 지원 종료 시 record-migration.ts와 reading-history-migration.ts를 정리하되 DB 스키마 생성과 실패 복구 검증은 유지합니다. 일반 조회·저장 경로에는 JSON 형식 호환 분기를 두지 않습니다.
 
 ## 검증
 

@@ -135,7 +135,7 @@ function installControlPositioning(
       const node = nodes[i];
       if (
         node instanceof Element &&
-        !node.closest('.arcafeed-navigation-control') &&
+        !node.closest('.rulifeed-navigation-control') &&
         (node.matches('.nav-control') || !!node.querySelector('.nav-control'))
       )
         return true;
@@ -170,16 +170,16 @@ function installControlPositioning(
 /** A persistent entry point independent of the settings dialog. */
 export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
   if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
-  if (document.querySelector('.arcafeed-navigation-trigger')) return;
+  if (document.querySelector('.rulifeed-navigation-trigger')) return;
   const control = createElement('div', {
-    class: 'arcafeed-navigation-control',
+    class: 'rulifeed-navigation-control',
   });
   let loading = isArticleLoading();
-  const count = createElement('span', { class: 'arcafeed-navigation-count' });
+  const count = createElement('span', { class: 'rulifeed-navigation-count' });
   const trigger = createElement(
     'a',
     {
-      class: 'arcafeed-navigation-trigger',
+      class: 'rulifeed-navigation-trigger',
       role: 'button',
       tabindex: 0,
       'aria-haspopup': 'dialog',
@@ -189,7 +189,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     createElement('span', { class: 'bi-list-ul', 'aria-hidden': 'true' }),
     count,
     fromTemplate(
-      '<svg class="arcafeed-navigation-loading-ring" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="2" y="2" width="96" height="96" rx="20" pathLength="100" /></svg>',
+      '<svg class="rulifeed-navigation-loading-ring" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="2" y="2" width="96" height="96" rx="20" pathLength="100" /></svg>',
     ),
   );
   trigger.addEventListener('click', () => open());
@@ -225,7 +225,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
   const open = () => {
     if (panel) return close();
     panel = createElement('div', {
-      class: 'helper-modal arcafeed-navigation-panel',
+      class: 'helper-modal rulifeed-navigation-panel',
     });
     const body = createElement(
       'div',
@@ -247,7 +247,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     cleanupFocus = installDialogFocus(
       body,
       close,
-      body.querySelector<HTMLElement>('.arcafeed-reading-close') ?? undefined,
+      body.querySelector<HTMLElement>('.rulifeed-reading-close') ?? undefined,
     );
   };
   const update = () => {
@@ -272,7 +272,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
       count.append(
         createElement('span', {
           text: ` · 실패 ${failures}`,
-          class: 'arcafeed-subscription-failure-count',
+          class: 'rulifeed-subscription-failure-count',
         }),
       );
     }

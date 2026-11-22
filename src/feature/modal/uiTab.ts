@@ -46,24 +46,24 @@ const ARTICLE_INFO_TOGGLES: {
 ];
 const MODAL_UI_TAB = `
 <div class="helper-modal-tab helper-modal-ui">
-  <div class="arcafeed-modal-content">
-    <section class="arcafeed-settings-section ui-reading-group">
-      <h3 class="arcafeed-settings-heading">탐색</h3>
+  <div class="rulifeed-modal-content">
+    <section class="rulifeed-settings-section ui-reading-group">
+      <h3 class="rulifeed-settings-heading">탐색</h3>
       <div id="ui-reading-list" class="ui-setting-list"></div>
     </section>
-    <section class="arcafeed-settings-section">
-      <h3 class="arcafeed-settings-heading">화면 표시</h3>
+    <section class="rulifeed-settings-section">
+      <h3 class="rulifeed-settings-heading">화면 표시</h3>
       <div id="ui-toggle-list" class="ui-setting-list"></div>
     </section>
-    <fieldset class="arcafeed-settings-section ui-article-info-group">
-      <legend class="arcafeed-settings-heading">게시글 목록에서 숨기기</legend>
-      <p class="arcafeed-settings-description">숨길 정보를 선택해 목록을 간결하게 만드세요.</p>
+    <fieldset class="rulifeed-settings-section ui-article-info-group">
+      <legend class="rulifeed-settings-heading">게시글 목록에서 숨기기</legend>
+      <p class="rulifeed-settings-description">숨길 정보를 선택해 목록을 간결하게 만드세요.</p>
       <div id="ui-article-info-list" class="ui-setting-list"></div>
     </fieldset>
   </div>
-  <div id="ui-buttons" class="arcafeed-modal-actions">
-    <button id="ui-cancel-btn" type="button" class="arcafeed-modal-button">취소</button>
-    <button id="ui-check-btn" type="button" class="arcafeed-modal-button is-primary">적용</button>
+  <div id="ui-buttons" class="rulifeed-modal-actions">
+    <button id="ui-cancel-btn" type="button" class="rulifeed-modal-button">취소</button>
+    <button id="ui-check-btn" type="button" class="rulifeed-modal-button is-primary">적용</button>
   </div>
 </div>
 `;
@@ -143,14 +143,14 @@ function createUISettingModal(p: VaultAdapter): HTMLElement {
   const help = createElement(
     'details',
     {
-      class: 'arcafeed-settings-section arcafeed-operation-help',
+      class: 'rulifeed-settings-section rulifeed-operation-help',
     },
     createElement('summary', {
-      class: 'arcafeed-settings-heading',
+      class: 'rulifeed-settings-heading',
       text: '조작 도움말·키보드',
     }),
     createElement('p', {
-      class: 'arcafeed-settings-description',
+      class: 'rulifeed-settings-description',
       text: p.isCurrentMode('ARTICLE')
         ? '← 이전 글 · → 다음 글. 스와이프가 켜져 있을 때 사용할 수 있습니다. 화면 폭이 1024px 이상이면 본문 왼쪽 빈 공간 클릭으로 이전 글, 오른쪽 빈 공간 클릭으로 다음 글로 이동합니다.'
         : p.isCurrentMode('CHANNEL')
@@ -158,15 +158,15 @@ function createUISettingModal(p: VaultAdapter): HTMLElement {
           : '이 화면에서는 글 이동 단축키를 사용하지 않습니다.',
     }),
     createElement('p', {
-      class: 'arcafeed-settings-description',
+      class: 'rulifeed-settings-description',
       text: '설정·이동 버튼: Tab으로 선택한 뒤 Enter 또는 Space. 설정창: Tab·Shift+Tab으로 내부 이동, 탭 선택에서 방향키로 전환, Escape로 닫기. 닫으면 열기 전 위치로 포커스가 돌아갑니다.',
     }),
     createElement('p', {
-      class: 'arcafeed-settings-description',
+      class: 'rulifeed-settings-description',
       text: '댓글·검색·입력·한글 조합 중에는 글 이동 단축키를 실행하지 않습니다. 설정창과 탐색 목록이 열려 있어도 이동하지 않습니다. 기기의 동작 줄이기 설정을 따릅니다.',
     }),
   );
-  uiTab.querySelector('.arcafeed-modal-content')!.append(help);
+  uiTab.querySelector('.rulifeed-modal-content')!.append(help);
   uiTab
     .querySelector('#ui-check-btn')!
     .addEventListener('click', () => eventBus.emit('checkUIModal'));

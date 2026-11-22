@@ -12,7 +12,6 @@ import {
   syncChannelSelect,
 } from './readingUi';
 import type { VaultAdapter } from '@/vault';
-import { SITE_RECENT_URL } from '@/vault/reading-history';
 import type { ReadingEntry } from '@/vault/reading-history';
 const PAGE_SIZE = 50;
 export function createHistoryModal(p: VaultAdapter): HTMLElement {
@@ -21,17 +20,17 @@ export function createHistoryModal(p: VaultAdapter): HTMLElement {
     class: 'helper-modal-tab helper-modal-history',
   });
   const count = createElement('span', {
-    class: 'arcafeed-reading-count',
+    class: 'rulifeed-reading-count',
     'aria-live': 'polite',
   });
   tab.append(
     readingHeader(
       '최근 본 글',
-      '아카라이브의 최근 읽은 글 목록을 표시합니다.',
+      '루리웹의 최근 읽은 글 목록을 표시합니다.',
       count,
     ),
   );
-  const tools = createElement('div', { class: 'arcafeed-history-tools' });
+  const tools = createElement('div', { class: 'rulifeed-history-tools' });
   const search = readingSearch(
     '제목 또는 채널 이름으로 검색',
     '최근 본 글 검색',
@@ -45,19 +44,19 @@ export function createHistoryModal(p: VaultAdapter): HTMLElement {
     search.element,
     channel,
     createElement('span', {
-      class: 'arcafeed-reading-sort',
+      class: 'rulifeed-reading-sort',
       text: '최근 방문 순',
     }),
   );
   const entries = createElement('div', {
-    class: 'arcafeed-reading-list arcafeed-history-list',
+    class: 'rulifeed-reading-list rulifeed-history-list',
   });
-  const total = createElement('span', { class: 'arcafeed-reading-total' });
+  const total = createElement('span', { class: 'rulifeed-reading-total' });
   const more = button('더 보기', () => {
     visibleCount += PAGE_SIZE;
     render();
   });
-  more.classList.add('arcafeed-reading-more');
+  more.classList.add('rulifeed-reading-more');
   let visibleCount = PAGE_SIZE;
   const matchesSearch = createReadingSearchMatcher<ReadingEntry>(
     (entry) => `${entry.title} ${entry.channelName} ${channelId(entry.path)}`,
@@ -112,7 +111,7 @@ export function createHistoryModal(p: VaultAdapter): HTMLElement {
           : readingEmptyState(
               'bi-clock-history',
               '아직 본 글이 없습니다',
-              '사이트의 최근 읽은 글에서 기록 사용 설정을 확인해주세요.',
+              '게시글을 열면 이 목록에 표시됩니다.',
             ),
       );
     let previousDate = '';
@@ -120,19 +119,19 @@ export function createHistoryModal(p: VaultAdapter): HTMLElement {
       const date = readingDateLabel(entry.visitedAt);
       if (date !== previousDate) {
         entries.append(
-          createElement('div', { class: 'arcafeed-reading-date', text: date }),
+          createElement('div', { class: 'rulifeed-reading-date', text: date }),
         );
         previousDate = date;
       }
       entries.append(
         createElement(
           'a',
-          { href: entry.path, class: 'arcafeed-history-row' },
+          { href: entry.path, class: 'rulifeed-history-row' },
           createElement(
             'div',
-            { class: 'arcafeed-history-row-heading' },
+            { class: 'rulifeed-history-row-heading' },
             createElement('span', {
-              class: 'arcafeed-history-link',
+              class: 'rulifeed-history-link',
               text: entry.title,
               title: entry.title,
             }),
@@ -143,9 +142,9 @@ export function createHistoryModal(p: VaultAdapter): HTMLElement {
           ),
           createElement(
             'div',
-            { class: 'arcafeed-history-meta' },
+            { class: 'rulifeed-history-meta' },
             createElement('span', {
-              class: 'arcafeed-reading-channel',
+              class: 'rulifeed-reading-channel',
               text: entry.channelName || channelId(entry.path),
             }),
             readingTime(entry.visitedAt),
@@ -162,22 +161,17 @@ export function createHistoryModal(p: VaultAdapter): HTMLElement {
   });
   tab.append(
     tools,
-    createElement('div', { class: 'arcafeed-modal-content' }, entries, more),
+    createElement('div', { class: 'rulifeed-modal-content' }, entries, more),
   );
   tab.append(
     createElement(
       'div',
-      { class: 'arcafeed-history-footer' },
+      { class: 'rulifeed-history-footer' },
       total,
       createElement(
         'div',
-        { class: 'arcafeed-history-footer-actions' },
+        { class: 'rulifeed-history-footer-actions' },
         button('새로고침', () => p.reading.reload(['entries'])),
-        createElement('a', {
-          href: SITE_RECENT_URL,
-          class: 'arcafeed-reading-button',
-          text: '사이트 기록 관리',
-        }),
       ),
     ),
   );

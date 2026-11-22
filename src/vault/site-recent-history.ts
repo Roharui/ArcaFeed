@@ -1,5 +1,5 @@
+import { normalizeArticlePath } from '@/utils/regex';
 import type { StorageRepository } from './repository';
-import { isChannelId, isRecord } from './record-schema';
 
 export interface ReadingEntry {
   path: string;
@@ -8,136 +8,105 @@ export interface ReadingEntry {
   visitedAt: number;
 }
 
-export const SITE_RECENT_KEY = 'recent_articles';
-export const SITE_RECENT_DISABLED_KEY = 'recent_disabled';
-export const SITE_RECENT_URL = '/u/recents';
+export const SITE_RECENT_KEY = 'rulifeed:recentArticles';
 export const RECENT_ENTRY_LIMIT = 300;
 
-function validTimestamp(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0
-    ? value
-    : 0;
+function readEntries(raw: string | null): ReadingEntry[] {
+  try {
+    const entries: unknown = JSON.parse(raw ?? '[]');
+    return Array.isArray(entries)
+      ? entries.filter(
+          (entry): entry is ReadingEntry =>
+            entry &&
+            typeof entry.path === 'string' &&
+            normalizeArticlePath(entry.path) === entry.path &&
+            typeof entry.title === 'string' &&
+            typeof entry.channelName === 'string' &&
+            Number.isFinite(entry.visitedAt) &&
+            entry.visitedAt > 0,
+        )
+      : [];
+  } catch {
+    return [];
+  }
 }
 
-function clampText(value: unknown, fallback = ''): string {
-  return typeof value === 'string' ? value.slice(0, 300) : fallback;
+export function recordVisit(
+  path: string,
+  title: string,
+  channelName: string,
+): void {
+  try {
+    const entries = readEntries(localStorage.getItem(SITE_RECENT_KEY));
+    localStorage.setItem(
+      SITE_RECENT_KEY,
+      JSON.stringify(
+        [
+          {
+            path,
+            title: title.slice(0, 300),
+            channelName: channelName.slice(0, 300),
+            visitedAt: Date.now(),
+          },
+          ...entries.filter((entry) => entry.path !== path),
+        ].slice(0, RECENT_ENTRY_LIMIT),
+      ),
+    );
+  } catch {
+    // Private browsing or a full storage quota can prevent recording a visit.
+  }
 }
 
-/** Match aliases from /b/my using the site's globally unique article IDs. */
 export function isVisitedPath(
   paths: Set<string> | undefined,
   path: string,
 ): boolean {
-  return (
-    !!paths && (paths.has(path) || paths.has(`/b/my/${path.split('/').pop()}`))
-  );
+  return paths?.has(path) ?? false;
 }
 
-/** Lazily read and cache the site-owned recent_articles list from localStorage. */
 export class SiteRecentHistory {
-  private loaded = false;
+  private raw: string | null | undefined;
   private recentEntries: ReadingEntry[] = [];
-  private visibleEntries: ReadingEntry[] = [];
-  private visitedPaths = new Set<string>();
-  private recentRaw: string | null | undefined;
-  private recentDisabled: string | null | undefined;
+  private paths = new Set<string>();
 
   constructor(private repo: StorageRepository) {}
 
   get entries(): readonly ReadingEntry[] {
-    this.ensureLoaded();
-    return this.visibleEntries;
+    this.reloadIfNeeded();
+    return this.recentEntries;
   }
 
   hasVisited(path: string): boolean {
-    this.ensureLoaded();
-    return isVisitedPath(this.visitedPaths, path);
+    this.reloadIfNeeded();
+    return this.paths.has(path);
   }
 
   getVisitedPaths(): Set<string> {
-    this.ensureLoaded();
-    return new Set(this.visitedPaths);
+    this.reloadIfNeeded();
+    return new Set(this.paths);
   }
 
-  /** Re-read raw site storage; return true only when the parsed snapshot changed. */
   reload(): boolean {
-    this.loaded = true;
-    const previous = this.recentEntries;
-    this.loadEntries();
-    if (previous === this.recentEntries) return false;
-    this.updateVisitedPaths();
+    const raw = this.repo.site(SITE_RECENT_KEY);
+    if (raw === this.raw) return false;
+    this.raw = raw;
+    const entries = readEntries(raw).sort((a, b) => b.visitedAt - a.visitedAt);
+    this.paths = new Set();
+    this.recentEntries = entries
+      .filter((entry) => {
+        if (this.paths.has(entry.path)) return false;
+        this.paths.add(entry.path);
+        return true;
+      })
+      .slice(0, RECENT_ENTRY_LIMIT);
     return true;
   }
 
-  /** Refresh only when site history has already been read on this page. */
   reloadIfLoaded(): boolean {
-    if (!this.loaded) return false;
-    return this.reload();
+    return this.raw !== undefined && this.reload();
   }
 
-  private ensureLoaded(): void {
-    if (this.loaded) return;
-    this.loaded = true;
-    this.loadEntries();
-    this.updateVisitedPaths();
-  }
-
-  private updateVisitedPaths(): void {
-    this.visitedPaths = new Set(
-      this.recentEntries.flatMap((entry) => [
-        entry.path,
-        `/b/my/${entry.path.split('/').pop()}`,
-      ]),
-    );
-  }
-
-  private loadEntries(): void {
-    const disabled = this.repo.site(SITE_RECENT_DISABLED_KEY);
-    const recentRaw = disabled ? null : this.repo.site(SITE_RECENT_KEY);
-    if (recentRaw === this.recentRaw && disabled === this.recentDisabled)
-      return;
-    this.recentRaw = recentRaw;
-    this.recentDisabled = disabled;
-    this.recentEntries = [];
-    this.visibleEntries = [];
-    if (disabled) return;
-
-    let raw: unknown;
-    try {
-      raw = recentRaw ? JSON.parse(recentRaw) : [];
-    } catch {
-      raw = [];
-    }
-
-    const seenIds = new Set<string>();
-    for (const item of Array.isArray(raw) ? raw : []) {
-      if (!isRecord(item)) continue;
-      const slug = typeof item.slug === 'string' ? item.slug : '';
-      const id =
-        typeof item.articleId === 'string' || typeof item.articleId === 'number'
-          ? String(item.articleId)
-          : '';
-      const visitedAt =
-        typeof item.regdateAt === 'number'
-          ? validTimestamp(item.regdateAt * 1000)
-          : 0;
-      if (
-        !isChannelId(slug) ||
-        !/^\d+$/.test(id) ||
-        !visitedAt ||
-        seenIds.has(id)
-      )
-        continue;
-      seenIds.add(id);
-      const path = `/b/${slug}/${id}`;
-      this.recentEntries.push({
-        path,
-        title: clampText(item.title, path),
-        channelName: clampText(item.boardName, slug),
-        visitedAt,
-      });
-    }
-    this.recentEntries.sort((a, b) => b.visitedAt - a.visitedAt);
-    this.visibleEntries = this.recentEntries.slice(0, RECENT_ENTRY_LIMIT);
+  private reloadIfNeeded(): void {
+    if (this.raw === undefined) this.reload();
   }
 }

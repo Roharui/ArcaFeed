@@ -1,5 +1,5 @@
 // Playwright MCP: browser_run_code_unsafe({ filename: "scripts/check-storage.mjs" })
-// Uses an isolated browser context; never accesses the arca.live database.
+// Uses an isolated browser context; never accesses the bbs.ruliweb.com database.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function checkStorage(page) {
   const baseURL = new URL(page.url()).origin;
@@ -29,8 +29,11 @@ async function checkStorage(page) {
           request.onsuccess = () => resolve(request.result);
           request.onerror = () => reject(request.error);
         });
-      const db = await open('ArcaFeed', (db) => db.createObjectStore('values'));
-      const paths = ['/b/test/100', '/b/test/99'];
+      const db = await open('RuliFeed', (db) => db.createObjectStore('values'));
+      const paths = [
+        '/community/board/300143/read/100',
+        '/community/board/300143/read/99',
+      ];
       const old = {
         id: 'series:old',
         label: 'saved',
@@ -48,17 +51,17 @@ async function checkStorage(page) {
       const tx = db.transaction('values', 'readwrite');
       tx.objectStore('values').put(
         JSON.stringify({ version: 2, sessions: [old] }),
-        'arcaFeed:readingHistory',
+        'ruliFeed:readingHistory',
       );
       tx.objectStore('values').put(
         JSON.stringify(paths),
-        'arcaFeed:readingList:series%3Aold',
+        'ruliFeed:readingList:series%3Aold',
       );
       tx.objectStore('values').put(
         JSON.stringify([
           { id: old.id, path: old.path, scrollY: 250, updatedAt: 2 },
         ]),
-        'arcaFeed:readingProgress',
+        'ruliFeed:readingProgress',
       );
       await done(tx);
       db.close();
@@ -145,7 +148,7 @@ async function checkStorage(page) {
         { saveConfig() {} },
         {
           mode: 'ARTICLE',
-          channelId: 'test',
+          channelId: 'community/board/300143',
           articleId: '100',
           articleKey: 'cold',
           search: '',
@@ -164,7 +167,7 @@ async function checkStorage(page) {
           2,
       );
       vault.destroy();
-      const benchmarkDB = await open('ArcaFeed-list-benchmark', (db) => {
+      const benchmarkDB = await open('RuliFeed-list-benchmark', (db) => {
         db.createObjectStore('whole', { keyPath: 'id' });
         db.createObjectStore('json', { keyPath: 'id' });
         db.createObjectStore('chunks', { keyPath: ['id', 'chunk'] });
@@ -177,7 +180,7 @@ async function checkStorage(page) {
           chunkSize = 500;
         let links = Array.from(
           { length: size },
-          (_, index) => `/b/test/${index + 1}`,
+          (_, index) => `/community/board/300143/read/${index + 1}`,
         );
         const seed = benchmarkDB.transaction(
           ['whole', 'json', 'chunks'],
@@ -199,7 +202,8 @@ async function checkStorage(page) {
           links = links.concat(
             Array.from(
               { length: 100 },
-              (_, index) => `/b/test/${startIndex + index + 1}`,
+              (_, index) =>
+                `/community/board/300143/read/${startIndex + index + 1}`,
             ),
           );
           for (const store of ['whole', 'json', 'chunks']) {

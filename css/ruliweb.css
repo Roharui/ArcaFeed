@@ -1,0 +1,61 @@
+html.hide-scrollbar {
+  scrollbar-width: none;
+}
+
+.rulifeed-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.rulifeed-toolbar button {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid currentColor;
+  border-radius: 0.4rem;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.rulifeed-swiper .swiper-slide > #board {
+  width: 100%;
+  min-width: 0;
+}
+
+body.hide-included-article-list #board_read ~ #board_list,
+body.hide-btns-board .board_read_top {
+  display: none;
+}
+
+body.rulifeed {
+  --color-bg-body: #fff;
+  --color-bg-main: #f4f5f7;
+  --color-text: #202124;
+  --color-text-muted: #666;
+  --color-bd-btn: #c9cdd3;
+}
+
+body.rulifeed.dark_mode {
+  --color-bg-body: #242528;
+  --color-bg-main: #303136;
+  --color-text: #eee;
+  --color-text-muted: #bbb;
+  --color-bd-btn: #565960;
+}
+
+@media (min-width: 1024px) {
+  .rulifeed #board {
+    max-width: var(--content-max-width, 1024px);
+    margin-inline: auto;
+  }
+}
+
+body.rulifeed-article-page.hide-included-article-list #board_list,
+body.hide-nav-control #board_read .board_read_top,
+body.hide-article-title #board_read .subject,
+body.hide-article-author #board_read .user_info_wrapper,
+body.hide-article-time #board_read .regdate,
+body.hide-article-view #board_read .hit {
+  display: none;
+}

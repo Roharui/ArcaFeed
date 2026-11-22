@@ -1,8 +1,6 @@
 import { mergeState } from '@/vault/lazy-state';
 import { createElement } from '@/utils/dom';
 
-import { extractChannelId } from '@/utils';
-
 import type { VaultAdapter } from '@/vault';
 import type { UISettings } from '@/types';
 
@@ -21,9 +19,7 @@ function installResizeHandle(p: VaultAdapter): void {
     p.isCurrentMode('CHANNEL', 'ARTICLE');
   if (!shouldInstall) return;
 
-  const contentWrapper = document.querySelector<HTMLElement>(
-    '.body .content-wrapper',
-  );
+  const contentWrapper = document.querySelector<HTMLElement>('#board');
   if (!contentWrapper) return;
   const wrapper = contentWrapper;
   wrapper.style.position = 'relative';
@@ -77,7 +73,7 @@ function installResizeHandle(p: VaultAdapter): void {
     }
 
     wrapper
-      .querySelector(`.arca-resize-handle-${dragging}`)
+      .querySelector(`.rulifeed-resize-handle-${dragging}`)
       ?.classList.remove('dragging');
     dragging = null;
 
@@ -88,7 +84,7 @@ function installResizeHandle(p: VaultAdapter): void {
   // Create both handles
   for (const side of ['left', 'right'] as const) {
     const handle = createElement('div', {
-      class: `arcafeed-resize-handle arca-resize-handle-${side} swiper-no-swiping`,
+      class: `rulifeed-resize-handle rulifeed-resize-handle-${side} swiper-no-swiping`,
     });
     handle.addEventListener('mousedown', onMouseDown(side));
     wrapper.append(handle);
@@ -118,7 +114,7 @@ function applyUISettings(settings: UISettings, previous?: UISettings): void {
   )
     return;
 
-  // CSS class-based toggles (sync with arcalive.css rules)
+  // CSS class-based toggles (sync with ruliweb.css rules)
   if (!previous || previous.hideScrollbar !== settings.hideScrollbar)
     document.documentElement.classList.toggle(
       'hide-scrollbar',
@@ -131,41 +127,13 @@ function applyUISettings(settings: UISettings, previous?: UISettings): void {
 
   // Content width (CSS variable on content-wrapper)
   if (!previous || previous.contentWidth !== settings.contentWidth)
-    document
-      .querySelectorAll<HTMLElement>('.body .content-wrapper')
-      .forEach((wrapper) => {
-        wrapper.style.setProperty(
-          '--content-max-width',
-          `${settings.contentWidth}px`,
-        );
-      });
-}
-
-// ── Mode-specific UI initializers ──────────────────────
-
-function initArticleModeUI(p: VaultAdapter): void {
-  document.body.append(
-    ...Array.from(document.querySelectorAll('.nav-control')),
-  );
-
-  // Open cross-channel article links in a new tab
-  // to avoid disrupting the current slide session.
-  document
-    .querySelectorAll<HTMLAnchorElement>('.included-article-list a[href]')
-    .forEach((el) => {
-      const href = el.getAttribute('href');
-      if (!href) return;
-      const targetChannelId = extractChannelId(href);
-      if (targetChannelId && targetChannelId !== p.href.channelId) {
-        el.target = '_blank';
-        el.rel = 'noopener';
-      }
+    document.querySelectorAll<HTMLElement>('#board').forEach((wrapper) => {
+      wrapper.style.setProperty(
+        '--content-max-width',
+        `${settings.contentWidth}px`,
+      );
     });
 }
-
-const MODE_UI_INIT: Record<string, (p: VaultAdapter) => void> = {
-  ARTICLE: initArticleModeUI,
-};
 
 const initializedVaults = new WeakSet<VaultAdapter>();
 
@@ -174,31 +142,15 @@ const initializedVaults = new WeakSet<VaultAdapter>();
 function initUi(p: VaultAdapter): void {
   if (initializedVaults.has(p)) return;
   initializedVaults.add(p);
-  document.body.classList.add('arcafeed');
-
-  // Wrap navbar for styling (stays in .root-container outside the swiper)
-  const navbar = document.querySelector('nav.navbar');
-  if (navbar && !navbar.parentElement?.classList.contains('navbar-wrapper')) {
-    const wrapper = createElement('div', {
-      class: 'navbar-wrapper swiper-no-swiping',
-    });
-    navbar.before(wrapper);
-    wrapper.append(navbar);
-  }
-
-  const ads = Array.from(document.querySelectorAll('.ad.small-ad'));
-  const stickyContainers = document.querySelectorAll('.sticky-container');
-  stickyContainers.forEach((container, index) => {
-    container.prepend(
-      ...(index === stickyContainers.length - 1
-        ? ads
-        : ads.map((ad) => ad.cloneNode(true))),
-    );
-  });
+  document.body.classList.add('rulifeed');
 
   document
-    .querySelectorAll('.board-category.hide-scrollbar')
-    .forEach((category) => category.classList.add('swiper-no-swiping'));
+    .querySelectorAll(
+      '.category_list, .category_menu, #board_top, [contenteditable]',
+    )
+    .forEach((element) => {
+      element.classList.add('swiper-no-swiping');
+    });
 
   // Apply current UI settings
   applyUISettings(p.uiSettings);
@@ -206,11 +158,13 @@ function initUi(p: VaultAdapter): void {
   // In series mode, automatically hide the included article list and btns-board
   document.body.classList.toggle('hide-included-article-list', p.isSeriesMode);
   document.body.classList.toggle('hide-btns-board', p.isSeriesMode);
+  document.body.classList.toggle(
+    'rulifeed-article-page',
+    p.href.mode === 'ARTICLE',
+  );
 
   // Install resize handle (PC only, once)
   installResizeHandle(p);
-
-  MODE_UI_INIT[p.href.mode]?.(p);
 
   // Reactive: subscribe to state changes to re-apply UI settings
   let lastSettings = p.uiSettings;

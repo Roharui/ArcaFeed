@@ -1,10 +1,10 @@
-.arcafeed-subscribe-controls {
+.rulifeed-subscribe-controls {
   display: flex;
   gap: 8px;
   margin-bottom: 14px;
 }
 
-.arcafeed-subscribe-row {
+.rulifeed-subscribe-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -13,28 +13,28 @@
   border-bottom: 1px solid var(--color-bd-btn);
 }
 
-.arcafeed-subscribe-row > div {
+.rulifeed-subscribe-row > div {
   min-width: 0;
 }
 
-.arcafeed-subscribe-row label {
+.rulifeed-subscribe-row label {
   position: relative;
   margin: 0;
   cursor: pointer;
 }
 
-.arcafeed-subscribe-row .category-span {
+.rulifeed-subscribe-row .category-span {
   margin: 0;
   overflow-wrap: anywhere;
 }
 
-.arcafeed-subscribe-summary {
+.rulifeed-subscribe-summary {
   margin-top: 6px;
   font-size: 0.75rem;
   color: var(--color-text-muted, #888);
 }
 
-.arcafeed-subscribe-filter-editor {
+.rulifeed-subscribe-filter-editor {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -43,7 +43,7 @@
   padding: 0;
 }
 
-.helper-modal-subscribe.is-editing-filter > .arcafeed-modal-content {
+.helper-modal-subscribe.is-editing-filter > .rulifeed-modal-content {
   overflow: hidden;
   padding: 0;
 }
@@ -52,44 +52,44 @@
   height: 100%;
 }
 
-.arcafeed-subscribe-filter-loading {
+.rulifeed-subscribe-filter-loading {
   height: 100%;
   overflow-y: auto;
-  padding: var(--arcafeed-modal-padding);
+  padding: var(--rulifeed-modal-padding);
 }
 
-.arcafeed-subscribe-filter-editor > .arcafeed-reading-header {
+.rulifeed-subscribe-filter-editor > .rulifeed-reading-header {
   flex-shrink: 0;
-  margin: var(--arcafeed-modal-padding) var(--arcafeed-modal-padding) 18px;
+  margin: var(--rulifeed-modal-padding) var(--rulifeed-modal-padding) 18px;
 }
 
 @media (max-width: 440px) {
-  .arcafeed-subscribe-row {
+  .rulifeed-subscribe-row {
     gap: 8px;
   }
 }
 
 @media (max-height: 480px) {
-  .arcafeed-subscribe-filter-editor > .arcafeed-reading-header {
+  .rulifeed-subscribe-filter-editor > .rulifeed-reading-header {
     margin-bottom: 10px;
   }
 }
 
-.arcafeed-subscription-status {
+.rulifeed-subscription-status {
   flex-shrink: 0;
   overflow-wrap: anywhere;
 }
 
-.arcafeed-subscription-status p {
+.rulifeed-subscription-status p {
   margin: 0 0 8px;
 }
 
-.helper-modal-navigation > .arcafeed-subscription-status {
-  margin: 0 var(--arcafeed-modal-padding) 12px;
+.helper-modal-navigation > .rulifeed-subscription-status {
+  margin: 0 var(--rulifeed-modal-padding) 12px;
   max-height: 30%;
   overflow-y: auto;
 }
 
-.arcafeed-subscription-status button {
+.rulifeed-subscription-status button {
   flex-shrink: 0;
 }

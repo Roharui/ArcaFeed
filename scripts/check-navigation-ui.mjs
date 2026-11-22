@@ -23,7 +23,7 @@ async function checkNavigationUi(page) {
         settings.textContent = '설정';
         control.append(settings);
       });
-      const control = document.querySelector('.arcafeed-navigation-control');
+      const control = document.querySelector('.rulifeed-navigation-control');
       document.body.classList.add('hide-nav-control');
       const visible = getComputedStyle(control).display !== 'none';
       document.body.classList.remove('hide-nav-control');
@@ -31,15 +31,15 @@ async function checkNavigationUi(page) {
         visible &&
         !control.matches('.nav-control') &&
         control.children.length === 1 &&
-        control.firstElementChild.matches('.arcafeed-navigation-trigger')
+        control.firstElementChild.matches('.rulifeed-navigation-trigger')
       );
     });
     if (!isolated)
       throw new Error('Site navigation code affected the exploration control');
-    const trigger = page.locator('.arcafeed-navigation-trigger');
+    const trigger = page.locator('.rulifeed-navigation-trigger');
     const hoverControl = async () => {
       const box = await page
-        .locator('.arcafeed-navigation-control')
+        .locator('.rulifeed-navigation-control')
         .boundingBox();
       await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
       await trigger.waitFor({ state: 'visible' });
@@ -50,7 +50,7 @@ async function checkNavigationUi(page) {
         const vault = window.uiFixture.vault;
         vault.articleList = Array.from(
           { length: 250 },
-          (_, i) => `/b/test0/${1000 - i}`,
+          (_, i) => `/community/board/300152/read/${1000 - i}`,
         );
         vault.activeIndex = currentIndex;
         vault.href.mode = 'ARTICLE';
@@ -61,7 +61,7 @@ async function checkNavigationUi(page) {
       await trigger.click();
       await page.waitForFunction(() => {
         const container = document.querySelector(
-          '.arcafeed-navigation-panel .arcafeed-modal-content',
+          '.rulifeed-navigation-panel .rulifeed-modal-content',
         );
         const current = container?.querySelector('[aria-current="page"]');
         if (!current) return false;
@@ -72,7 +72,7 @@ async function checkNavigationUi(page) {
           2
         );
       });
-      const rows = await page.locator('.arcafeed-navigation-row').count();
+      const rows = await page.locator('.rulifeed-navigation-row').count();
       if (rows > 100)
         throw new Error('Initial list exceeds its rendering window');
       if (index === 150) {
@@ -80,7 +80,7 @@ async function checkNavigationUi(page) {
           const row = document.querySelector('[aria-current="page"]');
           const before = row.getBoundingClientRect().top;
           Array.from(
-            document.querySelectorAll('.arcafeed-navigation-panel button'),
+            document.querySelectorAll('.rulifeed-navigation-panel button'),
           )
             .find((button) => button.textContent === '이전 목록 더 보기')
             .click();
@@ -90,7 +90,7 @@ async function checkNavigationUi(page) {
           throw new Error('Prepending rows moved the current article');
       }
       await page
-        .locator('.arcafeed-navigation-panel .arcafeed-reading-close')
+        .locator('.rulifeed-navigation-panel .rulifeed-reading-close')
         .click();
     }
     await hoverControl();
@@ -109,14 +109,14 @@ async function checkNavigationUi(page) {
       throw new Error('Scroll, outside touch, or loading revealed the button');
     await hoverControl();
     const loading = await page.evaluate(() => {
-      const button = document.querySelector('.arcafeed-navigation-trigger');
-      const ring = button.querySelector('.arcafeed-navigation-loading-ring');
+      const button = document.querySelector('.rulifeed-navigation-trigger');
+      const ring = button.querySelector('.rulifeed-navigation-loading-ring');
       const stroke = ring.querySelector('rect');
       return (
         getComputedStyle(button).visibility === 'visible' &&
         getComputedStyle(ring).display !== 'none' &&
         getComputedStyle(stroke).animationName ===
-          'arcafeed-navigation-loading' &&
+          'rulifeed-navigation-loading' &&
         button.getAttribute('aria-busy') === 'true' &&
         !document.querySelector('.fetch-loader')
       );
@@ -128,7 +128,7 @@ async function checkNavigationUi(page) {
     await hoverControl();
     await trigger.click();
     await page
-      .locator('.arcafeed-navigation-panel .arcafeed-reading-close')
+      .locator('.rulifeed-navigation-panel .rulifeed-reading-close')
       .click();
     await page.evaluate(() => window.uiFixture.hideFetchLoader());
     if (
@@ -149,13 +149,13 @@ async function checkNavigationUi(page) {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.evaluate(() => window.uiFixture.showFetchLoader());
     const reduced = await page
-      .locator('.arcafeed-navigation-loading-ring rect')
+      .locator('.rulifeed-navigation-loading-ring rect')
       .evaluate((stroke) => getComputedStyle(stroke).animationName === 'none');
     if (!reduced) throw new Error('Loading animation ignored reduced motion');
     await page.evaluate(() => window.uiFixture.hideFetchLoader());
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     const layout = await page.evaluate(() => {
-      const button = document.querySelector('.arcafeed-navigation-trigger');
+      const button = document.querySelector('.rulifeed-navigation-trigger');
       const bounds = button.getBoundingClientRect();
       return {
         left: bounds.left,
@@ -187,7 +187,7 @@ async function checkNavigationUi(page) {
       throw new Error(`Unexpected button layout: ${JSON.stringify(layout)}`);
     const heights = await page.evaluate(async () => {
       const native = document.querySelector('.nav-control');
-      const button = document.querySelector('.arcafeed-navigation-trigger');
+      const button = document.querySelector('.rulifeed-navigation-trigger');
       const visible = button.getBoundingClientRect().height;
       document.body.classList.add('hide-nav-control');
       await new Promise((resolve) => setTimeout(resolve, 100));

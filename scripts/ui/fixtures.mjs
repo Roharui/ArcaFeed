@@ -24,11 +24,11 @@ export function createFixtureData(options = {}, now = Date.now()) {
   const count =
     scenario.size === 'empty' ? 0 : scenario.size === 'short' ? 1 : 70;
   const channels = Array.from({ length: count }, (_, i) => ({
-    id: `test${i}`,
+    id: `community/board/${300152 + i}`,
     name: `테스트 채널 ${i} 긴 이름 테스트`,
   }));
   const entries = channels.map((channel, i) => ({
-    path: `/b/${channel.id}/${100 + i}`,
+    path: `/${channel.id}/read/${100 + i}`,
     title: `레이아웃 검사 게시글 ${i} 긴 제목을 넣어 모바일 줄바꿈도 확인합니다.`,
     channelName: channel.name,
     visitedAt: now - i * 60000,
@@ -37,7 +37,8 @@ export function createFixtureData(options = {}, now = Date.now()) {
     id: `session${i}`,
     path: entry.path,
     label: channels[i].name,
-    seriesChannels: i % 3 === 1 ? ['test0', 'test1'] : [],
+    seriesChannels:
+      i % 3 === 1 ? ['community/board/300152', 'community/board/300153'] : [],
     isSeriesMode: i % 3 === 1,
     isScrapMode: i % 3 === 2,
     updatedAt: entry.visitedAt,

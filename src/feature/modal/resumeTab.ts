@@ -36,7 +36,7 @@ function openRenameEditor(
   focusAction: (selector: string, id: string) => void,
 ): void {
   const editor = createElement('form', {
-    class: 'arcafeed-resume-name-editor',
+    class: 'rulifeed-resume-name-editor',
     'aria-label': '이어보기 이름 변경',
   });
   const name = createElement('input', {
@@ -56,7 +56,7 @@ function openRenameEditor(
     name,
     createElement('button', {
       type: 'submit',
-      class: 'arcafeed-reading-button',
+      class: 'rulifeed-reading-button',
       text: '저장',
     }),
     readingButton('취소', close),
@@ -67,7 +67,7 @@ function openRenameEditor(
       customName: name.value,
     });
     if (editor.isConnected) close();
-    else focusAction('.arcafeed-resume-rename', session.id);
+    else focusAction('.rulifeed-resume-rename', session.id);
   });
   editor.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && !event.isComposing) {
@@ -95,13 +95,13 @@ function createResumeCard(
     const latest = p.reading.sessions.find((item) => item.id === session.id);
     if (latest) void resumeReading(p, latest).catch(() => {});
   });
-  resume.classList.add('arcafeed-resume-action');
+  resume.classList.add('rulifeed-resume-action');
   resume.setAttribute('aria-label', `${displayName} · ${title} 이어보기`);
   const remove = readingButton('', () => {
     p.reading.removeSession(session.id);
     sessionsContainer.focus({ preventScroll: true });
   });
-  remove.classList.add('arcafeed-resume-delete', 'arcafeed-resume-icon');
+  remove.classList.add('rulifeed-resume-delete', 'rulifeed-resume-icon');
   setAttributes(remove, {
     'aria-label': `${displayName} · ${title} 이어보기 삭제`,
     title: '이 이어보기 삭제',
@@ -110,9 +110,9 @@ function createResumeCard(
   const pin = readingButton('', () => {
     const latest = p.reading.sessions.find((item) => item.id === session.id);
     if (latest) p.reading.updateSession(session.id, { pinned: !latest.pinned });
-    focusAction('.arcafeed-resume-pin', session.id);
+    focusAction('.rulifeed-resume-pin', session.id);
   });
-  pin.classList.add('arcafeed-resume-pin', 'arcafeed-resume-icon');
+  pin.classList.add('rulifeed-resume-pin', 'rulifeed-resume-icon');
   setAttributes(pin, {
     'data-session-id': session.id,
     'aria-pressed': String(!!session.pinned),
@@ -121,11 +121,11 @@ function createResumeCard(
   });
   pin.append(fromTemplate(pinIcon(!!session.pinned)));
   const label = createElement('span', {
-    class: 'arcafeed-resume-label',
+    class: 'rulifeed-resume-label',
     text: displayName,
     title: displayName,
   });
-  const nameRow = createElement('div', { class: 'arcafeed-resume-name' });
+  const nameRow = createElement('div', { class: 'rulifeed-resume-name' });
   const rename = readingButton('', () => {
     openRenameEditor(
       p,
@@ -137,7 +137,7 @@ function createResumeCard(
       focusAction,
     );
   });
-  rename.classList.add('arcafeed-resume-rename', 'arcafeed-resume-icon');
+  rename.classList.add('rulifeed-resume-rename', 'rulifeed-resume-icon');
   setAttributes(rename, {
     'data-session-id': session.id,
     'aria-label': `${displayName} 이름 변경`,
@@ -147,29 +147,29 @@ function createResumeCard(
   nameRow.append(label, rename);
   return createElement(
     'div',
-    { class: 'arcafeed-resume-card' },
+    { class: 'rulifeed-resume-card' },
     createElement(
       'div',
-      { class: 'arcafeed-resume-context' },
+      { class: 'rulifeed-resume-context' },
       createElement('span', {
-        class: 'arcafeed-resume-type',
+        class: 'rulifeed-resume-type',
         text: sessionTypeLabel(session),
       }),
       nameRow,
       pin,
     ),
     createElement('div', {
-      class: 'arcafeed-resume-title',
+      class: 'rulifeed-resume-title',
       text: title,
       title,
     }),
     createElement(
       'div',
-      { class: 'arcafeed-resume-bottom' },
+      { class: 'rulifeed-resume-bottom' },
       readingTime(session.updatedAt),
       createElement(
         'div',
-        { class: 'arcafeed-resume-actions' },
+        { class: 'rulifeed-resume-actions' },
         remove,
         resume,
       ),
@@ -180,7 +180,7 @@ export function createResumeModal(p: VaultAdapter): HTMLElement {
   const tab = createElement('div', {
     class: 'helper-modal-tab helper-modal-resume',
   });
-  const tools = createElement('div', { class: 'arcafeed-history-tools' });
+  const tools = createElement('div', { class: 'rulifeed-history-tools' });
   const search = readingSearch(
     '채널, 시리즈 또는 글 제목으로 검색',
     '이어보기 검색',
@@ -190,19 +190,19 @@ export function createResumeModal(p: VaultAdapter): HTMLElement {
     'aria-label': '이어보기 채널 필터',
   });
   const sessions = createElement('div', {
-    class: 'arcafeed-modal-content arcafeed-reading-list arcafeed-resume-list',
+    class: 'rulifeed-modal-content rulifeed-reading-list rulifeed-resume-list',
     tabindex: -1,
     'aria-label': '이어보기 목록',
   });
   const count = createElement('span', {
-    class: 'arcafeed-reading-count',
+    class: 'rulifeed-reading-count',
     'aria-live': 'polite',
   });
   tools.append(
     search.element,
     channel,
     createElement('span', {
-      class: 'arcafeed-reading-sort',
+      class: 'rulifeed-reading-sort',
       text: '고정 우선 · 최근 탐색 순',
     }),
   );

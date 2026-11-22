@@ -1,130 +1,33 @@
-import { createElement, fromTemplate, setAttributes } from '@/utils/dom';
-
 import { eventBus } from '@/core/app-events';
-
+import { createElement } from '@/utils/dom';
 import type { VaultAdapter } from '@/vault';
 
-// ── Mode-specific button builders ───────────────────────
+export function initButton(p: VaultAdapter): void {
+  const anchor =
+    document.querySelector('#board, #content, main') ??
+    document.body.firstElementChild;
+  if (!anchor) return;
 
-function buildHomeButtons(_p: VaultAdapter): void {
-  lastNavbarList()?.before(
-    btnWrapper([
-      createArcaFeedBtn('filter', 'bi-gear-fill', () =>
-        eventBus.emit('showModal'),
+  const toolbar = createElement('div', {
+    class: 'rulifeed-toolbar swiper-no-swiping',
+  });
+  if (p.isCurrentMode('CHANNEL', 'ARTICLE') && !p.isSeriesMode) {
+    const toggle = createElement('button', {
+      type: 'button',
+      text: '스와이프 전환',
+      'aria-pressed': String(
+        !p.articleFilterConfig[p.href.channelId]?.disableSwiper,
       ),
-    ]),
-  );
-}
-
-function buildScrapButtons(p: VaultAdapter): void {
-  if (p.isSeriesMode) return;
-
-  const shuffleIcon = p.isShuffleMode ? 'bi-shuffle' : 'bi-arrow-down-up';
-
-  lastNavbarList()?.before(
-    btnWrapper([
-      createArcaFeedBtn('shuffle', shuffleIcon, () =>
-        eventBus.emit('toggleShuffle'),
-      ),
-      createArcaFeedBtn('series', 'bi-archive-fill', () =>
-        eventBus.emit('enableScrapSeries'),
-      ),
-      createArcaFeedBtn('filter', 'bi-gear-fill', () =>
-        eventBus.emit('showModal'),
-      ),
-    ]),
-  );
-}
-
-function buildChannelArticleButtons(p: VaultAdapter): void {
-  const btns: HTMLElement[] = [];
-
-  if (!p.isSeriesMode) {
-    const { disableSwiper } = p.articleFilterConfig[p.href.channelId] || {
-      disableSwiper: false,
-      onlyBest: false,
-    };
-    btns.push(
-      createArcaFeedBtn(
-        'next',
-        disableSwiper ? 'bi-lock-fill' : 'bi-forward-fill',
-        () => eventBus.emit('toggleSwiper'),
-      ),
-    );
+    });
+    toggle.addEventListener('click', () => void eventBus.emit('toggleSwiper'));
+    toolbar.append(toggle);
   }
 
-  btns.push(
-    createArcaFeedBtn('filter', 'bi-gear-fill', () =>
-      eventBus.emit('showModal'),
-    ),
-  );
-
-  lastNavbarList()?.before(btnWrapper(btns));
-}
-
-const BUTTON_BUILDERS: Record<string, (p: VaultAdapter) => void> = {
-  HOME: buildHomeButtons,
-  SCRAP: buildScrapButtons,
-  CHANNEL: buildChannelArticleButtons,
-  ARTICLE: buildChannelArticleButtons,
-};
-
-const initButton = (p: VaultAdapter) => {
-  BUTTON_BUILDERS[p.href.mode]?.(p);
-};
-
-// ── Helpers ─────────────────────────────────────────────
-
-function createArcaFeedBtn(
-  id: string,
-  icon: string,
-  callback: () => void,
-  display = 'list-item',
-) {
-  const btn =
-    fromTemplate(`<li class="nav-item dropdown userscript-nav-item ${id}" style="display: ${display};">
-  <a class="nav-link">
-    <span class="d-none d-sm-inline navbar-top-margin"></span>
-    <span class="${icon} h5"></span>
-  </a>
-  </li>`);
-
-  const labels: Record<string, string> = {
-    filter: '아카피드 설정',
-    next: '스와이프 모드 전환',
-    shuffle: '스크랩 순서 전환',
-    series: '스크랩 탐색 시작',
-  };
-  const link = btn.querySelector('a')!;
-  setAttributes(link, {
-    role: 'button',
-    tabindex: 0,
-    'aria-label': labels[id] || id,
+  const settings = createElement('button', {
+    type: 'button',
+    text: '루리피드 설정',
   });
-  link.addEventListener('keydown', (event) => {
-    if ((event.key === 'Enter' || event.key === ' ') && !event.isComposing) {
-      event.preventDefault();
-      event.stopPropagation();
-      void callback();
-    }
-  });
-  btn.addEventListener('click', () => callback());
-
-  return btn;
+  settings.addEventListener('click', () => void eventBus.emit('showModal'));
+  toolbar.append(settings);
+  anchor.before(toolbar);
 }
-
-function lastNavbarList(): HTMLUListElement | undefined {
-  const lists =
-    document.querySelectorAll<HTMLUListElement>('ul.nav.navbar-nav');
-  return lists[lists.length - 1];
-}
-
-function btnWrapper(buttons: HTMLElement[]): HTMLUListElement {
-  return createElement(
-    'ul',
-    { class: 'nav navbar-nav userscript-nav' },
-    ...buttons,
-  );
-}
-
-export { initButton };

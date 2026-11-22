@@ -23,7 +23,7 @@ export default function (_env, _args) {
 
     output: {
       path: path.resolve(__dirname, 'dist'),
-      filename: 'ArcaFeed.user.js',
+      filename: 'RuliFeed.user.js',
       clean: true,
     },
 
@@ -33,11 +33,6 @@ export default function (_env, _args) {
         '@': path.resolve(__dirname, 'src'),
         '@css': path.resolve(__dirname, 'css'),
       },
-    },
-
-    externals: {
-      swiper: 'Swiper',
-      'toastify-js': 'Toastify',
     },
 
     module: {
@@ -67,21 +62,17 @@ export default function (_env, _args) {
     plugins: [
       new UserscriptPlugin({
         headers: {
-          name: 'ArcaFeed',
-          namespace: 'https://github.com/Roharui/ArcaFeed',
+          name: 'RuliFeed',
+          namespace: 'https://github.com/Roharui/RuliFeed',
           downloadURL:
-            'https://github.com/Roharui/ArcaFeed/releases/latest/download/ArcaFeed.user.js',
+            'https://github.com/Roharui/RuliFeed/releases/latest/download/RuliFeed.user.js',
           updateURL:
-            'https://github.com/Roharui/ArcaFeed/releases/latest/download/ArcaFeed.user.js',
+            'https://github.com/Roharui/RuliFeed/releases/latest/download/RuliFeed.user.js',
           version: currentVersion,
-          description: 'Use ArcaLive as Shorts',
+          description: 'Use Ruliweb as Shorts',
           author: 'https://github.com/Roharui',
-          match: 'https://arca.live/*',
-          icon: 'https://www.google.com/s2/favicons?sz=64&domain=arca.live',
-          require: [
-            'https://cdn.jsdelivr.net/npm/swiper@12.2.0/swiper-bundle.min.js',
-            'https://cdn.jsdelivr.net/npm/toastify-js@1.12.0',
-          ],
+          match: ['https://bbs.ruliweb.com/*', 'https://m.ruliweb.com/*'],
+          icon: 'https://www.google.com/s2/favicons?sz=64&domain=bbs.ruliweb.com',
           'run-at': 'document-start',
           grant: 'none',
         },

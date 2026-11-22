@@ -65,5 +65,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.check.outputs.new_tag }}
-          files: dist/ArcaFeed.user.js
+          files: dist/RuliFeed.user.js
           generate_release_notes: true

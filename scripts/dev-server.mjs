@@ -33,9 +33,11 @@ export async function startDevServer({
     const route = url.pathname.slice(prefix.length);
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('Vary', 'Origin');
-    const allowedOrigin = request.headers.origin === 'https://arca.live';
+    const allowedOrigin =
+      request.headers.origin === 'https://bbs.ruliweb.com' ||
+      request.headers.origin === 'https://m.ruliweb.com';
     if (allowedOrigin) {
-      response.setHeader('Access-Control-Allow-Origin', 'https://arca.live');
+      response.setHeader('Access-Control-Allow-Origin', request.headers.origin);
     }
     if (request.method === 'OPTIONS') {
       if (route === '/build' && allowedOrigin) {
@@ -58,8 +60,8 @@ export async function startDevServer({
       return;
     }
     if (
-      route === '/ArcaFeed.live.user.js' ||
-      route === '/ArcaFeed.fetch.user.js'
+      route === '/RuliFeed.live.user.js' ||
+      route === '/RuliFeed.fetch.user.js'
     ) {
       response.setHeader(
         'Content-Type',
@@ -72,7 +74,7 @@ export async function startDevServer({
       response.end(
         createDevLoader(
           loaderURL,
-          route === '/ArcaFeed.fetch.user.js' ? 'fetch' : 'auto',
+          route === '/RuliFeed.fetch.user.js' ? 'fetch' : 'auto',
         ),
       );
     } else if (route === '/build') {
@@ -106,7 +108,7 @@ export async function startDevServer({
   let watcher;
   try {
     compiler = webpack(config);
-    compiler.hooks.invalid.tap('ArcaFeedLive', () => {
+    compiler.hooks.invalid.tap('RuliFeedLive', () => {
       build = null;
     });
     watcher = compiler.watch({}, (error, stats) => {
@@ -125,7 +127,7 @@ export async function startDevServer({
       );
       build = { hash: stats.hash, code };
       compressedBuild = gzipSync(JSON.stringify(build));
-      console.log(`[ArcaFeed live] 빌드 완료 (${stats.hash})`);
+      console.log(`[RuliFeed live] 빌드 완료 (${stats.hash})`);
     });
   } catch (error) {
     await new Promise((resolve) => server.close(resolve));
@@ -157,18 +159,18 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     device: process.argv.includes('--mobile') ? 'mobile' : 'desktop',
   });
   console.log(
-    `[ArcaFeed live] 한 번 설치: ${live.baseURL}/ArcaFeed.live.user.js\n` +
-      '[ArcaFeed live] 기존 ArcaFeed/ArcaFeed-dev를 끄고 아카라이브를 열어주세요. 저장 시 자동 새로고침됩니다.',
+    `[RuliFeed live] 한 번 설치: ${live.baseURL}/RuliFeed.live.user.js\n` +
+      '[RuliFeed live] 기존 RuliFeed/RuliFeed-dev를 끄고 루리웹를 열어주세요. 저장 시 자동 새로고침됩니다.',
   );
   if (host !== '127.0.0.1') {
     console.log(
-      `[ArcaFeed live] 휴대폰에서 설치: http://<PC 주소>:${new URL(live.baseURL).port}/ArcaFeed.live.user.js`,
+      `[RuliFeed live] 휴대폰에서 설치: http://<PC 주소>:${new URL(live.baseURL).port}/RuliFeed.live.user.js`,
     );
   }
   if (process.env.DEV_URL) {
     const externalURL = normalizeDevURL(process.env.DEV_URL);
     console.log(
-      `[ArcaFeed live] GM API 없는 로더: ${externalURL}/ArcaFeed.fetch.user.js (HTTPS 필요)`,
+      `[RuliFeed live] GM API 없는 로더: ${externalURL}/RuliFeed.fetch.user.js (HTTPS 필요)`,
     );
   }
   const stop = async () => {

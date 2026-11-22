@@ -16,8 +16,8 @@ const tick = () => new Promise((resolve) => setImmediate(resolve));
 const quietConsole = { ...console, error() {}, warn() {}, log() {} };
 const windowFixture = {
   location: {
-    href: 'https://arca.live/b/test/100?articleKey=session',
-    origin: 'https://arca.live',
+    href: 'https://bbs.ruliweb.com/community/board/300143/read/100?articleKey=session',
+    origin: 'https://bbs.ruliweb.com',
   },
   history: { replaceState() {} },
 };
@@ -86,9 +86,9 @@ test('application commands are queued, awaited, and keep events emitted by an ac
       },
     },
   });
-  const { ArcaFeed, eventBus } = load('src/core/index.ts');
-  const app = new ArcaFeed();
-  assert.equal(new ArcaFeed(), app);
+  const { RuliFeed, eventBus } = load('src/core/index.ts');
+  const app = new RuliFeed();
+  assert.equal(new RuliFeed(), app);
   const init = eventBus.emit('init');
   await tick();
   const save = eventBus.emit('checkUIModal');
@@ -251,7 +251,7 @@ test('Vault commits related state atomically and list reset invalidates requests
   vault.subscribe((state) => snapshots.push(state));
   vault.updateState({
     articleKey: 'new',
-    articleList: ['/b/test/100'],
+    articleList: ['/community/board/300143/read/100'],
     activeIndex: 0,
   });
   assert.equal(snapshots.length, 1);
@@ -281,7 +281,10 @@ function listingLoader(
       },
       DOMParser: class {
         parseFromString() {
-          return listingFixture({ rows: [{ href: '/b/test/98' }], next });
+          return listingFixture({
+            rows: [{ href: '/community/board/300143/read/98' }],
+            next,
+          });
         }
       },
     },
@@ -304,7 +307,7 @@ for (const change of ['reset', 'search', 'channels', 'session']) {
     const work = fetchFirstBatch(p, '100');
     if (change === 'reset') p.resetArticleList();
     if (change === 'search') p.searchQuery = '?q=new';
-    if (change === 'channels') p.seriesChannels = ['other'];
+    if (change === 'channels') p.seriesChannels = ['community/board/300149'];
     if (change === 'session') p.articleKey = 'new';
     const expected = [...p.articleList];
     gate.resolve({ responseText: '' });
@@ -323,10 +326,10 @@ test('all-batch scrap loading cannot replace or navigate a newer session', async
   });
   const work = fetchAllBatches(p, '');
   p.articleKey = 'new';
-  p.articleList = ['/b/other/200'];
+  p.articleList = ['/community/board/300149/read/200'];
   gate.resolve({ responseText: '' });
   await work;
-  assert.deepEqual(p.articleList, ['/b/other/200']);
+  assert.deepEqual(p.articleList, ['/community/board/300149/read/200']);
   assert.equal(p.saves, 0);
 });
 
@@ -335,10 +338,14 @@ test('concurrent listing commits deduplicate URLs against the latest list', asyn
   const { fetchFirstBatch } = listingLoader(() => gate.promise, null);
   const p = vaultFixture();
   const work = fetchFirstBatch(p, '100');
-  p.articleList = [...p.articleList, '/b/test/98'];
+  p.articleList = [...p.articleList, '/community/board/300143/read/98'];
   gate.resolve({ responseText: '' });
   await work;
-  assert.deepEqual(p.articleList, ['/b/test/100', '/b/test/99', '/b/test/98']);
+  assert.deepEqual(p.articleList, [
+    '/community/board/300143/read/100',
+    '/community/board/300143/read/99',
+    '/community/board/300143/read/98',
+  ]);
 });
 
 test('resetting a list starts fresh background work and an older completion cannot change its index', async () => {
@@ -355,7 +362,10 @@ test('resetting a list starts fresh background work and an older completion cann
   p.resetArticleList();
   await activateArticleLink(p, '100');
   assert.equal(fetches, 2);
-  p.articleList = ['/b/test/101', '/b/test/100'];
+  p.articleList = [
+    '/community/board/300143/read/101',
+    '/community/board/300143/read/100',
+  ];
   p.activeIndex = 0;
   gates[0].resolve();
   await tick();
@@ -385,7 +395,9 @@ for (const scenario of ['success', 'empty', 'stale']) {
       },
       mocks: {
         '@/feature/subscriptions': {
-          parseSubscribedChannels: () => [{ id: 'test', name: 'Test channel' }],
+          parseSubscribedChannels: () => [
+            { id: 'community/board/300143', name: 'Test channel' },
+          ],
         },
         '@/feature/article/fetch': {
           showFetchLoader() {},
@@ -406,12 +418,21 @@ for (const scenario of ['success', 'empty', 'stale']) {
     const work = initStartHomeSeries(p);
     if (scenario === 'stale') p.articleKey = 'newer-session';
     gate.resolve(
-      scenario === 'empty' ? [] : ['/b/test/99', '/b/test/100', '/b/test/99'],
+      scenario === 'empty'
+        ? []
+        : [
+            '/community/board/300143/read/99',
+            '/community/board/300143/read/100',
+            '/community/board/300143/read/99',
+          ],
     );
     await work;
     if (scenario === 'success') {
       assert.equal(commits.length, 1);
-      assert.deepEqual(commits[0].articleList, ['/b/test/100', '/b/test/99']);
+      assert.deepEqual(commits[0].articleList, [
+        '/community/board/300143/read/100',
+        '/community/board/300143/read/99',
+      ]);
       assert.equal(commits[0].activeIndex, 0);
       assert.equal(commits[0].isSeriesMode, true);
       assert.equal(commits[0].href.articleKey, commits[0].articleKey);
@@ -420,7 +441,7 @@ for (const scenario of ['success', 'empty', 'stale']) {
         `?articleKey=${commits[0].articleKey}`,
       );
       assert.deepEqual(navigations, [
-        `https://arca.live/b/test/100?articleKey=${p.articleKey}`,
+        `https://bbs.ruliweb.com/community/board/300143/read/100?articleKey=${p.articleKey}`,
       ]);
       assert.equal(p.saves, 1);
     } else {
@@ -458,12 +479,16 @@ test('repeated navigation events cannot skip articles while the browser is leavi
   })('src/feature/swiper/page.ts');
   const p = vaultFixture({
     activeIndex: 0,
-    articleList: ['/b/test/100', '/b/test/99', '/b/test/98'],
+    articleList: [
+      '/community/board/300143/read/100',
+      '/community/board/300143/read/99',
+      '/community/board/300143/read/98',
+    ],
   });
   await toLink('NEXT')(p);
   await nextLinkForce(p);
   await toLink('PREV')(p);
-  assert.deepEqual(navigations, ['/b/test/99']);
+  assert.deepEqual(navigations, ['/community/board/300143/read/99']);
   assert.equal(p.activeIndex, 1);
   assert.equal(p.saves, 1);
 });
@@ -491,7 +516,7 @@ test('a failed browser navigation restores the saved index and permits retry', a
   assert.equal(p.activeIndex, 0);
   fail = false;
   await toLink('NEXT')(p);
-  assert.deepEqual(navigations, ['/b/test/99']);
+  assert.deepEqual(navigations, ['/community/board/300143/read/99']);
   assert.equal(p.activeIndex, 1);
 });
 
@@ -500,8 +525,8 @@ test('stored config is normalized at the persistence boundary, preserving valid 
   const { ConfigService } = load('src/vault/config.ts');
   const { StorageRepository } = load('src/vault/repository.ts');
   const storage = memoryStorage({
-    'arcaFeed:articleFilterConfig': JSON.stringify({
-      test: {
+    'ruliFeed:articleFilterConfig': JSON.stringify({
+      'community/board/300143': {
         tab: ['media', 1],
         title: null,
         disableSwiper: 'false',
@@ -509,37 +534,51 @@ test('stored config is normalized at the persistence boundary, preserving valid 
       },
       invalid: null,
     }),
-    'arcaFeed:uiSettings': JSON.stringify({
+    'ruliFeed:uiSettings': JSON.stringify({
       hideBlur: false,
       hideScrollbar: 'false',
       contentWidth: 99999,
-      hiddenChannels: 'test',
-      homeSeriesChannels: ['test', false, 'test'],
+      hiddenChannels: 'community/board/300143',
+      homeSeriesChannels: [
+        'community/board/300143',
+        false,
+        'community/board/300143',
+      ],
       lastModalTab: 'unknown',
     }),
-    'arcaFeed:session:articleList': JSON.stringify([
-      '/b/test/100',
-      'https://arca.live/b/test/100?articleKey=old',
-      '/b/test/99/',
+    'ruliFeed:session:articleList': JSON.stringify([
+      '/community/board/300143/read/100',
+      'https://bbs.ruliweb.com/community/board/300143/read/100?articleKey=old',
+      '/community/board/300143/read/99/',
       42,
       '/settings',
-      'https://example.com/b/test/98',
+      'https://example.com/community/board/300143/read/98',
     ]),
-    'arcaFeed:session:lastActiveIndex': 'oops',
-    'arcaFeed:recentArticleKeys': '{}',
+    'ruliFeed:session:lastActiveIndex': 'oops',
+    'ruliFeed:recentArticleKeys': '{}',
   });
   const state = new ConfigService(new StorageRepository(storage)).loadConfig();
-  assert.deepEqual(state.articleList, ['/b/test/100', '/b/test/99']);
+  assert.deepEqual(state.articleList, [
+    '/community/board/300143/read/100',
+    '/community/board/300143/read/99',
+  ]);
   assert.equal(state.lastActiveIndex, -1);
   assert.deepEqual(state.articleFilterConfig, {
-    test: { tab: ['media'], title: [], disableSwiper: false, onlyBest: true },
+    'community/board/300143': {
+      tab: ['media'],
+      title: [],
+      disableSwiper: false,
+      onlyBest: true,
+    },
   });
   assert.equal(state.uiSettings.hideBlur, false);
   assert.equal(state.uiSettings.hideScrollbar, true);
   assert.equal(state.uiSettings.contentWidth, 1400);
   assert.equal(state.uiSettings.lastModalTab, 'filter');
   assert.deepEqual(state.uiSettings.hiddenChannels, []);
-  assert.deepEqual(state.uiSettings.homeSeriesChannels, ['test']);
+  assert.deepEqual(state.uiSettings.homeSeriesChannels, [
+    'community/board/300143',
+  ]);
 });
 
 test('syntactically valid but wrong-shaped JSON cannot corrupt startup defaults', () => {
@@ -547,10 +586,10 @@ test('syntactically valid but wrong-shaped JSON cannot corrupt startup defaults'
   const { ConfigService } = load('src/vault/config.ts');
   const { StorageRepository } = load('src/vault/repository.ts');
   const storage = memoryStorage({
-    'arcaFeed:articleFilterConfig': '[]',
-    'arcaFeed:uiSettings': '"invalid"',
-    'arcaFeed:session:articleList': '{}',
-    'arcaFeed:recentArticleKeys': '[1, null, "session", "session"]',
+    'ruliFeed:articleFilterConfig': '[]',
+    'ruliFeed:uiSettings': '"invalid"',
+    'ruliFeed:session:articleList': '{}',
+    'ruliFeed:recentArticleKeys': '[1, null, "session", "session"]',
   });
   const state = new ConfigService(new StorageRepository(storage)).loadConfig();
   assert.deepEqual(state.articleList, []);
@@ -634,13 +673,19 @@ test('list jumps preserve session parameters and share the navigation guard', as
   })('src/feature/swiper/page.ts');
   const p = vaultFixture({
     activeIndex: 0,
-    articleList: ['/b/test/100', '/b/other/95', '/b/test/90'],
+    articleList: [
+      '/community/board/300143/read/100',
+      '/community/board/300149/read/95',
+      '/community/board/300143/read/90',
+    ],
     searchQuery: '?articleKey=feed&search=hello',
   });
   for (const index of [-1, 3, 1.5, NaN]) navigateToArticle(p, index);
   assert.equal(p.saves, 0);
   await navigateToArticle(p, 2);
-  assert.deepEqual(navigations, ['/b/test/90?articleKey=feed&search=hello']);
+  assert.deepEqual(navigations, [
+    '/community/board/300143/read/90?articleKey=feed&search=hello',
+  ]);
   assert.equal(p.activeIndex, 2);
   assert.equal(p.saves, 1);
   await toLink('PREV')(p);
@@ -665,7 +710,10 @@ test('failed list jumps restore position and allow cross-channel retry', async (
   })('src/feature/swiper/page.ts');
   const p = vaultFixture({
     activeIndex: 0,
-    articleList: ['/b/test/100', '/b/other/42'],
+    articleList: [
+      '/community/board/300143/read/100',
+      '/community/board/300149/read/42',
+    ],
   });
   await assert.rejects(
     () => navigateToArticle(p, 1),
@@ -675,5 +723,5 @@ test('failed list jumps restore position and allow cross-channel retry', async (
   fail = false;
   await navigateToArticle(p, 1);
   assert.equal(p.activeIndex, 1);
-  assert.deepEqual(navigations, ['/b/other/42']);
+  assert.deepEqual(navigations, ['/community/board/300149/read/42']);
 });

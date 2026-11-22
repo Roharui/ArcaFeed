@@ -52,14 +52,14 @@ export function installSwipeCompositing(swiper: Swiper): void {
     moving = true;
     cancelUiFlush?.();
     cancelUiFlush = undefined;
-    wrapperEl.classList.add('arcafeed-swiper-moving');
+    wrapperEl.classList.add('rulifeed-swiper-moving');
     useMovingTransform();
   }
 
   function stopMoving(): void {
     if (touched || dragging || !moving) return;
     moving = false;
-    wrapperEl.classList.remove('arcafeed-swiper-moving');
+    wrapperEl.classList.remove('rulifeed-swiper-moving');
     useRestingTransform();
     if (pendingUpdates.size > 0) {
       cancelUiFlush = afterPaint(() => {
@@ -70,7 +70,7 @@ export function installSwipeCompositing(swiper: Swiper): void {
           try {
             update();
           } catch (error) {
-            console.error('[ArcaFeed] Deferred swipe UI update failed:', error);
+            console.error('[RuliFeed] Deferred swipe UI update failed:', error);
           }
         }
       });
@@ -78,7 +78,7 @@ export function installSwipeCompositing(swiper: Swiper): void {
   }
 
   function updateTouchAction(): void {
-    el.classList.toggle('arcafeed-swipe-enabled', swiper.enabled);
+    el.classList.toggle('rulifeed-swipe-enabled', swiper.enabled);
   }
 
   updateTouchAction();
@@ -132,8 +132,8 @@ export function installSwipeCompositing(swiper: Swiper): void {
     cancelUiFlush?.();
     pendingUpdates.clear();
     uiSchedulers.delete(swiper);
-    el.classList.remove('arcafeed-swipe-enabled');
-    wrapperEl.classList.remove('arcafeed-swiper-moving');
+    el.classList.remove('rulifeed-swipe-enabled');
+    wrapperEl.classList.remove('rulifeed-swiper-moving');
   });
 }
 

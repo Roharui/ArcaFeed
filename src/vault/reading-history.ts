@@ -9,8 +9,6 @@ import { articleWindow, sessionArticleLimit } from './article-window';
 import {
   SiteRecentHistory,
   SITE_RECENT_KEY,
-  SITE_RECENT_DISABLED_KEY,
-  SITE_RECENT_URL,
   RECENT_ENTRY_LIMIT,
   isVisitedPath,
 } from './site-recent-history';
@@ -22,13 +20,7 @@ import {
 } from './storage-keys';
 
 export { SESSION_LIMIT, SESSION_TOTAL_ARTICLE_LIMIT } from './storage-keys';
-export {
-  SITE_RECENT_KEY,
-  SITE_RECENT_DISABLED_KEY,
-  SITE_RECENT_URL,
-  RECENT_ENTRY_LIMIT,
-  isVisitedPath,
-};
+export { SITE_RECENT_KEY, RECENT_ENTRY_LIMIT, isVisitedPath };
 export type { ReadingEntry };
 
 export interface ReadingSession {
@@ -86,7 +78,7 @@ function validTimestamp(value: unknown): number {
     : 0;
 }
 
-/** Read the site's recent history; persist only ArcaFeed resume positions. */
+/** Read the site's recent history; persist only RuliFeed resume positions. */
 export class ReadingHistory {
   private data: ReadingData = { sessions: [] };
   private sessionsLoaded = false;

@@ -16,9 +16,13 @@ export default function (env = {}) {
   baseURL.search = '';
   baseURL.hash = '';
   baseURL.pathname = `${baseURL.pathname.replace(/\/+$/, '')}/`;
-  const downloadURL = new URL('ArcaFeed.dev.user.js', baseURL).href;
+  const downloadURL = new URL('RuliFeed.dev.user.js', baseURL).href;
   const config = createDevConfig({ ...env, VERSION_RELOAD: 'false' });
   const headers = getDevHeaders(String(Date.now()));
+  if (env.BUNDLE === 'true') {
+    delete config.externals;
+    delete headers.require;
+  }
 
   // Use release-style packaging while preserving development diagnostics.
   config.mode = 'production';

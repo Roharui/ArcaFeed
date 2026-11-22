@@ -1,6 +1,6 @@
 # 프로젝트 안내
 
-ArcaFeed는 아카라이브 게시글을 스와이프로 탐색하는 TypeScript 유저스크립트다. Webpack으로 코드와 CSS를 빌드하며 표준 DOM API와 Swiper 등을 사용한다.
+RuliFeed는 루리웹 게시글을 스와이프로 탐색하는 TypeScript 유저스크립트다. Webpack으로 코드와 CSS를 빌드하며 표준 DOM API와 Swiper 등을 사용한다.
 
 ## 작업 시작 시 먼저 읽을 문서
 

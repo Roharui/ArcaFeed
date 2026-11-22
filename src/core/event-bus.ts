@@ -1,6 +1,6 @@
 /**
  * Lightweight Event Bus (pub/sub) to decouple feature modules.
- * Replaces static ArcaFeed.runEvent() calls with injected dependencies.
+ * Replaces static RuliFeed.runEvent() calls with injected dependencies.
  */
 
 import type { CommandResult } from './result';

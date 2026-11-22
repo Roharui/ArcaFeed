@@ -130,13 +130,16 @@ export function vaultFixture(overrides = {}) {
   const fixture = {
     href: {
       mode: 'ARTICLE',
-      channelId: 'test',
+      channelId: 'community/board/300143',
       articleId: '100',
       articleKey: 'session',
       search: '',
     },
     articleKey: 'session',
-    articleList: ['/b/test/100', '/b/test/99'],
+    articleList: [
+      '/community/board/300143/read/100',
+      '/community/board/300143/read/99',
+    ],
     articleFilterConfig: {},
     activeIndex: -1,
     articleLoadRevision: 0,

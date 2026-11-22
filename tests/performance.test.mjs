@@ -12,8 +12,8 @@ const quietConsole = { ...console, log() {} };
 const toastMock = { default: () => ({ showToast() {}, hideToast() {} }) };
 const windowFixture = {
   location: {
-    href: 'https://arca.live/b/test/100?articleKey=session',
-    origin: 'https://arca.live',
+    href: 'https://bbs.ruliweb.com/community/board/300143/read/100?articleKey=session',
+    origin: 'https://bbs.ruliweb.com',
   },
   history: { replaceState() {} },
 };
@@ -29,25 +29,28 @@ test('native article paths avoid per-link URL parsing and preserve input rules',
   const { normalizeArticles } = sourceLoader({
     globals: { URL: CountedURL },
   })('src/vault/config-schema.ts');
-  const paths = Array.from({ length: 20000 }, (_, i) => `/b/test/${i + 1}`);
-  assert.deepEqual(normalizeArticles(paths, 'https://arca.live'), paths);
+  const paths = Array.from(
+    { length: 20000 },
+    (_, i) => `/community/board/300143/read/${i + 1}`,
+  );
+  assert.deepEqual(normalizeArticles(paths, 'https://bbs.ruliweb.com'), paths);
   assert.equal(urls, 1);
   const input = [
-    '/b/test/1',
-    '/b/test/1/',
-    'https://arca.live/b/test/2?q=hello#title',
-    '//arca.live/b/test/3',
-    '/b/test/4?query=1',
-    '/b/test/5#title',
-    ' /b/test/6\n',
-    '/b/test/7\n',
-    '/b/test/8\u2028',
-    '/b/test/../other/9',
-    'https://other.example/b/test/10',
-    '//other.example/b/test/11',
+    '/community/board/300143/read/1',
+    '/community/board/300143/read/1/',
+    'https://bbs.ruliweb.com/community/board/300143/read/2?q=hello#title',
+    '//bbs.ruliweb.com/community/board/300143/read/3',
+    '/community/board/300143/read/4?query=1',
+    '/community/board/300143/read/5#title',
+    ' /community/board/300143/read/6\n',
+    '/community/board/300143/read/7\n',
+    '/community/board/300143/read/8\u2028',
+    '/community/board/300143/../other/9',
+    'https://other.example/community/board/300143/read/10',
+    '//other.example/community/board/300143/read/11',
     '/b/invalid-channel/12',
-    '/b/test/no-article',
-    '/b/test/13/extra',
+    '/community/board/300143/no-article',
+    '/community/board/300143/read/13/extra',
     'http://[invalid',
     null,
     123,
@@ -58,8 +61,8 @@ test('native article paths avoid per-link URL parsing and preserve input rules',
         if (typeof href !== 'string') return [];
         try {
           const url = new URL(href, origin);
-          return url.origin === origin &&
-            /^\/b\/[a-zA-Z0-9]+\/\d+\/?$/.test(url.pathname)
+          return url.origin === new URL(origin).origin &&
+            /^\/(?:[a-z0-9_-]+\/)*board\/\d+\/read\/\d+\/?$/i.test(url.pathname)
             ? [url.pathname.replace(/\/$/, '')]
             : [];
         } catch {
@@ -68,42 +71,80 @@ test('native article paths avoid per-link URL parsing and preserve input rules',
       }),
     ),
   ];
-  for (const origin of ['https://arca.live', 'https://arca.live/', 'invalid'])
+  for (const origin of [
+    'https://bbs.ruliweb.com',
+    'https://bbs.ruliweb.com/',
+    'invalid',
+  ])
     assert.deepEqual(
       normalizeArticles(input, origin),
       reference(input, origin),
     );
-  assert.deepEqual(normalizeArticles(null, 'https://arca.live'), []);
+  assert.deepEqual(normalizeArticles(null, 'https://bbs.ruliweb.com'), []);
 });
 
 test('article lookup validates saved indices and caches searches per list', () => {
   const { findArticleIndex } = sourceLoader()('src/vault/article-window.ts');
-  const articles = ['/b/test/102', '/b/test/101', '/b/test/100'];
+  const articles = [
+    '/community/board/300143/read/102',
+    '/community/board/300143/read/101',
+    '/community/board/300143/read/100',
+  ];
   let scans = 0;
   articles.indexOf = function (path) {
     scans++;
     return Array.prototype.indexOf.call(this, path);
   };
-  assert.equal(findArticleIndex(articles, '/b/test/100', 2), 2);
+  assert.equal(
+    findArticleIndex(articles, '/community/board/300143/read/100', 2),
+    2,
+  );
   assert.equal(scans, 0);
-  assert.equal(findArticleIndex(articles, '/b/test/100'), 2);
+  assert.equal(
+    findArticleIndex(articles, '/community/board/300143/read/100'),
+    2,
+  );
   assert.equal(scans, 0);
-  assert.equal(findArticleIndex(articles, '/b/test/101', 0), 1);
-  assert.equal(findArticleIndex(articles, '/b/test/101'), 1);
+  assert.equal(
+    findArticleIndex(articles, '/community/board/300143/read/101', 0),
+    1,
+  );
+  assert.equal(
+    findArticleIndex(articles, '/community/board/300143/read/101'),
+    1,
+  );
   assert.equal(scans, 1);
-  assert.equal(findArticleIndex(articles, '/b/test/99'), -1);
-  assert.equal(findArticleIndex(articles, '/b/test/99'), -1);
+  assert.equal(
+    findArticleIndex(articles, '/community/board/300143/read/99'),
+    -1,
+  );
+  assert.equal(
+    findArticleIndex(articles, '/community/board/300143/read/99'),
+    -1,
+  );
   assert.equal(scans, 2);
-  assert.equal(findArticleIndex(['/b/test/101'], '/b/test/101'), 0);
+  assert.equal(
+    findArticleIndex(
+      ['/community/board/300143/read/101'],
+      '/community/board/300143/read/101',
+    ),
+    0,
+  );
 });
 
 test('navigation compaction retains recent history and every queued article', () => {
   const { compactNavigationArticles } = sourceLoader()(
     'src/vault/article-window.ts',
   );
-  const articles = Array.from({ length: 10000 }, (_, i) => `/b/test/${i + 1}`);
+  const articles = Array.from(
+    { length: 10000 },
+    (_, i) => `/community/board/300143/read/${i + 1}`,
+  );
   assert.equal(compactNavigationArticles(articles, articles[200]), articles);
-  assert.equal(compactNavigationArticles(articles, '/b/other/1'), articles);
+  assert.equal(
+    compactNavigationArticles(articles, '/community/board/300149/read/1'),
+    articles,
+  );
   const compacted = compactNavigationArticles(articles, articles[9000], 9000);
   assert.equal(compacted.length, 1100);
   assert.equal(compacted[100], articles[9000]);
@@ -113,11 +154,11 @@ test('navigation compaction retains recent history and every queued article', ()
 test('loading a long session compacts and persists its remapped navigation index', () => {
   const articles = Array.from(
     { length: 1000 },
-    (_, i) => `/b/test/${1000 - i}`,
+    (_, i) => `/community/board/300143/read/${1000 - i}`,
   );
   const storage = memoryStorage({
-    'arcaFeed:session:articleList': JSON.stringify(articles),
-    'arcaFeed:session:lastActiveIndex': '900',
+    'ruliFeed:session:articleList': JSON.stringify(articles),
+    'ruliFeed:session:lastActiveIndex': '900',
   });
   const load = sourceLoader({ globals: { window: windowFixture } });
   const { StorageRepository } = load('src/vault/repository.ts');
@@ -126,19 +167,22 @@ test('loading a long session compacts and persists its remapped navigation index
   const config = new ConfigService(new StorageRepository(storage));
   const patch = config.loadConfig();
   assert.equal(patch.articleList.length, 200);
-  assert.equal(patch.articleList[100], '/b/test/100');
+  assert.equal(patch.articleList[100], '/community/board/300143/read/100');
   assert.equal(patch.lastActiveIndex, 100);
   config.saveConfig({ ...createInitialState(), ...patch, activeIndex: 100 });
   assert.equal(
-    JSON.parse(storage.getItem('arcaFeed:session:articleList')).length,
+    JSON.parse(storage.getItem('ruliFeed:session:articleList')).length,
     200,
   );
-  assert.equal(storage.getItem('arcaFeed:session:lastActiveIndex'), '100');
+  assert.equal(storage.getItem('ruliFeed:session:lastActiveIndex'), '100');
 });
 
 for (const isScrapMode of [false, true]) {
   test(`a new 300-link ${isScrapMode ? 'scrap' : 'series'} session retains all links on reload and activation`, async () => {
-    const articles = Array.from({ length: 300 }, (_, i) => `/b/test/${i + 1}`);
+    const articles = Array.from(
+      { length: 300 },
+      (_, i) => `/community/board/300143/read/${i + 1}`,
+    );
     const storage = memoryStorage();
     const load = sourceLoader({
       globals: {
@@ -146,7 +190,7 @@ for (const isScrapMode of [false, true]) {
           ...windowFixture,
           location: {
             ...windowFixture.location,
-            href: 'https://arca.live/b/test/250?articleKey=session',
+            href: 'https://bbs.ruliweb.com/community/board/300143/read/250?articleKey=session',
           },
         },
       },
@@ -155,7 +199,7 @@ for (const isScrapMode of [false, true]) {
     const { ConfigService } = load('src/vault/config.ts');
     const config = new ConfigService(new StorageRepository(storage));
     config.copySeriesStorage('source', 'session', articles, 249, '');
-    if (isScrapMode) storage.setItem('arcaFeed:session:scrapMode', 'true');
+    if (isScrapMode) storage.setItem('ruliFeed:session:scrapMode', 'true');
     const patch = config.loadConfig();
     assert.deepEqual(patch.articleList, articles);
     assert.equal(patch.lastActiveIndex, 249);
@@ -168,7 +212,7 @@ for (const isScrapMode of [false, true]) {
     assert.equal(p.activeIndex, 249);
     config.saveConfig(p);
     assert.deepEqual(
-      JSON.parse(storage.getItem('arcaFeed:session:articleList')),
+      JSON.parse(storage.getItem('ruliFeed:session:articleList')),
       articles,
     );
   });
@@ -179,23 +223,26 @@ test('compaction preserves exhausted channel cursors and shuffled ordering', () 
     'src/vault/article-window.ts',
   );
   const articles = [
-    '/b/other/50',
-    '/b/other/10',
-    ...Array.from({ length: 500 }, (_, i) => `/b/test/${1000 - i}`),
+    '/community/board/300149/read/50',
+    '/community/board/300149/read/10',
+    ...Array.from(
+      { length: 500 },
+      (_, i) => `/community/board/300143/read/${1000 - i}`,
+    ),
   ];
   const compacted = compactNavigationArticles(articles, articles[400], 400, [
-    'test',
-    'other',
+    'community/board/300143',
+    'community/board/300149',
   ]);
-  assert.equal(compacted[0], '/b/other/10');
+  assert.equal(compacted[0], '/community/board/300149/read/10');
   assert.equal(compacted[101], articles[400]);
   assert.deepEqual(compacted.slice(102), articles.slice(401));
   const shuffled = [...articles].reverse();
   const result = compactNavigationArticles(shuffled, shuffled[400], 400, [
-    'test',
-    'other',
+    'community/board/300143',
+    'community/board/300149',
   ]);
-  assert.ok(result.includes('/b/test/501'));
+  assert.ok(result.includes('/community/board/300143/read/501'));
   assert.deepEqual(
     result.slice(result.indexOf(shuffled[400]) + 1),
     shuffled.slice(401),
@@ -206,8 +253,11 @@ test('refill checks stop after three available articles instead of scanning the 
   let visits = 0;
   const p = vaultFixture({
     articleList: [
-      '/b/test/100',
-      ...Array.from({ length: 10000 }, (_, i) => `/b/test/${i + 101}`),
+      '/community/board/300143/read/100',
+      ...Array.from(
+        { length: 10000 },
+        (_, i) => `/community/board/300143/read/${i + 101}`,
+      ),
     ],
   });
   p.skipVisitedArticles = true;
@@ -258,7 +308,7 @@ test('default channel settings arrays are isolated between stores', () => {
   const { Store } = sourceLoader()('src/vault/store.ts');
   const first = new Store();
   const second = new Store();
-  first.getState().uiSettings.homeSeriesChannels.push('test');
+  first.getState().uiSettings.homeSeriesChannels.push('community/board/300143');
   assert.deepEqual(second.getState().uiSettings.homeSeriesChannels, []);
 });
 
@@ -272,7 +322,7 @@ test('saving an unchanged state makes no storage writes; navigation saves only t
   const state = {
     ...createInitialState(),
     articleKey: 'session',
-    articleList: ['/b/test/100'],
+    articleList: ['/community/board/300143/read/100'],
     activeIndex: 0,
   };
   config.saveConfig(state);
@@ -281,17 +331,17 @@ test('saving an unchanged state makes no storage writes; navigation saves only t
   assert.equal(storage.writes.length, 0);
   config.saveConfig({ ...state, activeIndex: 1 });
   assert.deepEqual(storage.writes, [
-    { key: 'arcaFeed:session:lastActiveIndex', value: '1' },
+    { key: 'ruliFeed:session:lastActiveIndex', value: '1' },
   ]);
   storage.writes.length = 0;
   config.saveConfig({
     ...state,
     activeIndex: 1,
-    articleList: [...state.articleList, '/b/test/99'],
+    articleList: [...state.articleList, '/community/board/300143/read/99'],
   });
   assert.deepEqual(
     storage.writes.map((entry) => entry.key),
-    ['arcaFeed:session:articleList'],
+    ['ruliFeed:session:articleList'],
   );
 });
 
@@ -306,12 +356,12 @@ test('switching session persists its complete scoped state', () => {
   config.saveConfig(state);
   storage.writes.length = 0;
   config.saveConfig({ ...state, articleKey: 'second' });
-  assert.equal(storage.getItem('arcaFeed:second:articleList'), '[]');
-  assert.equal(storage.getItem('arcaFeed:second:seriesMode'), 'false');
-  assert.equal(storage.getItem('arcaFeed:second:searchQuery'), '');
-  assert.equal(storage.getItem('arcaFeed:second:lastActiveIndex'), '-1');
+  assert.equal(storage.getItem('ruliFeed:second:articleList'), '[]');
+  assert.equal(storage.getItem('ruliFeed:second:seriesMode'), 'false');
+  assert.equal(storage.getItem('ruliFeed:second:searchQuery'), '');
+  assert.equal(storage.getItem('ruliFeed:second:lastActiveIndex'), '-1');
   assert.ok(
-    storage.writes.every((entry) => entry.key !== 'arcaFeed:uiSettings'),
+    storage.writes.every((entry) => entry.key !== 'ruliFeed:uiSettings'),
   );
 });
 
@@ -328,7 +378,10 @@ test('page reload does not rewrite the loaded navigation list or settings', () =
     ...createInitialState(),
     articleKey: 'session',
     activeIndex: 0,
-    articleList: ['/b/test/100', '/b/test/99'],
+    articleList: [
+      '/community/board/300143/read/100',
+      '/community/board/300143/read/99',
+    ],
   });
   const config = new ConfigService(new StorageRepository(storage));
   const store = new Store(config.loadConfig());
@@ -378,15 +431,15 @@ test('pages without a session save global settings without creating an empty ses
   assert.deepEqual(
     storage.writes.map(({ key }) => key).sort(),
     [
-      'arcaFeed:displaySettings',
-      'arcaFeed:subscriptionSettings',
-      'arcaFeed:readingSettings',
-      'arcaFeed:lastModalTab',
-      'arcaFeed:isShuffleMode',
+      'ruliFeed:displaySettings',
+      'ruliFeed:subscriptionSettings',
+      'ruliFeed:readingSettings',
+      'ruliFeed:lastModalTab',
+      'ruliFeed:isShuffleMode',
     ].sort(),
   );
   assert.ok(
-    storage.writes.every((entry) => !entry.key.startsWith('arcaFeed::')),
+    storage.writes.every((entry) => !entry.key.startsWith('ruliFeed::')),
   );
 });
 
@@ -463,13 +516,13 @@ test('identical simultaneous GET requests share a response and subsequent calls 
       },
     },
   })('src/utils/fetch.ts');
-  const first = fetchUrl('/b/test');
-  const second = fetchUrl('https://arca.live/b/test');
+  const first = fetchUrl('/community/board/300143');
+  const second = fetchUrl('https://bbs.ruliweb.com/community/board/300143');
   assert.equal(first, second);
   assert.equal(calls, 1);
   response.resolve({ ok: true, text: async () => 'html' });
   assert.deepEqual(await first, { responseText: 'html' });
-  await fetchUrl('/b/test');
+  await fetchUrl('/community/board/300143');
   assert.equal(calls, 2);
 });
 
@@ -484,8 +537,8 @@ test('HTTP failures are surfaced and are not cached', async () => {
       },
     },
   })('src/utils/fetch.ts');
-  await assert.rejects(fetchUrl('/b/test'), /HTTP 503/);
-  await assert.rejects(fetchUrl('/b/test'), /HTTP 503/);
+  await assert.rejects(fetchUrl('/community/board/300143'), /HTTP 503/);
+  await assert.rejects(fetchUrl('/community/board/300143'), /HTTP 503/);
   assert.equal(calls, 2);
 });
 
@@ -501,10 +554,10 @@ test('write requests and GET requests with different timeouts are not coalesced'
     },
   })('src/utils/fetch.ts');
   await Promise.all([
-    fetchUrl('/b/test', 'GET', 100),
-    fetchUrl('/b/test', 'GET', 200),
-    fetchUrl('/b/test', 'POST'),
-    fetchUrl('/b/test', 'POST'),
+    fetchUrl('/community/board/300143', 'GET', 100),
+    fetchUrl('/community/board/300143', 'GET', 200),
+    fetchUrl('/community/board/300143', 'POST'),
+    fetchUrl('/community/board/300143', 'POST'),
   ]);
   assert.equal(calls, 4);
 });
@@ -513,11 +566,9 @@ test('title-only filters work without selecting tabs and read the title once', (
   const { buildFilterPredicate } = sourceLoader()('src/feature/filter.ts');
   let titleReads = 0;
   const row = {
-    matches: () => false,
-    querySelector(selector) {
-      assert.equal(selector, '.title');
+    get textContent() {
       titleReads++;
-      return { textContent: 'a normal title' };
+      return 'a normal title';
     },
   };
   const predicate = buildFilterPredicate({
@@ -540,16 +591,21 @@ test('title-only filters work without selecting tabs and read the title once', (
 test('legacy no-tab filters include both media variants and reject other tabs early', () => {
   const { buildFilterPredicate } = sourceLoader()('src/feature/filter.ts');
   const predicate = buildFilterPredicate({ tab: ['노탭'], title: [] });
-  const row = (hasImage) => ({
-    querySelector: (selector) =>
-      selector === '.media-icon.bi-images' && hasImage ? {} : null,
+  const row = (hasImage, category) => ({
+    closest: () => ({
+      querySelector: (selector) =>
+        selector === '.icon-picture'
+          ? hasImage
+            ? {}
+            : null
+          : category
+            ? { textContent: category }
+            : null,
+    }),
   });
   assert.equal(predicate(row(false)), true);
   assert.equal(predicate(row(true)), true);
-  assert.equal(
-    predicate({ querySelector: () => ({ textContent: 'other' }) }),
-    false,
-  );
+  assert.equal(predicate(row(false, '정보')), false);
 });
 
 test('navigation initialization returns while the next batch is still loading', async () => {
@@ -560,13 +616,16 @@ test('navigation initialization returns while the next batch is still loading', 
     fetchFirstBatch: async () => {
       fetches++;
       await gate.promise;
-      p.articleList = [...p.articleList, '/b/test/98'];
+      p.articleList = [...p.articleList, '/community/board/300143/read/98'];
     },
   });
   await activateArticleLink(p, '100');
   assert.equal(p.activeIndex, 0);
   assert.equal(fetches, 1);
-  assert.deepEqual(p.articleList, ['/b/test/100', '/b/test/99']);
+  assert.deepEqual(p.articleList, [
+    '/community/board/300143/read/100',
+    '/community/board/300143/read/99',
+  ]);
   await activateArticleLink(p, '100');
   assert.equal(fetches, 1);
   gate.resolve();
@@ -581,7 +640,11 @@ test('an empty list initializes immediately and resolves the exact article after
   const { activateArticleLink } = loadLink({
     fetchFirstBatch: async () => {
       await gate.promise;
-      p.articleList = ['/b/test/1000', '/b/test/100', '/b/test/99'];
+      p.articleList = [
+        '/community/board/300143/read/1000',
+        '/community/board/300143/read/100',
+        '/community/board/300143/read/99',
+      ];
     },
   });
   await activateArticleLink(p, '100');
@@ -597,33 +660,41 @@ test('home-series replenishment fetches channels together and preserves visited 
   const started = [];
   const p = vaultFixture({
     isSeriesMode: true,
-    articleList: ['/b/test/102', '/b/other/101', '/b/test/100', '/b/other/99'],
-    seriesChannels: ['test', 'other'],
+    articleList: [
+      '/community/board/300143/read/102',
+      '/community/board/300149/read/101',
+      '/community/board/300143/read/100',
+      '/community/board/300149/read/99',
+    ],
+    seriesChannels: ['community/board/300143', 'community/board/300149'],
   });
   const { activateArticleLink } = loadLink({
     showFetchLoader() {},
     hideFetchLoader() {},
     fetchChannelArticlesBefore: async (channel, minId) => {
       started.push([channel, minId]);
-      return gates[channel === 'test' ? 0 : 1].promise;
+      return gates[channel === 'community/board/300143' ? 0 : 1].promise;
     },
   });
   await activateArticleLink(p, '100');
   assert.deepEqual(started, [
-    ['test', 100],
-    ['other', 99],
+    ['community/board/300143', 100],
+    ['community/board/300149', 99],
   ]);
-  gates[0].resolve(['/b/test/98', '/b/test/98']);
-  gates[1].resolve(['/b/other/97']);
+  gates[0].resolve([
+    '/community/board/300143/read/98',
+    '/community/board/300143/read/98',
+  ]);
+  gates[1].resolve(['/community/board/300149/read/97']);
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(p.activeIndex, 2);
   assert.deepEqual(p.articleList, [
-    '/b/test/102',
-    '/b/other/101',
-    '/b/test/100',
-    '/b/other/99',
-    '/b/test/98',
-    '/b/other/97',
+    '/community/board/300143/read/102',
+    '/community/board/300149/read/101',
+    '/community/board/300143/read/100',
+    '/community/board/300149/read/99',
+    '/community/board/300143/read/98',
+    '/community/board/300149/read/97',
   ]);
 });
 
@@ -631,7 +702,7 @@ test('a filter change discards an old home-series response', async () => {
   const gate = deferred();
   const p = vaultFixture({
     isSeriesMode: true,
-    seriesChannels: ['test'],
+    seriesChannels: ['community/board/300143'],
   });
   const { activateArticleLink } = loadLink({
     showFetchLoader() {},
@@ -639,10 +710,15 @@ test('a filter change discards an old home-series response', async () => {
     fetchChannelArticlesBefore: () => gate.promise,
   });
   await activateArticleLink(p, '100');
-  p.articleFilterConfig = { test: { title: ['new-filter'] } };
-  gate.resolve(['/b/test/98']);
+  p.articleFilterConfig = {
+    'community/board/300143': { title: ['new-filter'] },
+  };
+  gate.resolve(['/community/board/300143/read/98']);
   await new Promise((resolve) => setImmediate(resolve));
-  assert.deepEqual(p.articleList, ['/b/test/100', '/b/test/99']);
+  assert.deepEqual(p.articleList, [
+    '/community/board/300143/read/100',
+    '/community/board/300143/read/99',
+  ]);
 });
 
 test('navigation persists the target index before leaving', async () => {
@@ -659,7 +735,7 @@ test('navigation persists the target index before leaving', async () => {
     mocks: { '@/utils': { getArrayItem: (list, index) => list[index] } },
   })('src/feature/swiper/page.ts');
   await toLink('NEXT')(p);
-  assert.deepEqual(navigations, [['/b/test/99', 1, 1]]);
+  assert.deepEqual(navigations, [['/community/board/300143/read/99', 1, 1]]);
 });
 
 test('Swiper is reused and background list changes unlock navigation', () => {
@@ -683,7 +759,7 @@ test('Swiper is reused and background list changes unlock navigation', () => {
   }
   const p = vaultFixture({
     activeIndex: 0,
-    articleList: ['/b/test/100'],
+    articleList: ['/community/board/300143/read/100'],
     subscribe: (fn) => {
       subscriber = fn;
     },
@@ -700,10 +776,10 @@ test('Swiper is reused and background list changes unlock navigation', () => {
   assert.equal(p.swiper.speed, 300);
   assert.equal(p.swiper.maxBackfaceHiddenSlides, 0);
   assert.equal(p.swiper.allowSlideNext, false);
-  p.articleList = [...p.articleList, '/b/test/99'];
+  p.articleList = [...p.articleList, '/community/board/300143/read/99'];
   subscriber({ href: p.href, articleFilterConfig: p.articleFilterConfig });
   assert.equal(p.swiper.allowSlideNext, true);
-  p.articleFilterConfig = { test: { disableSwiper: true } };
+  p.articleFilterConfig = { 'community/board/300143': { disableSwiper: true } };
   initSwiperPage(p);
   assert.equal(p.swiper.enabled, false);
   assert.equal(constructions, 1);
@@ -763,7 +839,7 @@ test('Swiper keeps a single transform write per drag update and releases composi
   emit('sliderFirstMove');
   updateAfterSwipe(swiper, update);
   updateAfterSwipe(swiper, update);
-  assert.equal(classList.has('arcafeed-swiper-moving'), true);
+  assert.equal(classList.has('rulifeed-swiper-moving'), true);
   assert.equal(move(650.5), 'translate3d(650.5px, 0px, 0px)');
   emit('touchEnd');
   emit('setTransition', 300);
@@ -772,7 +848,7 @@ test('Swiper keeps a single transform write per drag update and releases composi
   flushFrames();
   assert.equal(afterPaint, undefined);
   assert.equal(uiUpdates, 1);
-  assert.equal(classList.has('arcafeed-swiper-moving'), true);
+  assert.equal(classList.has('rulifeed-swiper-moving'), true);
   swiper.animating = false;
   emit('transitionEnd');
   assert.equal(classList.size, 0);
@@ -896,9 +972,9 @@ test('prefetch follows the next article, avoids repeat mutations and respects di
   initArticlePrefetch(p);
   subscriber();
   assert.deepEqual(appended, [
-    'https://arca.live/b/test/99?articleKey=session',
+    'https://bbs.ruliweb.com/community/board/300143/read/99?articleKey=session',
   ]);
-  p.articleFilterConfig = { test: { disableSwiper: true } };
+  p.articleFilterConfig = { 'community/board/300143': { disableSwiper: true } };
   subscriber();
   assert.equal(appended.length, 1);
 });
@@ -933,27 +1009,45 @@ function listingAdapter(
 test('listing pages deduplicate existing URLs, duplicate rows and repeats across pages', async () => {
   const row = (href) => ({ href });
   const pages = {
-    first: {
-      rows: [row('/b/test/100'), row('/b/test/99'), row('/b/test/99')],
+    'community/board/300146': {
+      rows: [
+        row('/community/board/300143/read/100'),
+        row('/community/board/300143/read/99'),
+        row('/community/board/300143/read/99'),
+      ],
       next: '?p=2',
     },
-    second: { rows: [row('/b/test/99'), row('/b/test/98')], next: null },
+    'community/board/300147': {
+      rows: [
+        row('/community/board/300143/read/99'),
+        row('/community/board/300143/read/98'),
+      ],
+      next: null,
+    },
   };
   let calls = 0;
   const { load } = listingAdapter(pages, async () => ({
-    responseText: calls++ === 0 ? 'first' : 'second',
+    responseText:
+      calls++ === 0 ? 'community/board/300146' : 'community/board/300147',
   }));
   const { fetchAllBatches } = load('src/feature/article/fetch.ts');
-  const p = vaultFixture({ articleList: ['/b/test/100'] });
+  const p = vaultFixture({ articleList: ['/community/board/300143/read/100'] });
   await fetchAllBatches(p, '100');
-  assert.deepEqual(p.articleList, ['/b/test/100', '/b/test/99', '/b/test/98']);
+  assert.deepEqual(p.articleList, [
+    '/community/board/300143/read/100',
+    '/community/board/300143/read/99',
+    '/community/board/300143/read/98',
+  ]);
   assert.equal(calls, 2);
 });
 
 test('skipping seen articles scans later pages and keeps seen links for backward navigation', async () => {
   const pages = {
-    seen: { rows: [{ href: '/b/test/99' }], next: '?p=2' },
-    unseen: { rows: [{ href: '/b/test/98' }], next: '?p=3' },
+    seen: { rows: [{ href: '/community/board/300143/read/99' }], next: '?p=2' },
+    unseen: {
+      rows: [{ href: '/community/board/300143/read/98' }],
+      next: '?p=3',
+    },
   };
   let calls = 0;
   const { load } = listingAdapter(pages, async () => ({
@@ -961,14 +1055,22 @@ test('skipping seen articles scans later pages and keeps seen links for backward
   }));
   const { fetchFirstBatch } = load('src/feature/article/fetch.ts');
   const p = vaultFixture({
-    articleList: ['/b/test/100'],
+    articleList: ['/community/board/300143/read/100'],
     activeIndex: 0,
-    uiSettings: { skipVisitedContexts: { 'channel:test': true } },
-    reading: { hasVisited: (path) => path === '/b/test/99' },
+    uiSettings: {
+      skipVisitedContexts: { 'channel:community/board/300143': true },
+    },
+    reading: {
+      hasVisited: (path) => path === '/community/board/300143/read/99',
+    },
   });
   await fetchFirstBatch(p, '100');
   assert.equal(calls, 2);
-  assert.deepEqual(p.articleList, ['/b/test/100', '/b/test/99', '/b/test/98']);
+  assert.deepEqual(p.articleList, [
+    '/community/board/300143/read/100',
+    '/community/board/300143/read/99',
+    '/community/board/300143/read/98',
+  ]);
   assert.equal(p.getAdjacentArticleIndex('NEXT'), 2);
   p.activeIndex = 2;
   assert.equal(p.getAdjacentArticleIndex('PREV'), 1);
@@ -977,24 +1079,30 @@ test('skipping seen articles scans later pages and keeps seen links for backward
 for (const scenario of [
   {
     name: 'one next article remains',
-    links: ['/b/test/99'],
+    links: ['/community/board/300143/read/99'],
     expectedToasts: 0,
   },
   {
     name: 'multiple next articles remain',
-    links: ['/b/test/99', '/b/test/98'],
+    links: [
+      '/community/board/300143/read/99',
+      '/community/board/300143/read/98',
+    ],
     expectedToasts: 0,
   },
   { name: 'no next article remains', links: [], expectedToasts: 1 },
   {
     name: 'only visited next articles remain with skipping enabled',
-    links: ['/b/test/99'],
+    links: ['/community/board/300143/read/99'],
     skipVisited: true,
     expectedToasts: 1,
   },
   {
     name: 'an unvisited next article remains with skipping enabled',
-    links: ['/b/test/99', '/b/test/98'],
+    links: [
+      '/community/board/300143/read/99',
+      '/community/board/300143/read/98',
+    ],
     skipVisited: true,
     expectedToasts: 0,
   },
@@ -1007,12 +1115,16 @@ for (const scenario of [
       { showToast: (message) => toasts.push(message) },
     );
     const p = vaultFixture({
-      articleList: ['/b/test/100', ...scenario.links],
+      articleList: ['/community/board/300143/read/100', ...scenario.links],
       activeIndex: 0,
       uiSettings: {
-        skipVisitedContexts: { 'channel:test': Boolean(scenario.skipVisited) },
+        skipVisitedContexts: {
+          'channel:community/board/300143': Boolean(scenario.skipVisited),
+        },
       },
-      reading: { hasVisited: (path) => path === '/b/test/99' },
+      reading: {
+        hasVisited: (path) => path === '/community/board/300143/read/99',
+      },
     });
     await load('src/feature/article/fetch.ts').fetchFirstBatch(p, '100');
     assert.equal(toasts.length, scenario.expectedToasts);
@@ -1069,7 +1181,9 @@ for (const scenario of [
     const pages = {};
     for (let page = 1; page <= scenario.totalPages; page++) {
       pages[page] = {
-        rows: skipVisited ? [{ href: `/b/test/${100 - page}` }] : [],
+        rows: skipVisited
+          ? [{ href: `/community/board/300143/read/${100 - page}` }]
+          : [],
         next: page < scenario.totalPages ? `?p=${page + 1}` : null,
       };
     }
@@ -1093,19 +1207,24 @@ for (const scenario of [
       },
     );
     const p = vaultFixture({
-      articleList: ['/b/test/100'],
+      articleList: ['/community/board/300143/read/100'],
       activeIndex: 0,
       subscribe: () => () => {},
-      uiSettings: { skipVisitedContexts: { 'channel:test': skipVisited } },
+      uiSettings: {
+        skipVisitedContexts: { 'channel:community/board/300143': skipVisited },
+      },
       reading: {
-        hasVisited: (path) => path !== `/b/test/${100 - scenario.unseenPage}`,
+        hasVisited: (path) =>
+          path !== `/community/board/300143/read/${100 - scenario.unseenPage}`,
       },
     });
     await load('src/feature/article/fetch.ts').fetchFirstBatch(p, '100');
     assert.deepEqual(
       requests,
       Array.from({ length: scenario.expectedRequests }, (_, index) =>
-        index === 0 ? '100' : `100?p=${index + 1}`,
+        index === 0
+          ? '/community/board/300143/read/100'
+          : `/community/board/300143?p=${index + 1}`,
       ),
     );
     assert.equal(prompts.length, scenario.expectedPrompts);
@@ -1129,7 +1248,7 @@ for (const action of ['continue', 'change-setting']) {
     const pages = {};
     for (let page = 1; page <= 11; page++) {
       pages[page] = {
-        rows: [{ href: `/b/test/${100 - page}` }],
+        rows: [{ href: `/community/board/300143/read/${100 - page}` }],
         next: `?p=${page + 1}`,
       };
     }
@@ -1151,10 +1270,14 @@ for (const action of ['continue', 'change-setting']) {
       },
     );
     const p = vaultFixture({
-      articleList: ['/b/test/100'],
+      articleList: ['/community/board/300143/read/100'],
       activeIndex: 0,
-      uiSettings: { skipVisitedContexts: { 'channel:test': true } },
-      reading: { hasVisited: (path) => path !== '/b/test/89' },
+      uiSettings: {
+        skipVisitedContexts: { 'channel:community/board/300143': true },
+      },
+      reading: {
+        hasVisited: (path) => path !== '/community/board/300143/read/89',
+      },
       subscribe: (callback) => {
         subscriber = callback;
         return () => (unsubscribed = true);
@@ -1174,13 +1297,21 @@ for (const action of ['continue', 'change-setting']) {
     await work;
     assert.equal(requests, action === 'continue' ? 11 : 10);
     assert.equal(unsubscribed, true);
-    assert.equal(p.articleList.includes('/b/test/89'), action === 'continue');
+    assert.equal(
+      p.articleList.includes('/community/board/300143/read/89'),
+      action === 'continue',
+    );
   });
 }
 
 test('changing the skip setting discards an in-flight listing response', async () => {
   const gate = deferred();
-  const pages = { first: { rows: [{ href: '/b/test/98' }], next: '?p=2' } };
+  const pages = {
+    'community/board/300146': {
+      rows: [{ href: '/community/board/300143/read/98' }],
+      next: '?p=2',
+    },
+  };
   let calls = 0;
   const { load } = listingAdapter(pages, () => {
     calls++;
@@ -1190,9 +1321,12 @@ test('changing the skip setting discards an in-flight listing response', async (
   const p = vaultFixture();
   const work = fetchFirstBatch(p, '100');
   p.skipVisitedArticles = true;
-  gate.resolve({ responseText: 'first' });
+  gate.resolve({ responseText: 'community/board/300146' });
   await work;
-  assert.deepEqual(p.articleList, ['/b/test/100', '/b/test/99']);
+  assert.deepEqual(p.articleList, [
+    '/community/board/300143/read/100',
+    '/community/board/300143/read/99',
+  ]);
   assert.equal(calls, 1);
 });
 
@@ -1210,24 +1344,30 @@ test('cyclic pagination stops before requesting a page again', async () => {
 
 test('a filter change during a listing request discards its stale result', async () => {
   const gate = deferred();
-  const pages = { first: { rows: [{ href: '/b/test/98' }], next: null } };
+  const pages = {
+    'community/board/300146': {
+      rows: [{ href: '/community/board/300143/read/98' }],
+      next: null,
+    },
+  };
   const { load } = listingAdapter(pages, () => gate.promise);
   const { fetchFirstBatch } = load('src/feature/article/fetch.ts');
   const p = vaultFixture();
   const work = fetchFirstBatch(p, '100');
-  p.articleFilterConfig = { test: { title: ['changed'] } };
-  gate.resolve({ responseText: 'first' });
+  p.articleFilterConfig = { 'community/board/300143': { title: ['changed'] } };
+  gate.resolve({ responseText: 'community/board/300146' });
   await work;
-  assert.deepEqual(p.articleList, ['/b/test/100', '/b/test/99']);
+  assert.deepEqual(p.articleList, [
+    '/community/board/300143/read/100',
+    '/community/board/300143/read/99',
+  ]);
 });
 
 test('UI initialization installs one subscription and skips DOM work for article state changes', () => {
   let domWrites = 0;
   const subscribers = [];
-  const dom = domFixture(
-    '<main class="body"><div class="content-wrapper"></div></main>',
-  );
-  const wrapper = dom.document.querySelector('.content-wrapper');
+  const dom = domFixture('<main class="body"><div id="board"></div></main>');
+  const wrapper = dom.document.querySelector('#board');
   const nativeStyle = wrapper.style;
   Object.defineProperty(wrapper, 'style', {
     value: {
@@ -1269,10 +1409,8 @@ test('resize events perform one geometry read and style update per animation fra
   let styleWrites = 0;
   const frames = new Map();
   let nextFrame = 0;
-  const dom = domFixture(
-    '<main class="body"><div class="content-wrapper"></div></main>',
-  );
-  const wrapper = dom.document.querySelector('.content-wrapper');
+  const dom = domFixture('<main class="body"><div id="board"></div></main>');
+  const wrapper = dom.document.querySelector('#board');
   wrapper.getBoundingClientRect = () => {
     geometryReads++;
     return { left: 0, right: 700 };
@@ -1312,7 +1450,11 @@ test('resize events perform one geometry read and style update per animation fra
   });
   initUi(p);
   styleWrites = 0;
-  send(wrapper.querySelector('.arca-resize-handle-right'), 'mousedown', 700);
+  send(
+    wrapper.querySelector('.rulifeed-resize-handle-right'),
+    'mousedown',
+    700,
+  );
   for (let index = 0; index < 100; index++)
     send(dom.document, 'mousemove', 800 + index);
   assert.equal(frames.size, 1);
@@ -1327,7 +1469,12 @@ test('resize events perform one geometry read and style update per animation fra
 
 test('a direct article uses its DOM listing while saved sessions keep their existing order', async () => {
   let fetches = 0;
-  const rows = ['/b/test/100', '/b/test/99', '/b/test/98', '/b/test/97'];
+  const rows = [
+    '/community/board/300143/read/100',
+    '/community/board/300143/read/99',
+    '/community/board/300143/read/98',
+    '/community/board/300143/read/97',
+  ];
   const { initLink } = loadLink(
     {
       fetchFirstBatch: async () => {
@@ -1341,14 +1488,19 @@ test('a direct article uses its DOM listing while saved sessions keep their exis
   assert.deepEqual(p.articleList, rows);
   assert.equal(p.activeIndex, 0);
   const saved = vaultFixture({
-    articleList: ['/b/test/100', '/b/test/90', '/b/test/80', '/b/test/70'],
+    articleList: [
+      '/community/board/300143/read/100',
+      '/community/board/300143/read/90',
+      '/community/board/300143/read/80',
+      '/community/board/300143/read/70',
+    ],
   });
   await initLink(saved);
   assert.deepEqual(saved.articleList, [
-    '/b/test/100',
-    '/b/test/90',
-    '/b/test/80',
-    '/b/test/70',
+    '/community/board/300143/read/100',
+    '/community/board/300143/read/90',
+    '/community/board/300143/read/80',
+    '/community/board/300143/read/70',
   ]);
   assert.equal(fetches, 0);
 });
@@ -1364,7 +1516,7 @@ test('best-only mode never seeds ordinary DOM rows and empty channels initialize
         await gate.promise;
       },
     },
-    ['/b/test/99'],
+    ['/community/board/300143/read/99'],
     (p, applyCss) => {
       assert.equal(applyCss, true);
       styledModes.push(p.href.mode);
@@ -1372,15 +1524,19 @@ test('best-only mode never seeds ordinary DOM rows and empty channels initialize
   );
   const p = vaultFixture({
     articleList: [],
-    articleFilterConfig: { test: { onlyBest: true } },
+    articleFilterConfig: { 'community/board/300143': { onlyBest: true } },
   });
   await initLink(p);
   assert.deepEqual(p.articleList, []);
   assert.equal(fetches, 1);
   const channel = vaultFixture({
-    href: { mode: 'CHANNEL', channelId: 'test', articleId: '' },
+    href: {
+      mode: 'CHANNEL',
+      channelId: 'community/board/300143',
+      articleId: '',
+    },
     articleList: [],
-    articleFilterConfig: { test: { onlyBest: true } },
+    articleFilterConfig: { 'community/board/300143': { onlyBest: true } },
   });
   await initLink(channel);
   assert.deepEqual(styledModes, ['ARTICLE', 'CHANNEL']);
@@ -1395,20 +1551,32 @@ test('best-only mode never seeds ordinary DOM rows and empty channels initialize
 test('best-only opacity follows fetched membership and resets when the option is disabled', () => {
   const document = listingFixture({
     rows: [
-      { href: '/b/test/100?articleKey=session', title: 'best' },
-      { href: '/b/test/99', title: 'ordinary' },
-      { href: '/b/test/98', title: 'excluded best' },
+      {
+        href: '/community/board/300143/read/100?articleKey=session',
+        title: 'best',
+      },
+      { href: '/community/board/300143/read/99', title: 'ordinary' },
+      { href: '/community/board/300143/read/98', title: 'excluded best' },
     ],
   });
-  const rows = Array.from(document.querySelectorAll('a.vrow'));
+  const rows = Array.from(document.querySelectorAll('a.subject_link'));
   const { filterLink } = sourceLoader({ globals: { document } })(
     'src/feature/filter.ts',
   );
   const p = vaultFixture({
-    href: { mode: 'CHANNEL', channelId: 'test', articleKey: '', search: '' },
+    href: {
+      mode: 'CHANNEL',
+      channelId: 'community/board/300143',
+      articleKey: '',
+      search: '',
+    },
     articleList: [],
     articleFilterConfig: {
-      test: { tab: [], title: ['excluded'], onlyBest: true },
+      'community/board/300143': {
+        tab: [],
+        title: ['excluded'],
+        onlyBest: true,
+      },
     },
   });
   filterLink(p, true);
@@ -1416,20 +1584,23 @@ test('best-only opacity follows fetched membership and resets when the option is
     rows.map((row) => row.style.opacity),
     ['0.5', '0.5', '0.5'],
   );
-  p.articleList = ['/b/test/100', '/b/test/98'];
+  p.articleList = [
+    '/community/board/300143/read/100',
+    '/community/board/300143/read/98',
+  ];
   filterLink(p, true);
   assert.deepEqual(
     rows.map((row) => row.style.opacity),
     ['1', '0.5', '0.5'],
   );
-  p.href.search = '?mode=best';
+  p.href.search = '?view_best=1';
   filterLink(p, true);
   assert.deepEqual(
     rows.map((row) => row.style.opacity),
     ['1', '1', '0.5'],
   );
   p.href.search = '';
-  p.articleFilterConfig.test.onlyBest = false;
+  p.articleFilterConfig['community/board/300143'].onlyBest = false;
   filterLink(p, true);
   assert.deepEqual(
     rows.map((row) => row.style.opacity),
@@ -1446,7 +1617,7 @@ test('step execution keeps parallel work, sequential dependencies and follow-ups
   const work = runner.run(p, [
     [
       async () => {
-        events.push('a');
+        events.push('community/board/300151');
         await gate.promise;
         return [p, () => events.push('follow-up')];
       },
@@ -1459,10 +1630,16 @@ test('step execution keeps parallel work, sequential dependencies and follow-ups
       return () => events.push('last');
     },
   ]);
-  assert.deepEqual(events, ['a', 'b']);
+  assert.deepEqual(events, ['community/board/300151', 'b']);
   gate.resolve();
   await work;
-  assert.deepEqual(events, ['a', 'b', 'follow-up', 'c', 'last']);
+  assert.deepEqual(events, [
+    'community/board/300151',
+    'b',
+    'follow-up',
+    'c',
+    'last',
+  ]);
   assert.equal(p.saves, 1);
 });
 
@@ -1492,10 +1669,10 @@ test('repository returns native objects without parsing or serializing payloads'
 
 test('config getters retain lazy normalization without JSON conversion through state updates', () => {
   const storage = memoryStorage({
-    'arcaFeed:articleFilterConfig': '{"test":{}}',
-    'arcaFeed:displaySettings': '{"contentWidth":800}',
-    'arcaFeed:settingsVersion': '2',
-    'arcaFeed:session:articleList': '["/b/test/100"]',
+    'ruliFeed:articleFilterConfig': '{"community/board/300143":{}}',
+    'ruliFeed:displaySettings': '{"contentWidth":800}',
+    'ruliFeed:settingsVersion': '2',
+    'ruliFeed:session:articleList': '["/community/board/300143/read/100"]',
   });
   const parsed = [];
   const load = sourceLoader({
@@ -1522,16 +1699,18 @@ test('config getters retain lazy normalization without JSON conversion through s
   assert.equal(store.getState().uiSettings.contentWidth, 800);
   assert.deepEqual(parsed, []);
   assert.equal(store.getState().uiSettings.contentWidth, 800);
-  store.setState({ articleList: ['/b/test/101'] });
-  assert.deepEqual(store.getState().articleList, ['/b/test/101']);
+  store.setState({ articleList: ['/community/board/300143/read/101'] });
+  assert.deepEqual(store.getState().articleList, [
+    '/community/board/300143/read/101',
+  ]);
   assert.deepEqual(parsed, []);
 });
 
 test('reading payloads load independently on demand and reload leaves unused sessions untouched', () => {
   const storage = memoryStorage({
-    recent_articles: '[]',
-    'arcaFeed:readingHistory': '{"sessions":[]}',
-    'arcaFeed:readingProgress': '[]',
+    'rulifeed:recentArticles': '[]',
+    'ruliFeed:readingHistory': '{"sessions":[]}',
+    'ruliFeed:readingProgress': '[]',
   });
   const parsed = [];
   const load = sourceLoader({
@@ -1550,7 +1729,7 @@ test('reading payloads load independently on demand and reload leaves unused ses
   const { ReadingHistory } = load('src/vault/reading-history.ts');
   const reading = new ReadingHistory();
   assert.deepEqual(parsed, []);
-  assert.equal(reading.hasVisited('/b/test/100'), false);
+  assert.equal(reading.hasVisited('/community/board/300143/read/100'), false);
   assert.deepEqual(parsed, ['[]']);
   reading.reload();
   assert.deepEqual(parsed, ['[]']);
@@ -1562,8 +1741,8 @@ test('reading payloads load independently on demand and reload leaves unused ses
 
 test('short navigation lists do not load unrelated series channel settings', () => {
   const storage = memoryStorage({
-    'arcaFeed:session:articleList': '["/b/test/100"]',
-    'arcaFeed:session:seriesChannels': '["unused"]',
+    'ruliFeed:session:articleList': '["/community/board/300143/read/100"]',
+    'ruliFeed:session:seriesChannels': '["unused"]',
   });
   const reads = [];
   const getItem = storage.getItem.bind(storage);
@@ -1576,10 +1755,10 @@ test('short navigation lists do not load unrelated series channel settings', () 
   const { ConfigService } = load('src/vault/config.ts');
   const config = new ConfigService(new StorageRepository(storage)).loadConfig();
   reads.length = 0;
-  assert.deepEqual(config.articleList, ['/b/test/100']);
-  assert.ok(!reads.includes('arcaFeed:session:seriesChannels'));
-  assert.ok(!reads.includes('arcaFeed:articleFilterConfig'));
-  assert.ok(!reads.includes('arcaFeed:uiSettings'));
+  assert.deepEqual(config.articleList, ['/community/board/300143/read/100']);
+  assert.ok(!reads.includes('ruliFeed:session:seriesChannels'));
+  assert.ok(!reads.includes('ruliFeed:articleFilterConfig'));
+  assert.ok(!reads.includes('ruliFeed:uiSettings'));
 });
 
 test('prefetch matches skipped navigation URLs and removes link when Swiper is disabled', () => {
@@ -1596,9 +1775,13 @@ test('prefetch matches skipped navigation URLs and removes link when Swiper is d
   const p = vaultFixture({
     activeIndex: 0,
     searchQuery: '?articleKey=session',
-    articleList: ['/b/test/100', '/b/test/99', '/b/test/98'],
+    articleList: [
+      '/community/board/300143/read/100',
+      '/community/board/300143/read/99',
+      '/community/board/300143/read/98',
+    ],
     reading: {
-      hasVisited: (path) => path === '/b/test/99',
+      hasVisited: (path) => path === '/community/board/300143/read/99',
     },
     subscribe: (fn) => {
       subscriber = fn;
@@ -1624,9 +1807,9 @@ test('prefetch matches skipped navigation URLs and removes link when Swiper is d
   })('src/feature/article/prefetch.ts');
   initArticlePrefetch(p);
   assert.deepEqual(appended, [
-    'https://arca.live/b/test/98?articleKey=session&arcaFeedSkipped=1',
+    'https://bbs.ruliweb.com/community/board/300143/read/98?articleKey=session&ruliFeedSkipped=1',
   ]);
-  p.articleFilterConfig = { test: { disableSwiper: true } };
+  p.articleFilterConfig = { 'community/board/300143': { disableSwiper: true } };
   subscriber({
     articleList: p.articleList,
     activeIndex: p.activeIndex,
@@ -1675,12 +1858,12 @@ test('Swiper pre-promotes compositing on touchStart, releases on vertical scroll
   installSwipeCompositing(swiper);
   // Pre-promote on touchStart before horizontal drag threshold is crossed.
   emit('touchStart');
-  assert.equal(classList.has('arcafeed-swiper-moving'), true);
+  assert.equal(classList.has('rulifeed-swiper-moving'), true);
   assert.equal(style.transform, 'translate3d(-360px, 0px, 0px)');
 
   // Release immediately when the gesture turns into a vertical scroll.
   emit('touchMoveOpposite');
-  assert.equal(classList.has('arcafeed-swiper-moving'), false);
+  assert.equal(classList.has('rulifeed-swiper-moving'), false);
   assert.equal(style.transform, 'translate(-360px, 0px)');
 
   // Keep compositing intact when a retouch interrupts an active transition.
@@ -1689,7 +1872,7 @@ test('Swiper pre-promotes compositing on touchStart, releases on vertical scroll
   emit('touchStart');
   swiper.animating = false;
   emit('transitionEnd');
-  assert.equal(classList.has('arcafeed-swiper-moving'), true);
+  assert.equal(classList.has('rulifeed-swiper-moving'), true);
   assert.equal(style.transform, 'translate3d(-360px, 0px, 0px)');
 
   emit('touchEnd');
@@ -1697,14 +1880,19 @@ test('Swiper pre-promotes compositing on touchStart, releases on vertical scroll
     frames.delete(id);
     callback();
   }
-  assert.equal(classList.has('arcafeed-swiper-moving'), false);
+  assert.equal(classList.has('rulifeed-swiper-moving'), false);
   assert.equal(style.transform, 'translate(-360px, 0px)');
 });
 
-test('initReading defers parsing recent_articles until needed when visited skipping is off', () => {
+test('initReading defers parsing visits until needed when visited skipping is off', () => {
   const storage = memoryStorage({
-    recent_articles: JSON.stringify([
-      { slug: 'test', articleId: 99, title: 'Seen', regdateAt: 1700000000 },
+    'rulifeed:recentArticles': JSON.stringify([
+      {
+        path: `/community/board/300143/read/${99}`,
+        title: 'Seen',
+        channelName: '게시판',
+        visitedAt: 1700000000 * 1000,
+      },
     ]),
   });
   const parsed = [];
@@ -1747,7 +1935,7 @@ test('initReading defers parsing recent_articles until needed when visited skipp
   const vault = new VaultAdapter(
     new Store({
       articleKey: 'session',
-      articleList: ['/b/test/100'],
+      articleList: ['/community/board/300143/read/100'],
       uiSettings: { showVisitedIndicators: false },
     }),
     { saveConfig() {} },
@@ -1760,17 +1948,42 @@ test('initReading defers parsing recent_articles until needed when visited skipp
 
 test('equalData compares arrays directly and distinguishes arrays from objects', () => {
   const { equalData, addressId } = sourceLoader()('src/vault/record-schema.ts');
-  assert.equal(equalData(['/b/a/1', '/b/a/2'], ['/b/a/1', '/b/a/2']), true);
-  assert.equal(equalData(['/b/a/1', '/b/a/2'], ['/b/a/1', '/b/a/3']), false);
-  assert.equal(equalData(['/b/a/1'], { 0: '/b/a/1' }), false);
-  assert.equal(equalData({ 0: '/b/a/1' }, ['/b/a/1']), false);
-  assert.notEqual(
-    addressId({ store: 'lists', key: ['resume', 'a'] }),
-    addressId({ store: 'lists', key: ['navigation', 'a'] }),
+  assert.equal(
+    equalData(
+      ['/community/board/300151/read/1', '/community/board/300151/read/2'],
+      ['/community/board/300151/read/1', '/community/board/300151/read/2'],
+    ),
+    true,
+  );
+  assert.equal(
+    equalData(
+      ['/community/board/300151/read/1', '/community/board/300151/read/2'],
+      ['/community/board/300151/read/1', '/community/board/300151/read/3'],
+    ),
+    false,
+  );
+  assert.equal(
+    equalData(['/community/board/300151/read/1'], {
+      0: '/community/board/300151/read/1',
+    }),
+    false,
+  );
+  assert.equal(
+    equalData({ 0: '/community/board/300151/read/1' }, [
+      '/community/board/300151/read/1',
+    ]),
+    false,
   );
   assert.notEqual(
-    addressId({ store: 'settings', key: 'a' }),
-    addressId({ store: 'channelFilters', key: 'a' }),
+    addressId({ store: 'lists', key: ['resume', 'community/board/300151'] }),
+    addressId({
+      store: 'lists',
+      key: ['navigation', 'community/board/300151'],
+    }),
+  );
+  assert.notEqual(
+    addressId({ store: 'settings', key: 'community/board/300151' }),
+    addressId({ store: 'channelFilters', key: 'community/board/300151' }),
   );
 });
 

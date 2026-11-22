@@ -117,7 +117,7 @@
 
 /* Resize handle (PC only) */
 
-.arcafeed-resize-handle {
+.rulifeed-resize-handle {
   position: absolute;
   top: 0;
   width: 10px;
@@ -127,29 +127,29 @@
 }
 
 @media screen and (max-width: 1023px), (pointer: coarse) {
-  .arcafeed-resize-handle {
+  .rulifeed-resize-handle {
     display: none !important;
   }
 }
 
-.arca-resize-handle-right {
+.rulifeed-resize-handle-right {
   right: -5px;
   cursor: ew-resize;
   border-left: 2px solid transparent;
 }
 
-.arca-resize-handle-left {
+.rulifeed-resize-handle-left {
   left: -5px;
   cursor: ew-resize;
   border-right: 2px solid transparent;
 }
 
-.arca-resize-handle-right:hover,
-.arca-resize-handle-right.dragging {
+.rulifeed-resize-handle-right:hover,
+.rulifeed-resize-handle-right.dragging {
   border-left-color: var(--color-bd-btn);
 }
 
-.arca-resize-handle-left:hover,
-.arca-resize-handle-left.dragging {
+.rulifeed-resize-handle-left:hover,
+.rulifeed-resize-handle-left.dragging {
   border-right-color: var(--color-bd-btn);
 }

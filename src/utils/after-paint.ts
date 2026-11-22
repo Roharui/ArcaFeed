@@ -14,7 +14,7 @@ export function afterPaint(task: () => void): () => void {
     try {
       task();
     } catch (error) {
-      console.error('[ArcaFeed] Deferred initialization failed:', error);
+      console.error('[RuliFeed] Deferred initialization failed:', error);
     }
   };
   // Background tabs may not receive animation frames.

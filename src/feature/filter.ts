@@ -1,3 +1,4 @@
+import { normalizeArticlePath } from '@/utils/regex';
 import type { VaultAdapter } from '@/vault';
 import type { ArticleFilterImpl } from '@/types';
 
@@ -14,23 +15,12 @@ const NO_TAB_CATEGORIES = [
 
 // ── Row extraction ─────────────────────────────────────
 
-const ARTICLE_ROW_SELECTOR = [
-  'div.article-list > div.list-table.table > a.vrow.column',
-  'div.article-list > div.list-table.hybrid a.title.hybrid-title',
-  'div.scrap-list > div.article-list.admin > div.list-table > a.vrow.column',
-].join(', ');
+const ARTICLE_ROW =
+  '#board_list .board_list_table tr.table_body:not(.notice):not(.other)';
+const ARTICLE_ROW_SELECTOR = `${ARTICLE_ROW} a.subject_link, ${ARTICLE_ROW} a:has(span.subject_link)`;
 
-function extractArticleRows(scope?: ParentNode): HTMLElement[] {
-  if (scope)
-    return Array.from(
-      scope.querySelectorAll<HTMLElement>(ARTICLE_ROW_SELECTOR),
-    ).filter((row) => !row.classList.contains('notice'));
-  const roots = document.querySelectorAll('.root-container');
-  if (!roots.length) return [];
-  if (roots.length === 1) return extractArticleRows(roots[0]!);
-  return Array.from(
-    new Set(Array.from(roots).flatMap((root) => extractArticleRows(root))),
-  );
+function extractArticleRows(scope: ParentNode = document): HTMLElement[] {
+  return Array.from(scope.querySelectorAll<HTMLElement>(ARTICLE_ROW_SELECTOR));
 }
 
 // ── Article key injection ──────────────────────────────
@@ -58,7 +48,11 @@ function injectArticleKeys(rows: HTMLElement[], articleKey: string): void {
     }
 
     const url = new URL(href, window.location.origin);
-    if (url.searchParams.get('articleKey') === articleKey) return;
+    if (
+      !normalizeArticlePath(url.href) ||
+      url.searchParams.get('articleKey') === articleKey
+    )
+      return;
 
     url.searchParams.set('articleKey', articleKey);
     el.setAttribute('href', `${url.pathname}${url.search}`);
@@ -101,21 +95,19 @@ function buildFilterPredicate(
   return (ele: HTMLElement) => {
     if (allowedTabs.size > 0) {
       const badgeText = ele
-        .querySelector('.text-bg-success')
-        ?.textContent?.trim();
+        .closest('tr')
+        ?.querySelector('.divsn, .cate_label')
+        ?.textContent?.trim()
+        .replace(/^\[|\]$/g, '');
       const tab =
         badgeText ||
-        (ele.querySelector('.media-icon.bi-images')
+        (ele.closest('tr')?.querySelector('.icon-picture')
           ? NO_TAB_CATEGORY_WITH_IMAGE
           : NO_TAB_CATEGORY_WITHOUT_IMAGE);
       if (!allowedTabs.has(tab)) return false;
     }
     if (titleFilter.length === 0 && includes.length === 0) return true;
-    const title =
-      (ele.matches('.title')
-        ? ele
-        : ele.querySelector('.title')
-      )?.textContent?.trim() ?? '';
+    const title = ele.textContent?.trim() ?? '';
     if (titleFilter.some((keyword) => title.includes(keyword))) return false;
     if (!includes.length) return true;
     const content = filter.includeCaseSensitive
@@ -133,8 +125,7 @@ function extractArticleHref(element: HTMLElement): string | null {
   const href = element.getAttribute('href');
   if (!href) return null;
 
-  // Normalize: strip origin and query string → "/b/channel/12345"
-  return href.replace('https://arca.live', '').replace(/\?.+$/, '');
+  return normalizeArticlePath(href);
 }
 
 // ── Public API ─────────────────────────────────────────
@@ -162,7 +153,8 @@ function filterLink(
   const predicate = buildFilterPredicate(filter);
   const existingUrls = new Set(p.articleList);
   // Best status comes from the site's best-only listing, not vote thresholds.
-  const bestListing = new URLSearchParams(p.href.search).get('mode') === 'best';
+  const bestListing =
+    new URLSearchParams(p.href.search).get('view_best') === '1';
 
   const result: string[] = [];
 

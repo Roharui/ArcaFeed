@@ -60,11 +60,11 @@ function showConfirmToast(
   if (signal?.aborted) return Promise.resolve(false);
   return new Promise((resolve) => {
     const content = document.createElement('div');
-    content.className = 'arcafeed-toast-confirm';
+    content.className = 'rulifeed-toast-confirm';
     const text = document.createElement('div');
     text.textContent = message;
     const actions = document.createElement('div');
-    actions.className = 'arcafeed-toast-actions';
+    actions.className = 'rulifeed-toast-actions';
     let settled = false;
     let toast: ToastInstance | null = null;
     const finish = (accepted: boolean) => {
@@ -86,7 +86,7 @@ function showConfirmToast(
       const button = document.createElement('button');
       button.type = 'button';
       button.textContent = label;
-      button.className = accepted ? 'arcafeed-toast-primary' : '';
+      button.className = accepted ? 'rulifeed-toast-primary' : '';
       button.addEventListener('click', (event) => {
         event.stopPropagation();
         finish(accepted);
@@ -102,7 +102,7 @@ function showConfirmToast(
       {
         node: content,
         duration: -1,
-        className: 'arcafeed-toast-with-actions',
+        className: 'rulifeed-toast-with-actions',
         style: { borderRadius: '12px', padding: '16px' },
       },
       cancel,

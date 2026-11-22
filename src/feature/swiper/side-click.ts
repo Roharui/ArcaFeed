@@ -39,13 +39,13 @@ export function installSideClick(p: VaultAdapter, swiper: Swiper): void {
       swiper.destroyed ||
       swiper.animating ||
       isNavigating(p) ||
-      document.querySelector('#dialog, .arcafeed-navigation-panel') ||
+      document.querySelector('#dialog, .rulifeed-navigation-panel') ||
       window.getSelection()?.toString() ||
       Math.hypot(event.clientX - start.x, event.clientY - start.y) > 10
     )
       return;
 
-    const content = swiper.el.querySelector('.slide-active .content-wrapper');
+    const content = swiper.el.querySelector('.slide-active #board');
     const target = event.target;
     if (
       !content ||

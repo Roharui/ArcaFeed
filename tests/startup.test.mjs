@@ -121,13 +121,15 @@ test('initialization prepares Swiper and releases the queue before creating navi
 test('unsupported pages exit before opening IndexedDB or constructing the application', async () => {
   const calls = [];
   sourceLoader({
-    globals: { window: { location: { href: 'https://arca.live/u/settings' } } },
+    globals: {
+      window: { location: { href: 'https://bbs.ruliweb.com/u/settings' } },
+    },
     mocks: {
       '@/vault/indexed-storage': {
         initializeStorage: () => calls.push('storage'),
       },
       '@/core': {
-        ArcaFeed: class {
+        RuliFeed: class {
           constructor() {
             calls.push('app');
           }
@@ -135,7 +137,7 @@ test('unsupported pages exit before opening IndexedDB or constructing the applic
         eventBus: { emit: () => calls.push('init') },
       },
       '@/feature/swiper/skip-toast': { captureSkippedToast() {} },
-      get '@css/arcalive.css'() {
+      get '@css/ruliweb.css'() {
         calls.push('layout');
         return {};
       },
@@ -150,12 +152,16 @@ test('layout is applied before storage completes while application initializatio
   const storage = deferred();
   sourceLoader({
     globals: {
-      window: { location: { href: 'https://arca.live/b/test/100' } },
+      window: {
+        location: {
+          href: 'https://bbs.ruliweb.com/community/board/300143/read/100',
+        },
+      },
       process: { env: { NODE_ENV: 'production' } },
       document: { head: {}, readyState: 'interactive' },
     },
     mocks: {
-      get '@css/arcalive.css'() {
+      get '@css/ruliweb.css'() {
         calls.push('layout');
         return {};
       },
@@ -166,7 +172,7 @@ test('layout is applied before storage completes while application initializatio
         },
       },
       '@/core': {
-        ArcaFeed: class {
+        RuliFeed: class {
           constructor() {
             calls.push('app');
           }
@@ -191,7 +197,9 @@ test('storage starts during parsing and DOM initialization waits for the parsed 
   sourceLoader({
     globals: {
       window: {
-        location: { href: 'https://arca.live/b/test/100' },
+        location: {
+          href: 'https://bbs.ruliweb.com/community/board/300143/read/100',
+        },
         addEventListener(type, handler, options) {
           assert.equal(type, 'DOMContentLoaded');
           assert.equal(options.capture, true);
@@ -211,12 +219,12 @@ test('storage starts during parsing and DOM initialization waits for the parsed 
       },
     },
     mocks: {
-      '@css/arcalive.css': {},
+      '@css/ruliweb.css': {},
       '@/vault/indexed-storage': {
         initializeStorage: () => calls.push('storage'),
       },
       '@/core': {
-        ArcaFeed: class {},
+        RuliFeed: class {},
         eventBus: { emit: () => calls.push('init') },
       },
       '@/feature/swiper/skip-toast': { captureSkippedToast() {} },

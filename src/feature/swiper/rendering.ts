@@ -11,9 +11,7 @@ export function deferOffscreenArticleSections(swiper: Swiper): void {
     return;
 
   const sections = Array.from(
-    swiper.el.querySelectorAll<HTMLElement>(
-      '.board-article #comment, .board-article .included-article-list',
-    ),
+    swiper.el.querySelectorAll<HTMLElement>('#board_read #cmt, #board_list'),
   );
   if (sections.length === 0) return;
 
@@ -22,8 +20,8 @@ export function deferOffscreenArticleSections(swiper: Swiper): void {
   const applyHeights = () => {
     for (const [section, height] of heights) {
       observer.unobserve(section);
-      section.style.setProperty('--arcafeed-section-height', `${height}px`);
-      section.classList.add('arcafeed-deferred-section');
+      section.style.setProperty('--rulifeed-section-height', `${height}px`);
+      section.classList.add('rulifeed-deferred-section');
     }
     heights.clear();
   };
@@ -41,8 +39,8 @@ export function deferOffscreenArticleSections(swiper: Swiper): void {
     observer.disconnect();
     heights.clear();
     for (const section of sections) {
-      section.classList.remove('arcafeed-deferred-section');
-      section.style.removeProperty('--arcafeed-section-height');
+      section.classList.remove('rulifeed-deferred-section');
+      section.style.removeProperty('--rulifeed-section-height');
     }
   });
 }

@@ -27,19 +27,19 @@ import type { ArticleFilterConfigImpl, ArticleFilterImpl } from '@/types';
 import type { SubscribedChannel } from '@/feature/subscriptions';
 const MODAL_SUBSCRIBE_TAB = `
 <div class="helper-modal-tab helper-modal-subscribe">
-  <div class="arcafeed-modal-content">
-    <div class="arcafeed-subscribe-controls">
-      <button type="button" class="arcafeed-modal-button" id="subscribe-select-all">전체 선택</button>
-      <button type="button" class="arcafeed-modal-button" id="subscribe-select-none">전체 해제</button>
+  <div class="rulifeed-modal-content">
+    <div class="rulifeed-subscribe-controls">
+      <button type="button" class="rulifeed-modal-button" id="subscribe-select-all">전체 선택</button>
+      <button type="button" class="rulifeed-modal-button" id="subscribe-select-none">전체 해제</button>
     </div>
-    <div id="subscribe-start-status" class="arcafeed-subscription-status" hidden></div>
+    <div id="subscribe-start-status" class="rulifeed-subscription-status" hidden></div>
     <div id="subscribe-channel-list"></div>
     <div id="subscribe-filter-editor"></div>
   </div>
-  <div id="subscribe-buttons" class="arcafeed-modal-actions">
-    <button id="subscribe-cancel-btn" class="arcafeed-modal-button" type="button">취소</button>
-    <button id="subscribe-save-btn" class="arcafeed-modal-button" type="button">저장</button>
-    <button id="subscribe-check-btn" class="arcafeed-modal-button is-primary" type="button">일괄 탐색 시작</button>
+  <div id="subscribe-buttons" class="rulifeed-modal-actions">
+    <button id="subscribe-cancel-btn" class="rulifeed-modal-button" type="button">취소</button>
+    <button id="subscribe-save-btn" class="rulifeed-modal-button" type="button">저장</button>
+    <button id="subscribe-check-btn" class="rulifeed-modal-button is-primary" type="button">일괄 탐색 시작</button>
   </div>
 </div>
 `;
@@ -78,7 +78,7 @@ async function fetchChannelCategories(channelId: string): Promise<{
   failed: boolean;
 }> {
   try {
-    const response = await fetchUrl(`/b/${channelId}`);
+    const response = await fetchUrl(`/${channelId}`);
     return {
       categories: extractFilterCategories(
         new DOMParser().parseFromString(response.responseText, 'text/html'),
@@ -106,7 +106,7 @@ function createSubscribeSettingModal(p: VaultAdapter): HTMLElement {
   let editorRevision = 0;
   let editorOpener: HTMLElement | null = null;
   const status = createSubscriptionStatus(p);
-  const content = tab.querySelector<HTMLElement>('.arcafeed-modal-content')!;
+  const content = tab.querySelector<HTMLElement>('.rulifeed-modal-content')!;
   content.prepend(status.element);
   const unsubscribeLoading = subscribeArticleLoading((active) => {
     tab
@@ -126,7 +126,7 @@ function createSubscribeSettingModal(p: VaultAdapter): HTMLElement {
   const list = tab.querySelector<HTMLElement>('#subscribe-channel-list')!;
   const panel = tab.querySelector<HTMLElement>('#subscribe-filter-editor')!;
   const header = tab.querySelector<HTMLElement>(
-    ':scope > .arcafeed-reading-header',
+    ':scope > .rulifeed-reading-header',
   )!;
   const startResult = tab.querySelector<HTMLElement>(
     '#subscribe-start-status',
@@ -136,7 +136,7 @@ function createSubscribeSettingModal(p: VaultAdapter): HTMLElement {
     header,
     ...Array.from(
       tab.querySelectorAll<HTMLElement>(
-        '.arcafeed-subscribe-controls, #subscribe-buttons',
+        '.rulifeed-subscribe-controls, #subscribe-buttons',
       ),
     ),
   ];
@@ -180,7 +180,7 @@ function createSubscribeSettingModal(p: VaultAdapter): HTMLElement {
     panel.replaceChildren(
       createElement(
         'div',
-        { class: 'arcafeed-subscribe-filter-loading' },
+        { class: 'rulifeed-subscribe-filter-loading' },
         createElement('p', {
           text: `${channel.name} 카테고리를 불러오는 중…`,
           role: 'status',
@@ -188,7 +188,7 @@ function createSubscribeSettingModal(p: VaultAdapter): HTMLElement {
         listen(
           createElement('button', {
             type: 'button',
-            class: 'arcafeed-modal-button',
+            class: 'rulifeed-modal-button',
             text: '취소',
           }),
           'click',
@@ -213,7 +213,7 @@ function createSubscribeSettingModal(p: VaultAdapter): HTMLElement {
       onCancel: closeEditor,
     });
     editor.classList.remove('helper-modal-tab');
-    editor.classList.add('arcafeed-subscribe-filter-editor');
+    editor.classList.add('rulifeed-subscribe-filter-editor');
     const focusedLoading = panel.contains(document.activeElement);
     panel.replaceChildren(editor);
     if (focusedLoading && isVisible(panel)) {
@@ -222,19 +222,19 @@ function createSubscribeSettingModal(p: VaultAdapter): HTMLElement {
         ?.focus();
     }
     if (failed) {
-      editor.querySelector('.arcafeed-modal-content')!.prepend(
+      editor.querySelector('.rulifeed-modal-content')!.prepend(
         createElement(
           'section',
-          { class: 'arcafeed-settings-section' },
+          { class: 'rulifeed-settings-section' },
           createElement('p', {
-            class: 'arcafeed-settings-description',
+            class: 'rulifeed-settings-description',
             role: 'status',
             text: '카테고리를 불러오지 못했습니다. 저장된 카테고리와 다른 필터는 수정할 수 있습니다.',
           }),
           listen(
             createElement('button', {
               type: 'button',
-              class: 'arcafeed-modal-button',
+              class: 'rulifeed-modal-button',
               text: '다시 불러오기',
             }),
             'click',
@@ -246,7 +246,7 @@ function createSubscribeSettingModal(p: VaultAdapter): HTMLElement {
   };
   for (const channel of channels) {
     const summary = createElement('div', {
-      class: 'arcafeed-subscribe-summary',
+      class: 'rulifeed-subscribe-summary',
     });
     const updateSummary = (filter?: ArticleFilterImpl) => {
       summary.textContent = formatFilterSummary(filter);
@@ -255,7 +255,7 @@ function createSubscribeSettingModal(p: VaultAdapter): HTMLElement {
     list.append(
       createElement(
         'div',
-        { class: 'arcafeed-subscribe-row' },
+        { class: 'rulifeed-subscribe-row' },
         createElement(
           'div',
           {},
@@ -265,7 +265,7 @@ function createSubscribeSettingModal(p: VaultAdapter): HTMLElement {
         listen(
           createElement('button', {
             type: 'button',
-            class: 'arcafeed-modal-button',
+            class: 'rulifeed-modal-button',
             text: '필터 수정',
             'aria-label': `${channel.name} 필터 수정`,
           }),
@@ -278,7 +278,7 @@ function createSubscribeSettingModal(p: VaultAdapter): HTMLElement {
   if (!channels.length) {
     list.append(
       createElement('p', {
-        text: '구독 채널이 없습니다. /b/my에서 로그인 상태와 구독 목록을 확인해주세요.',
+        text: '루리웹에서 즐겨찾기 또는 퀵메뉴를 연 뒤 이 탭을 다시 열어주세요.',
       }),
     );
   }
@@ -378,7 +378,7 @@ async function initStartHomeSeries(p: VaultAdapter): Promise<CommandResult> {
         : '탐색 조건이 바뀌었거나 다른 이동이 진행 중입니다.',
     );
   } catch (error) {
-    console.error('[ArcaFeed] Subscription feed start failed:', error);
+    console.error('[RuliFeed] Subscription feed start failed:', error);
     return failedCommand(reportFailure(error));
   }
 }

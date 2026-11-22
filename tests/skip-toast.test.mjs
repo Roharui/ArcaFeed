@@ -12,7 +12,7 @@ function fixture() {
       sessionStorage: storage,
       window: {
         location: {
-          href: 'https://arca.live/b/test/100?articleKey=session',
+          href: 'https://bbs.ruliweb.com/community/board/300143/read/100?articleKey=session',
           replace(url) {
             if (fail) throw new Error('navigation failed');
             navigations.push(url);
@@ -28,9 +28,18 @@ function fixture() {
   const toast = load('src/feature/swiper/skip-toast.ts');
   const p = vaultFixture({
     activeIndex: 0,
-    articleList: ['/b/test/100', '/b/test/99', '/b/test/98', '/b/test/97'],
+    articleList: [
+      '/community/board/300143/read/100',
+      '/community/board/300143/read/99',
+      '/community/board/300143/read/98',
+      '/community/board/300143/read/97',
+    ],
     reading: {
-      hasVisited: (path) => ['/b/test/99', '/b/test/98'].includes(path),
+      hasVisited: (path) =>
+        [
+          '/community/board/300143/read/99',
+          '/community/board/300143/read/98',
+        ].includes(path),
     },
   });
   p.skipVisitedArticles = true;
@@ -50,10 +59,12 @@ function fixture() {
 test('skipping visited articles shows one toast on the destination, without delaying navigation', async () => {
   const f = fixture();
   await f.toLink('NEXT')(f.p);
-  assert.deepEqual(f.navigations, ['/b/test/97?arcaFeedSkipped=2']);
+  assert.deepEqual(f.navigations, [
+    '/community/board/300143/read/97?ruliFeedSkipped=2',
+  ]);
   assert.deepEqual(f.messages, []);
-  f.toast.showPendingSkippedToast('/b/test/97');
-  f.toast.showPendingSkippedToast('/b/test/97');
+  f.toast.showPendingSkippedToast('/community/board/300143/read/97');
+  f.toast.showPendingSkippedToast('/community/board/300143/read/97');
   assert.deepEqual(f.messages, ['최근 본 글 2개를 건너뛰었습니다']);
 });
 
@@ -75,7 +86,7 @@ test('a failed navigation clears its pending notification', async () => {
     () => f.toLink('NEXT')(f.p),
     (error) => error.cause?.message === 'navigation failed',
   );
-  f.toast.showPendingSkippedToast('/b/test/97');
+  f.toast.showPendingSkippedToast('/community/board/300143/read/97');
   assert.equal(f.messages.length, 1);
   assert.equal(f.p.activeIndex, 0);
 });
@@ -90,24 +101,24 @@ test('an all-visited remainder is reported on the current page', async () => {
 
 test('pending notifications cannot appear on an unrelated page', async () => {
   const f = fixture();
-  f.toast.queueSkippedToast('/b/test/97', 2);
-  f.toast.showPendingSkippedToast('/b/other/97');
-  f.toast.showPendingSkippedToast('/b/test/97');
+  f.toast.queueSkippedToast('/community/board/300143/read/97', 2);
+  f.toast.showPendingSkippedToast('/community/board/300149/read/97');
+  f.toast.showPendingSkippedToast('/community/board/300143/read/97');
   assert.deepEqual(f.messages, []);
 });
 
-test('subscription feed aliases survive the redirect to the real channel', async () => {
+test('pending notifications appear once on the destination article', async () => {
   const f = fixture();
-  f.toast.queueSkippedToast('/b/my/97', 2);
-  f.toast.showPendingSkippedToast('/b/test/97');
-  f.toast.showPendingSkippedToast('/b/test/97');
+  f.toast.queueSkippedToast('/community/board/300143/read/97', 2);
+  f.toast.showPendingSkippedToast('/community/board/300143/read/97');
+  f.toast.showPendingSkippedToast('/community/board/300143/read/97');
   assert.deepEqual(f.messages, ['최근 본 글 2개를 건너뛰었습니다']);
 });
 
-test('subscription aliases do not match a different article', async () => {
+test('pending notifications do not match a different article', async () => {
   const f = fixture();
-  f.toast.queueSkippedToast('/b/my/97', 2);
-  f.toast.showPendingSkippedToast('/b/test/98');
+  f.toast.queueSkippedToast('/community/board/300143/read/97', 2);
+  f.toast.showPendingSkippedToast('/community/board/300143/read/98');
   assert.deepEqual(f.messages, []);
 });
 
@@ -115,7 +126,7 @@ test('URL handoff survives cleared storage and is removed before initialization'
   const messages = [];
   const storage = memoryStorage();
   const location = {
-    href: 'https://arca.live/b/test/97?articleKey=session&q=hello&arcaFeedSkipped=2',
+    href: 'https://bbs.ruliweb.com/community/board/300143/read/97?articleKey=session&q=hello&ruliFeedSkipped=2',
   };
   const history = {
     state: { site: true },
@@ -133,9 +144,9 @@ test('URL handoff survives cleared storage and is removed before initialization'
   toast.captureSkippedToast();
   assert.equal(
     location.href,
-    'https://arca.live/b/test/97?articleKey=session&q=hello',
+    'https://bbs.ruliweb.com/community/board/300143/read/97?articleKey=session&q=hello',
   );
-  toast.showPendingSkippedToast('/b/test/97');
-  toast.showPendingSkippedToast('/b/test/97');
+  toast.showPendingSkippedToast('/community/board/300143/read/97');
+  toast.showPendingSkippedToast('/community/board/300143/read/97');
   assert.deepEqual(messages, ['최근 본 글 2개를 건너뛰었습니다']);
 });

@@ -1,3 +1,4 @@
+import { parseHref } from '@/utils/regex';
 import { SESSION_ARTICLE_LIMIT } from './storage-keys';
 
 /** Compute the per-session article cap while reserving at least one slot per remaining session. */
@@ -42,7 +43,7 @@ export function compactNavigationArticles(
   const cursors = new Map<string, { index: number; id: number }>();
   const channels = new Set(seriesChannels);
   articles.forEach((article, position) => {
-    const [, , channel, id] = article.split('/');
+    const { channelId: channel, articleId: id } = parseHref(article);
     if (!channel || !channels.has(channel)) return;
     const value = Number(id);
     const previous = cursors.get(channel);

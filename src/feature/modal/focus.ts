@@ -1,4 +1,4 @@
-/** Manage only the topmost ArcaFeed dialog; leave inner editors their Escape key. */
+/** Manage only the topmost RuliFeed dialog; leave inner editors their Escape key. */
 export function installDialogFocus(
   root: HTMLElement,
   close: () => void,

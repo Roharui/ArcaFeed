@@ -28,7 +28,7 @@ for (const root of roots) {
     articleKey: 'benchmark',
     articleList: Array.from(
       { length: 5000 },
-      (_, index) => `/b/test/${10000 - index}`,
+      (_, index) => `/community/board/300143/read/${10000 - index}`,
     ),
     activeIndex: 0,
   };

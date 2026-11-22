@@ -1,3 +1,4 @@
+import { BOARD_PATH } from '@/utils/regex';
 import { deferField, mergeState, sameField } from './lazy-state';
 /**
  * Config Service - handles loading and saving application configuration.
@@ -13,8 +14,6 @@ import { compactNavigationArticles, findArticleIndex } from './article-window';
 import type { AppState } from '@/vault/store';
 import { createInitialState } from './store';
 import type { ReadingSession } from './reading-history';
-
-const CHANNEL_OR_ARTICLE_PAGE_REGEX = /^\/b\/[a-zA-Z0-9]+(\/\d+)?\/?$/;
 
 export class ConfigService {
   private lastSavedState: Readonly<AppState> | undefined;
@@ -38,7 +37,7 @@ export class ConfigService {
       return existingKey;
     }
 
-    if (!CHANNEL_OR_ARTICLE_PAGE_REGEX.test(currentUrl.pathname)) {
+    if (!BOARD_PATH.test(currentUrl.pathname)) {
       return '';
     }
 

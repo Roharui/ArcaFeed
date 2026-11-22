@@ -1,3 +1,4 @@
+import { normalizeArticlePath } from '@/utils/regex';
 import { navigate, isNavigating } from '@/feature/navigation';
 import { articlePath, countSkippedVisited } from '@/vault/navigation-context';
 import type { PageMode, PromiseFunc } from '@/types';
@@ -40,7 +41,7 @@ export async function navigateToArticle(
 ): Promise<void> {
   if (isNavigating(p) || !Number.isSafeInteger(index)) return;
   const path = p.articleList[index];
-  if (!path || !/^\/b\/[^/?#]+\/\d+$/.test(path)) return;
+  if (!path || normalizeArticlePath(path) !== path) return;
   if (path === articlePath(p.href.channelId, p.href.articleId)) return;
   await navigate(
     p,

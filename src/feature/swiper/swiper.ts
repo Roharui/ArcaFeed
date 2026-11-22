@@ -76,10 +76,10 @@ function observeSwiperWidth(swiper: Swiper): void {
 
 function initSwiper(p: VaultAdapter): void {
   if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
-  const content = document.querySelector<HTMLElement>('.content-wrapper');
+  const content = document.querySelector<HTMLElement>('#board');
   if (!content) return;
 
-  const swiper = `<div class="swiper">
+  const swiper = `<div class="swiper rulifeed-swiper">
   <div class="swiper-wrapper">
   <div class="swiper-slide slide-empty"><div class="loader-container"><div class="custom-loader"></div></div></div>
   <div class="swiper-slide slide-active"></div>
@@ -87,8 +87,7 @@ function initSwiper(p: VaultAdapter): void {
   </div>
   </div>`;
 
-  // Insert swiper inside .root-container before the content area,
-  // so footer/#bottom stay in flow. Then move content into the active slide.
+  // Keep the site header and footer outside the swipe surface.
   const container = fromTemplate(swiper);
   content.before(container);
   const slide = container.querySelector<
@@ -120,7 +119,7 @@ function initSwiperPage(p: VaultAdapter): void {
     return;
   }
 
-  p.swiper = new Swiper('.swiper', {
+  p.swiper = new Swiper('.rulifeed-swiper', {
     ...swiperOptions,
     resizeObserver: false,
     updateOnWindowResize: typeof ResizeObserver !== 'function',

@@ -1,3 +1,4 @@
+import { parseHref } from '@/utils/regex';
 import type { DataRow } from './record-schema';
 export const cleanQuery = (query: string): string => {
   const params = new URLSearchParams(query);
@@ -28,6 +29,6 @@ export const contextKey = (session: DataRow): string[] =>
       ]
     : [
         'channel',
-        String(session.path).split('/')[2] ?? '',
+        parseHref(String(session.path)).channelId,
         cleanQuery(session.query ?? session.searchQuery ?? ''),
       ];

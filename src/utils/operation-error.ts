@@ -24,11 +24,11 @@ export function reportFailure(error: unknown): OperationError {
         );
   if (!failure.reported) {
     failure.reported = true;
-    console.error('[ArcaFeed] Operation failed:', failure);
+    console.error('[RuliFeed] Operation failed:', failure);
     try {
       showToast(failure.message, 5000);
     } catch (reportError) {
-      console.error('[ArcaFeed] Could not display failure:', reportError);
+      console.error('[RuliFeed] Could not display failure:', reportError);
     }
   }
   return failure;

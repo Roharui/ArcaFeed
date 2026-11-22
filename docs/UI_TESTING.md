@@ -95,7 +95,7 @@ hover 종료 후 숨김, 목록 첫·중간·마지막 글의 중앙 정렬을 �
 
 ## IndexedDB 브라우저 검사
 
-로컬 UI 서버를 실행하고 Playwright MCP에서 `/fixture`를 연 뒤 `browser_run_code_unsafe`에 `{"filename":"scripts/check-storage.mjs"}`를 전달합니다. 새 브라우저 context에서 localhost의 테스트 DB만 사용하며 arca.live 데이터에 접근하지 않습니다. 실제 IndexedStorage·StorageRepository·ReadingHistory를 실행하여 v1 이전, 객체 레코드, 지연 목록 로드, 위치 저장, 이름·고정 보존과 삭제 복구를 확인합니다.
+로컬 UI 서버를 실행하고 Playwright MCP에서 `/fixture`를 연 뒤 `browser_run_code_unsafe`에 `{"filename":"scripts/check-storage.mjs"}`를 전달합니다. 새 브라우저 context에서 localhost의 테스트 DB만 사용하며 bbs.ruliweb.com 데이터에 접근하지 않습니다. 실제 IndexedStorage·StorageRepository·ReadingHistory를 실행하여 v1 이전, 객체 레코드, 지연 목록 로드, 위치 저장, 이름·고정 보존과 삭제 복구를 확인합니다.
 
 같은 검사에서 2,000개·20,000개 링크에 100개씩 추가하는 15회 트랜잭션과 전체 읽기를 비교합니다. JSON 문자열·객체 배열·500개 청크의 중앙값을 보고합니다. DB 초기 쓰기는 측정에서 제외하며 저장 결과의 개수·마지막 링크도 검사합니다. 결과는 `.cache/ui-results/report.json`에 저장됩니다. Node의 메모리 어댑터 성능과 구분하고 실제 사이트·모바일 기기의 성능으로 일반화하지 않습니다.
 

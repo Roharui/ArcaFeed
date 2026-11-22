@@ -10,14 +10,14 @@ function liveLoader(baseURL, transport) {
 
   if (!useGM && !baseURL.startsWith('https://')) {
     console.error(
-      '[ArcaFeed live] GM API 없이 로드하려면 HTTPS 주소가 필요합니다. DEV_URL을 HTTPS 주소로 지정하고 fetch 로더를 다시 설치하세요.',
+      '[RuliFeed live] GM API 없이 로드하려면 HTTPS 주소가 필요합니다. DEV_URL을 HTTPS 주소로 지정하고 fetch 로더를 다시 설치하세요.',
     );
     return;
   }
 
   function retry(error) {
     if (!reportedFailure) {
-      console.warn('[ArcaFeed live] 개발 서버 연결 대기 중:', error);
+      console.warn('[RuliFeed live] 개발 서버 연결 대기 중:', error);
       reportedFailure = true;
     }
     setTimeout(poll, 1000);
@@ -46,9 +46,9 @@ function liveLoader(baseURL, transport) {
           try {
             // Direct eval preserves access to Swiper and Toastify from @require.
             eval(build.code);
-            console.info('[ArcaFeed live] 최신 개발 빌드 로드:', currentHash);
+            console.info('[RuliFeed live] 최신 개발 빌드 로드:', currentHash);
           } catch (error) {
-            console.error('[ArcaFeed live] 실행 오류:', error);
+            console.error('[RuliFeed live] 실행 오류:', error);
           }
         }
         setTimeout(poll, 1000);
@@ -88,8 +88,8 @@ export function createDevLoader(baseURL, transport = 'auto') {
   if (baseURL) baseURL = normalizeDevURL(baseURL);
   const headers = {
     ...getDevHeaders('1.0.0'),
-    name: transport === 'fetch' ? 'ArcaFeed-live-fetch' : 'ArcaFeed-live',
-    description: 'Load local ArcaFeed builds and reload on changes',
+    name: transport === 'fetch' ? 'RuliFeed-live-fetch' : 'RuliFeed-live',
+    description: 'Load local RuliFeed builds and reload on changes',
     grant: transport === 'fetch' ? 'none' : 'GM_xmlhttpRequest',
     ...(transport === 'fetch' ? {} : { connect: new URL(baseURL).hostname }),
     noframes: '',

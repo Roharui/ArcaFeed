@@ -27,34 +27,47 @@ const filter = {
 };
 test('channel lookup and enumeration use native records without a separate channel index', () => {
   const { storage, reads, config } = fixture();
-  for (const id of ['first', 'second'])
+  for (const id of ['community/board/300146', 'community/board/300147'])
     storage.set('channelFilters', id, { id, value: filter });
   reads.length = 0;
   const filters = config.filters('session');
   assert.deepEqual(reads, []);
-  assert.deepEqual(filters.first, filter);
-  assert.deepEqual(reads, [['channelFilters', 'first']]);
+  assert.deepEqual(filters['community/board/300146'], filter);
+  assert.deepEqual(reads, [['channelFilters', 'community/board/300146']]);
   reads.length = 0;
-  assert.deepEqual(Object.keys(filters), ['first', 'second']);
+  assert.deepEqual(Object.keys(filters), [
+    'community/board/300146',
+    'community/board/300147',
+  ]);
   assert.deepEqual(reads, []);
   assert.equal(Object.hasOwn(filters, 'missing'), false);
 });
 test('changing one channel preserves lazy filters and writes only that record', () => {
   const { storage, reads, config, mergeState } = fixture();
-  for (const id of ['first', 'second'])
+  for (const id of ['community/board/300146', 'community/board/300147'])
     storage.set('channelFilters', id, { id, value: filter });
   const previous = config.filters('session'),
-    next = mergeState(previous, { first: { ...filter, onlyBest: true } });
+    next = mergeState(previous, {
+      'community/board/300146': { ...filter, onlyBest: true },
+    });
   storage.recordWrites.length = 0;
   config.saveFilters(next, previous);
   assert.deepEqual(
     storage.recordWrites.map(({ store, key }) => [store, key]),
-    [['channelFilters', 'first']],
+    [['channelFilters', 'community/board/300146']],
   );
-  assert.ok(!reads.some(([, key]) => key === 'second'));
-  config.saveFilters({ first: next.first }, next);
-  assert.equal(storage.get('channelFilters', 'second'), undefined);
-  assert.deepEqual(Object.keys(config.filters('session')), ['first']);
+  assert.ok(!reads.some(([, key]) => key === 'community/board/300147'));
+  config.saveFilters(
+    { 'community/board/300146': next['community/board/300146'] },
+    next,
+  );
+  assert.equal(
+    storage.get('channelFilters', 'community/board/300147'),
+    undefined,
+  );
+  assert.deepEqual(Object.keys(config.filters('session')), [
+    'community/board/300146',
+  ]);
 });
 test('settings groups load independently and unrelated state copies do not run getters', () => {
   const { storage, reads, config, mergeState } = fixture();
@@ -64,7 +77,7 @@ test('settings groups load independently and unrelated state copies do not run g
   });
   storage.set('settings', 'reading', {
     id: 'reading',
-    value: { skipVisitedContexts: { 'channel:first': true } },
+    value: { skipVisitedContexts: { 'channel:community/board/300146': true } },
   });
   const settings = config.settings();
   assert.deepEqual(reads, []);
@@ -72,7 +85,10 @@ test('settings groups load independently and unrelated state copies do not run g
   assert.deepEqual(reads, [['settings', 'display']]);
   const copy = mergeState(settings, { lastModalTab: 'history' });
   assert.equal(copy.contentWidth, 800);
-  assert.equal(copy.skipVisitedContexts['channel:first'], true);
+  assert.equal(
+    copy.skipVisitedContexts['channel:community/board/300146'],
+    true,
+  );
   assert.deepEqual(reads, [
     ['settings', 'display'],
     ['settings', 'reading'],
@@ -96,11 +112,13 @@ test('malformed native settings and filters normalize independently', () => {
     id: 'display',
     value: { contentWidth: 'bad', hideBlur: false },
   });
-  storage.set('channelFilters', 'first', {
-    id: 'first',
+  storage.set('channelFilters', 'community/board/300146', {
+    id: 'community/board/300146',
     value: { onlyBest: 'bad', title: ['ok', 1] },
   });
   assert.equal(config.settings().contentWidth, 700);
   assert.equal(config.settings().hideBlur, false);
-  assert.deepEqual(config.filters('session').first.title, ['ok']);
+  assert.deepEqual(config.filters('session')['community/board/300146'].title, [
+    'ok',
+  ]);
 });
