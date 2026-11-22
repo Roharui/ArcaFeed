@@ -102,6 +102,29 @@ function initSwiper(p: VaultAdapter): void {
   initSwiperPage(p);
 }
 
+function installLoaderPosition(swiper: Swiper): void {
+  const update = () => {
+    if (
+      swiper.destroyed ||
+      typeof window === 'undefined' ||
+      typeof swiper.el?.getBoundingClientRect !== 'function'
+    )
+      return;
+    const rect = swiper.el.getBoundingClientRect();
+    const vh = window.innerHeight;
+    if (vh <= 0) return;
+    const maxOffset = Math.max(24, Math.round(rect.height) - 24);
+    const offset = Math.max(
+      24,
+      Math.min(maxOffset, Math.round(vh / 2 - rect.top)),
+    );
+    swiper.el.style.setProperty('--rulifeed-loader-top', `${offset}px`);
+  };
+  swiper.on('touchStart', update);
+  swiper.on('sliderFirstMove', update);
+  swiper.on('slideChangeTransitionStart', update);
+}
+
 function initSwiperPage(p: VaultAdapter): void {
   if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
 
@@ -128,6 +151,7 @@ function initSwiperPage(p: VaultAdapter): void {
     enabled: !disableSwiper,
   });
   installReducedMotion(p.swiper);
+  installLoaderPosition(p.swiper);
   observeSwiperWidth(p.swiper);
   if (p.isCurrentMode('ARTICLE')) deferOffscreenArticleSections(p.swiper);
   installSwiperVideoPause(p.swiper);
