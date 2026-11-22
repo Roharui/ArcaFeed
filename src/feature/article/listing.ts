@@ -18,7 +18,10 @@ async function fetchAndParse(url: string): Promise<Document> {
   return new DOMParser().parseFromString(res.responseText, 'text/html');
 }
 
-function extractNextPageUrl(html: Document, basePath: string): string | null {
+export function extractNextPageUrl(
+  html: ParentNode,
+  basePath: string,
+): string | null {
   const nextLink = Array.from(
     html.querySelectorAll('#board_list .btn_num.active'),
   )
@@ -29,11 +32,10 @@ function extractNextPageUrl(html: Document, basePath: string): string | null {
     )
     .find((link) => link)
     ?.getAttribute('href');
-  return nextLink
-    ? nextLink.startsWith('?')
-      ? `${basePath}${nextLink}`
-      : nextLink
-    : null;
+  if (!nextLink) return null;
+  return normalizeUrl(
+    nextLink.startsWith('?') ? `${basePath}${nextLink}` : nextLink,
+  );
 }
 
 const MAX_PAGES = 10;
@@ -45,6 +47,9 @@ interface ListingOptions {
   existingUrls?: ReadonlySet<string> | undefined;
   isCurrent?: () => boolean;
   continueSearch?: (() => Promise<boolean>) | undefined;
+  onPageLoaded?:
+    | ((nextUrl: string | null, pageUrl: string) => void)
+    | undefined;
 }
 
 /** Shared pagination, loop detection and deduplication for every article listing. */
@@ -55,6 +60,7 @@ export async function* fetchListingPages({
   existingUrls,
   isCurrent = () => true,
   continueSearch,
+  onPageLoaded,
 }: ListingOptions): AsyncGenerator<string[]> {
   let nextUrl: string | null = withBestMode(initialUrl, filter);
   const seen = new Set<string>();
@@ -74,9 +80,9 @@ export async function* fetchListingPages({
 
     const links = extractLinks(html, filter, existingUrls, seen);
     for (const link of links) seen.add(link);
-    yield links;
-
     nextUrl = extractNextPageUrl(html, basePath);
+    onPageLoaded?.(nextUrl, url);
+    yield links;
   }
 }
 

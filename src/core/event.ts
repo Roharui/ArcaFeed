@@ -1,4 +1,5 @@
 import { navigate } from '@/feature/navigation';
+import { handoffTabArticleKey } from '@/utils/article-key';
 import { mergeState } from '@/vault/lazy-state';
 import { initNavigationList } from '@/feature/modal/navigationTab';
 import { StepRunner } from '@/core/step-runner';
@@ -116,9 +117,17 @@ class EventManager implements Record<AppEvent, () => Step[]> {
       async (p: VaultAdapter) => {
         if (!p.isCurrentMode('SCRAP')) return;
 
-        await navigate(p, () => window.location.reload(), {
-          patch: { isShuffleMode: !p.isShuffleMode },
-        });
+        await navigate(
+          p,
+          () => {
+            if (p.articleKey)
+              handoffTabArticleKey(p.articleKey, window.location.pathname);
+            window.location.reload();
+          },
+          {
+            patch: { isShuffleMode: !p.isShuffleMode },
+          },
+        );
       },
     ];
   }
@@ -142,13 +151,21 @@ class EventManager implements Record<AppEvent, () => Step[]> {
           disableSwiper: !existingFilter.disableSwiper,
         };
 
-        await navigate(p, () => window.location.reload(), {
-          patch: {
-            articleFilterConfig: mergeState(p.articleFilterConfig, {
-              [p.href.channelId]: pageFilter,
-            }),
+        await navigate(
+          p,
+          () => {
+            if (p.articleKey)
+              handoffTabArticleKey(p.articleKey, window.location.pathname);
+            window.location.reload();
           },
-        });
+          {
+            patch: {
+              articleFilterConfig: mergeState(p.articleFilterConfig, {
+                [p.href.channelId]: pageFilter,
+              }),
+            },
+          },
+        );
       },
     ];
   }

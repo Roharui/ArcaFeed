@@ -41,17 +41,17 @@ EventBus는 모든 구독자의 완료를 기다리고 `CommandResult`를 반환
 
 RuliFeed 소유 영속 데이터는 IndexedDB `RuliFeed` 버전 2에 일반 객체로 저장합니다. 문자열 `Storage` API와 JSON 캐시를 사용하지 않습니다. `record-schema.ts`는 저장소 이름·레코드 주소·변경분 형식을, `StorageRepository`는 설정·탐색·이어보기 도메인 API를 제공합니다. 앱의 동기 `Store`와 지연 getter는 유지하며 저장소 경계에서 필요한 데이터만 준비합니다. 앱 상태의 Proxy·getter·Swiper 객체를 직접 저장하지 않고 필드가 명시된 객체·배열을 만듭니다.
 
-| Object store         | 기본 키      | 내용                                                          |
-| -------------------- | ------------ | ------------------------------------------------------------- |
-| `settings`           | `id`         | display·subscription·reading·lastModalTab·shuffle·versionInfo |
-| `channelFilters`     | 채널 ID      | 채널별 필터 객체                                              |
-| `navigationSessions` | articleKey   | mode·query·channels·실패 상태·목록 버전·최근 사용 시각        |
-| `resumeSessions`     | 이어보기 ID  | 이름·고정·탐색 문맥·현재 글·목록 개수·목록 버전               |
-| `progress`           | `[kind, id]` | navigation의 인덱스 또는 resume의 스크롤·갱신 시각            |
-| `lists`              | `[kind, id]` | 순서가 있는 pathname 배열과 목록 버전                         |
-| `meta`               | `id`         | 스키마 이전 상태                                              |
+| Object store         | 기본 키      | 내용                                                               |
+| -------------------- | ------------ | ------------------------------------------------------------------ |
+| `settings`           | `id`         | display·subscription·reading·lastModalTab·shuffle·versionInfo      |
+| `channelFilters`     | 채널 ID      | 채널별 필터 객체                                                   |
+| `navigationSessions` | articleKey   | mode·query·nextPageUrl·channels·실패 상태·목록 버전·최근 사용 시각 |
+| `resumeSessions`     | 이어보기 ID  | 이름·고정·탐색 문맥·현재 글·목록 개수·목록 버전                    |
+| `progress`           | `[kind, id]` | navigation의 인덱스 또는 resume의 스크롤·갱신 시각                 |
+| `lists`              | `[kind, id]` | 순서가 있는 pathname 배열과 목록 버전                              |
+| `meta`               | `id`         | 스키마 이전 상태                                                   |
 
-`kind`는 navigation 또는 resume입니다. 채널 필터 ID와 최근 탐색 키의 별도 인덱스 배열은 저장하지 않습니다. 필터는 실제 레코드에서 열거하고, 탐색 캐시는 최근 사용 시각으로 5개를 유지합니다. 내부 mode는 channel·series·scrap·subscription이며 런타임의 기존 플래그는 어댑터에서 해석합니다. `articleKey`는 URL 쿼리에 추가하지 않고 탭별 `history.state`와 `sessionStorage`에 보관합니다(새 탭 핸드오프나 기존 URL에 `articleKey`가 들어 있으면 흡수한 뒤 주소에서 제거합니다). 검색 조건에도 `articleKey`를 포함하지 않습니다. 이어보기의 `context` unique index는 정렬한 전체 검색 조건과 채널 또는 원래 시리즈 키를 배열로 보관합니다. 새 채널 문맥 ID는 전체 조건에서 결정하므로 32비트 해시 충돌로 세션을 합치지 않으며 이전 ID도 문맥 조회로 재사용합니다.
+`kind`는 navigation 또는 resume입니다. 채널 필터 ID와 최근 탐색 키의 별도 인덱스 배열은 저장하지 않습니다. 필터는 실제 레코드에서 열거하고, 탐색 캐시는 최근 사용 시각으로 5개를 유지합니다. 내부 mode는 channel·series·scrap·subscription이며 런타임의 기존 플래그는 어댑터에서 해석합니다. `articleKey`는 URL 쿼리에 추가하지 않고 탭별 `history.state`와 `sessionStorage`에 보관합니다(새 탭 핸드오프나 기존 URL에 `articleKey`가 들어 있으면 흡수한 뒤 주소에서 제거합니다). 이동마다 `history.state`와 `sessionStorage`가 초기화되는 멀티-WebView 브라우저에서는 대상 경로·referrer 기준의 짧은 수명 `localStorage` 핸드오프로 세션을 이어받습니다. 검색 조건에도 `articleKey`를 포함하지 않습니다. 이어보기의 `context` unique index는 정렬한 전체 검색 조건과 채널 또는 원래 시리즈 키를 배열로 보관합니다. 새 채널 문맥 ID는 전체 조건에서 결정하므로 32비트 해시 충돌로 세션을 합치지 않으며 이전 ID도 문맥 조회로 재사용합니다.
 
 시작 시 지원하지 않는 페이지를 DB 접근 전에 제외합니다. 지원 페이지는 작은 설정·메타데이터·위치 레코드와 현재 articleKey의 탐색 목록만 읽고 앱을 생성합니다. 이어보기는 `prepareList(id)`, 체크포인트는 `prepareSession(session)`이 Promise를 반환하면 완료를 기다린 뒤 동기 목록 getter나 `saveSession()`을 사용합니다. 준비는 비교할 기존 세션과 링크 한도로 축소할 목록만 로드합니다. 요청 중인 목록도 준비 완료로 오인하지 않으며, 목록과 그 메타데이터를 같은 스냅샷에서 읽습니다. 이어보기 이동은 준비 후 최신 요약·위치를 다시 확인하고 삭제된 항목에서는 중단합니다.
 

@@ -107,6 +107,92 @@ test('articleKey stays in history.state and sessionStorage without polluting URL
   assert.equal(history.state.ruliFeedArticleKey, 'handoff');
 });
 
+test('articleKey handoff preserves session across isolated WebViews without URL params', () => {
+  const sharedLocal = memoryStorage();
+  const makeEnv = (href, referrer = '') => {
+    const session = memoryStorage();
+    const location = { origin: 'https://m.ruliweb.com', href };
+    const history = {
+      state: null,
+      replaceState(state, _title, url) {
+        this.state = state;
+        if (typeof url === 'string') location.href = url;
+      },
+    };
+    const mod = sourceLoader({
+      globals: {
+        localStorage: sharedLocal,
+        sessionStorage: session,
+        document: { referrer },
+        window: { location, history },
+      },
+    })('src/utils/article-key.ts');
+    return { ...mod, location, history, session };
+  };
+
+  // Source WebView starts a session and hands off to the next article.
+  const source = makeEnv(
+    'https://m.ruliweb.com/community/board/300143/read/100?view_best=1',
+  );
+  const key = source.ensureTabArticleKey();
+  source.handoffTabArticleKey(key, '/community/board/300143/read/99');
+
+  // Unrelated article in another isolated WebView must not steal the handoff.
+  const unrelated = makeEnv(
+    'https://m.ruliweb.com/community/board/300143/read/500?view_best=1',
+  );
+  assert.equal(unrelated.getCurrentArticleKey(), '');
+  assert.notEqual(unrelated.ensureTabArticleKey(), key);
+
+  // Target WebView (fresh sessionStorage + null history.state) inherits the key.
+  const target = makeEnv(
+    'https://m.ruliweb.com/community/board/300143/read/99?view_best=1',
+    'https://m.ruliweb.com/community/board/300143/read/100?view_best=1',
+  );
+  // Peeking during storage initialization keeps the handoff until ensureTabArticleKey consumes it.
+  assert.equal(target.getCurrentArticleKey(), key);
+  assert.equal(target.ensureTabArticleKey(), key);
+  assert.equal(target.history.state.ruliFeedArticleKey, key);
+  assert.equal(
+    target.location.href,
+    'https://m.ruliweb.com/community/board/300143/read/99?view_best=1',
+  );
+
+  // Once consumed, a fresh WebView at the same URL creates a separate session.
+  const fresh = makeEnv(
+    'https://m.ruliweb.com/community/board/300143/read/99?view_best=1',
+  );
+  assert.equal(fresh.getCurrentArticleKey(), '');
+  assert.notEqual(fresh.ensureTabArticleKey(), key);
+
+  // Referrer-only fallback (e.g. pagehide) matches same-channel articles from that referrer,
+  // but never matches a channel listing or a different channel.
+  const board = makeEnv(
+    'https://m.ruliweb.com/community/board/300143?view_best=1&page=2',
+  );
+  const boardKey = board.ensureTabArticleKey();
+  board.handoffTabArticleKey(boardKey);
+
+  const otherChannel = makeEnv(
+    'https://m.ruliweb.com/game/board/100/read/1',
+    'https://m.ruliweb.com/community/board/300143?view_best=1&page=2',
+  );
+  assert.equal(otherChannel.getCurrentArticleKey(), '');
+
+  const nextBoardPage = makeEnv(
+    'https://m.ruliweb.com/community/board/300143?view_best=1&page=3',
+    'https://m.ruliweb.com/community/board/300143?view_best=1&page=2',
+  );
+  assert.equal(nextBoardPage.getCurrentArticleKey(), '');
+
+  const openedArticle = makeEnv(
+    'https://m.ruliweb.com/community/board/300143/read/98?view_best=1&page=2',
+    'https://m.ruliweb.com/community/board/300143?view_best=1&page=2',
+  );
+  assert.equal(openedArticle.getCurrentArticleKey(), boardKey);
+  assert.equal(openedArticle.ensureTabArticleKey(), boardKey);
+});
+
 test('a channel filter reads only its own editor and preserves its navigation setting', () => {
   const { readArticleFilter } = sourceLoader()('src/feature/modal/filterUi.ts');
   const editor = (tab, title, onlyBest) => {

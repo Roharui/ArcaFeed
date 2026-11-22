@@ -154,6 +154,7 @@ export function vaultFixture(overrides = {}) {
       getVisitedPaths: () => new Set(),
     },
     searchQuery: '',
+    nextPageUrl: '',
     saves: 0,
     invalidateSavedState() {},
     subscriptionFailures: [],
@@ -164,6 +165,7 @@ export function vaultFixture(overrides = {}) {
       this.articleLoadRevision++;
       this.articleList = [];
       this.activeIndex = -1;
+      this.nextPageUrl = '';
     },
     updateState(patch) {
       Object.assign(this, patch);

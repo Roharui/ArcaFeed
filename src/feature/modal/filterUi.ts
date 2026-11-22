@@ -165,6 +165,7 @@ function initCheckFilterModal(p: VaultAdapter) {
       [channelId]: pageFilter,
     }),
     articleList: p.articleList.slice(0, p.activeIndex + 1),
+    nextPageUrl: '',
   });
   return p;
 }

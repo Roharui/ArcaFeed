@@ -22,6 +22,7 @@ export interface AppState {
   readingRevision: number;
   isShuffleMode: boolean;
   searchQuery: string;
+  nextPageUrl: string;
   lastActiveIndex: number;
   uiSettings: UISettings;
 }
@@ -66,6 +67,7 @@ export function createInitialState(): AppState {
     readingRevision: 0,
     isShuffleMode: false,
     searchQuery: '',
+    nextPageUrl: '',
     lastActiveIndex: -1,
     uiSettings: {
       ...DEFAULT_UI_SETTINGS,

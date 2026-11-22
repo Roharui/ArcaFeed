@@ -1,5 +1,5 @@
 import { navigate } from '@/feature/navigation';
-import { setTabArticleKey } from '@/utils/article-key';
+import { handoffTabArticleKey } from '@/utils/article-key';
 import { OperationError } from '@/utils/operation-error';
 import { shuffle } from '@/utils/func';
 import { showToast, showConfirmToast } from '@/utils/toast';
@@ -14,23 +14,43 @@ import type { VaultAdapter } from '@/vault';
 // Preserve the article API while parsing and pagination live in their own module.
 export { extractLinks, withBestMode } from './listing';
 
+function resolveListingStartUrl(
+  p: VaultAdapter,
+  basePath: string,
+  articleId: string,
+  scrap: boolean,
+): string {
+  const savedNext = !scrap && p.articleList.length > 0 ? p.nextPageUrl : '';
+  if (
+    savedNext &&
+    (savedNext === basePath ||
+      savedNext.startsWith(`${basePath}?`) ||
+      savedNext.startsWith(`${basePath}/`))
+  ) {
+    return savedNext;
+  }
+  const path =
+    articleId && !scrap ? articlePath(p.href.channelId, articleId) : basePath;
+  return `${path}${p.href.search}`;
+}
+
 /** Capture the navigation session before iterating its listing pages. */
 function fetchArticlePages(
   p: VaultAdapter,
   articleId: string,
   continueSearch?: () => Promise<boolean>,
+  onPageLoaded?: (nextUrl: string | null, pageUrl: string) => void,
 ): AsyncGenerator<string[]> {
   const scrap = p.isCurrentMode('SCRAP');
   const basePath = scrap ? window.location.pathname : `/${p.href.channelId}`;
-  const path =
-    articleId && !scrap ? articlePath(p.href.channelId, articleId) : basePath;
   return fetchListingPages({
-    url: `${path}${p.href.search}`,
+    url: resolveListingStartUrl(p, basePath, articleId, scrap),
     basePath,
     filter: p.articleFilterConfig[p.href.channelId],
     existingUrls: new Set(p.articleList),
     isCurrent: captureArticleSession(p),
     continueSearch,
+    onPageLoaded,
   });
 }
 
@@ -48,6 +68,7 @@ async function fetchFirstBatch(
   const isCurrent = captureArticleSession(p);
   try {
     let searchCancelled = false;
+    let nextPageUrl = p.nextPageUrl ?? '';
     const continueSearch = async () => {
       if (!isCurrent() || !p.skipVisitedArticles || p.isNextPageActive())
         return false;
@@ -69,18 +90,45 @@ async function fetchFirstBatch(
         showFetchLoader();
       }
     };
-    for await (const links of fetchArticlePages(p, articleId, continueSearch)) {
+    const pages = fetchArticlePages(
+      p,
+      articleId,
+      continueSearch,
+      (nextUrl, pageUrl) => {
+        nextPageUrl = nextUrl ?? pageUrl;
+      },
+    );
+    for await (const links of pages) {
       if (!isCurrent()) return;
+      const nextList =
+        links.length > 0
+          ? [...new Set([...p.articleList, ...links])]
+          : p.articleList;
+      if (nextList !== p.articleList || nextPageUrl !== (p.nextPageUrl ?? '')) {
+        p.updateState({
+          articleList: nextList,
+          nextPageUrl,
+        });
+      }
       if (links.length > 0) {
-        p.articleList = [...new Set([...p.articleList, ...links])];
         const currentPath = articlePath(p.href.channelId, p.href.articleId);
-        if (
-          !p.skipVisitedArticles ||
-          links.some(
-            (path) => path !== currentPath && !p.reading.hasVisited(path),
-          )
-        )
-          return;
+        const currentIndex =
+          p.href.mode === 'ARTICLE' ? p.articleList.indexOf(currentPath) : -1;
+        const hasNextLink =
+          currentIndex >= 0
+            ? p.articleList
+                .slice(currentIndex + 1)
+                .some(
+                  (path) =>
+                    path !== currentPath &&
+                    (!p.skipVisitedArticles || !p.reading.hasVisited(path)),
+                )
+            : links.some(
+                (path) =>
+                  path !== currentPath &&
+                  (!p.skipVisitedArticles || !p.reading.hasVisited(path)),
+              );
+        if (hasNextLink) return;
       }
     }
     if (isCurrent() && !searchCancelled && !p.isNextPageActive())
@@ -150,7 +198,7 @@ async function openScrapSeriesArticle(p: VaultAdapter): Promise<void> {
   await navigate(
     p,
     () => {
-      if (p.articleKey) setTabArticleKey(p.articleKey);
+      if (p.articleKey) handoffTabArticleKey(p.articleKey, firstUrl);
       window.location.replace(nextUrl.toString());
     },
     {

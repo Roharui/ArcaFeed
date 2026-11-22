@@ -649,3 +649,118 @@ test('failed list jumps restore position and allow cross-channel retry', async (
   assert.equal(p.activeIndex, 1);
   assert.deepEqual(navigations, ['/community/board/300149/read/42']);
 });
+
+test('fetchFirstBatch continues past the current article at page end and resumes refills from nextPageUrl', async () => {
+  const requests = [];
+  const pages = {
+    '/community/board/300143/read/98?view_best=1': {
+      rows: [
+        { href: '/community/board/300143/read/100' },
+        { href: '/community/board/300143/read/99' },
+        { href: '/community/board/300143/read/98' },
+      ],
+      next: 'https://m.ruliweb.com/community/board/300143?view_best=1&page=2',
+    },
+    '/community/board/300143?view_best=1&page=2': {
+      rows: [
+        { href: '/community/board/300143/read/97' },
+        { href: '/community/board/300143/read/96' },
+      ],
+      next: 'https://m.ruliweb.com/community/board/300143?view_best=1&page=3',
+    },
+    '/community/board/300143?view_best=1&page=3': {
+      rows: [{ href: '/community/board/300143/read/95' }],
+      next: 'https://m.ruliweb.com/community/board/300143?view_best=1&page=4',
+    },
+  };
+  const { fetchFirstBatch } = sourceLoader({
+    globals: {
+      window: windowFixture,
+      DOMParser: class {
+        parseFromString(text) {
+          return listingFixture(pages[text]);
+        }
+      },
+    },
+    mocks: {
+      '@/utils/fetch': {
+        fetchUrl: async (url) => {
+          requests.push(url);
+          return { responseText: url };
+        },
+      },
+      '@/utils/toast': { showToast: () => assert.fail('unexpected toast') },
+    },
+  })('src/feature/article/fetch.ts');
+
+  const p = vaultFixture({
+    href: {
+      mode: 'ARTICLE',
+      channelId: 'community/board/300143',
+      articleId: '98',
+      articleKey: 'session',
+      search: '?view_best=1',
+    },
+    articleList: [],
+    activeIndex: -1,
+  });
+
+  // Landing on the last article of page 1 must also fetch page 2 so next swipe is unlocked.
+  await fetchFirstBatch(p, '98');
+  assert.deepEqual(requests, [
+    '/community/board/300143/read/98?view_best=1',
+    '/community/board/300143?view_best=1&page=2',
+  ]);
+  assert.deepEqual(p.articleList, [
+    '/community/board/300143/read/100',
+    '/community/board/300143/read/99',
+    '/community/board/300143/read/98',
+    '/community/board/300143/read/97',
+    '/community/board/300143/read/96',
+  ]);
+  assert.equal(p.nextPageUrl, '/community/board/300143?view_best=1&page=3');
+
+  // Subsequent refill must start directly at page 3 instead of restarting from page 1.
+  await fetchFirstBatch(p, '96');
+  assert.deepEqual(requests, [
+    '/community/board/300143/read/98?view_best=1',
+    '/community/board/300143?view_best=1&page=2',
+    '/community/board/300143?view_best=1&page=3',
+  ]);
+  assert.deepEqual(p.articleList, [
+    '/community/board/300143/read/100',
+    '/community/board/300143/read/99',
+    '/community/board/300143/read/98',
+    '/community/board/300143/read/97',
+    '/community/board/300143/read/96',
+    '/community/board/300143/read/95',
+  ]);
+  assert.equal(p.nextPageUrl, '/community/board/300143?view_best=1&page=4');
+
+  // Resetting the list clears the pagination cursor.
+  p.resetArticleList();
+  assert.equal(p.nextPageUrl, '');
+});
+
+test('NavigationStorage persists and restores nextPageUrl across navigations', () => {
+  const load = sourceLoader({ globals: { window: windowFixture } });
+  const { NavigationStorage } = load('src/vault/navigation-storage.ts');
+  const { StorageRepository } = load('src/vault/repository.ts');
+  const { createInitialState } = load('src/vault/store.ts');
+  const storage = memoryStorage();
+  const nav = new NavigationStorage(new StorageRepository(storage));
+  const state = {
+    ...createInitialState(),
+    articleKey: 'session',
+    articleList: ['/community/board/300143/read/100'],
+    activeIndex: 0,
+    searchQuery: '?view_best=1',
+    nextPageUrl: '/community/board/300143?view_best=1&page=3',
+  };
+  nav.save(state);
+  const loaded = nav.load('session');
+  assert.equal(
+    loaded.nextPageUrl,
+    '/community/board/300143?view_best=1&page=3',
+  );
+});

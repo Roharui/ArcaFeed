@@ -33,6 +33,8 @@ export class NavigationStorage {
       typeof record?.query === 'string' && record.query
         ? cleanQuery(record.query)
         : '';
+    patch.nextPageUrl =
+      typeof record?.nextPageUrl === 'string' ? record.nextPageUrl : '';
     const index = this.repo.navigationPosition(articleKey)?.activeIndex;
     patch.lastActiveIndex =
       Number.isSafeInteger(index) && index >= -1 ? index : -1;
@@ -61,6 +63,7 @@ export class NavigationStorage {
           'seriesChannels',
           'subscriptionFailures',
           'searchQuery',
+          'nextPageUrl',
         ] as const
       ).some((field) => !sameField(previous, state, field))
     ) {
@@ -74,6 +77,7 @@ export class NavigationStorage {
         channels: [...state.seriesChannels],
         failures: state.subscriptionFailures.map((item) => ({ ...item })),
         query: cleanQuery(state.searchQuery),
+        nextPageUrl: state.nextPageUrl,
       };
       changed = true;
     }
@@ -103,6 +107,7 @@ export class NavigationStorage {
       ),
       channels: [...session.seriesChannels],
       query: cleanQuery(session.searchQuery),
+      nextPageUrl: '',
       failures: [],
       listVersion,
       lastUsedAt: Date.now(),
@@ -124,6 +129,7 @@ export class NavigationStorage {
       mode: 'series',
       channels: [],
       query: cleanQuery(query),
+      nextPageUrl: '',
       failures: [],
       listVersion,
       lastUsedAt: Date.now(),

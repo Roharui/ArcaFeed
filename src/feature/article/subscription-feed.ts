@@ -2,7 +2,7 @@ import { navigate, isNavigating } from '@/feature/navigation';
 import { mergeState } from '@/vault/lazy-state';
 import { captureArticleSession } from '@/vault/article-session';
 import { isVisitedPath } from '@/vault/reading-history';
-import { createArticleKey, setTabArticleKey } from '@/utils/article-key';
+import { createArticleKey, handoffTabArticleKey } from '@/utils/article-key';
 import { extractChannelId, getArticleId } from '@/utils/regex';
 import { mapConcurrent } from '@/utils/func';
 import { showToast } from '@/utils/toast';
@@ -163,7 +163,7 @@ async function buildSubscriptionFeed(
     const moved = await navigate(
       p,
       () => {
-        setTabArticleKey(articleKey);
+        handoffTabArticleKey(articleKey, articles[firstIndex]);
         window.location.replace(nextUrl.toString());
       },
       {
@@ -177,6 +177,7 @@ async function buildSubscriptionFeed(
           subscriptionFailures: failures,
           activeIndex: firstIndex,
           searchQuery: '',
+          nextPageUrl: '',
           uiSettings: mergeState(p.uiSettings, {
             homeSeriesChannels: [...channels],
           }),

@@ -3,10 +3,16 @@ import {
   restoreNavigationState,
 } from '@/feature/navigation';
 import { fetchFirstBatch, fetchAllBatches } from './fetch';
+import { extractNextPageUrl } from './listing';
 import { loadMoreHomeSeriesArticles } from './subscription-feed';
 import { filterLink } from '@/feature/filter';
 import { parseSearchQuery } from '@/feature/search';
-import { createArticleKey, setTabArticleKey } from '@/utils/article-key';
+import {
+  createArticleKey,
+  handoffTabArticleKey,
+  setTabArticleKey,
+} from '@/utils/article-key';
+import { extractChannelId, normalizeArticlePath } from '@/utils/regex';
 import { captureArticleSession } from '@/vault/article-session';
 import { articlePath } from '@/vault/navigation-context';
 import {
@@ -15,6 +21,57 @@ import {
 } from '@/vault/article-window';
 
 import type { VaultAdapter } from '@/vault';
+
+const handoffInstalled = new WeakSet<VaultAdapter>();
+
+function currentDocumentNextPageUrl(channelId: string): string {
+  if (typeof document === 'undefined' || !channelId) return '';
+  return extractNextPageUrl(document, `/${channelId}`) ?? '';
+}
+
+function installNavigationHandoff(p: VaultAdapter): void {
+  if (handoffInstalled.has(p)) return;
+  handoffInstalled.add(p);
+  if (
+    typeof document !== 'undefined' &&
+    typeof document.addEventListener === 'function'
+  ) {
+    document.addEventListener(
+      'click',
+      (event) => {
+        if (!p.articleKey || !p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
+        const target = event.target as Element | null;
+        const anchor = target?.closest?.<HTMLAnchorElement>('a[href]');
+        if (!anchor) return;
+        const href = anchor.getAttribute('href');
+        if (!href) return;
+        const articleTarget = normalizeArticlePath(href);
+        if (!articleTarget) return;
+        if (
+          !p.isSeriesMode &&
+          extractChannelId(articleTarget) !== p.href.channelId
+        )
+          return;
+        handoffTabArticleKey(p.articleKey, articleTarget);
+        try {
+          p.flushSave();
+        } catch {
+          // Best-effort flush before browser-initiated navigation.
+        }
+      },
+      true,
+    );
+  }
+  if (
+    typeof window !== 'undefined' &&
+    typeof window.addEventListener === 'function'
+  ) {
+    window.addEventListener('pagehide', () => {
+      if (!p.articleKey || !p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
+      handoffTabArticleKey(p.articleKey);
+    });
+  }
+}
 
 // ── Link Initialization ────────────────────────────────
 
@@ -27,7 +84,11 @@ async function initArticleLink(p: VaultAdapter): Promise<void> {
     links.length > 0 &&
     !p.articleFilterConfig[p.href.channelId]?.onlyBest
   ) {
-    p.articleList = links;
+    const nextPageUrl = currentDocumentNextPageUrl(p.href.channelId);
+    p.updateState({
+      articleList: links,
+      ...(nextPageUrl ? { nextPageUrl } : {}),
+    });
   }
   await activateArticleLink(p, p.href.articleId);
 }
@@ -44,8 +105,15 @@ async function initChannelLink(p: VaultAdapter): Promise<void> {
     return;
   }
 
-  p.articleList = newLinks.length > 0 ? newLinks : [];
-  if (newLinks.length === 0) {
+  if (newLinks.length > 0) {
+    const nextPageUrl = currentDocumentNextPageUrl(p.href.channelId);
+    p.updateState({
+      articleList: newLinks,
+      ...(nextPageUrl ? { nextPageUrl } : {}),
+    });
+    p.flushSave();
+  } else {
+    p.articleList = [];
     startBackgroundLoad(p, () => fetchFirstBatch(p, p.href.articleId));
   }
 }
@@ -62,6 +130,7 @@ const LINK_HANDLERS: Record<string, (p: VaultAdapter) => Promise<void>> = {
 };
 
 async function initLink(p: VaultAdapter): Promise<void> {
+  installNavigationHandoff(p);
   const handler = LINK_HANDLERS[p.href.mode];
   if (handler) {
     await handler(p);

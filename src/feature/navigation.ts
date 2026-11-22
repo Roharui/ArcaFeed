@@ -18,6 +18,7 @@ export function captureNavigationState(p: VaultAdapter): Partial<AppState> {
     'seriesChannels',
     'subscriptionFailures',
     'searchQuery',
+    'nextPageUrl',
     'lastActiveIndex',
   ] as const;
   const state = p.getState();

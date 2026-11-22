@@ -89,6 +89,7 @@ export class VaultAdapter {
       'subscriptionFailures',
       'isShuffleMode',
       'searchQuery',
+      'nextPageUrl',
       'activeIndex',
       'uiSettings',
     ] as const;
@@ -243,6 +244,13 @@ export class VaultAdapter {
     this.store.setState({ searchQuery: v });
   }
 
+  get nextPageUrl(): string {
+    return this.store.getState().nextPageUrl;
+  }
+  set nextPageUrl(v: string) {
+    this.store.setState({ nextPageUrl: v });
+  }
+
   get lastActiveIndex(): number {
     return this.store.getState().lastActiveIndex;
   }
@@ -342,6 +350,7 @@ export class VaultAdapter {
     this.store.setState({
       articleList: [],
       activeIndex: -1,
+      nextPageUrl: '',
       subscriptionFailures: [],
     });
   }
