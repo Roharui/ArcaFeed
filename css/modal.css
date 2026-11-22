@@ -1,5 +1,12 @@
 /* modal body */
 
+.helper-modal,
+.helper-modal *,
+.helper-modal *::before,
+.helper-modal *::after {
+  box-sizing: border-box;
+}
+
 .helper-modal {
   position: fixed;
 
@@ -113,6 +120,7 @@ input.helper-modal-tab-radio {
   flex: 1;
   min-width: 0;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 0 var(--rulifeed-modal-padding) var(--rulifeed-modal-padding);
@@ -157,6 +165,7 @@ input.helper-modal-tab-radio {
 .rulifeed-modal-button {
   flex-shrink: 0;
   min-height: 40px;
+  margin: 0;
   padding: 9px 18px;
   border: 1px solid var(--color-bd-btn);
   border-radius: 8px;
@@ -221,10 +230,10 @@ input.helper-modal-tab-radio {
   }
 }
 
-.rulifeed-navigation-row {
+.rulifeed-reading-button.rulifeed-navigation-row {
   display: block;
   width: 100%;
-  margin-bottom: 8px;
+  margin: 0 0 8px;
   padding: 12px;
   text-align: left;
   white-space: normal;
