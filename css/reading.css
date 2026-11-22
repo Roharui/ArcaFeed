@@ -1,83 +1,120 @@
-.rulifeed-list-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.rulifeed-list-title > .title {
-  min-width: 0;
+.rulifeed-list-info,
+.rulifeed-list-subject {
+  position: relative;
+  box-sizing: border-box;
+  padding-right: 52px;
 }
 
 .rulifeed-list-visited-status {
-  flex-shrink: 0;
-  margin-left: auto;
+  display: inline-block;
+  margin-left: 6px;
+  vertical-align: middle;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.rulifeed-list-info > .rulifeed-list-visited-status,
+.rulifeed-list-subject > .rulifeed-list-visited-status {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  margin-left: 0;
+  transform: translateY(-50%);
+}
+
+.rulifeed-list-visited-status[hidden] {
+  display: none;
 }
 
 .rulifeed-list-visited-status::after {
   content: '본 글';
   display: inline-block;
-  padding: 1px 5px;
-  border-radius: 4px;
-  font-size: 0.75rem;
+  padding: 1px 6px;
+  border: 1px solid var(--color-bd-btn);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1.35;
   white-space: nowrap;
-  color: var(--color-text-muted, #888);
+  color: var(--color-text-muted, #666);
   background: var(--color-bg-main);
 }
 
-.rulifeed-article-heading {
-  position: relative;
-  box-sizing: border-box;
-  width: 100%;
-  padding-right: 1.6em;
-}
-
-.rulifeed-article-heading-text {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  white-space: normal;
+.rulifeed-article-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  clear: both;
+  padding: 6px 8px 8px;
 }
 
 .rulifeed-skip-setting {
-  position: absolute;
-  top: 50%;
-  right: 0;
-  transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 1.2em;
-  height: 1.2em;
-  min-width: 0;
-  min-height: 0;
+  gap: 5px;
   margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
+  padding: 4px 10px;
+  border: 1px solid var(--color-bd-btn);
+  border-radius: 999px;
   appearance: none;
   box-shadow: none;
-  font-size: 1rem;
-  font-weight: normal;
-  line-height: 1;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.3;
   white-space: nowrap;
-  color: var(--color-text-muted, #888);
-  background: transparent;
+  color: var(--color-text-muted, #666);
+  background: var(--color-bg-main);
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
 }
 
-.rulifeed-skip-setting::before {
-  content: '📖';
+.rulifeed-skip-icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
-.rulifeed-skip-setting.is-active::before {
-  content: '⏭️';
+.rulifeed-skip-state {
+  padding: 1px 5px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: rgba(128, 128, 128, 0.14);
 }
 
-.rulifeed-skip-setting:hover {
-  background: transparent;
+.rulifeed-skip-setting.is-active {
+  border-color: #766df4;
+  color: #5b52e0;
+  background: rgba(118, 109, 244, 0.12);
+}
+
+body.dark_mode .rulifeed-skip-setting.is-active {
+  color: #a9a2ff;
+  background: rgba(118, 109, 244, 0.22);
+}
+
+.rulifeed-skip-setting.is-active .rulifeed-skip-state {
+  color: #fff;
+  background: #766df4;
+}
+
+@media (hover: hover) {
+  .rulifeed-skip-setting:hover {
+    border-color: #766df4;
+  }
+}
+
+.rulifeed-skip-setting:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .rulifeed-skip-setting:focus-visible {

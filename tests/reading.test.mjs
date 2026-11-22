@@ -1052,3 +1052,113 @@ test('cleared visits are read lazily and storage refresh loads new visits', () =
   siteVisit(storage, reading, entry('/community/board/300143/read/100'));
   assert.equal(reading.hasVisited('/community/board/300143/read/100'), true);
 });
+
+test('visited indicator mounts into mobile info row or desktop subject container and skip button mounts in article header actions', () => {
+  const dom = domFixture(`
+    <div id="board_read">
+      <aside class="board_main_top">
+        <h4 class="subject"><span class="subject_text"><span class="category_text">[잡담]</span> <span class="subject_inner_text">제목</span></span></h4>
+        <div class="user_view">작성자</div>
+      </aside>
+    </div>
+    <div id="board_list">
+      <table class="board_list_table"><tbody>
+        <tr class="table_body default_list">
+          <td class="subject block">
+            <div class="title row">
+              <a class="cate_label" href="#">[잡담]</a>
+              <a class="subject_link deco" href="/community/board/300143/read/100">모바일 본 글</a>
+            </div>
+            <div class="info row"><span class="time">13:32</span></div>
+          </td>
+        </tr>
+        <tr class="table_body">
+          <td class="subject">
+            <div class="relative">
+              <a class="subject_link deco" href="/community/board/300143/read/100">PC 본 글</a>
+            </div>
+          </td>
+        </tr>
+      </tbody></table>
+    </div>
+  `);
+  const listeners = new Set();
+  const vault = vaultFixture({
+    uiSettings: {
+      showVisitedIndicators: true,
+      homeSeriesChannels: [],
+      skipVisitedContexts: {},
+    },
+    reading: {
+      hasVisited: (path) => path === '/community/board/300143/read/100',
+      getVisitedPaths: () => new Set(['/community/board/300143/read/100']),
+      reload() {},
+      reloadEntriesIfLoaded() {},
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  });
+  let skipValue = false;
+  Object.defineProperty(vault, 'skipVisitedArticles', {
+    get: () => skipValue,
+    set: (value) => {
+      skipValue = value;
+      listeners.forEach((listener) => listener(vault));
+    },
+  });
+
+  const { initReading } = sourceLoader({
+    globals: {
+      ...dom,
+      window: {
+        location: { origin: 'https://m.ruliweb.com' },
+        addEventListener() {},
+      },
+    },
+    mocks: {
+      '@/utils/after-paint': {
+        afterPaint(callback) {
+          callback();
+          return () => {};
+        },
+      },
+      '@/vault/site-recent-history': { recordVisit() {} },
+      './article/link': { refreshUnvisitedNavigation() {} },
+      './swiper/skip-toast': { showPendingSkippedToast() {} },
+    },
+  })('src/feature/reading.ts');
+
+  initReading(vault);
+
+  const mobileInfo = dom.document.querySelector('.info.row');
+  const mobileLink = dom.document.querySelector('.default_list a.subject_link');
+  assert.equal(mobileInfo.classList.contains('rulifeed-list-info'), true);
+  assert.ok(mobileInfo.querySelector(':scope > .rulifeed-list-visited-status'));
+  assert.equal(mobileLink.querySelector('.rulifeed-list-visited-status'), null);
+
+  const pcSubject = dom.document.querySelector('td.subject .relative');
+  assert.equal(pcSubject.classList.contains('rulifeed-list-subject'), true);
+  assert.ok(pcSubject.querySelector(':scope > .rulifeed-list-visited-status'));
+
+  const skipButton = dom.document.querySelector('#rulifeed-skip-visited');
+  assert.ok(skipButton);
+  assert.ok(
+    skipButton.closest('#board_read .board_main_top .rulifeed-article-actions'),
+  );
+  assert.equal(dom.document.querySelector('.rulifeed-article-heading'), null);
+  assert.equal(skipButton.getAttribute('aria-pressed'), 'false');
+  assert.equal(
+    skipButton.querySelector('.rulifeed-skip-state').textContent,
+    '꺼짐',
+  );
+
+  skipButton.click();
+  assert.equal(skipButton.getAttribute('aria-pressed'), 'true');
+  assert.equal(skipButton.classList.contains('is-active'), true);
+  assert.equal(
+    skipButton.querySelector('.rulifeed-skip-state').textContent,
+    '켜짐',
+  );
+});

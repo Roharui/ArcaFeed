@@ -1,4 +1,4 @@
-import { createElement, setAttributes } from '@/utils/dom';
+import { createElement, fromTemplate, setAttributes } from '@/utils/dom';
 import '@css/reading.css';
 
 import { extractArticleRows } from './filter';
@@ -15,7 +15,12 @@ import { afterPaint } from '@/utils/after-paint';
 
 const ARTICLE_TITLE_SELECTOR =
   '#board_read .subject_inner_text, #board_read .subject_text';
+const ARTICLE_HEADER_SELECTOR = '#board_read .board_main_top';
+const SKIP_ICON =
+  '<svg class="rulifeed-skip-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>';
+
 const initializedVaults = new WeakSet<VaultAdapter>();
+
 function currentPath(p: VaultAdapter): string {
   return articlePath(p.href.channelId, p.href.articleId);
 }
@@ -37,27 +42,50 @@ function normalizeRowPath(href: string): string {
   return new URL(href, window.location.origin).pathname.replace(/\/$/, '');
 }
 
+interface VisitedTarget {
+  container: HTMLElement;
+  containerClass?: string;
+}
+
+function resolveVisitedTarget(row: HTMLElement): VisitedTarget {
+  const cell = row.closest<HTMLElement>('td, tr');
+  const info = cell?.querySelector<HTMLElement>('.info');
+  if (info) return { container: info, containerClass: 'rulifeed-list-info' };
+
+  const subjectRelative = row.closest<HTMLElement>('td.subject .relative');
+  if (subjectRelative)
+    return {
+      container: subjectRelative,
+      containerClass: 'rulifeed-list-subject',
+    };
+
+  return { container: row.parentElement ?? row };
+}
+
 function updateVisitedIndicators(p: VaultAdapter): void {
   const enabled = p.uiSettings.showVisitedIndicators;
   for (const row of extractArticleRows()) {
     const href = row.getAttribute('href');
     if (!href) continue;
     const show = enabled && p.reading.hasVisited(normalizeRowPath(href));
-    const title = row;
-    if (!title) continue;
-    let status = title.querySelector<HTMLElement>(
+    const { container, containerClass } = resolveVisitedTarget(row);
+    let status = container.querySelector<HTMLElement>(
       ':scope > .rulifeed-list-visited-status',
     );
-    if (!show && !status && !title.classList.contains('rulifeed-list-title'))
+    if (
+      !show &&
+      !status &&
+      (!containerClass || !container.classList.contains(containerClass))
+    )
       continue;
     if (show && !status) {
       status = createElement('span', {
         class: 'rulifeed-list-visited-status',
         'aria-label': '본 글',
       });
-      title.append(status);
+      container.append(status);
     }
-    title.classList.toggle('rulifeed-list-title', show);
+    if (containerClass) container.classList.toggle(containerClass, show);
     if (status) status.hidden = !show;
   }
   updateSkipButton(p);
@@ -72,6 +100,8 @@ function updateSkipButton(p: VaultAdapter): void {
   const label = readingContextLabel(p);
   button.disabled = !p.canSkipVisitedArticles;
   button.classList.toggle('is-active', skip);
+  const state = button.querySelector<HTMLElement>('.rulifeed-skip-state');
+  if (state) state.textContent = skip ? '켜짐' : '꺼짐';
   setAttributes(button, {
     'aria-pressed': String(skip),
     'aria-label': `${label}에서 본 글 건너뛰기`,
@@ -136,14 +166,30 @@ function bindReadingStateUpdates(
 
 function mountSkipButton(p: VaultAdapter): void {
   if (!p.canSkipVisitedArticles) return;
-  const heading = document.querySelector(ARTICLE_TITLE_SELECTOR);
-  if (!heading) return;
-  const skipButton = createElement('button', {
-    id: 'rulifeed-skip-visited',
-    type: 'button',
-    class: 'rulifeed-skip-setting swiper-no-swiping',
-    'aria-label': '본 글 건너뛰기',
-  });
+  if (document.querySelector('#rulifeed-skip-visited')) return;
+  const header = document.querySelector<HTMLElement>(ARTICLE_HEADER_SELECTOR);
+  const fallbackSubject = header
+    ? null
+    : document.querySelector<HTMLElement>(
+        `#board_read h4.subject, ${ARTICLE_TITLE_SELECTOR}`,
+      );
+  if (!header && !fallbackSubject) return;
+
+  const skipButton = createElement(
+    'button',
+    {
+      id: 'rulifeed-skip-visited',
+      type: 'button',
+      class: 'rulifeed-skip-setting swiper-no-swiping',
+      'aria-label': '본 글 건너뛰기',
+    },
+    fromTemplate(SKIP_ICON),
+    createElement('span', {
+      class: 'rulifeed-skip-label',
+      text: '본 글 건너뛰기',
+    }),
+    createElement('span', { class: 'rulifeed-skip-state', text: '꺼짐' }),
+  );
   skipButton.addEventListener('click', () => {
     p.skipVisitedArticles = !p.skipVisitedArticles;
     try {
@@ -152,10 +198,14 @@ function mountSkipButton(p: VaultAdapter): void {
       reportFailure(error);
     }
   });
-  const wrapper = createElement('div', { class: 'rulifeed-article-heading' });
-  heading.classList.add('rulifeed-article-heading-text');
-  heading.before(wrapper);
-  wrapper.append(heading, skipButton);
+
+  const actions = createElement(
+    'div',
+    { class: 'rulifeed-article-actions swiper-no-swiping' },
+    skipButton,
+  );
+  if (header) header.append(actions);
+  else fallbackSubject?.after(actions);
 }
 
 export function initReading(p: VaultAdapter): void {

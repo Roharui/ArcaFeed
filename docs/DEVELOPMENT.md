@@ -143,4 +143,4 @@ python3 ../Soul/patches/adb_userscript.py dist/RuliFeed.dev.user.js
 adb shell am start -a android.intent.action.VIEW -d https://m.ruliweb.com/community/board/300143 -p com.mycompany.app.soulbrowser.memoryfix
 ```
 
-게시판의 **루리피드 설정**을 열고 가로 스와이프로 게시판에서 첫 글, 첫 글에서 다음 글로 이동하는지 확인합니다. `BUNDLE=true`는 Rui Browser가 페이지 외부 라이브러리를 따로 읽지 않아도 실행할 수 있도록 Swiper와 Toastify를 빌드에 포함합니다.
+좌측 하단 플로팅 버튼의 **루리피드 설정**을 열고 가로 스와이프로 게시판에서 첫 글, 첫 글에서 다음 글로 이동하는지 확인합니다. `BUNDLE=true`는 Rui Browser가 페이지 외부 라이브러리를 따로 읽지 않아도 실행할 수 있도록 Swiper와 Toastify를 빌드에 포함합니다.

@@ -48,9 +48,9 @@ Webpack으로 코드와 CSS를 묶고, 화면과 목록은 표준 DOM API로 처
 1. 유저스크립트는 `document-start`에 시작합니다. `src/index.ts`에서 URL과 중복 실행을 확인하고, 지원하지 않는 `OTHER` 페이지는 스타일이나 저장소를 준비하기 전에 종료합니다.
 2. 문서에 `head`가 생기면 기본 레이아웃 CSS를 적용하고 IndexedDB `RuliFeed` 버전 2의 용도별 저장소를 엽니다. 문서 파싱과 병행해 기존 localStorage 데이터 이전, 설정·요약과 현재 탐색 목록 준비를 진행합니다. 다른 탐색 목록과 이어보기 목록은 첫 조회에서 제외합니다. 저장소와 DOM이 준비되면 `RuliFeed`를 생성합니다. `VaultAdapter`는 메모리 캐시 위에 지연 getter를 제공합니다.
 3. 지원 페이지에서는 이벤트를 `EventManager`의 단계와 연결하고 `init`을 발행합니다.
-4. 초기화는 개발 버전 표시 → 링크·버튼·키보드·시리즈·UI 병렬 초기화 →
+4. 초기화는 개발 버전 표시 → 링크·키보드·시리즈·UI 병렬 초기화 →
    읽기 이벤트·버튼 연결 → Swiper → 다음 글 prefetch 순서로 실행합니다.
-   방문 기록과 탐색 버튼 생성은 첫 렌더링 이후로 미루며
+   방문 기록과 좌측 하단 플로팅 제어 버튼(스와이프 전환·루리피드 설정·탐색 목록) 생성은 첫 렌더링 이후로 미루며
    초기화 명령 큐는 이 작업의 완료를 기다리지 않습니다.
 5. 버튼·키보드·Swiper가 발행한 명령은 `EventQueue`를 거쳐 실행됩니다.
    게시글 이동 전에는 인덱스를 저장하고 새 페이지에서 다시 초기화합니다.
@@ -71,7 +71,7 @@ Webpack으로 코드와 CSS를 묶고, 화면과 목록은 표준 DOM API로 처
 사이트 루트는 쿼리·fragment와 무관하게 `HOME`으로 판별하고 검색 조건과 `articleKey`를 유지합니다.
 이벤트 중복, 병렬 실패와 조회 무효화의 상세 동작은 [아키텍처](ARCHITECTURE.md)를 참고하세요.
 
-탐색 목록은 `feature/modal/navigationTab.ts`에서 고정 위치 버튼과 독립 패널 열기를 담당하고, `feature/modal/navigationModal.ts`에서 패널 목록 UI를 구성합니다.
+탐색 목록은 `feature/modal/navigationTab.ts`에서 좌측 하단 고정 플로팅 제어 스택(스와이프 전환·루리피드 설정·탐색 목록)과 독립 패널 열기를 담당하고, `feature/modal/navigationModal.ts`에서 패널 목록 UI를 구성합니다.
 목록 로딩 상태는 `feature/article/loading.ts`에서 동시 요청 수로 관리하고,
 탐색 버튼의 외부 테두리에 표시합니다. 버튼 생성 전 시작된 요청도 구독 시 반영합니다.
 현재 목록·인덱스를 구독하고, 직접 이동은 `feature/swiper/page.ts`의 공용 이동 함수를 사용합니다.

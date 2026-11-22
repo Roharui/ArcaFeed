@@ -267,7 +267,10 @@ body .rulifeed-navigation-control {
   left: 16px;
   bottom: 20px;
   z-index: 10000;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
 }
 
 .rulifeed-navigation-control::before {
@@ -276,19 +279,24 @@ body .rulifeed-navigation-control {
   inset: -12px;
 }
 
+.rulifeed-navigation-control > .rulifeed-control-button,
 .rulifeed-navigation-control > .rulifeed-navigation-trigger {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 44px;
+  gap: 2px;
+  min-width: 58px;
   box-sizing: border-box;
   height: 44px;
-  padding: 2px 6px;
+  margin: 0;
+  padding: 3px 4px;
   border: 1px solid var(--color-bd-btn);
   border-radius: 10px;
   background: rgba(96, 96, 96, 0.8);
   color: #fff;
+  font-family: inherit;
   text-decoration: none;
   cursor: pointer;
   opacity: 0;
@@ -296,31 +304,70 @@ body .rulifeed-navigation-control {
   pointer-events: none;
   transition:
     opacity 0.35s ease,
-    visibility 0.35s;
+    visibility 0.35s,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.rulifeed-navigation-control > [hidden] {
+  display: none;
+}
+
+.rulifeed-control-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.rulifeed-control-label,
+.rulifeed-navigation-count {
+  font-size: 0.62rem;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
 .rulifeed-navigation-trigger > .bi-list-ul {
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
 }
 
-.rulifeed-navigation-count {
-  font-size: 0.65rem;
-  line-height: 1.2;
+.rulifeed-swipe-toggle.is-active {
+  border-color: #766df4;
+  background: rgba(118, 109, 244, 0.88);
+}
+
+.rulifeed-swipe-toggle.is-active .rulifeed-swipe-slash {
+  display: none;
+}
+
+.rulifeed-swipe-toggle:not(.is-active) {
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .rulifeed-navigation-spacer {
   pointer-events: none;
 }
 
+.rulifeed-navigation-control.is-hovered > .rulifeed-control-button,
+.rulifeed-navigation-control.is-hovered > .rulifeed-navigation-trigger,
 .rulifeed-navigation-trigger.is-hovered {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
 }
 
+.rulifeed-navigation-control > .rulifeed-control-button:focus-visible,
+.rulifeed-navigation-control > .rulifeed-navigation-trigger:focus-visible {
+  outline: 2px solid #766df4;
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .rulifeed-navigation-trigger {
+  .rulifeed-navigation-control > .rulifeed-control-button,
+  .rulifeed-navigation-control > .rulifeed-navigation-trigger {
     transition: none;
   }
 }

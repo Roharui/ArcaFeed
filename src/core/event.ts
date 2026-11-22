@@ -13,7 +13,6 @@ import {
   initEvent,
   initModal,
   addVersionInfo,
-  initButton,
   initSeriesContent,
   nextLinkForce,
   initEnableSeries,
@@ -42,7 +41,7 @@ class EventManager implements Record<AppEvent, () => Step[]> {
   init(): Step[] {
     return [
       [addVersionInfo],
-      [initLink, initButton, initEvent, initSeriesContent, initUi],
+      [initLink, initEvent, initSeriesContent, initUi],
       initReading,
       initSwiper,
       initArticlePrefetch,

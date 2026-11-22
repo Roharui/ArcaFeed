@@ -1,4 +1,5 @@
 import { createElement, fromTemplate } from '@/utils/dom';
+import { createFloatingControlButtons } from '@/feature/button';
 import { disposeDialogElement } from './cleanup';
 import { installDialogFocus } from './focus';
 import { createNavigationModal } from './navigationModal';
@@ -13,6 +14,10 @@ import { currentArticlePath } from '@/vault/navigation-context';
 import { activeSubscriptionFailures } from '@/vault/subscription-failures';
 import type { VaultAdapter } from '@/vault';
 export { createNavigationModal } from './navigationModal';
+
+const LIST_ICON =
+  '<svg class="rulifeed-control-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg>';
+
 interface PositionCache {
   styledNativeButton: HTMLElement | null;
   baseBottom: number | undefined;
@@ -20,13 +25,13 @@ interface PositionCache {
 }
 function positionNavigationControl(
   control: HTMLElement,
-  trigger: HTMLElement,
+  trigger: HTMLElement | undefined,
   cache: PositionCache,
 ): void {
   const nativeButton = document.querySelector<HTMLElement>(
     '.nav-control a, .nav-control button',
   );
-  if (nativeButton && nativeButton !== cache.styledNativeButton) {
+  if (trigger && nativeButton && nativeButton !== cache.styledNativeButton) {
     cache.styledNativeButton = nativeButton;
     const style = getComputedStyle(nativeButton);
     // Keep the native theme while retaining our rounded corners.
@@ -71,15 +76,20 @@ function positionNavigationControl(
 function installControlPositioning(
   p: VaultAdapter,
   control: HTMLElement,
-  trigger: HTMLElement,
+  trigger: HTMLElement | undefined,
   isDisposed: () => boolean,
 ) {
   let touchTimer: ReturnType<typeof setTimeout> | undefined;
+  let suppressClickUntil = 0;
   let frame: number | undefined;
   const cache: PositionCache = {
     styledNativeButton: null,
     baseBottom: undefined,
     appliedBottom: undefined,
+  };
+  const setRevealed = (visible: boolean) => {
+    control.classList.toggle('is-hovered', visible);
+    trigger?.classList.toggle('is-hovered', visible);
   };
   const position = () => {
     if (isDisposed()) return;
@@ -97,20 +107,29 @@ function installControlPositioning(
   const onResize = () => schedulePosition(true);
   const hide = () => {
     clearTimeout(touchTimer);
-    trigger.classList.remove('is-hovered');
+    suppressClickUntil = 0;
+    setRevealed(false);
   };
   control.addEventListener('pointerenter', (event) => {
-    if (event.pointerType === 'mouse') trigger.classList.add('is-hovered');
+    if (event.pointerType === 'mouse') setRevealed(true);
   });
   control.addEventListener('pointerleave', (event) => {
-    if (event.pointerType === 'mouse') trigger.classList.remove('is-hovered');
+    if (event.pointerType === 'mouse') setRevealed(false);
   });
   control.addEventListener('pointerdown', (event) => {
     if (event.pointerType !== 'touch') return;
-    trigger.classList.add('is-hovered');
+    const wasRevealed = control.classList.contains('is-hovered');
+    setRevealed(true);
     clearTimeout(touchTimer);
-    touchTimer = setTimeout(() => trigger.classList.remove('is-hovered'), 1500);
+    touchTimer = setTimeout(() => setRevealed(false), 1500);
+    if (!wasRevealed) suppressClickUntil = Date.now() + 400;
   });
+  const consumeSuppressedClick = (event: Event) => {
+    if (Date.now() > suppressClickUntil) return false;
+    suppressClickUntil = 0;
+    event.preventDefault();
+    return true;
+  };
   document.addEventListener('scroll', hide, { passive: true, capture: true });
   window.addEventListener('resize', onResize);
   const resizeObserver = new ResizeObserver(() => schedulePosition());
@@ -155,9 +174,13 @@ function installControlPositioning(
   bodyObserver.observe(document.body, { childList: true });
   observeControls();
   return {
+    setRevealed,
+    hide,
+    consumeSuppressedClick,
     schedulePosition,
     cleanup: () => {
       clearTimeout(touchTimer);
+      suppressClickUntil = 0;
       if (frame !== undefined) cancelAnimationFrame(frame);
       resizeObserver.disconnect?.();
       navAttributeObserver.disconnect?.();
@@ -169,40 +192,60 @@ function installControlPositioning(
 }
 /** A persistent entry point independent of the settings dialog. */
 export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
-  if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
-  if (document.querySelector('.rulifeed-navigation-trigger')) return;
+  if (!p.isCurrentMode('HOME', 'CHANNEL', 'ARTICLE')) return;
+  if (document.querySelector('.rulifeed-navigation-control')) return;
   const control = createElement('div', {
-    class: 'rulifeed-navigation-control',
+    class: 'rulifeed-navigation-control swiper-no-swiping',
   });
+  const hasNavigation = p.isCurrentMode('CHANNEL', 'ARTICLE');
   let loading = isArticleLoading();
-  const count = createElement('span', { class: 'rulifeed-navigation-count' });
-  const trigger = createElement(
-    'a',
-    {
-      class: 'rulifeed-navigation-trigger',
-      role: 'button',
-      tabindex: 0,
-      'aria-haspopup': 'dialog',
-      'aria-expanded': 'false',
-      title: '탐색 목록',
-    },
-    createElement('span', { class: 'bi-list-ul', 'aria-hidden': 'true' }),
-    count,
-    fromTemplate(
-      '<svg class="rulifeed-navigation-loading-ring" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="2" y="2" width="96" height="96" rx="20" pathLength="100" /></svg>',
-    ),
-  );
-  trigger.addEventListener('click', () => open());
-  trigger.addEventListener('keydown', (event) => {
-    if ((event.key === 'Enter' || event.key === ' ') && !event.isComposing) {
-      event.preventDefault();
-      open();
-    }
-  });
+  let count: HTMLElement | undefined;
+  let trigger: HTMLAnchorElement | undefined;
   let panel: HTMLElement | undefined;
   let cleanupFocus: (() => void) | undefined;
   let disposed = false;
-  control.append(trigger);
+
+  const actions = createFloatingControlButtons(p, {
+    onSettingsOpen: () => positioning.hide(),
+    shouldSuppressClick: (event) => positioning.consumeSuppressedClick(event),
+  });
+  control.append(...actions.buttons);
+
+  if (hasNavigation) {
+    count = createElement('span', { class: 'rulifeed-navigation-count' });
+    trigger = createElement(
+      'a',
+      {
+        class: 'rulifeed-navigation-trigger',
+        role: 'button',
+        tabindex: 0,
+        'aria-haspopup': 'dialog',
+        'aria-expanded': 'false',
+        title: '탐색 목록',
+      },
+      createElement(
+        'span',
+        { class: 'bi-list-ul', 'aria-hidden': 'true' },
+        fromTemplate(LIST_ICON),
+      ),
+      count,
+      fromTemplate(
+        '<svg class="rulifeed-navigation-loading-ring" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><rect x="2" y="2" width="96" height="96" rx="20" pathLength="100" /></svg>',
+      ),
+    );
+    trigger.addEventListener('click', (event) => {
+      if (positioning.consumeSuppressedClick(event)) return;
+      open();
+    });
+    trigger.addEventListener('keydown', (event) => {
+      if ((event.key === 'Enter' || event.key === ' ') && !event.isComposing) {
+        event.preventDefault();
+        open();
+      }
+    });
+    control.append(trigger);
+  }
+
   document.body.append(control);
   const positioning = installControlPositioning(
     p,
@@ -210,6 +253,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     trigger,
     () => disposed,
   );
+
   const close = () => {
     if (!panel) return;
     cleanupFocus?.();
@@ -217,12 +261,13 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     panel.querySelectorAll('.helper-modal-tab').forEach(disposeDialogElement);
     panel.remove();
     panel = undefined;
-    trigger.classList.add('is-hovered');
-    trigger.setAttribute('aria-expanded', 'false');
-    trigger.focus();
+    positioning.setRevealed(true);
+    trigger?.setAttribute('aria-expanded', 'false');
+    trigger?.focus();
     positioning.schedulePosition();
   };
   const open = () => {
+    if (!trigger) return;
     if (panel) return close();
     panel = createElement('div', {
       class: 'helper-modal rulifeed-navigation-panel',
@@ -252,6 +297,11 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
   };
   const update = () => {
     if (disposed) return;
+    actions.update();
+    if (!trigger || !count) {
+      positioning.schedulePosition();
+      return;
+    }
     trigger.classList.toggle('is-loading', loading);
     trigger.setAttribute('aria-busy', String(loading));
     const current = currentArticlePath(p.href);
@@ -294,6 +344,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
       state.articleList !== previous.articleList ||
       state.activeIndex !== previous.activeIndex ||
       state.href !== previous.href ||
+      state.articleFilterConfig !== previous.articleFilterConfig ||
       state.subscriptionFailures !== previous.subscriptionFailures ||
       state.seriesChannels !== previous.seriesChannels ||
       state.isSeriesMode !== previous.isSeriesMode ||
@@ -305,10 +356,12 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
       positioning.schedulePosition(true);
     }
   });
-  const unsubscribeLoading = subscribeArticleLoading((active) => {
-    loading = active;
-    updateAfterSwipe(p.swiper, update);
-  });
+  const unsubscribeLoading = hasNavigation
+    ? subscribeArticleLoading((active) => {
+        loading = active;
+        updateAfterSwipe(p.swiper, update);
+      })
+    : () => {};
   return () => {
     disposed = true;
     close();

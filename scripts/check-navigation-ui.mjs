@@ -30,8 +30,12 @@ async function checkNavigationUi(page) {
       return (
         visible &&
         !control.matches('.nav-control') &&
-        control.children.length === 1 &&
-        control.firstElementChild.matches('.rulifeed-navigation-trigger')
+        control.lastElementChild.matches('.rulifeed-navigation-trigger') &&
+        Array.from(control.children).every((child) =>
+          child.matches(
+            '.rulifeed-control-button, .rulifeed-navigation-trigger',
+          ),
+        )
       );
     });
     if (!isolated)

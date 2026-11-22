@@ -2,22 +2,6 @@ html.hide-scrollbar {
   scrollbar-width: none;
 }
 
-.rulifeed-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 0.5rem;
-}
-
-.rulifeed-toolbar button {
-  padding: 0.35rem 0.65rem;
-  border: 1px solid currentColor;
-  border-radius: 0.4rem;
-  color: inherit;
-  background: transparent;
-  cursor: pointer;
-}
-
 .rulifeed-swiper .swiper-slide > #board {
   width: 100%;
   min-width: 0;

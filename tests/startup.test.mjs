@@ -76,7 +76,6 @@ test('initialization prepares Swiper and releases the queue before creating navi
     [
       'addVersionInfo',
       'initLink',
-      'initButton',
       'initEvent',
       'initSeriesContent',
       'initUi',
