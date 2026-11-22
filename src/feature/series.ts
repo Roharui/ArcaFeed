@@ -6,11 +6,7 @@ import { eventBus } from '@/core/app-events';
 import { navigate, isNavigating } from '@/feature/navigation';
 import { OperationError } from '@/utils/operation-error';
 import { normalizedSearchQuery } from './search';
-import {
-  createArticleKey,
-  getCurrentArticleKey,
-  withArticleKey,
-} from '@/utils/article-key';
+import { createArticleKey } from '@/utils/article-key';
 
 import { navigationMode } from '@/vault/navigation-context';
 import type { VaultAdapter } from '@/vault';
@@ -28,18 +24,12 @@ interface SeriesEntry {
 
 /**
  * Extract series link entries from the page DOM.
- * Strips target="_blank" and injects articleKey into hrefs.
+ * Strips target="_blank" so series articles open in the current tab.
  */
-function parseSeriesEntries(
-  links: Iterable<HTMLElement>,
-  articleKey: string,
-): SeriesEntry[] {
+function parseSeriesEntries(links: Iterable<HTMLElement>): SeriesEntry[] {
   return Array.from(links, (element) => {
     const anchors = element.querySelectorAll('a');
-    const url = withArticleKey(
-      anchors[0]?.getAttribute('href') || '',
-      articleKey,
-    );
+    const url = anchors[0]?.getAttribute('href') || '';
     anchors.forEach((anchor) =>
       setAttributes(anchor, { target: '', rel: '', href: url }),
     );
@@ -126,7 +116,7 @@ function initSeriesContent(p: VaultAdapter): void {
     );
   });
 
-  const entries = parseSeriesEntries(Array.from(links), getCurrentArticleKey());
+  const entries = parseSeriesEntries(Array.from(links));
   const currentIndex = findCurrentIndex(entries);
   if (currentIndex === -1) return;
 
@@ -168,7 +158,6 @@ async function initEnableSeries(p: VaultAdapter): Promise<void> {
         .querySelector('.article-series')
         ?.querySelectorAll<HTMLElement>('.series-link') ?? [],
     ),
-    getCurrentArticleKey(),
   );
 
   if (!entries.length)

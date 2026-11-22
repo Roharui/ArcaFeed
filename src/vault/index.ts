@@ -68,7 +68,13 @@ export class VaultAdapter {
     if (initialHref) {
       this.store.setState({ href: initialHref });
     } else {
-      this.store.setState({ href: parseHref(window.location.href) });
+      const parsed = parseHref(window.location.href);
+      this.store.setState({
+        href: {
+          ...parsed,
+          articleKey: parsed.articleKey || this.store.getState().articleKey,
+        },
+      });
     }
 
     // Auto-persist state changes with debounce

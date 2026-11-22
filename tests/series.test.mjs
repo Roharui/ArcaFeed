@@ -93,7 +93,7 @@ for (const [feed, isScrapMode, seriesChannels] of [
     assert.deepEqual(copies[0].slice(0, 4), [
       'scraps',
       'newserie',
-      ['/community/board/300143/read/100?articleKey=scraps'],
+      ['/community/board/300143/read/100'],
       0,
     ]);
     assert.deepEqual(fixture.opened, [

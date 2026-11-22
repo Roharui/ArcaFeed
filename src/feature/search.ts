@@ -3,6 +3,7 @@ import type { VaultAdapter } from '@/vault';
 export function normalizedSearchQuery(search: string): string {
   const searchParams = new URLSearchParams(search);
 
+  searchParams.delete('articleKey');
   searchParams.delete('page');
   searchParams.delete('near');
   searchParams.delete('after');

@@ -446,7 +446,8 @@ test('resume restores session links, selected channels and search without changi
     ]);
     const params = new URLSearchParams(restored.searchQuery);
     assert.equal(params.get('q'), '검색');
-    assert.equal(params.get('articleKey'), 'restored');
+    assert.equal(params.has('articleKey'), false);
+    assert.equal(restored.articleKey, 'restored');
     assert.equal(
       vault.reading.hasVisited('/community/board/300143/read/100'),
       true,

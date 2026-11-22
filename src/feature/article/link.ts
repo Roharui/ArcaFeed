@@ -6,8 +6,7 @@ import { fetchFirstBatch, fetchAllBatches } from './fetch';
 import { loadMoreHomeSeriesArticles } from './subscription-feed';
 import { filterLink } from '@/feature/filter';
 import { parseSearchQuery } from '@/feature/search';
-import { createArticleKey } from '@/utils/article-key';
-import { appendSearchParam } from '@/utils/url';
+import { createArticleKey, setTabArticleKey } from '@/utils/article-key';
 import { captureArticleSession } from '@/vault/article-session';
 import { articlePath } from '@/vault/navigation-context';
 import {
@@ -161,10 +160,10 @@ async function initEnableScrapSeries(p: VaultAdapter): Promise<void> {
   const previous = captureNavigationState(p);
   parseSearchQuery(p);
   const articleKey = p.articleKey || createArticleKey();
+  setTabArticleKey(articleKey);
   p.updateState({
     articleKey,
     href: { ...p.href, articleKey },
-    searchQuery: appendSearchParam(p.searchQuery, 'articleKey', articleKey),
     isSeriesMode: true,
     isScrapMode: true,
     seriesChannels: [],

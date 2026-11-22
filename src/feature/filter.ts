@@ -12,42 +12,6 @@ function extractArticleRows(scope: ParentNode = document): HTMLElement[] {
   return Array.from(scope.querySelectorAll<HTMLElement>(ARTICLE_ROW_SELECTOR));
 }
 
-// ── Article key injection ──────────────────────────────
-
-function injectArticleKeys(rows: HTMLElement[], articleKey: string): void {
-  if (!articleKey) return;
-  const encodedKey = encodeURIComponent(articleKey);
-  const keyParam = `articleKey=${encodedKey}`;
-
-  rows.forEach((el) => {
-    const href = el.getAttribute('href');
-    if (!href) return;
-
-    if (href.startsWith('/') && !href.includes('#')) {
-      const queryIndex = href.indexOf('?');
-      if (queryIndex === -1) {
-        el.setAttribute('href', `${href}?${keyParam}`);
-        return;
-      }
-      const query = href.slice(queryIndex + 1);
-      if (!query.includes('articleKey=')) {
-        el.setAttribute('href', `${href}&${keyParam}`);
-        return;
-      }
-    }
-
-    const url = new URL(href, window.location.origin);
-    if (
-      !normalizeArticlePath(url.href) ||
-      url.searchParams.get('articleKey') === articleKey
-    )
-      return;
-
-    url.searchParams.set('articleKey', articleKey);
-    el.setAttribute('href', `${url.pathname}${url.search}`);
-  });
-}
-
 // ── Tab / Title filtering ──────────────────────────────
 
 function buildFilterPredicate(
@@ -96,8 +60,6 @@ function filterLink(
   scope?: ParentNode,
 ): string[] {
   const rows = extractArticleRows(scope);
-
-  if (applyCss) injectArticleKeys(rows, p.href.articleKey);
 
   const filter = p.articleFilterConfig[p.href.channelId] || {
     tab: [],

@@ -68,7 +68,7 @@ Webpack으로 코드와 CSS를 묶고, 화면과 목록은 표준 DOM API로 처
 백그라운드에서 수행합니다. 이전 구독 탐색 세션의 보충·재시도는 `article/subscription-feed.ts`에서 처리합니다.
 `article/listing.ts`는 목록 파싱과 페이지 순회를 공유합니다.
 조회 결과는 시작 시 캡처한 세션이 여전히 유효할 때만 반영합니다.
-사이트 루트는 쿼리·fragment와 무관하게 `HOME`으로 판별하고 검색 조건과 `articleKey`를 유지합니다.
+사이트 루트는 쿼리·fragment와 무관하게 `HOME`으로 판별하고 검색 조건을 유지합니다. 탐색 세션 키(`articleKey`)는 URL 쿼리가 아니라 탭별 `history.state`와 `sessionStorage`로 관리합니다.
 이벤트 중복, 병렬 실패와 조회 무효화의 상세 동작은 [아키텍처](ARCHITECTURE.md)를 참고하세요.
 
 탐색 목록은 `feature/modal/navigationTab.ts`에서 좌측 하단 고정 플로팅 제어 스택(스와이프 전환·루리피드 설정·탐색 목록)과 독립 패널 열기를 담당하고, `feature/modal/navigationModal.ts`에서 패널 목록 UI를 구성합니다.

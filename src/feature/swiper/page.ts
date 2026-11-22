@@ -1,4 +1,5 @@
 import { normalizeArticlePath } from '@/utils/regex';
+import { setTabArticleKey } from '@/utils/article-key';
 import { navigate, isNavigating } from '@/feature/navigation';
 import { articlePath, countSkippedVisited } from '@/vault/navigation-context';
 import type { PageMode, PromiseFunc } from '@/types';
@@ -46,6 +47,7 @@ export async function navigateToArticle(
   await navigate(
     p,
     () => {
+      if (p.articleKey) setTabArticleKey(p.articleKey);
       queueSkippedToast(path, skipped);
       window.location.replace(
         skippedToastURL(`${path}${p.searchQuery}`, skipped),

@@ -1,4 +1,3 @@
-import { BOARD_PATH } from '@/utils/regex';
 import { deferField, mergeState, sameField } from './lazy-state';
 /**
  * Config Service - handles loading and saving application configuration.
@@ -8,7 +7,7 @@ import { deferField, mergeState, sameField } from './lazy-state';
 import { StorageRepository } from './repository';
 import { ConfigStorage } from './config-storage';
 import { NavigationStorage } from './navigation-storage';
-import { createArticleKey } from '@/utils/article-key';
+import { ensureTabArticleKey } from '@/utils/article-key';
 import { compactNavigationArticles, findArticleIndex } from './article-window';
 
 import type { AppState } from '@/vault/store';
@@ -27,26 +26,10 @@ export class ConfigService {
   }
 
   /**
-   * Ensure the current page has an articleKey in its URL query params.
+   * Ensure the current tab has an articleKey stored in history.state/sessionStorage.
    */
   ensureArticleKey(): string {
-    const currentUrl = new URL(window.location.href);
-    const existingKey = currentUrl.searchParams.get('articleKey');
-
-    if (existingKey) {
-      return existingKey;
-    }
-
-    if (!BOARD_PATH.test(currentUrl.pathname)) {
-      return '';
-    }
-
-    const generatedKey = createArticleKey();
-
-    currentUrl.searchParams.set('articleKey', generatedKey);
-    window.history.replaceState({}, '', currentUrl.toString());
-
-    return generatedKey;
+    return ensureTabArticleKey();
   }
 
   /**

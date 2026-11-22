@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { domFixture } from './dom-fixture.mjs';
-import { sourceLoader } from './source-loader.mjs';
+import { memoryStorage, sourceLoader } from './source-loader.mjs';
 
 test('Ruliweb routes recognize mobile and desktop boards and reject external hosts', () => {
   const { parseHref } = sourceLoader({ globals: { console: { log() {} } } })(
@@ -43,6 +43,68 @@ test('Ruliweb routes recognize mobile and desktop boards and reject external hos
     parseHref('https://m.ruliweb.com/game/board/123/write').mode,
     'OTHER',
   );
+});
+
+test('articleKey stays in history.state and sessionStorage without polluting URLs', () => {
+  const session = memoryStorage();
+  const location = {
+    origin: 'https://m.ruliweb.com',
+    href: 'https://m.ruliweb.com/community/board/300143',
+  };
+  const history = {
+    state: { site: true },
+    replaceState(state, _title, url) {
+      this.state = state;
+      if (typeof url === 'string') location.href = url;
+    },
+  };
+  const { ensureTabArticleKey, getCurrentArticleKey } = sourceLoader({
+    globals: {
+      sessionStorage: session,
+      window: { location, history },
+    },
+  })('src/utils/article-key.ts');
+
+  const firstKey = ensureTabArticleKey();
+  assert.ok(firstKey);
+  assert.equal(location.href, 'https://m.ruliweb.com/community/board/300143');
+  assert.equal(history.state.site, true);
+  assert.equal(history.state.ruliFeedArticleKey, firstKey);
+  assert.equal(getCurrentArticleKey(), firstKey);
+
+  // Moving from board list to article in the same tab inherits the key via sessionStorage.
+  location.href = 'https://m.ruliweb.com/community/board/300143/read/100';
+  history.state = null;
+  assert.equal(ensureTabArticleKey(), firstKey);
+  assert.equal(
+    location.href,
+    'https://m.ruliweb.com/community/board/300143/read/100',
+  );
+  assert.equal(history.state.ruliFeedArticleKey, firstKey);
+
+  // Opening a fresh channel listing in the same tab creates a separate key.
+  location.href = 'https://m.ruliweb.com/ps/board/300001';
+  history.state = null;
+  const secondKey = ensureTabArticleKey();
+  assert.ok(secondKey);
+  assert.notEqual(secondKey, firstKey);
+  assert.equal(location.href, 'https://m.ruliweb.com/ps/board/300001');
+
+  // Back navigation restores the previous session key from history.state.
+  location.href = 'https://m.ruliweb.com/community/board/300143/read/100';
+  history.state = { ruliFeedArticleKey: firstKey };
+  assert.equal(ensureTabArticleKey(), firstKey);
+
+  // Explicit URL handoff (e.g. series new tab) is absorbed and stripped from the URL.
+  location.href =
+    'https://m.ruliweb.com/community/board/300143/read/100?articleKey=handoff&cate=13';
+  history.state = null;
+  assert.equal(ensureTabArticleKey(), 'handoff');
+  assert.equal(
+    location.href,
+    'https://m.ruliweb.com/community/board/300143/read/100?cate=13',
+  );
+  assert.equal(history.state.ruliFeedArticleKey, 'handoff');
 });
 
 test('a channel filter reads only its own editor and preserves its navigation setting', () => {

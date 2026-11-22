@@ -1,3 +1,4 @@
+import { getCurrentArticleKey } from '@/utils/article-key';
 import { OperationError, reportFailure } from '@/utils/operation-error';
 import {
   RECORD_STORES,
@@ -552,7 +553,7 @@ export async function initializeStorage(): Promise<void> {
       window.dispatchEvent(
         new CustomEvent('rulifeed:storage', { detail: { changes } }),
       ),
-    new URL(window.location.href).searchParams.get('articleKey') ?? '',
+    getCurrentArticleKey(),
     window.location.origin,
   );
   await storage.initialize();

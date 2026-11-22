@@ -1,4 +1,5 @@
 import { navigate } from '@/feature/navigation';
+import { setTabArticleKey } from '@/utils/article-key';
 import { OperationError } from '@/utils/operation-error';
 import { shuffle } from '@/utils/func';
 import { showToast, showConfirmToast } from '@/utils/toast';
@@ -146,13 +147,16 @@ async function openScrapSeriesArticle(p: VaultAdapter): Promise<void> {
   const nextUrl = new URL(firstUrl, window.location.origin);
   nextUrl.search = p.searchQuery;
 
-  if (p.articleKey) {
-    nextUrl.searchParams.set('articleKey', p.articleKey);
-  }
-
-  await navigate(p, () => window.location.replace(nextUrl.toString()), {
-    patch: { activeIndex: firstIndex },
-  });
+  await navigate(
+    p,
+    () => {
+      if (p.articleKey) setTabArticleKey(p.articleKey);
+      window.location.replace(nextUrl.toString());
+    },
+    {
+      patch: { activeIndex: firstIndex },
+    },
+  );
 }
 
 // ── Channel listings ───────────────────────────────────
