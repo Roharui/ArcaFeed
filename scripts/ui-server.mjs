@@ -3,13 +3,13 @@ import { readFileSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import webpack from 'webpack';
-import createDevConfig from '../webpack.config.dev.js';
+import createDevConfig from '../../webpack.config.dev.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const uiRoot = path.join(root, 'scripts/ui');
 
 export function createUiConfig() {
-  const config = createDevConfig();
+  const config = createDevConfig({ APP: 'rulifeed' });
   return {
     ...config,
     context: root,
@@ -30,7 +30,10 @@ export function createUiConfig() {
         rule.test.test('.ts')
           ? {
               ...rule,
-              use: { loader: 'ts-loader', options: { transpileOnly: true } },
+              use: {
+                loader: 'ts-loader',
+                options: { transpileOnly: true, allowTsInNodeModules: true },
+              },
             }
           : rule,
       ),

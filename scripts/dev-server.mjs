@@ -4,7 +4,7 @@ import path from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import webpack from 'webpack';
-import createDevConfig from '../webpack.config.dev.js';
+import createDevConfig from '../../webpack.config.dev.js';
 import { createDevLoader, normalizeDevURL } from './dev-loader.mjs';
 
 export async function startDevServer({
@@ -13,6 +13,7 @@ export async function startDevServer({
   publicURL,
   device = 'desktop',
   config = createDevConfig({
+    APP: 'rulifeed',
     DEVICE: device,
     LIVE: true,
     VERSION_RELOAD: 'false',

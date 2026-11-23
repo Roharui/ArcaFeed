@@ -1,4 +1,4 @@
-import { getDevHeaders } from '../webpack.config.dev.js';
+import { getDevHeaders } from '../../webpack.config.dev.js';
 
 // This function runs inside the userscript manager, alongside the @require globals.
 function liveLoader(baseURL, transport) {
@@ -87,7 +87,7 @@ export function normalizeDevURL(baseURL) {
 export function createDevLoader(baseURL, transport = 'auto') {
   if (baseURL) baseURL = normalizeDevURL(baseURL);
   const headers = {
-    ...getDevHeaders('1.0.0'),
+    ...getDevHeaders('rulifeed', '1.0.0'),
     name: transport === 'fetch' ? 'RuliFeed-live-fetch' : 'RuliFeed-live',
     description: 'Load local RuliFeed builds and reload on changes',
     grant: transport === 'fetch' ? 'none' : 'GM_xmlhttpRequest',

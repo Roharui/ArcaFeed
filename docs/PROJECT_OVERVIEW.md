@@ -118,8 +118,8 @@ Webpack으로 코드와 CSS를 묶고, 화면과 목록은 표준 DOM API로 처
 
 ## 빌드와 릴리즈
 
-[개발 설정](../webpack.config.dev.js)은 `dist/RuliFeed.dev.user.js`,
-[프로덕션 설정](../webpack.config.prod.js)은 `dist/RuliFeed.user.js`를 생성합니다.
+[개발 설정](../../webpack.config.dev.js)은 루트 `dist/RuliFeed.dev.user.js`,
+[프로덕션 설정](../../webpack.config.prod.js)은 루트 `dist/RuliFeed.user.js`를 생성합니다.
 실시간 개발과 모바일 로더 설치는 [개발 안내](DEVELOPMENT.md)에 정리되어 있습니다.
 
 [릴리즈 워크플로](../.github/workflows/release.yml)는 `main` 푸시 시
