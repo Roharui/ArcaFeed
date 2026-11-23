@@ -21,33 +21,6 @@ npm run bench:performance # 재현 가능한 합성 벤치마크
 Playwright MCP에서 저장된 검사 파일을 실행할 수 있습니다.
 사용법과 검증 범위는 [UI_TESTING.md](./UI_TESTING.md)를 참고하세요.
 
-## 로컬 CDN 업데이트용 개발 빌드
-
-`.env.example`을 `.env`로 복사하고 `CDN_URL`에 직접 구성한 CDN의 기본 주소를
-작성하세요. `.env`는 Git에 포함되지 않습니다.
-
-```dotenv
-CDN_URL=https://dev.example.com/n/
-```
-
-```bash
-npm run dev:cdn         # 데스크톱 개발 빌드
-npm run dev:cdn:mobile  # eruda를 포함한 모바일 개발 빌드
-```
-
-생성된 `dist/RuliFeed.dev.user.js`를 CDN의
-`https://dev.example.com/n/RuliFeed.dev.user.js` 경로에 제공하고 해당 주소에서
-설치하세요. `@updateURL`과 `@downloadURL` 모두 이 경로를 사용하며, 이후 빌드를
-CDN에 반영하면 유저스크립트 관리자의 업데이트 확인으로 받을 수 있습니다.
-빌드할 때마다 숫자 버전이 증가합니다. 기존 `RuliFeed`와 라이브 로더는 끄고
-`RuliFeed-dev`만 켜세요. CDN 서버 구성과 파일 반영은 별도로 진행합니다.
-CDN 빌드는 배포용과 같은 압축 방식과 외부 `@require` 라이브러리를 사용합니다.
-개발 버전 표시와 모바일 eruda는 유지하되, 버전 변경에 따른 강제 새로고침은
-실행하지 않습니다.
-
-`.env`가 없으면 `http://localhost:3000/`을 사용합니다. `CDN_URL`을 바꾼 뒤에는
-새 주소에서 다시 설치하세요.
-
 ## 실시간 개발
 
 개발 중에는 `npm run dev:live`를 실행하고
@@ -82,46 +55,14 @@ ViolentMonkey에 **한 번만 설치**하세요. 설치 화면이 열리지 않�
 Webpack 설정을 바꿀 때는 서버도 다시 실행해야 합니다.
 
 기본 로더는 `GM_xmlhttpRequest`를 사용하고 `@connect`에는 접속할 PC 주소만
-지정합니다. Via의 공식 스크립트 안내에도 이 API가 지원 목록에 있습니다.
-([Via 공식 안내](https://github.com/tuyafeng/Via/blob/master/app/src/main/res/values/strings.xml))
-설치된 버전에서 API를 지원하지 않거나 사용할 수 없으면 아래 대안을 사용하세요.
-
-## GM API 없는 HTTPS 로더
-
-개발 서버를 Tailscale Serve 등의 HTTPS 주소에
-연결한 뒤 `DEV_URL=https://<PC의 HTTPS 호스트> npm run dev:live -- --mobile`로
-실행하고, 휴대폰에서 `https://<PC의 HTTPS 호스트>/RuliFeed.fetch.user.js`를
-설치하세요. HTTPS 연결 설정은 별도로 준비해야 합니다. 이 로더는 `@grant none`과
-표준 `fetch`를 사용하며, 기본 로더도 GM API가 없고 주소가 HTTPS이면 `fetch`로
-전환합니다. GM API가 존재하지만 동작하지 않는 환경에서는 별도 fetch 로더를
-선택하세요. 로더 두 개를 동시에 켜지 마세요.
-
-### nginx 프록시 예시
-
-아래의 `dev.example.com`은 예시 주소입니다. 실제 개발 서버 주소로 바꾸세요.
-nginx가 `location /n`을 개발 서버의 3000번 포트로 프록시하는 경우:
-
-```bash
-DEV_URL=https://dev.example.com/n npm run dev:live:mobile
-```
-
-휴대폰에서 `https://dev.example.com/n/RuliFeed.fetch.user.js`를 설치하세요.
-로더는 `/n/build`를 조회합니다. nginx가 upstream에 `/n`을 유지하거나
-제거해서 전달하는 경우 모두 지원합니다. 프록시가 다른 PC에 있어도 접속할
-수 있도록 이 명령은 `0.0.0.0:3000`에서 연결을 받습니다.
+지정합니다.
 
 ## 연결 제한과 바인딩
 
 서버는 `https://bbs.ruliweb.com`에만 CORS 응답을 허용하고, 쿠키나 인증 정보를
-첨부하지 않습니다. 일반 HTTP 주소는 혼합 콘텐츠 차단 때문에 fetch 로더에서
-사용할 수 없습니다. 또한 Via/WebView나 사이트의 CSP가 외부 연결 또는 `eval`을
-차단하면 이 대안도 실행되지 않을 수 있습니다. 브라우저 보안 설정을 꺼서 우회하는
-방식은 사용하지 않습니다. 실제 설치된 Via에서의 실행 확인은 별도로 필요합니다.
-
-개발 서버에는 별도 인증이 없습니다. 직접 Tailscale IP로 접속할 때는
+첨부하지 않습니다. 개발 서버에는 별도 인증이 없습니다. 직접 Tailscale IP로 접속할 때는
 `HOST=<PC의 Tailscale IP> npm run dev:live:mobile`로 해당 주소에서만 접속을 받게
-설정할 수 있습니다. HTTPS 프록시가 같은 PC에서 연결하는 방식이라면 위의
-`npm run dev:live -- --mobile`을 사용하여 기본 `127.0.0.1` 바인딩을 유지하세요.
+설정할 수 있습니다.
 
 ## 빌드와 관련 문서
 
@@ -138,8 +79,8 @@ DEV_URL=https://dev.example.com/n npm run dev:live:mobile
 연결된 기기에서 Rui Browser의 유저스크립트를 활성화합니다. Rui Browser 저장소의 ADB 설치 도구를 사용합니다.
 
 ```bash
-npm run dev:cdn -- --env BUNDLE=true
-python3 ../Soul/patches/adb_userscript.py dist/RuliFeed.dev.user.js
+npm run dev -- --env BUNDLE=true
+python3 ../Soul/patches/adb_userscript.py ../dist/RuliFeed.dev.user.js
 adb shell am start -a android.intent.action.VIEW -d https://m.ruliweb.com/community/board/300143 -p com.mycompany.app.soulbrowser.memoryfix
 ```
 

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import webpack from 'webpack';
-import createDevConfig from '../../webpack.config.dev.js';
+import { createDevConfig } from '../../webpack.config.js';
 import { createDevLoader, normalizeDevURL } from './dev-loader.mjs';
 
 export async function startDevServer({
@@ -60,10 +60,7 @@ export async function startDevServer({
       response.end();
       return;
     }
-    if (
-      route === '/RuliFeed.live.user.js' ||
-      route === '/RuliFeed.fetch.user.js'
-    ) {
+    if (route === '/RuliFeed.live.user.js') {
       response.setHeader(
         'Content-Type',
         'application/javascript; charset=utf-8',
@@ -72,12 +69,7 @@ export async function startDevServer({
       const loaderURL =
         externalURL ||
         `${new URL(`http://${request.headers.host}`).origin}${prefix}`;
-      response.end(
-        createDevLoader(
-          loaderURL,
-          route === '/RuliFeed.fetch.user.js' ? 'fetch' : 'auto',
-        ),
-      );
+      response.end(createDevLoader(loaderURL));
     } else if (route === '/build') {
       response.setHeader('Content-Type', 'application/json; charset=utf-8');
       response.setHeader('Vary', 'Origin, Accept-Encoding');
@@ -166,12 +158,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (host !== '127.0.0.1') {
     console.log(
       `[RuliFeed live] 휴대폰에서 설치: http://<PC 주소>:${new URL(live.baseURL).port}/RuliFeed.live.user.js`,
-    );
-  }
-  if (process.env.DEV_URL) {
-    const externalURL = normalizeDevURL(process.env.DEV_URL);
-    console.log(
-      `[RuliFeed live] GM API 없는 로더: ${externalURL}/RuliFeed.fetch.user.js (HTTPS 필요)`,
     );
   }
   const stop = async () => {

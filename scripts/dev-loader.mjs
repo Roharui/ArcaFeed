@@ -1,19 +1,10 @@
-import { getDevHeaders } from '../../webpack.config.dev.js';
+import { getDevHeaders } from '../../webpack.config.js';
 
 // This function runs inside the userscript manager, alongside the @require globals.
-function liveLoader(baseURL, transport) {
+function liveLoader(baseURL) {
   baseURL = baseURL.replace(/\/+$/, '');
   let currentHash = null;
   let reportedFailure = false;
-  const useGM =
-    transport !== 'fetch' && typeof GM_xmlhttpRequest === 'function';
-
-  if (!useGM && !baseURL.startsWith('https://')) {
-    console.error(
-      '[RuliFeed live] GM API 없이 로드하려면 HTTPS 주소가 필요합니다. DEV_URL을 HTTPS 주소로 지정하고 fetch 로더를 다시 설치하세요.',
-    );
-    return;
-  }
 
   function retry(error) {
     if (!reportedFailure) {
@@ -57,20 +48,7 @@ function liveLoader(baseURL, transport) {
       ontimeout: retry,
     };
     try {
-      if (useGM) {
-        GM_xmlhttpRequest({ method: 'GET', url, timeout: 5000, ...callbacks });
-      } else {
-        fetch(url, {
-          cache: 'no-store',
-          credentials: 'omit',
-          signal: AbortSignal.timeout(5000),
-        })
-          .then(async (response) => ({
-            status: response.status,
-            responseText: await response.text(),
-          }))
-          .then(callbacks.onload, callbacks.onerror);
-      }
+      GM_xmlhttpRequest({ method: 'GET', url, timeout: 5000, ...callbacks });
     } catch (error) {
       retry(error);
     }
@@ -84,14 +62,14 @@ export function normalizeDevURL(baseURL) {
   return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
 }
 
-export function createDevLoader(baseURL, transport = 'auto') {
+export function createDevLoader(baseURL) {
   if (baseURL) baseURL = normalizeDevURL(baseURL);
   const headers = {
     ...getDevHeaders('rulifeed', '1.0.0'),
-    name: transport === 'fetch' ? 'RuliFeed-live-fetch' : 'RuliFeed-live',
+    name: 'RuliFeed-live',
     description: 'Load local RuliFeed builds and reload on changes',
-    grant: transport === 'fetch' ? 'none' : 'GM_xmlhttpRequest',
-    ...(transport === 'fetch' ? {} : { connect: new URL(baseURL).hostname }),
+    grant: 'GM_xmlhttpRequest',
+    connect: new URL(baseURL).hostname,
     noframes: '',
   };
   const metadata = Object.entries(headers).flatMap(([key, value]) =>
@@ -103,7 +81,7 @@ export function createDevLoader(baseURL, transport = 'auto') {
     '// ==UserScript==',
     ...metadata,
     '// ==/UserScript==',
-    `(${liveLoader.toString()})(${JSON.stringify(baseURL)}, ${JSON.stringify(transport)});`,
+    `(${liveLoader.toString()})(${JSON.stringify(baseURL)});`,
     '',
   ].join('\n');
 }
