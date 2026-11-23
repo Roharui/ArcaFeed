@@ -231,3 +231,25 @@ test('storage starts during parsing and DOM initialization waits for the parsed 
   await new Promise(setImmediate);
   assert.deepEqual(calls, ['storage', 'init']);
 });
+
+test('addVersionInfo does not read development process.env fields in production', async () => {
+  const env = new Proxy(
+    { NODE_ENV: 'production' },
+    {
+      get(target, prop) {
+        if (prop !== 'NODE_ENV') {
+          throw new Error(`Unexpected process.env.${String(prop)} access`);
+        }
+        return target.NODE_ENV;
+      },
+    },
+  );
+  const { addVersionInfo } = sourceLoader({
+    globals: { process: { env } },
+    mocks: {
+      '@/vault/indexed-storage': { getStorage: () => assert.fail('unused') },
+      '@/feature/navigation': { navigate: () => assert.fail('unused') },
+    },
+  })('src/feature/version.ts');
+  await addVersionInfo(vaultFixture());
+});
