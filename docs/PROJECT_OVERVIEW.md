@@ -1,128 +1,48 @@
-# 프로젝트 구조
+# ArcaFeed 프로젝트 구조
 
-ArcaFeed는 아카라이브 게시글을 스와이프로 탐색하는 TypeScript 유저스크립트입니다.
-Webpack으로 코드와 CSS를 묶고, 화면과 목록은 표준 DOM API로 처리합니다.
-Swiper와 Toastify는 유저스크립트의 `@require`로 로드합니다. 모바일 개발 빌드에는 eruda도 포함합니다.
-버전과 의존성은 [package.json](../package.json)을 기준으로 확인합니다.
+ArcaFeed는 아카라이브(`arca.live`) 게시글을 스와이프로 탐색하는 TypeScript 유저스크립트입니다.
+공용 이벤트 엔진·유틸리티·IndexedDB 저장소·모달/스와이퍼 헬퍼는 [`@feed/core`](../../FeedCore)를 사용하고, 이 디렉토리는 아카라이브 전용 라우팅·DOM 파싱·UI 설정·구독/스크랩/이어보기 기능을 담당합니다.
 
-이 문서는 코드를 읽기 위한 진입점과 유지보수 규칙을 정리합니다.
-구체적인 타입과 기본값은 소스에서 확인하고, 동작이나 구조가 바뀌면 관련 문서를 갱신합니다.
+공통 아키텍처, 개발·빌드 절차, UI 테스트, 성능 측정과 기능 TODO는 루트 문서에서 관리합니다.
 
-## 관련 문서
+| 문서                                        | 내용                                                             |
+| ------------------------------------------- | ---------------------------------------------------------------- |
+| [README](../README.md)                      | 설치, 주요 기능과 기본 사용법                                    |
+| [사용 안내](./USAGE.md)                     | 아카라이브 필터, 구독 피드, 스크랩, 최근 본 글과 이어보기        |
+| [통합 아키텍처](../../docs/ARCHITECTURE.md) | `@feed/core` 경계, 이벤트 실행·비동기·IndexedDB 저장소 보장 범위 |
+| [개발·CI 안내](../../docs/DEVELOPMENT.md)   | 루트 `webpack.config.js`, `dist/`, 실시간 개발 서버와 검증 명령  |
+| [UI 테스트](../../docs/UI_TESTING.md)       | 모달 미리보기와 Playwright MCP 검사                              |
+| [성능 측정](../../docs/PERFORMANCE.md)      | 최적화 내용, 성능 회귀 검증과 벤치마크                           |
+| [기능 TODO](../../docs/TODO.md)             | 공통 기능 제안과 우선순위                                        |
 
-| 문서                        | 내용                                                       |
-| --------------------------- | ---------------------------------------------------------- |
-| [README](../README.md)      | 설치, 주요 기능, 기본 사용법                               |
-| [사용 안내](USAGE.md)       | 필터, 구독 피드, 최근 본 글과 이어보기                     |
-| [개발 안내](DEVELOPMENT.md) | 개발 서버, 로더 설치, 모바일 연결, 검증 명령               |
-| [아키텍처](ARCHITECTURE.md) | 의존성 방향, 이벤트 실행, 비동기 요청과 저장소의 보장 범위 |
-| [UI 테스트](UI_TESTING.md)  | 모달 미리보기와 브라우저 검사                              |
-| [성능 측정](PERFORMANCE.md) | 최적화 내용, 회귀 검증과 합성 벤치마크                     |
-| [기능 TODO](TODO.md)        | 아직 구현하지 않은 기능 제안과 우선순위                    |
+## 아카라이브 페이지 모드
 
-## 코드 위치
+페이지 모드는 [src/utils/regex.ts](../src/utils/regex.ts)의 `parseHref()`에서 판별합니다.
 
-| 위치                                                                                                                        | 역할                                                       |
-| --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| [src/index.ts](../src/index.ts)                                                                                             | 중복 실행을 막고 애플리케이션 생성 후 `init` 발행          |
-| [src/core/index.ts](../src/core/index.ts)                                                                                   | `ArcaFeed` 싱글톤, 상태 저장소와 이벤트 실행기 조립        |
-| [src/core/app-events.ts](../src/core/app-events.ts)                                                                         | `AppEvent` 타입과 기능 모듈이 사용하는 공용 이벤트 버스    |
-| [src/core/event.ts](../src/core/event.ts)                                                                                   | 이벤트별 실행 단계 정의                                    |
-| `@feed/core` ([`../FeedCore`](../../FeedCore))                                                                              | `ArcaFeed`·`RuliFeed` 공용 코어 엔진·유틸·저장소·UI 헬퍼   |
-| [src/core/step-runner.ts](../src/core/step-runner.ts)                                                                       | `@feed/core` 단계 실행기에 저장소 flush 연결               |
-| [src/feature/article/](../src/feature/article/)                                                                             | 게시글 목록 조회, 링크 이동, 다음 글 prefetch              |
-| [src/feature/swiper/](../src/feature/swiper/)                                                                               | Swiper 생성과 이동 가능 상태 갱신                          |
-| [src/feature/filter.ts](../src/feature/filter.ts), [search.ts](../src/feature/search.ts)                                    | 목록 필터와 검색 조건 처리                                 |
-| [src/feature/series.ts](../src/feature/series.ts), [subscriptions.ts](../src/feature/subscriptions.ts)                      | 게시글 시리즈와 사이트 구독 채널 파싱                      |
-| [src/feature/reading.ts](../src/feature/reading.ts)                                                                         | 본 글 표시·건너뛰기, 이어보기 복원과 스크롤 저장           |
-| [src/feature/modal/](../src/feature/modal/)                                                                                 | 필터, 화면 설정, 구독 채널, 최근 본 글, 이어보기 탭        |
-| [src/feature/button.ts](../src/feature/button.ts), [keyEvent.ts](../src/feature/keyEvent.ts), [ui.ts](../src/feature/ui.ts) | 버튼, 키보드와 페이지 레이아웃                             |
-| [src/vault/](../src/vault/)                                                                                                 | `@feed/core/vault` 기반 상태, 설정·읽기 기록과 세션 어댑터 |
-| [src/types/](../src/types/)                                                                                                 | `@feed/core/types` 재내보내기 및 앱 전용 함수 타입         |
-| [src/utils/](../src/utils/)                                                                                                 | URL 파싱, 네트워크 요청과 공통 유틸리티                    |
-| [css/](../css/)                                                                                                             | 페이지 레이아웃과 기능별 스타일                            |
-| [scripts/](../scripts/)                                                                                                     | 개발·UI 서버, 개발 로더와 성능 측정 도구                   |
-| [tests/](../tests/)                                                                                                         | 실제 소스 모듈을 사용하는 회귀 테스트와 테스트 어댑터      |
+| 모드      | 대상                                        |
+| --------- | ------------------------------------------- |
+| `HOME`    | 사이트 루트(`/`)와 구독 피드(`/b/my`)       |
+| `CHANNEL` | 채널 목록(`/b/{channelId}`)                 |
+| `ARTICLE` | 게시글(`/b/{channelId}/{articleId}`)        |
+| `SCRAP`   | 스크랩 목록(`/u/scrap_list`)                |
+| `OTHER`   | 그 밖의 페이지 (스타일·DB 초기화 전에 종료) |
 
-## 실행 흐름
+## 아카라이브 전용 코드 위치
 
-1. 유저스크립트는 `document-start`에 시작합니다. `src/index.ts`에서 URL과 중복 실행을 확인하고, 지원하지 않는 `OTHER` 페이지는 스타일이나 저장소를 준비하기 전에 종료합니다.
-2. 문서에 `head`가 생기면 기본 레이아웃 CSS를 적용하고 IndexedDB `ArcaFeed` 버전 2의 용도별 저장소를 엽니다. 문서 파싱과 병행해 기존 localStorage 데이터 이전, 설정·요약과 현재 탐색 목록 준비를 진행합니다. 다른 탐색 목록과 이어보기 목록은 첫 조회에서 제외합니다. 저장소와 DOM이 준비되면 `ArcaFeed`를 생성합니다. `VaultAdapter`는 메모리 캐시 위에 지연 getter를 제공합니다.
-3. 지원 페이지에서는 이벤트를 `EventManager`의 단계와 연결하고 `init`을 발행합니다.
-4. 초기화는 개발 버전 표시 → 링크·버튼·키보드·시리즈·UI 병렬 초기화 →
-   읽기 이벤트·버튼 연결 → Swiper → 다음 글 prefetch 순서로 실행합니다.
-   목록의 방문 표시, 첫 이어보기 저장과 탐색 버튼 생성은 첫 렌더링 이후로 미루며
-   초기화 명령 큐는 이 작업의 완료를 기다리지 않습니다.
-5. 버튼·키보드·Swiper가 발행한 명령은 `EventQueue`를 거쳐 실행됩니다.
-   게시글 이동 전에는 인덱스를 저장하고 새 페이지에서 다시 초기화합니다.
+| 위치                                                                                                   | 역할                                                                                                                                                        |
+| ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [src/index.ts](../src/index.ts), [src/core/](../src/core/)                                             | 중복 실행 가드, `arcalive.css` 선적용, `ArcaFeed` 싱글톤과 이벤트 단계 조립                                                                                 |
+| [src/utils/regex.ts](../src/utils/regex.ts), [article-key.ts](../src/utils/article-key.ts)             | 아카라이브 URL 파싱과 URL 쿼리(`?articleKey=...`) 기반 세션 키 관리                                                                                         |
+| [src/feature/article/](../src/feature/article/)                                                        | 아카라이브 목록 파싱(`.page-item.active`, `?mode=best`), 링크 이동, `/b/my` 구독 일괄 탐색                                                                  |
+| [src/feature/subscriptions.ts](../src/feature/subscriptions.ts), [series.ts](../src/feature/series.ts) | 구독 메뉴 채널 파싱과 본문 시리즈 링크 추출                                                                                                                 |
+| [src/feature/filter.ts](../src/feature/filter.ts), [search.ts](../src/feature/search.ts)               | 채널별 카테고리·제목 포함/차단·개념글 필터                                                                                                                  |
+| [src/feature/reading.ts](../src/feature/reading.ts)                                                    | 본 글 표시·건너뛰기, 이어보기 복원과 스크롤 체크포인트 저장                                                                                                 |
+| [src/feature/modal/](../src/feature/modal/)                                                            | 필터·UI 설정(`uiTab`)·채널 설정(`subscribeTab`)·최근 본 글(`historyTab`)·이어보기(`resumeTab`) 탭과 독립 탐색 패널                                          |
+| [src/feature/button.ts](../src/feature/button.ts), [ui.ts](../src/feature/ui.ts)                       | 상단/목록 제어 버튼과 아카라이브 화면 레이아웃·본문 너비 설정                                                                                               |
+| [src/vault/](../src/vault/)                                                                            | IndexedDB `ArcaFeed` v2 어댑터, `recent_articles`·`recent_disabled` 읽기 전용 방문 기록 연동([site-recent-history.ts](../src/vault/site-recent-history.ts)) |
+| [css/](../css/)                                                                                        | `arcalive.css`, `ui.css` 및 기능별 스타일 (`arcafeed-*` 접두사)                                                                                             |
 
-페이지 모드는 [utils/regex.ts](../src/utils/regex.ts)의 `parseHref()`에서 판별합니다.
+## 빌드 및 의존성 특징
 
-| 모드      | 대상                                |
-| --------- | ----------------------------------- |
-| `HOME`    | 사이트 루트와 구독 피드 `/b/my`     |
-| `CHANNEL` | 채널 목록 `/b/{channelId}`          |
-| `ARTICLE` | 게시글 `/b/{channelId}/{articleId}` |
-| `SCRAP`   | 스크랩 목록 `/u/scrap_list`         |
-| `OTHER`   | 그 밖의 페이지                      |
-
-목록 초기화는 현재 HTML과 저장된 목록을 먼저 사용하고 필요한 보충 조회는
-백그라운드에서 수행합니다. 구독 채널의 일괄 탐색·부분 성공·보충·재시도는 `article/subscription-feed.ts`에서 처리합니다.
-`article/listing.ts`는 목록 파싱과 페이지 순회를 공유합니다.
-조회 결과는 시작 시 캡처한 세션이 여전히 유효할 때만 반영합니다.
-사이트 루트는 쿼리·fragment와 무관하게 `HOME`으로 판별하고 검색 조건과 `articleKey`를 유지합니다.
-이벤트 중복, 병렬 실패와 조회 무효화의 상세 동작은 [아키텍처](ARCHITECTURE.md)를 참고하세요.
-
-탐색 목록은 `feature/modal/navigationTab.ts`에서 고정 위치 버튼과 독립 패널 열기를 담당하고, `feature/modal/navigationModal.ts`에서 패널 목록 UI를 구성합니다.
-목록 로딩 상태는 `@feed/core/feature/loading`에서 동시 요청 수로 관리하고,
-탐색 버튼의 외부 테두리에 표시합니다. 버튼 생성 전 시작된 요청도 구독 시 반영합니다.
-현재 목록·인덱스를 구독하고, 직접 이동은 `feature/swiper/page.ts`의 공용 이동 함수를 사용합니다.
-
-## 상태와 저장소
-
-[Store](../src/vault/store.ts)는 `AppState`와 구독을 관리하고,
-[VaultAdapter](../src/vault/index.ts)는 기능 모듈에 상태 접근과 자동 저장을 제공합니다.
-[ConfigService](../src/vault/config.ts)는
-[config-schema.ts](../src/vault/config-schema.ts)로 데이터를 검증한 뒤
-[StorageRepository](../src/vault/repository.ts)를 통해 IndexedDB의 메모리 읽기 캐시에 접근합니다. [IndexedStorage](../src/vault/indexed-storage.ts)가 선택적 비동기 초기화, 저장 큐와 변경 키 기반 탭 간 캐시 갱신을 담당합니다. `@feed/core/vault/record-transaction`은 트랜잭션 안에서 레코드 변경과 보관 한도를 검증하고, [record-schema.ts](../src/vault/record-schema.ts)는 저장소·주소·변경분 형식과 채널 ID 규칙을 정의합니다. 일반 객체를 직접 저장하며 필드는 첫 접근 때만 정규화합니다. `@feed/core/vault/storage-keys`는 보관 한도를 공유하며, 상태 복사와 변경 감지는 사용하지 않은 getter를 실행하지 않습니다. [ConfigStorage](../src/vault/config-storage.ts)는 채널별 필터와 화면·구독·읽기 설정을 별도 키에서 읽고 저장합니다. 설정 모달도 선택한 탭을 처음 열 때 생성합니다.
-
-| 저장 범위        | Object store와 내용                                        |
-| ---------------- | ---------------------------------------------------------- |
-| 전역 설정        | settings에 용도별 설정, channelFilters에 채널별 필터 객체  |
-| 탐색 세션        | navigationSessions에 모드·검색 조건·채널·목록 버전         |
-| 이어보기         | resumeSessions에 세션별 요약·이름·고정·목록 버전           |
-| 목록과 위치      | lists와 progress에 `[kind, id]` 복합 키로 개별 저장        |
-| 데이터 이전      | meta의 schema 상태, record-migration.ts의 일회성 구형 변환 |
-| 사이트 방문 기록 | 사이트 소유 recent_articles·recent_disabled를 읽기만 함    |
-
-[ReadingHistory](../src/vault/reading-history.ts)는 [SiteRecentHistory](../src/vault/site-recent-history.ts)를 통해 사이트 방문 기록을 읽고 이어보기를
-관리하며 방문 기록·세션·위치 변경을 별도로 알립니다.
-보관 한도와 탭 사이 병합 정책은 [아키텍처](ARCHITECTURE.md)의 저장소 경계를 참고하세요.
-
-## 변경할 때 확인할 곳
-
-- 기능 모듈에서 이벤트를 발행할 때는 `@/core/app-events`를 사용합니다.
-  같은 디렉토리에서도 구체적인 모듈을 가져와 barrel을 통한 순환 참조를 피합니다.
-- 새 명령은 `APP_EVENTS`와 같은 이름의 `EventManager` `Step[]` 메서드에 추가합니다.
-  이벤트 타입과 버스 등록은 명령 목록에서 파생합니다.
-- 배열과 설정 객체는 새 참조로 갱신합니다. 여러 필드가 함께 바뀌면
-  `VaultAdapter.updateState()`를 사용하고, 목록 초기화에는 `resetArticleList()`를 사용합니다.
-- 저장할 상태를 추가하면 `AppState`와 기본값, 스키마 정규화, 설정 로드·저장,
-  `VaultAdapter`의 저장 변경 감지 대상도 확인합니다. 이동 직전에는 `flushSave()`로 변경을 모은 뒤 `flushStorage()` 완료를 기다립니다. 공용 `navigate()`가 이를 처리합니다.
-- 비동기 목록 조회를 추가하면 `captureArticleSession()`으로 오래된 응답을 차단합니다.
+- 프로덕션 빌드([webpack.config.js](../../webpack.config.js))는 루트 `dist/ArcaFeed.user.js`를 생성하며 `Swiper`와 `Toastify`를 유저스크립트 `@require`로 외부 로드합니다.
 - 경로 별칭은 `@/` → `src/`, `@css/` → `css/`입니다.
-  코드 포맷과 린트 규칙은 저장소의 Prettier·ESLint 설정을 따릅니다.
-
-전체 검증은 `npm run check`입니다. 변경 중에는 해당 동작의 테스트와
-`npm run typecheck`로 확인하고, 화면 변경은 [UI 테스트](UI_TESTING.md)로 검증합니다.
-
-## 빌드와 릴리즈
-
-[Webpack 설정](../../webpack.config.js)은 개발 모드에서 루트 `dist/ArcaFeed.dev.user.js`,
-프로덕션 모드에서 루트 `dist/ArcaFeed.user.js`를 생성합니다.
-실시간 개발과 모바일 로더 설치는 [개발 안내](DEVELOPMENT.md)에 정리되어 있습니다.
-
-[릴리즈 워크플로](../.github/workflows/release.yml)는 `main` 푸시 시
-`package.json` 버전과 최신 태그를 비교합니다. 버전이 다르면 `v{version}` 태그를
-생성하고 `npm ci` → `npm run prod` 후 유저스크립트를 GitHub Release에 첨부합니다.
-변경 이력은 Git 커밋과 릴리즈 노트에서 확인합니다.
