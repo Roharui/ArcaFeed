@@ -1,0 +1,62 @@
+body {
+  margin: 0;
+  padding: 24px;
+  font-family: system-ui, sans-serif;
+  color: #222;
+  background: #e8e9ee;
+}
+h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+header p {
+  margin: 10px 0;
+}
+#controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin: 20px 0;
+}
+label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+select,
+button {
+  padding: 8px 10px;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  background: #fff;
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+a {
+  padding: 8px 0;
+  color: #4e43bc;
+}
+main {
+  overflow: auto;
+  padding: 8px;
+}
+iframe {
+  display: block;
+  border: 0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 4px 24px #0002;
+}
+#build-status {
+  font-size: 0.85rem;
+}
+#build-error {
+  padding: 16px;
+  overflow: auto;
+  color: #9b1728;
+  background: #fff;
+  white-space: pre-wrap;
+}

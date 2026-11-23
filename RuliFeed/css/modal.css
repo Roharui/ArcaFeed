@@ -1,0 +1,471 @@
+/* modal body */
+
+.helper-modal,
+.helper-modal *,
+.helper-modal *::before,
+.helper-modal *::after {
+  box-sizing: border-box;
+}
+
+.helper-modal {
+  position: fixed;
+
+  display: flex;
+
+  justify-content: center;
+  align-items: center;
+
+  top: 0;
+  left: 0;
+
+  width: 100%;
+  height: 100%;
+
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 9999999;
+
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.helper-modal-body {
+  display: grid;
+  grid-template-columns: repeat(
+    var(--rulifeed-modal-tab-count, 4),
+    minmax(0, 1fr)
+  );
+  grid-template-rows: auto minmax(0, 1fr);
+  box-sizing: border-box;
+  width: min(560px, calc(100vw - 24px));
+  height: 80dvh;
+  overflow: hidden;
+
+  background-color: var(--color-bg-body);
+
+  border: 1px solid var(--color-bd-btn);
+  border-radius: 14px;
+  box-shadow: 0 20px 64px rgba(0, 0, 0, 0.24);
+}
+
+/* modal header */
+
+label.helper-modal-tab-label {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 13px 6px;
+  margin-bottom: 0px;
+  border-bottom: 2px solid transparent;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  cursor: pointer;
+
+  background-color: var(--color-bg-body);
+  color: var(--color-text);
+}
+
+input.helper-modal-tab-radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.helper-modal-tab-radio:focus-visible + .helper-modal-tab-label {
+  outline: 2px solid #766df4;
+  outline-offset: -4px;
+}
+
+#filter + label {
+  border-radius: 12px 0px 0px 0px;
+}
+
+#filter:checked + label.helper-modal-tab-label,
+#history:checked + label.helper-modal-tab-label {
+  background-color: var(--color-bg-main);
+  color: var(--color-text);
+  border-bottom-color: #766df4;
+}
+
+#filter:checked ~ .helper-modal-filter,
+#history:checked ~ .helper-modal-history {
+  display: flex;
+}
+
+.helper-modal-tab {
+  --rulifeed-modal-padding: 22px;
+  grid-column: 1 / -1;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  border-radius: 0px 0px 10px 10px;
+
+  display: none;
+  background-color: var(--color-bg-main);
+}
+
+.helper-modal-tab > .rulifeed-reading-header {
+  flex-shrink: 0;
+  margin: var(--rulifeed-modal-padding) var(--rulifeed-modal-padding) 18px;
+}
+
+.rulifeed-modal-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--rulifeed-modal-padding) var(--rulifeed-modal-padding);
+  scrollbar-width: thin;
+}
+
+.rulifeed-settings-section {
+  margin: 0 0 16px;
+  padding: 16px;
+  border: 1px solid var(--color-bd-btn);
+  border-radius: 12px;
+  background: var(--color-bg-body);
+}
+
+.rulifeed-settings-heading {
+  display: block;
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.rulifeed-settings-description {
+  margin: 6px 0 0;
+  font-size: 0.77rem;
+  line-height: 1.6;
+  color: var(--color-text-muted, #888);
+}
+
+.rulifeed-modal-actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 0;
+  padding: 14px var(--rulifeed-modal-padding) var(--rulifeed-modal-padding);
+  border-top: 1px solid var(--color-bd-btn);
+  background: var(--color-bg-main);
+}
+
+.rulifeed-modal-button {
+  flex-shrink: 0;
+  min-height: 40px;
+  margin: 0;
+  padding: 9px 18px;
+  border: 1px solid var(--color-bd-btn);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text);
+  background: var(--color-bg-body);
+  cursor: pointer;
+}
+
+.rulifeed-modal-button:hover {
+  border-color: #766df4;
+}
+
+.rulifeed-modal-button.is-primary {
+  border-color: #766df4;
+  color: #fff;
+  background: #766df4;
+}
+
+.rulifeed-modal-button.is-primary:hover {
+  background: #655cda;
+}
+
+.rulifeed-modal-button:focus-visible {
+  outline: 2px solid #766df4;
+  outline-offset: 3px;
+}
+
+@media (max-width: 440px) {
+  .helper-modal-tab {
+    --rulifeed-modal-padding: 16px;
+  }
+
+  .rulifeed-settings-section {
+    padding: 12px;
+  }
+
+  .rulifeed-modal-actions {
+    padding-top: 12px;
+  }
+}
+
+@media (max-width: 380px) {
+  label.helper-modal-tab-label {
+    gap: 3px;
+    font-size: 0.73rem;
+  }
+}
+
+@media (max-height: 480px) {
+  .helper-modal-tab {
+    --rulifeed-modal-padding: 12px;
+  }
+
+  .helper-modal-tab > .rulifeed-reading-header {
+    margin-bottom: 10px;
+  }
+
+  .rulifeed-modal-actions {
+    padding-top: 10px;
+  }
+}
+
+.rulifeed-reading-button.rulifeed-navigation-row {
+  display: block;
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 12px;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.rulifeed-navigation-channel,
+.rulifeed-navigation-title,
+.rulifeed-navigation-current {
+  display: block;
+}
+
+.rulifeed-navigation-channel {
+  margin-bottom: 4px;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--color-text-muted, #888);
+}
+
+.rulifeed-navigation-title {
+  line-height: 1.5;
+}
+
+.rulifeed-navigation-current {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: #766df4;
+}
+
+.rulifeed-navigation-row[aria-current='page'] {
+  border: 2px solid #766df4;
+  font-weight: 600;
+}
+
+/* Keep the control independent of site navigation selectors. */
+body .rulifeed-navigation-control {
+  position: fixed;
+  top: auto;
+  right: auto;
+  left: 16px;
+  bottom: 20px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.rulifeed-navigation-control::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+}
+
+.rulifeed-navigation-control > .rulifeed-control-button,
+.rulifeed-navigation-control > .rulifeed-navigation-trigger {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 58px;
+  box-sizing: border-box;
+  height: 44px;
+  margin: 0;
+  padding: 3px 4px;
+  border: 1px solid var(--color-bd-btn);
+  border-radius: 10px;
+  background: rgba(96, 96, 96, 0.8);
+  color: #fff;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.35s ease,
+    visibility 0.35s,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.rulifeed-navigation-control > [hidden] {
+  display: none;
+}
+
+.rulifeed-control-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.rulifeed-control-label,
+.rulifeed-navigation-count {
+  font-size: 0.62rem;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.rulifeed-navigation-trigger > .bi-list-ul {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.rulifeed-swipe-toggle.is-active {
+  border-color: #766df4;
+  background: rgba(118, 109, 244, 0.88);
+}
+
+.rulifeed-swipe-toggle.is-active .rulifeed-swipe-slash {
+  display: none;
+}
+
+.rulifeed-swipe-toggle:not(.is-active) {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.rulifeed-navigation-spacer {
+  pointer-events: none;
+}
+
+.rulifeed-navigation-control.is-hovered > .rulifeed-control-button,
+.rulifeed-navigation-control.is-hovered > .rulifeed-navigation-trigger,
+.rulifeed-navigation-trigger.is-hovered {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.rulifeed-navigation-control > .rulifeed-control-button:focus-visible,
+.rulifeed-navigation-control > .rulifeed-navigation-trigger:focus-visible {
+  outline: 2px solid #766df4;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rulifeed-navigation-control > .rulifeed-control-button,
+  .rulifeed-navigation-control > .rulifeed-navigation-trigger {
+    transition: none;
+  }
+}
+
+.rulifeed-navigation-panel .helper-modal-navigation {
+  display: flex;
+}
+
+.rulifeed-navigation-panel .helper-modal-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.rulifeed-navigation-panel .helper-modal-navigation {
+  flex: 1;
+}
+
+/* The moving stroke stays on the button perimeter; its contents do not rotate. */
+.rulifeed-navigation-trigger {
+  position: relative;
+}
+
+.rulifeed-navigation-loading-ring {
+  position: absolute;
+  inset: -5px;
+  width: calc(100% + 10px);
+  height: calc(100% + 10px);
+  overflow: visible;
+  pointer-events: none;
+  display: none;
+}
+
+.rulifeed-navigation-trigger.is-loading .rulifeed-navigation-loading-ring {
+  display: block;
+}
+
+.rulifeed-navigation-loading-ring rect {
+  fill: none;
+  stroke: #766df4;
+  stroke-width: 3px;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-dasharray: 28 72;
+  animation: rulifeed-navigation-loading 1s linear infinite;
+}
+
+@keyframes rulifeed-navigation-loading {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rulifeed-navigation-loading-ring rect {
+    animation: none;
+    stroke-dasharray: none;
+  }
+}
+
+.rulifeed-reading-button.rulifeed-navigation-load {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 4px 0 12px;
+  padding: 10px 12px;
+  border-style: dashed;
+  border-radius: 20px;
+  background: transparent;
+  color: var(--color-text-muted, #888);
+  font-size: 0.78rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .helper-modal *,
+  .custom-loader,
+  .rulifeed-navigation-control * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.helper-modal-body input:focus-visible,
+.helper-modal-body select:focus-visible,
+.helper-modal-body summary:focus-visible {
+  outline: 2px solid #766df4;
+  outline-offset: 2px;
+}
+
+.helper-modal [hidden] {
+  display: none !important;
+}

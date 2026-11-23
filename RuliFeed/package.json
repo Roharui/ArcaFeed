@@ -1,0 +1,57 @@
+{
+  "name": "rulifeed",
+  "version": "4.0.1",
+  "main": "main.js",
+  "scripts": {
+    "dev": "webpack --config ../webpack.config.js --mode development --env APP=rulifeed",
+    "dev:watch": "webpack --config ../webpack.config.js --mode development --env APP=rulifeed --env WATCH=true",
+    "dev:live": "node scripts/dev-server.mjs",
+    "dev:live:mobile": "node scripts/dev-server.mjs --mobile --network",
+    "dev:ui": "node scripts/ui-server.mjs",
+    "dev:mobile": "webpack --config ../webpack.config.js --mode development --env APP=rulifeed --env DEVICE=mobile",
+    "build": "webpack --config ../webpack.config.js --mode production --env APP=rulifeed",
+    "prod": "npm run build",
+    "lint": "eslint --config ../eslint.config.js .",
+    "format": "prettier --config ../prettier.config.js --write .",
+    "format:check": "prettier --config ../prettier.config.js --check .",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build",
+    "agent:check": "npm run typecheck",
+    "test": "node --test tests/*.test.mjs",
+    "test:architecture": "node tests/architecture.test.mjs",
+    "test:ui:server": "node --test tests/ui-server.test.mjs",
+    "test:performance": "node tests/performance.test.mjs",
+    "bench:performance": "node scripts/benchmark-performance.mjs"
+  },
+  "author": "Roharui",
+  "license": "ISC",
+  "description": "루리웹 게시글을 쇼츠처럼 탐색하는 유저스크립트",
+  "engines": {
+    "node": "^22.13.0 || >=24.0.0",
+    "npm": ">=10.9.0"
+  },
+  "packageManager": "npm@10.9.2",
+  "dependencies": {
+    "@feed/core": "file:../FeedCore",
+    "eruda": "3.4.3",
+    "swiper": "12.2.0",
+    "toastify-js": "1.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.8",
+    "css-loader": "^7.1.2",
+    "eslint": "^10.8.0",
+    "eslint-config-prettier": "^10.1.8",
+    "fake-indexeddb": "^6.2.8",
+    "linkedom": "0.18.12",
+    "prettier": "^3.3.3",
+    "style-loader": "^4.0.0",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.62.1",
+    "webpack": "^5.93.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-userscript": "^3.2.3"
+  },
+  "type": "module"
+}

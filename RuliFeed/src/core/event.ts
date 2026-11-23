@@ -1,0 +1,174 @@
+import { navigate } from '@/feature/navigation';
+import { handoffTabArticleKey } from '@/utils/article-key';
+import { mergeState } from '@feed/core/vault/lazy-state';
+import { initNavigationList } from '@/feature/modal/navigationTab';
+import { StepRunner } from '@/core/step-runner';
+import { initArticlePrefetch } from '@/feature/article/prefetch';
+import { afterPaint } from '@/utils/after-paint';
+import { updateAfterSwipe } from '@/feature/swiper/motion';
+
+import {
+  initLink,
+  initSwiper,
+  toLink,
+  initEvent,
+  initModal,
+  addVersionInfo,
+  initSeriesContent,
+  nextLinkForce,
+  initEnableSeries,
+  initEnableScrapSeries,
+  initSwiperPage,
+  initSeriesBtnCss,
+  initUi,
+  initCloseModal,
+  initCheckFilterModal,
+  initReading,
+} from '@/feature';
+
+import type { Step } from '@/core/step-runner';
+import type { VaultAdapter } from '@/vault';
+import type { AppEvent } from './app-events';
+
+class EventManager implements Record<AppEvent, () => Step[]> {
+  runner: StepRunner;
+
+  constructor() {
+    this.runner = new StepRunner();
+  }
+
+  // Init Event
+
+  init(): Step[] {
+    return [
+      [addVersionInfo],
+      [initLink, initEvent, initSeriesContent, initUi],
+      initReading,
+      initSwiper,
+      initArticlePrefetch,
+      (p: VaultAdapter) => {
+        afterPaint(() => {
+          updateAfterSwipe(p.swiper, () => initNavigationList(p));
+        });
+      },
+    ];
+  }
+
+  // Keyboard Events
+
+  toNextPage(): Step[] {
+    return [
+      (p: VaultAdapter) => {
+        p.swiper!.slideNext();
+      },
+    ];
+  }
+
+  toPrevPage(): Step[] {
+    return [
+      (p: VaultAdapter) => {
+        p.swiper!.slidePrev();
+      },
+    ];
+  }
+
+  // Page Events
+
+  toNextLinkForce(): Step[] {
+    return [nextLinkForce];
+  }
+
+  renderNextPage(): Step[] {
+    return [toLink('NEXT')];
+  }
+
+  renderPrevPage(): Step[] {
+    return [toLink('PREV')];
+  }
+
+  // Series Events
+
+  enableSeries(): Step[] {
+    return [initEnableSeries, [initSeriesBtnCss, initSwiperPage]];
+  }
+
+  enableScrapSeries(): Step[] {
+    return [initEnableScrapSeries];
+  }
+
+  // Modal Events
+
+  showModal(): Step[] {
+    return [initModal];
+  }
+
+  checkFilterModal(): Step[] {
+    return [initCheckFilterModal, [initLink, initCloseModal], initSwiperPage];
+  }
+
+  closeModal(): Step[] {
+    return [initCloseModal];
+  }
+
+  // toggle Shuffle
+
+  toggleShuffle(): Step[] {
+    return [
+      async (p: VaultAdapter) => {
+        if (!p.isCurrentMode('SCRAP')) return;
+
+        await navigate(
+          p,
+          () => {
+            if (p.articleKey)
+              handoffTabArticleKey(p.articleKey, window.location.pathname);
+            window.location.reload();
+          },
+          {
+            patch: { isShuffleMode: !p.isShuffleMode },
+          },
+        );
+      },
+    ];
+  }
+
+  // toggle Swiper
+
+  toggleSwiper(): Step[] {
+    return [
+      async (p: VaultAdapter) => {
+        if (!p.isCurrentMode('CHANNEL', 'ARTICLE')) return;
+
+        const existingFilter = p.articleFilterConfig[p.href.channelId] || {
+          tab: [],
+          title: [],
+          disableSwiper: false,
+          onlyBest: false,
+        };
+
+        const pageFilter = {
+          ...existingFilter,
+          disableSwiper: !existingFilter.disableSwiper,
+        };
+
+        await navigate(
+          p,
+          () => {
+            if (p.articleKey)
+              handoffTabArticleKey(p.articleKey, window.location.pathname);
+            window.location.reload();
+          },
+          {
+            patch: {
+              articleFilterConfig: mergeState(p.articleFilterConfig, {
+                [p.href.channelId]: pageFilter,
+              }),
+            },
+          },
+        );
+      },
+    ];
+  }
+}
+
+export { EventManager };

@@ -1,0 +1,40 @@
+html.hide-scrollbar {
+  scrollbar-width: none;
+}
+
+.rulifeed-swiper .swiper-slide > #board {
+  width: 100%;
+  min-width: 0;
+}
+
+body.hide-included-article-list #board_read ~ #board_list,
+body.hide-btns-board .board_read_top {
+  display: none;
+}
+
+body.rulifeed {
+  --color-bg-body: #fff;
+  --color-bg-main: #f4f5f7;
+  --color-text: #202124;
+  --color-text-muted: #666;
+  --color-bd-btn: #c9cdd3;
+}
+
+body.rulifeed.dark_mode {
+  --color-bg-body: #242528;
+  --color-bg-main: #303136;
+  --color-text: #eee;
+  --color-text-muted: #bbb;
+  --color-bd-btn: #565960;
+}
+
+@media (min-width: 1024px) {
+  .rulifeed #board {
+    max-width: 1024px;
+    margin-inline: auto;
+  }
+}
+
+body.rulifeed-article-page.hide-included-article-list #board_list {
+  display: none;
+}

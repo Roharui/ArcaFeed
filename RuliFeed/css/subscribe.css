@@ -1,0 +1,95 @@
+.rulifeed-subscribe-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.rulifeed-subscribe-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-bd-btn);
+}
+
+.rulifeed-subscribe-row > div {
+  min-width: 0;
+}
+
+.rulifeed-subscribe-row label {
+  position: relative;
+  margin: 0;
+  cursor: pointer;
+}
+
+.rulifeed-subscribe-row .category-span {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.rulifeed-subscribe-summary {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #888);
+}
+
+.rulifeed-subscribe-filter-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.helper-modal-subscribe.is-editing-filter > .rulifeed-modal-content {
+  overflow: hidden;
+  padding: 0;
+}
+
+.is-editing-filter #subscribe-filter-editor {
+  height: 100%;
+}
+
+.rulifeed-subscribe-filter-loading {
+  height: 100%;
+  overflow-y: auto;
+  padding: var(--rulifeed-modal-padding);
+}
+
+.rulifeed-subscribe-filter-editor > .rulifeed-reading-header {
+  flex-shrink: 0;
+  margin: var(--rulifeed-modal-padding) var(--rulifeed-modal-padding) 18px;
+}
+
+@media (max-width: 440px) {
+  .rulifeed-subscribe-row {
+    gap: 8px;
+  }
+}
+
+@media (max-height: 480px) {
+  .rulifeed-subscribe-filter-editor > .rulifeed-reading-header {
+    margin-bottom: 10px;
+  }
+}
+
+.rulifeed-subscription-status {
+  flex-shrink: 0;
+  overflow-wrap: anywhere;
+}
+
+.rulifeed-subscription-status p {
+  margin: 0 0 8px;
+}
+
+.helper-modal-navigation > .rulifeed-subscription-status {
+  margin: 0 var(--rulifeed-modal-padding) 12px;
+  max-height: 30%;
+  overflow-y: auto;
+}
+
+.rulifeed-subscription-status button {
+  flex-shrink: 0;
+}

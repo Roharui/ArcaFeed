@@ -1,0 +1,41 @@
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  --color-bg-body: #fff;
+  --color-bg-main: #f5f5f7;
+  --color-bd-btn: #ddd;
+  --color-text: #222;
+  --color-text-muted: #777;
+  background: var(--color-bg-body);
+  color: var(--color-text);
+}
+body[data-theme='dark'] {
+  color-scheme: dark;
+  --color-bg-body: #23252a;
+  --color-bg-main: #191b20;
+  --color-bd-btn: #44474f;
+  --color-text: #eee;
+  --color-text-muted: #a8abb3;
+}
+button,
+input,
+select {
+  font: inherit;
+}
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+fieldset {
+  min-width: 0;
+}
+button {
+  cursor: pointer;
+}
+.fixture-background {
+  padding: 24px;
+}

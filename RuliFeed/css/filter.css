@@ -1,0 +1,142 @@
+/* Best-only and title keyword controls */
+
+.filter-best-row label {
+  position: relative;
+  margin: 0;
+  cursor: pointer;
+}
+
+.category-span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 3px;
+  padding: 7px 10px;
+  border: 1px solid var(--color-bd-btn);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: var(--color-text);
+  background: var(--color-bg-body);
+}
+
+.helper-modal-filter .category-span {
+  margin: 0;
+}
+
+input.category-check {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+input.category-check:checked + .category-span {
+  border-color: #766df4;
+  color: var(--color-text);
+  background: rgba(118, 109, 244, 0.12);
+}
+
+input.category-check:checked + .category-span::before {
+  content: '✓';
+  color: #766df4;
+}
+
+input.category-check:focus-visible + .category-span {
+  outline: 2px solid #766df4;
+  outline-offset: 3px;
+}
+
+.category-span:hover {
+  border-color: #766df4;
+}
+
+.exclude-title-input-wrapper {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+#exclude-title {
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-bd-btn);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  background: var(--color-bg-body);
+}
+
+#exclude-title:focus-visible {
+  outline: 2px solid #766df4;
+  outline-offset: 2px;
+}
+
+.exclude-title-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.exclude-title-list:empty {
+  margin-top: 0;
+}
+
+button.exclude-title-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--color-bd-btn);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  text-align: left;
+  color: var(--color-text);
+  background: var(--color-bg-body);
+  cursor: pointer;
+}
+
+.exclude-title-tag > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.exclude-title-tag:hover {
+  border-color: #d65a6b;
+  color: #d65a6b;
+}
+
+.exclude-title-tag:focus-visible {
+  outline: 2px solid #766df4;
+  outline-offset: 2px;
+}
+
+#include-title,
+.filter-include-options select {
+  box-sizing: border-box;
+  max-width: 100%;
+  padding: 10px;
+  border: 1px solid var(--color-bd-btn);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  background: var(--color-bg-body);
+}
+
+#include-title {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.filter-include-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 0.8rem;
+}
