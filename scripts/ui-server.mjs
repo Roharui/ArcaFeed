@@ -3,7 +3,7 @@ import { readFileSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import webpack from 'webpack';
-import createDevConfig from '../../webpack.config.dev.js';
+import { createDevConfig } from '../../webpack.config.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const uiRoot = path.join(root, 'scripts/ui');

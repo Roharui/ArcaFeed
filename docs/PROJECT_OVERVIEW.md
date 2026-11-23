@@ -118,8 +118,8 @@ Swiper와 Toastify는 유저스크립트의 `@require`로 로드합니다. 모�
 
 ## 빌드와 릴리즈
 
-[개발 설정](../../webpack.config.dev.js)은 루트 `dist/ArcaFeed.dev.user.js`,
-[프로덕션 설정](../../webpack.config.prod.js)은 루트 `dist/ArcaFeed.user.js`를 생성합니다.
+[Webpack 설정](../../webpack.config.js)은 개발 모드에서 루트 `dist/ArcaFeed.dev.user.js`,
+프로덕션 모드에서 루트 `dist/ArcaFeed.user.js`를 생성합니다.
 실시간 개발과 모바일 로더 설치는 [개발 안내](DEVELOPMENT.md)에 정리되어 있습니다.
 
 [릴리즈 워크플로](../.github/workflows/release.yml)는 `main` 푸시 시
