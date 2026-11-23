@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { domFixture } from './dom-fixture.mjs';
-import createCdnConfig from '../webpack.config.cdn.js';
+import { createCdnConfig } from '../../webpack.config.dev.js';
 import { sourceLoader } from './source-loader.mjs';
 
 test('CDN mobile initialization displays the version without reloading', () => {
   const config = createCdnConfig({
+    APP: 'arcafeed',
     CDN_URL: 'https://cdn.example.com/dev/',
     DEVICE: 'mobile',
   });
