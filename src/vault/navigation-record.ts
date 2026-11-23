@@ -1,34 +1,10 @@
+import {
+  cleanQuery,
+  createContextKey,
+  storedMode,
+} from '@feed/core/vault/navigation-record';
 import { parseHref } from '@/utils/regex';
-import type { DataRow } from './record-schema';
-export const cleanQuery = (query: string): string => {
-  const params = new URLSearchParams(query);
-  params.delete('articleKey');
-  params.sort();
-  return params.size ? `?${params}` : '';
-};
-export const storedMode = (
-  series: boolean,
-  scrap: boolean,
-  channels: readonly string[],
-): string =>
-  scrap
-    ? 'scrap'
-    : series
-      ? channels.length
-        ? 'subscription'
-        : 'series'
-      : 'channel';
-export const contextKey = (session: DataRow): string[] =>
-  session.mode !== 'channel'
-    ? [
-        'series',
-        session.navigationId ??
-          (String(session.id).startsWith('series:')
-            ? String(session.id).slice(7)
-            : session.id),
-      ]
-    : [
-        'channel',
-        parseHref(String(session.path)).channelId,
-        cleanQuery(session.query ?? session.searchQuery ?? ''),
-      ];
+
+export { cleanQuery, storedMode };
+
+export const contextKey = createContextKey((path) => parseHref(path).channelId);

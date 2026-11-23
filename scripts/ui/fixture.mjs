@@ -9,7 +9,7 @@ import { Store } from '@/vault/store';
 import { initReading } from '@/feature/reading';
 import { StorageRepository } from '@/vault/repository';
 import { ReadingHistory } from '@/vault/reading-history';
-import { showFetchLoader, hideFetchLoader } from '@/feature/article/loading';
+import { showFetchLoader, hideFetchLoader } from '@feed/core/feature/loading';
 import { initNavigationList } from '@/feature/modal/navigationTab';
 import './fixture.css';
 import { createInitialState } from '@/vault/store';

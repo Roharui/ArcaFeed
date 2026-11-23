@@ -47,7 +47,7 @@ function fixture() {
       },
       cancelAnimationFrame: (id) => frames.delete(id),
     },
-  })('src/feature/swiper/video.ts');
+  })('@feed/core/feature/swiper/video');
   installSwiperVideoPause(swiper);
   return {
     swiper,

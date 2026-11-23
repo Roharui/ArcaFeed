@@ -13,7 +13,7 @@ import {
   setTabArticleKey,
 } from '@/utils/article-key';
 import { extractChannelId, normalizeArticlePath } from '@/utils/regex';
-import { captureArticleSession } from '@/vault/article-session';
+import { captureArticleSession } from '@feed/core/vault/article-session';
 import { articlePath } from '@/vault/navigation-context';
 import {
   compactNavigationArticles,

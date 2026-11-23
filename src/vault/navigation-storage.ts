@@ -1,5 +1,5 @@
 import { normalizeSubscriptionFailures } from './subscription-failures';
-import { deferField, sameField } from './lazy-state';
+import { deferField, sameField } from '@feed/core/vault/lazy-state';
 import { normalizeArticles, stringList } from './config-schema';
 import { cleanQuery, storedMode } from './navigation-record';
 import { isChannelId } from './record-schema';

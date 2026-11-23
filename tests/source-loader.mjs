@@ -28,6 +28,19 @@ export function sourceLoader({
     AbortSignal,
     ...globals,
   };
+  const feedCoreRoot = fs.existsSync(path.join(root, 'node_modules/@feed/core'))
+    ? fs.realpathSync(path.join(root, 'node_modules/@feed/core'))
+    : path.resolve(root, '..', 'FeedCore');
+  function resolveFeedCore(specifier) {
+    const subpath =
+      specifier === '@feed/core' ? '' : specifier.slice('@feed/core/'.length);
+    const base = subpath
+      ? path.join(feedCoreRoot, 'src', subpath)
+      : path.join(feedCoreRoot, 'src');
+    return fs.existsSync(`${base}.ts`)
+      ? `${base}.ts`
+      : path.join(base, 'index.ts');
+  }
   function load(filename) {
     if (modules.has(filename)) return modules.get(filename).exports;
     const module = { exports: {} };
@@ -54,6 +67,8 @@ export function sourceLoader({
         };
       }
       if (specifier.endsWith('.css')) return {};
+      if (specifier === '@feed/core' || specifier.startsWith('@feed/core/'))
+        return load(resolveFeedCore(specifier));
       let target;
       if (specifier.startsWith('@/'))
         target = path.join(root, 'src', specifier.slice(2));
@@ -81,7 +96,10 @@ export function sourceLoader({
     );
     return module.exports;
   }
-  return (entry) => load(path.resolve(root, entry));
+  return (entry) =>
+    entry === '@feed/core' || entry.startsWith('@feed/core/')
+      ? load(resolveFeedCore(entry))
+      : load(path.resolve(root, entry));
 }
 
 let recordLoader;

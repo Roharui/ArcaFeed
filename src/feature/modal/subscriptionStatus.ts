@@ -1,9 +1,9 @@
-import { createElement, listen } from '@/utils/dom';
+import { createElement, listen } from '@feed/core/utils/dom';
 import { retrySubscriptionChannel } from '@/feature/article/subscription-feed';
-import { subscribeArticleLoading } from '@/feature/article/loading';
+import { subscribeArticleLoading } from '@feed/core/feature/loading';
 import { reportFailure } from '@/utils/operation-error';
 import { activeSubscriptionFailures } from '@/vault/subscription-failures';
-import type { SubscriptionFailure } from '@/types/vault';
+import type { SubscriptionFailure } from '@feed/core/types/vault';
 import type { VaultAdapter } from '@/vault';
 import '@css/subscribe.css';
 const REASONS: Record<SubscriptionFailure['reason'], string> = {

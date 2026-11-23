@@ -1,4 +1,8 @@
-import { createElement, fromTemplate, setAttributes } from '@/utils/dom';
+import {
+  createElement,
+  fromTemplate,
+  setAttributes,
+} from '@feed/core/utils/dom';
 import '@css/reading.css';
 
 import { extractArticleRows } from './filter';

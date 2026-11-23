@@ -1,5 +1,9 @@
 import { eventBus } from '@/core/app-events';
-import { createElement, fromTemplate, setAttributes } from '@/utils/dom';
+import {
+  createElement,
+  fromTemplate,
+  setAttributes,
+} from '@feed/core/utils/dom';
 import type { VaultAdapter } from '@/vault';
 
 const SWIPE_ICON =

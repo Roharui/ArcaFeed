@@ -36,7 +36,7 @@ for (const pointerType of ['mouse', 'touch']) {
       mocks: {
         './readingUi': {},
         '@/feature/swiper/page': {},
-        '@/feature/article/loading': {
+        '@feed/core/feature/loading': {
           isArticleLoading: () => false,
           subscribeArticleLoading(callback) {
             notifyLoading = callback;
@@ -110,7 +110,7 @@ test('touch reveal suppresses a blind first click on hidden floating buttons', (
       '@/core/app-events': {
         eventBus: { emit: (event) => emitted.push(event) },
       },
-      '@/feature/article/loading': {
+      '@feed/core/feature/loading': {
         isArticleLoading: () => false,
         subscribeArticleLoading: () => () => {},
       },

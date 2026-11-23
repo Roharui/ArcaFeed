@@ -1,14 +1,14 @@
-import { createElement, fromTemplate } from '@/utils/dom';
+import { createElement, fromTemplate } from '@feed/core/utils/dom';
 import { createFloatingControlButtons } from '@/feature/button';
-import { disposeDialogElement } from './cleanup';
-import { installDialogFocus } from './focus';
+import { disposeDialogElement } from '@feed/core/feature/modal/cleanup';
+import { installDialogFocus } from '@feed/core/feature/modal/focus';
 import { createNavigationModal } from './navigationModal';
 import '@css/modal.css';
 import '@css/reading.css';
 import {
   isArticleLoading,
   subscribeArticleLoading,
-} from '@/feature/article/loading';
+} from '@feed/core/feature/loading';
 import { updateAfterSwipe } from '@/feature/swiper/motion';
 import { currentArticlePath } from '@/vault/navigation-context';
 import { activeSubscriptionFailures } from '@/vault/subscription-failures';

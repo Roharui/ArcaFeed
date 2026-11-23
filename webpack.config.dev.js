@@ -96,8 +96,11 @@ export default function (env = {}, _args) {
         },
         {
           test: /\.ts$/,
-          use: 'ts-loader',
-          exclude: /node_modules/,
+          use: {
+            loader: 'ts-loader',
+            options: { allowTsInNodeModules: true },
+          },
+          exclude: /node_modules\/(?!@feed\/core)/,
         },
       ],
     },

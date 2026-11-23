@@ -1,13 +1,13 @@
 import { navigate } from '@/feature/navigation';
 import { handoffTabArticleKey } from '@/utils/article-key';
 import { OperationError } from '@/utils/operation-error';
-import { shuffle } from '@/utils/func';
+import { shuffle } from '@feed/core/utils/func';
 import { showToast, showConfirmToast } from '@/utils/toast';
-import { captureArticleSession } from '@/vault/article-session';
+import { captureArticleSession } from '@feed/core/vault/article-session';
 import { articlePath } from '@/vault/navigation-context';
 import { isVisitedPath } from '@/vault/reading-history';
 import { fetchListingPages } from './listing';
-import { showFetchLoader, hideFetchLoader } from './loading';
+import { showFetchLoader, hideFetchLoader } from '@feed/core/feature/loading';
 import type { ArticleFilterImpl } from '@/types';
 import type { VaultAdapter } from '@/vault';
 

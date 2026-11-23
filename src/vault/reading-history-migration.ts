@@ -1,8 +1,8 @@
 /** Legacy embedded-list reader used only by record-migration.ts during database upgrade. */
+import { readLegacyReadingSessionsWith } from '@feed/core/vault/reading-history-migration';
+import type { ReadingSession } from '@feed/core/vault/reading-session-schema';
 import { normalizeSessionMetadata } from './reading-session-schema';
 import { normalizeArticles } from './config-schema';
-import { articleWindow } from './article-window';
-import type { ReadingSession } from './reading-history';
 
 export function readLegacyReadingSessions(
   value: unknown,
@@ -10,28 +10,11 @@ export function readLegacyReadingSessions(
   sessionLimit: number,
   articleLimit: number,
 ): ReadingSession[] {
-  if (
-    !value ||
-    typeof value !== 'object' ||
-    !('sessions' in value) ||
-    !Array.isArray(value.sessions)
-  )
-    return [];
-  const sessions: ReadingSession[] = [];
-  const seen = new Set<string>();
-  for (const item of value.sessions) {
-    const metadata = normalizeSessionMetadata(item, origin);
-    if (!metadata || seen.has(metadata.id)) continue;
-    seen.add(metadata.id);
-    sessions.push({
-      ...metadata,
-      articleList: articleWindow(
-        normalizeArticles(item.articleList, origin),
-        metadata.path,
-        articleLimit,
-      ),
-    });
-    if (sessions.length === sessionLimit) break;
-  }
-  return sessions;
+  return readLegacyReadingSessionsWith(
+    value,
+    origin,
+    sessionLimit,
+    articleLimit,
+    { normalizeSessionMetadata, normalizeArticles },
+  );
 }

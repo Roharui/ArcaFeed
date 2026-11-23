@@ -1,4 +1,4 @@
-import { fromTemplate } from '@/utils/dom';
+import { fromTemplate } from '@feed/core/utils/dom';
 
 import '@css/swiper.css';
 
@@ -10,7 +10,7 @@ import type { AppEvent } from '@/core/app-events';
 import type { SwiperOptions } from 'swiper/types';
 import type { VaultAdapter } from '@/vault';
 import { installReducedMotion, installSwipeCompositing } from './motion';
-import { installSwiperVideoPause } from './video';
+import { installSwiperVideoPause } from '@feed/core/feature/swiper/video';
 import { installSideClick } from './side-click';
 import { deferOffscreenArticleSections } from './rendering';
 

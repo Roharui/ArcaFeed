@@ -43,7 +43,7 @@ for (const root of roots) {
     0,
   );
 
-  const { mapConcurrent } = load('src/utils/func.ts');
+  const { mapConcurrent } = load('@feed/core/utils/func');
   const channels = Array.from({ length: 8 }, (_, index) => index);
   start = performance.now();
   if (mapConcurrent) await mapConcurrent(channels, async () => delay(80));
