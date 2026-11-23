@@ -4,7 +4,7 @@
 
 ## 설치
 
-유저스크립트 관리자에서 [RuliFeed.user.js](https://github.com/Roharui/RuliFeed/releases/latest/download/RuliFeed.user.js)를 설치하거나, 저장소에서 `npm ci`와 `npm run build`를 실행한 뒤 `dist/RuliFeed.user.js`를 가져오세요.
+유저스크립트 관리자에서 [RuliFeed.user.js](https://github.com/Roharui/ArcaFeed/releases/latest/download/RuliFeed.user.js)를 설치하거나, 루트 저장소에서 `npm run install:all`과 `npm run build`를 실행한 뒤 `dist/RuliFeed.user.js`를 가져오세요.
 
 Rui Browser에 ADB로 개발 빌드를 설치하는 방법은 [개발·CI 안내](../docs/DEVELOPMENT.md#adb로-rui-browser에서-확인-rulifeed)를 참고하세요.
 

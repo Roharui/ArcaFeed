@@ -43,9 +43,9 @@ export const APPLICATIONS = {
     devName: 'RuliFeed-dev',
     namespace: 'https://github.com/Roharui/RuliFeed',
     downloadURL:
-      'https://github.com/Roharui/RuliFeed/releases/latest/download/RuliFeed.user.js',
+      'https://github.com/Roharui/ArcaFeed/releases/latest/download/RuliFeed.user.js',
     updateURL:
-      'https://github.com/Roharui/RuliFeed/releases/latest/download/RuliFeed.user.js',
+      'https://github.com/Roharui/ArcaFeed/releases/latest/download/RuliFeed.user.js',
     description: 'Use Ruliweb as Shorts',
     match: ['https://bbs.ruliweb.com/*', 'https://m.ruliweb.com/*'],
     icon: 'https://www.google.com/s2/favicons?sz=64&domain=bbs.ruliweb.com',
