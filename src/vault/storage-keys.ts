@@ -1,4 +1,0 @@
-export const SESSION_LIMIT = 20;
-export const SESSION_ARTICLE_LIMIT = 2000;
-export const SESSION_TOTAL_ARTICLE_LIMIT = 5000;
-export const ARTICLE_KEY_CACHE_LIMIT = 5;

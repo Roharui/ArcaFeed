@@ -1,5 +1,5 @@
-import { mergeState } from '@/vault/lazy-state';
-import { createElement } from '@/utils/dom';
+import { mergeState } from '@feed/core/vault/lazy-state';
+import { createElement } from '@feed/core/utils/dom';
 
 import { extractChannelId } from '@/utils';
 

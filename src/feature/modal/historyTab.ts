@@ -1,5 +1,5 @@
-import { createElement } from '@/utils/dom';
-import { setDialogCleanup } from './cleanup';
+import { createElement } from '@feed/core/utils/dom';
+import { setDialogCleanup } from '@feed/core/feature/modal/cleanup';
 import {
   readingButton as button,
   readingChannelId as channelId,

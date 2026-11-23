@@ -408,7 +408,7 @@ test('navigation retention derives from records instead of a redundant recency a
 });
 
 test('concurrent mapping caps active requests and preserves channel order', async () => {
-  const { mapConcurrent } = sourceLoader()('src/utils/func.ts');
+  const { mapConcurrent } = sourceLoader()('@feed/core/utils/func');
   const gates = Array.from({ length: 8 }, deferred);
   let active = 0;
   let peak = 0;
@@ -435,7 +435,7 @@ test('concurrent mapping caps active requests and preserves channel order', asyn
 });
 
 test('a channel failure rejects the batch and stops queuing more requests', async () => {
-  const { mapConcurrent } = sourceLoader()('src/utils/func.ts');
+  const { mapConcurrent } = sourceLoader()('@feed/core/utils/func');
   const started = [];
   await assert.rejects(
     mapConcurrent(
@@ -462,7 +462,7 @@ test('identical simultaneous GET requests share a response and subsequent calls 
         return response.promise;
       },
     },
-  })('src/utils/fetch.ts');
+  })('@feed/core/utils/fetch');
   const first = fetchUrl('/b/test');
   const second = fetchUrl('https://arca.live/b/test');
   assert.equal(first, second);
@@ -483,7 +483,7 @@ test('HTTP failures are surfaced and are not cached', async () => {
         return { ok: false, status: 503, text: () => assert.fail() };
       },
     },
-  })('src/utils/fetch.ts');
+  })('@feed/core/utils/fetch');
   await assert.rejects(fetchUrl('/b/test'), /HTTP 503/);
   await assert.rejects(fetchUrl('/b/test'), /HTTP 503/);
   assert.equal(calls, 2);
@@ -499,7 +499,7 @@ test('write requests and GET requests with different timeouts are not coalesced'
         return { ok: true, text: async () => '' };
       },
     },
-  })('src/utils/fetch.ts');
+  })('@feed/core/utils/fetch');
   await Promise.all([
     fetchUrl('/b/test', 'GET', 100),
     fetchUrl('/b/test', 'GET', 200),
@@ -691,7 +691,7 @@ test('Swiper is reused and background list changes unlock navigation', () => {
   const { initSwiperPage } = sourceLoader({
     mocks: {
       swiper: { default: FakeSwiper },
-      './video': { installSwiperVideoPause() {} },
+      '@feed/core/feature/swiper/video': { installSwiperVideoPause() {} },
       './side-click': { installSideClick() {} },
       '@/core/app-events': { eventBus: {} },
     },
@@ -838,7 +838,7 @@ test('Swiper ignores article height changes and batches width changes until the 
     },
     mocks: {
       swiper: { default: FakeSwiper },
-      './video': { installSwiperVideoPause() {} },
+      '@feed/core/feature/swiper/video': { installSwiperVideoPause() {} },
       './side-click': { installSideClick() {} },
       '@/core/app-events': { eventBus: {} },
     },
@@ -923,7 +923,7 @@ function listingAdapter(
       },
     },
     mocks: {
-      '@/utils/fetch': { fetchUrl: fetchResponse },
+      '@feed/core/utils/fetch': { fetchUrl: fetchResponse },
       '@/utils/toast': { showToast, showConfirmToast },
     },
   });
@@ -1799,7 +1799,7 @@ test('navigation control observes only direct body children instead of subtree m
     mocks: {
       './readingUi': {},
       '@/feature/swiper/page': {},
-      '@/feature/article/loading': {
+      '@feed/core/feature/loading': {
         isArticleLoading: () => false,
         subscribeArticleLoading: () => () => {},
       },

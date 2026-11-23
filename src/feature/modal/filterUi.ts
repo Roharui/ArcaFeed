@@ -1,5 +1,5 @@
-import { mergeState } from '@/vault/lazy-state';
-import { createElement, fromTemplate } from '@/utils/dom';
+import { mergeState } from '@feed/core/vault/lazy-state';
+import { createElement, fromTemplate } from '@feed/core/utils/dom';
 import '@css/filter.css';
 import { eventBus } from '@/core/app-events';
 import { NO_TAB_CATEGORIES, expandTabCategories } from '@/feature/filter';

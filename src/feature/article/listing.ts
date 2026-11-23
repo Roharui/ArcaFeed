@@ -3,8 +3,8 @@ import {
   extractArticleHref,
   extractArticleRows,
 } from '@/feature/filter';
-import { fetchUrl } from '@/utils/fetch';
-import { appendSearchParam } from '@/utils/url';
+import { fetchUrl } from '@feed/core/utils/fetch';
+import { appendSearchParam } from '@feed/core/utils/url';
 import type { ArticleFilterImpl } from '@/types';
 
 function normalizeUrl(pageUrl: string): string {

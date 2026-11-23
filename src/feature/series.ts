@@ -1,4 +1,4 @@
-import { createElement, setAttributes } from '@/utils/dom';
+import { createElement, setAttributes } from '@feed/core/utils/dom';
 
 import '@css/series.css';
 

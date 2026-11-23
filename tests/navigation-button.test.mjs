@@ -36,7 +36,7 @@ for (const pointerType of ['mouse', 'touch']) {
       mocks: {
         './readingUi': {},
         '@/feature/swiper/page': {},
-        '@/feature/article/loading': {
+        '@feed/core/feature/loading': {
           isArticleLoading: () => false,
           subscribeArticleLoading(callback) {
             notifyLoading = callback;

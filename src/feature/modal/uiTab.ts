@@ -1,5 +1,5 @@
-import { mergeState } from '@/vault/lazy-state';
-import { createElement, fromTemplate } from '@/utils/dom';
+import { mergeState } from '@feed/core/vault/lazy-state';
+import { createElement, fromTemplate } from '@feed/core/utils/dom';
 import '@css/ui.css';
 import { eventBus } from '@/core/app-events';
 import { readingContextLabel } from '@/vault/reading-context';

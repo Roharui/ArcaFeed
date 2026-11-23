@@ -16,7 +16,7 @@ function fixture() {
     storage,
     reads,
     config: new ConfigStorage(new StorageRepository(storage)),
-    mergeState: load('src/vault/lazy-state.ts').mergeState,
+    mergeState: load('@feed/core/vault/lazy-state').mergeState,
   };
 }
 const filter = {

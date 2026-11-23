@@ -138,7 +138,7 @@ test('photo-only and best-only subscriptions fetch their own channel listings ra
         ],
       },
       '@/feature/article/link': { refreshUnvisitedNavigation() {} },
-      '@/utils/fetch': {
+      '@feed/core/utils/fetch': {
         fetchUrl: async (url) => {
           const resolved = new URL(url, 'https://arca.live/b/my');
           requests.push(`${resolved.pathname}${resolved.search}`);

@@ -34,6 +34,7 @@
   },
   "packageManager": "npm@10.9.2",
   "dependencies": {
+    "@feed/core": "file:../FeedCore",
     "eruda": "3.4.3",
     "swiper": "12.2.0",
     "toastify-js": "1.12.0"

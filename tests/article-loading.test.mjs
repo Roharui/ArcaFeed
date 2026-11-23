@@ -3,7 +3,7 @@ import test from 'node:test';
 import { sourceLoader } from './source-loader.mjs';
 
 test('loading remains active until concurrent requests finish and never underflows', () => {
-  const loading = sourceLoader()('src/feature/article/loading.ts');
+  const loading = sourceLoader()('@feed/core/feature/loading');
   const states = [];
   const unsubscribe = loading.subscribeArticleLoading((active) =>
     states.push(active),
@@ -25,7 +25,7 @@ test('loading remains active until concurrent requests finish and never underflo
 });
 
 test('navigation subscribing after a request starts immediately receives its loading state', () => {
-  const loading = sourceLoader()('src/feature/article/loading.ts');
+  const loading = sourceLoader()('@feed/core/feature/loading');
   loading.showFetchLoader();
   const states = [];
   loading.subscribeArticleLoading((active) => states.push(active));

@@ -22,26 +22,27 @@ Swiper와 Toastify는 유저스크립트의 `@require`로 로드합니다. 모�
 
 ## 코드 위치
 
-| 위치                                                                                                                        | 역할                                                    |
-| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| [src/index.ts](../src/index.ts)                                                                                             | 중복 실행을 막고 애플리케이션 생성 후 `init` 발행       |
-| [src/core/index.ts](../src/core/index.ts)                                                                                   | `ArcaFeed` 싱글톤, 상태 저장소와 이벤트 실행기 조립     |
-| [src/core/app-events.ts](../src/core/app-events.ts)                                                                         | `AppEvent` 타입과 기능 모듈이 사용하는 공용 이벤트 버스 |
-| [src/core/event.ts](../src/core/event.ts)                                                                                   | 이벤트별 실행 단계 정의                                 |
-| [src/core/event-queue.ts](../src/core/event-queue.ts), [step-runner.ts](../src/core/step-runner.ts)                         | 명령 큐와 순차·병렬 단계 실행                           |
-| [src/feature/article/](../src/feature/article/)                                                                             | 게시글 목록 조회, 링크 이동, 다음 글 prefetch           |
-| [src/feature/swiper/](../src/feature/swiper/)                                                                               | Swiper 생성과 이동 가능 상태 갱신                       |
-| [src/feature/filter.ts](../src/feature/filter.ts), [search.ts](../src/feature/search.ts)                                    | 목록 필터와 검색 조건 처리                              |
-| [src/feature/series.ts](../src/feature/series.ts), [subscriptions.ts](../src/feature/subscriptions.ts)                      | 게시글 시리즈와 사이트 구독 채널 파싱                   |
-| [src/feature/reading.ts](../src/feature/reading.ts)                                                                         | 본 글 표시·건너뛰기, 이어보기 복원과 스크롤 저장        |
-| [src/feature/modal/](../src/feature/modal/)                                                                                 | 필터, 화면 설정, 구독 채널, 최근 본 글, 이어보기 탭     |
-| [src/feature/button.ts](../src/feature/button.ts), [keyEvent.ts](../src/feature/keyEvent.ts), [ui.ts](../src/feature/ui.ts) | 버튼, 키보드와 페이지 레이아웃                          |
-| [src/vault/](../src/vault/)                                                                                                 | 상태, 설정 검증·저장, 읽기 기록과 조회 세션 관리        |
-| [src/types/vault.ts](../src/types/vault.ts)                                                                                 | 페이지 모드, 필터와 UI 설정 타입                        |
-| [src/utils/](../src/utils/)                                                                                                 | URL 파싱, 네트워크 요청과 공통 유틸리티                 |
-| [css/](../css/)                                                                                                             | 페이지 레이아웃과 기능별 스타일                         |
-| [scripts/](../scripts/)                                                                                                     | 개발·UI 서버, 개발 로더와 성능 측정 도구                |
-| [tests/](../tests/)                                                                                                         | 실제 소스 모듈을 사용하는 회귀 테스트와 테스트 어댑터   |
+| 위치                                                                                                                        | 역할                                                       |
+| --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| [src/index.ts](../src/index.ts)                                                                                             | 중복 실행을 막고 애플리케이션 생성 후 `init` 발행          |
+| [src/core/index.ts](../src/core/index.ts)                                                                                   | `ArcaFeed` 싱글톤, 상태 저장소와 이벤트 실행기 조립        |
+| [src/core/app-events.ts](../src/core/app-events.ts)                                                                         | `AppEvent` 타입과 기능 모듈이 사용하는 공용 이벤트 버스    |
+| [src/core/event.ts](../src/core/event.ts)                                                                                   | 이벤트별 실행 단계 정의                                    |
+| `@feed/core` ([`../FeedCore`](../../FeedCore))                                                                              | `ArcaFeed`·`RuliFeed` 공용 코어 엔진·유틸·저장소·UI 헬퍼   |
+| [src/core/step-runner.ts](../src/core/step-runner.ts)                                                                       | `@feed/core` 단계 실행기에 저장소 flush 연결               |
+| [src/feature/article/](../src/feature/article/)                                                                             | 게시글 목록 조회, 링크 이동, 다음 글 prefetch              |
+| [src/feature/swiper/](../src/feature/swiper/)                                                                               | Swiper 생성과 이동 가능 상태 갱신                          |
+| [src/feature/filter.ts](../src/feature/filter.ts), [search.ts](../src/feature/search.ts)                                    | 목록 필터와 검색 조건 처리                                 |
+| [src/feature/series.ts](../src/feature/series.ts), [subscriptions.ts](../src/feature/subscriptions.ts)                      | 게시글 시리즈와 사이트 구독 채널 파싱                      |
+| [src/feature/reading.ts](../src/feature/reading.ts)                                                                         | 본 글 표시·건너뛰기, 이어보기 복원과 스크롤 저장           |
+| [src/feature/modal/](../src/feature/modal/)                                                                                 | 필터, 화면 설정, 구독 채널, 최근 본 글, 이어보기 탭        |
+| [src/feature/button.ts](../src/feature/button.ts), [keyEvent.ts](../src/feature/keyEvent.ts), [ui.ts](../src/feature/ui.ts) | 버튼, 키보드와 페이지 레이아웃                             |
+| [src/vault/](../src/vault/)                                                                                                 | `@feed/core/vault` 기반 상태, 설정·읽기 기록과 세션 어댑터 |
+| [src/types/](../src/types/)                                                                                                 | `@feed/core/types` 재내보내기 및 앱 전용 함수 타입         |
+| [src/utils/](../src/utils/)                                                                                                 | URL 파싱, 네트워크 요청과 공통 유틸리티                    |
+| [css/](../css/)                                                                                                             | 페이지 레이아웃과 기능별 스타일                            |
+| [scripts/](../scripts/)                                                                                                     | 개발·UI 서버, 개발 로더와 성능 측정 도구                   |
+| [tests/](../tests/)                                                                                                         | 실제 소스 모듈을 사용하는 회귀 테스트와 테스트 어댑터      |
 
 ## 실행 흐름
 
@@ -73,7 +74,7 @@ Swiper와 Toastify는 유저스크립트의 `@require`로 로드합니다. 모�
 이벤트 중복, 병렬 실패와 조회 무효화의 상세 동작은 [아키텍처](ARCHITECTURE.md)를 참고하세요.
 
 탐색 목록은 `feature/modal/navigationTab.ts`에서 고정 위치 버튼과 독립 패널 열기를 담당하고, `feature/modal/navigationModal.ts`에서 패널 목록 UI를 구성합니다.
-목록 로딩 상태는 `feature/article/loading.ts`에서 동시 요청 수로 관리하고,
+목록 로딩 상태는 `@feed/core/feature/loading`에서 동시 요청 수로 관리하고,
 탐색 버튼의 외부 테두리에 표시합니다. 버튼 생성 전 시작된 요청도 구독 시 반영합니다.
 현재 목록·인덱스를 구독하고, 직접 이동은 `feature/swiper/page.ts`의 공용 이동 함수를 사용합니다.
 
@@ -83,7 +84,7 @@ Swiper와 Toastify는 유저스크립트의 `@require`로 로드합니다. 모�
 [VaultAdapter](../src/vault/index.ts)는 기능 모듈에 상태 접근과 자동 저장을 제공합니다.
 [ConfigService](../src/vault/config.ts)는
 [config-schema.ts](../src/vault/config-schema.ts)로 데이터를 검증한 뒤
-[StorageRepository](../src/vault/repository.ts)를 통해 IndexedDB의 메모리 읽기 캐시에 접근합니다. [IndexedStorage](../src/vault/indexed-storage.ts)가 선택적 비동기 초기화, 저장 큐와 변경 키 기반 탭 간 캐시 갱신을 담당합니다. [record-transaction.ts](../src/vault/record-transaction.ts)는 트랜잭션 안에서 레코드 변경과 보관 한도를 검증하고, [record-schema.ts](../src/vault/record-schema.ts)는 저장소·주소·변경분 형식을 정의합니다. 일반 객체를 직접 저장하며 필드는 첫 접근 때만 정규화합니다. [storage-keys.ts](../src/vault/storage-keys.ts)는 보관 한도를 공유하며, 상태 복사와 변경 감지는 사용하지 않은 getter를 실행하지 않습니다. [ConfigStorage](../src/vault/config-storage.ts)는 채널별 필터와 화면·구독·읽기 설정을 별도 키에서 읽고 저장합니다. 설정 모달도 선택한 탭을 처음 열 때 생성합니다.
+[StorageRepository](../src/vault/repository.ts)를 통해 IndexedDB의 메모리 읽기 캐시에 접근합니다. [IndexedStorage](../src/vault/indexed-storage.ts)가 선택적 비동기 초기화, 저장 큐와 변경 키 기반 탭 간 캐시 갱신을 담당합니다. `@feed/core/vault/record-transaction`은 트랜잭션 안에서 레코드 변경과 보관 한도를 검증하고, [record-schema.ts](../src/vault/record-schema.ts)는 저장소·주소·변경분 형식과 채널 ID 규칙을 정의합니다. 일반 객체를 직접 저장하며 필드는 첫 접근 때만 정규화합니다. `@feed/core/vault/storage-keys`는 보관 한도를 공유하며, 상태 복사와 변경 감지는 사용하지 않은 getter를 실행하지 않습니다. [ConfigStorage](../src/vault/config-storage.ts)는 채널별 필터와 화면·구독·읽기 설정을 별도 키에서 읽고 저장합니다. 설정 모달도 선택한 탭을 처음 열 때 생성합니다.
 
 | 저장 범위        | Object store와 내용                                        |
 | ---------------- | ---------------------------------------------------------- |

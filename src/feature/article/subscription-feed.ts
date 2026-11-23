@@ -1,10 +1,10 @@
 import { navigate, isNavigating } from '@/feature/navigation';
-import { mergeState } from '@/vault/lazy-state';
-import { captureArticleSession } from '@/vault/article-session';
+import { mergeState } from '@feed/core/vault/lazy-state';
+import { captureArticleSession } from '@feed/core/vault/article-session';
 import { isVisitedPath } from '@/vault/reading-history';
 import { createArticleKey } from '@/utils/article-key';
 import { extractChannelId, getArticleId } from '@/utils/regex';
-import { mapConcurrent } from '@/utils/func';
+import { mapConcurrent } from '@feed/core/utils/func';
 import { showToast } from '@/utils/toast';
 import {
   fetchChannelFirstPage,
@@ -13,7 +13,7 @@ import {
   hideFetchLoader,
 } from '@/feature/article/fetch';
 import type { VaultAdapter } from '@/vault';
-import type { SubscriptionFailure } from '@/types/vault';
+import type { SubscriptionFailure } from '@feed/core/types/vault';
 
 export interface SubscriptionStartResult {
   channels: string[];

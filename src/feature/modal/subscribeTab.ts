@@ -1,9 +1,14 @@
-import { failedCommand } from '@/core/result';
-import type { CommandResult } from '@/core/result';
+import { failedCommand } from '@feed/core/core/result';
+import type { CommandResult } from '@feed/core/core/result';
 import { OperationError, reportFailure } from '@/utils/operation-error';
-import { mergeState } from '@/vault/lazy-state';
-import { createElement, fromTemplate, isVisible, listen } from '@/utils/dom';
-import { setDialogCleanup } from './cleanup';
+import { mergeState } from '@feed/core/vault/lazy-state';
+import {
+  createElement,
+  fromTemplate,
+  isVisible,
+  listen,
+} from '@feed/core/utils/dom';
+import { setDialogCleanup } from '@feed/core/feature/modal/cleanup';
 import { eventBus } from '@/core/app-events';
 import {
   startSubscriptionFeed,
@@ -14,9 +19,9 @@ import {
   createSubscriptionStatus,
   subscriptionFailureRows,
 } from './subscriptionStatus';
-import { subscribeArticleLoading } from '@/feature/article/loading';
+import { subscribeArticleLoading } from '@feed/core/feature/loading';
 import { showToast } from '@/utils/toast';
-import { fetchUrl } from '@/utils/fetch';
+import { fetchUrl } from '@feed/core/utils/fetch';
 import { parseSubscribedChannels } from '@/feature/subscriptions';
 import { createArticleFilterModal, extractFilterCategories } from './filterUi';
 import { readingHeader } from './readingUi';

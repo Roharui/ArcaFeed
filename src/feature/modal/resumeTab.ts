@@ -1,5 +1,9 @@
-import { createElement, fromTemplate, setAttributes } from '@/utils/dom';
-import { setDialogCleanup } from './cleanup';
+import {
+  createElement,
+  fromTemplate,
+  setAttributes,
+} from '@feed/core/utils/dom';
+import { setDialogCleanup } from '@feed/core/feature/modal/cleanup';
 import { resumeReading } from '@/feature/reading';
 import {
   readingButton,

@@ -1,139 +1,18 @@
-import type { SubscriptionFailure } from '@/types/vault';
-import { mergeState, sameField } from './lazy-state';
-/**
- * Centralized state store with immutable updates and subscription support.
- * Replaces the mutable Vault god-object with a Flux-like single-direction data flow.
- *
- * Moved to vault/ to avoid circular dependency (core ↔ vault).
- */
+import {
+  Store as CoreStore,
+  createBaseInitialState,
+} from '@feed/core/vault/store';
+import type { BaseAppState, StateSubscriber } from '@feed/core/vault/store';
 
-import type { HrefImpl, ArticleFilterConfigImpl, UISettings } from '@/types';
-
-export interface AppState {
-  href: HrefImpl;
-  activeIndex: number;
-  articleKey: string;
-  articleList: string[];
-  articleFilterConfig: ArticleFilterConfigImpl;
-  isSeriesMode: boolean;
-  isScrapMode: boolean;
-  seriesChannels: string[];
-  subscriptionFailures: SubscriptionFailure[];
-  readingRevision: number;
-  isShuffleMode: boolean;
-  searchQuery: string;
-  lastActiveIndex: number;
-  uiSettings: UISettings;
-}
-
-export type StateSubscriber = (state: AppState) => void;
-
-const DEFAULT_HREF: HrefImpl = {
-  mode: 'NOT_CHECKED',
-  channelId: '',
-  articleId: '',
-  articleKey: '',
-  search: '',
-};
-
-const DEFAULT_UI_SETTINGS: UISettings = {
-  hideScrollbar: true,
-  hideBlur: true,
-  hideNavControl: false,
-  hideArticleTitle: false,
-  hideArticleAuthor: false,
-  hideArticleTime: false,
-  hideArticleView: false,
-  showVisitedIndicators: true,
-  skipVisitedContexts: {},
-  lastModalTab: 'filter',
-  hiddenChannels: [],
-  homeSeriesChannels: [],
-  contentWidth: 700,
-};
+export type AppState = BaseAppState;
+export type { StateSubscriber };
 
 export function createInitialState(): AppState {
-  return {
-    href: { ...DEFAULT_HREF },
-    activeIndex: -1,
-    articleKey: '',
-    articleList: [],
-    articleFilterConfig: {},
-    isSeriesMode: false,
-    isScrapMode: false,
-    seriesChannels: [],
-    subscriptionFailures: [],
-    readingRevision: 0,
-    isShuffleMode: false,
-    searchQuery: '',
-    lastActiveIndex: -1,
-    uiSettings: {
-      ...DEFAULT_UI_SETTINGS,
-      skipVisitedContexts: {},
-      hiddenChannels: [],
-      homeSeriesChannels: [],
-    },
-  };
+  return createBaseInitialState();
 }
 
-export class Store {
-  private state: AppState;
-  private subscribers = new Set<StateSubscriber>();
-
+export class Store extends CoreStore<AppState> {
   constructor(initialState?: Partial<AppState>) {
-    const base = createInitialState();
-
-    // Deep-merge uiSettings so newly added fields get default values
-    // even when old IndexedDB data is missing them.
-    if (
-      initialState &&
-      !Object.getOwnPropertyDescriptor(initialState, 'uiSettings')?.get &&
-      initialState.uiSettings
-    ) {
-      initialState = {
-        ...initialState,
-        uiSettings: { ...base.uiSettings, ...initialState.uiSettings },
-      };
-    }
-
-    this.state = mergeState(base, initialState);
-  }
-
-  getState(): Readonly<AppState> {
-    return this.state;
-  }
-
-  setState(patch: Partial<AppState>): void {
-    const changed = (Object.keys(patch) as (keyof AppState)[]).some(
-      (key) => !sameField(this.state, patch as AppState, key),
-    );
-    if (!changed) return;
-    this.state = mergeState(this.state, patch);
-    this.notify();
-  }
-
-  replaceState(newState: AppState): void {
-    if (newState === this.state) return;
-    this.state = newState;
-    this.notify();
-  }
-
-  subscribe(subscriber: StateSubscriber): () => void {
-    this.subscribers.add(subscriber);
-
-    return () => {
-      this.subscribers.delete(subscriber);
-    };
-  }
-
-  private notify(): void {
-    const snapshot = this.state;
-    this.subscribers.forEach((fn) => {
-      try {
-        fn(snapshot);
-      } catch (err) {
-        console.error('[Store] Subscriber error:', err);
-      }
-    });
+    super(initialState, createInitialState);
   }
 }

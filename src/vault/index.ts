@@ -1,5 +1,5 @@
 import { OperationError, reportFailure } from '@/utils/operation-error';
-import { sameField, mergeState } from './lazy-state';
+import { sameField, mergeState } from '@feed/core/vault/lazy-state';
 export { StorageRepository } from './repository';
 export { ConfigService } from './config';
 

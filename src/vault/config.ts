@@ -1,4 +1,4 @@
-import { deferField, mergeState, sameField } from './lazy-state';
+import { deferField, mergeState, sameField } from '@feed/core/vault/lazy-state';
 /**
  * Config Service - handles loading and saving application configuration.
  * Uses StorageRepository instead of directly accessing IndexedDB.

@@ -1,6 +1,9 @@
 import type { HrefImpl } from '@/types';
 
-import { getRegexMatchByIndex, getRegexMatchByIndexTry } from './type';
+import {
+  getRegexMatchByIndex,
+  getRegexMatchByIndexTry,
+} from '@feed/core/utils/type';
 
 const channelPageRegex = /b\/[a-zA-Z0-9]+(\?|\?.+)?$/;
 const articlePageRegex = /b\/([A-Za-z0-9])+\/[0-9]+(\?|\?.+)?$/;

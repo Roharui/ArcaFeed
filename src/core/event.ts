@@ -1,5 +1,5 @@
 import { navigate } from '@/feature/navigation';
-import { mergeState } from '@/vault/lazy-state';
+import { mergeState } from '@feed/core/vault/lazy-state';
 import { initNavigationList } from '@/feature/modal/navigationTab';
 import { StepRunner } from '@/core/step-runner';
 import { initArticlePrefetch } from '@/feature/article/prefetch';

@@ -1,9 +1,12 @@
-import { fromTemplate } from '@/utils/dom';
-import { disposeDialogElement, setDialogCleanup } from './cleanup';
+import { fromTemplate } from '@feed/core/utils/dom';
+import {
+  disposeDialogElement,
+  setDialogCleanup,
+} from '@feed/core/feature/modal/cleanup';
 import { reportFailure } from '@/utils/operation-error';
 
 import '@css/modal.css';
-import { installDialogFocus } from './focus';
+import { installDialogFocus } from '@feed/core/feature/modal/focus';
 import { eventBus } from '@/core/app-events';
 
 import { createArticleFilterModal } from './filterUi';
@@ -12,7 +15,7 @@ import { createSubscribeSettingModal } from './subscribeTab';
 import { createHistoryModal } from './historyTab';
 import { createResumeModal } from './resumeTab';
 
-import { mergeState } from '@/vault/lazy-state';
+import { mergeState } from '@feed/core/vault/lazy-state';
 import { navigationMode } from '@/vault/navigation-context';
 import type { VaultAdapter } from '@/vault';
 

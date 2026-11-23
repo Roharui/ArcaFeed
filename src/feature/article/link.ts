@@ -7,8 +7,8 @@ import { loadMoreHomeSeriesArticles } from './subscription-feed';
 import { filterLink } from '@/feature/filter';
 import { parseSearchQuery } from '@/feature/search';
 import { createArticleKey } from '@/utils/article-key';
-import { appendSearchParam } from '@/utils/url';
-import { captureArticleSession } from '@/vault/article-session';
+import { appendSearchParam } from '@feed/core/utils/url';
+import { captureArticleSession } from '@feed/core/vault/article-session';
 import { articlePath } from '@/vault/navigation-context';
 import {
   compactNavigationArticles,

@@ -104,7 +104,7 @@ test('application commands are queued, awaited, and keep events emitted by an ac
 });
 
 test('a failed queued command rejects its caller and does not poison subsequent commands', async () => {
-  const { EventQueue } = sourceLoader()('src/core/event-queue.ts');
+  const { EventQueue } = sourceLoader()('@feed/core/core/event-queue');
   const queue = new EventQueue();
   const failure = new Error('failed command');
   const first = queue.run(() => {
@@ -123,7 +123,7 @@ test('EventBus isolates synchronous and asynchronous failures and invokes all su
   const errors = [];
   const { EventBus } = sourceLoader({
     globals: { console: { error: (...args) => errors.push(args) } },
-  })('src/core/event-bus.ts');
+  })('@feed/core/core/event-bus');
   const bus = new EventBus();
   const calls = [];
   bus.on('event', () => {
@@ -207,7 +207,7 @@ test('a failed dynamic follow-up stops later steps', async () => {
 });
 
 test('concurrent mapping waits for running requests after failure and stops new requests', async () => {
-  const { mapConcurrent } = sourceLoader()('src/utils/func.ts');
+  const { mapConcurrent } = sourceLoader()('@feed/core/utils/func');
   const gate = deferred();
   const started = [];
   let finished = false;
@@ -244,7 +244,7 @@ test('Vault commits related state atomically and list reset invalidates requests
   });
   const { Store } = load('src/vault/store.ts');
   const { VaultAdapter } = load('src/vault/index.ts');
-  const { captureArticleSession } = load('src/vault/article-session.ts');
+  const { captureArticleSession } = load('@feed/core/vault/article-session');
   const config = { saveConfig() {}, loadConfig: () => assert.fail() };
   const vault = new VaultAdapter(new Store(), config, vaultFixture().href);
   const snapshots = [];
@@ -286,7 +286,7 @@ function listingLoader(
       },
     },
     mocks: {
-      '@/utils/fetch': { fetchUrl: response },
+      '@feed/core/utils/fetch': { fetchUrl: response },
       '@/utils/toast': { showToast: () => assert.fail('stale toast') },
     },
   })('src/feature/article/fetch.ts');
@@ -561,6 +561,9 @@ test('syntactically valid but wrong-shaped JSON cannot corrupt startup defaults'
 
 test('runtime source imports form an acyclic graph', () => {
   const graph = new Map();
+  const feedCoreRoot = fs.realpathSync(
+    path.join(projectRoot, 'node_modules/@feed/core'),
+  );
   function visitDirectory(directory) {
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
       const filename = path.join(directory, entry.name);
@@ -595,9 +598,17 @@ test('runtime source imports form an acyclic graph', () => {
         if (!specifier || specifier.endsWith('.css')) return [];
         const base = specifier.startsWith('@/')
           ? path.join(projectRoot, 'src', specifier.slice(2))
-          : specifier.startsWith('.')
-            ? path.resolve(path.dirname(filename), specifier)
-            : null;
+          : specifier === '@feed/core' || specifier.startsWith('@feed/core/')
+            ? path.join(
+                feedCoreRoot,
+                'src',
+                specifier === '@feed/core'
+                  ? ''
+                  : specifier.slice('@feed/core/'.length),
+              )
+            : specifier.startsWith('.')
+              ? path.resolve(path.dirname(filename), specifier)
+              : null;
         return base
           ? [
               fs.existsSync(`${base}.ts`)
@@ -610,6 +621,7 @@ test('runtime source imports form an acyclic graph', () => {
     }
   }
   visitDirectory(path.join(projectRoot, 'src'));
+  visitDirectory(path.join(feedCoreRoot, 'src'));
   const visited = new Set();
   function walk(filename, stack = []) {
     assert.equal(

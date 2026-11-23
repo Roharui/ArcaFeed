@@ -1,4 +1,4 @@
-import { createElement, setAttributes } from '@/utils/dom';
+import { createElement, setAttributes } from '@feed/core/utils/dom';
 import { navigate } from '@/feature/navigation';
 import '@css/reading.css';
 
@@ -14,7 +14,7 @@ import type { VaultAdapter } from '@/vault';
 import { articlePath } from '@/vault/navigation-context';
 import { readingContextLabel } from '@/vault/reading-context';
 import { articleWindow } from '@/vault/article-window';
-import { SESSION_ARTICLE_LIMIT } from '@/vault/storage-keys';
+import { SESSION_ARTICLE_LIMIT } from '@feed/core/vault/storage-keys';
 import { showPendingSkippedToast } from './swiper/skip-toast';
 import { updateAfterSwipe } from './swiper/motion';
 import { OperationError, reportFailure } from '@/utils/operation-error';

@@ -1,24 +1,15 @@
-import type { CommandResult } from '@/core/result';
+import type {
+  Condition as CoreCondition,
+  ConditionFuncResult,
+  MethodKeys,
+  PromiseFunc as CorePromiseFunc,
+  PromiseFuncResult as CorePromiseFuncResult,
+} from '@feed/core/types/func';
 import type { VaultAdapter } from '@/vault';
 
-type PromiseFuncResultObj = VaultAdapter | PromiseFunc;
-type PromiseFuncResult =
-  | void
-  | CommandResult
-  | PromiseFuncResultObj
-  | Array<PromiseFuncResultObj>;
-
-type ConditionFuncResult = 'wait' | 'skip' | 'run';
-
-type Condition = (p: VaultAdapter) => ConditionFuncResult;
-
-type PromiseFunc = (
-  p: VaultAdapter,
-) => Promise<PromiseFuncResult> | PromiseFuncResult;
-
-type MethodKeys<T> = {
-  [K in keyof T]: T[K] extends (...args: any[]) => any ? K : never;
-}[keyof T];
+type PromiseFuncResult = CorePromiseFuncResult<VaultAdapter>;
+type Condition = CoreCondition<VaultAdapter>;
+type PromiseFunc = CorePromiseFunc<VaultAdapter>;
 
 export type {
   PromiseFunc,

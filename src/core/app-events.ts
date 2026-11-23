@@ -1,4 +1,4 @@
-import { EventBus } from './event-bus';
+import { EventBus } from '@feed/core/core/event-bus';
 
 export const APP_EVENTS = [
   'init',
