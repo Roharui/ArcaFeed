@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: |
+            ArcaFeed/package-lock.json
+            RuliFeed/package-lock.json
+
+      - name: Read package.json version
+        id: version
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "pkg_version=${PKG_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Compare tag with package.json version
+        id: check
+        run: |
+          TAG_NAME="v${{ steps.version.outputs.pkg_version }}"
+          if git rev-parse -q --verify "refs/tags/${TAG_NAME}" >/dev/null; then
+            echo "Tag ${TAG_NAME} already exists, skipping."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "New version detected, will release ${TAG_NAME}."
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "new_tag=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        if: steps.check.outputs.should_release == 'true'
+        run: npm run install:all
+
+      - name: Verify and build both userscripts
+        if: steps.check.outputs.should_release == 'true'
+        run: npm run check
+
+      - name: Create tag
+        if: steps.check.outputs.should_release == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.check.outputs.new_tag }}"
+          git push origin "${{ steps.check.outputs.new_tag }}"
+
+      - name: Create Release
+        if: steps.check.outputs.should_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.check.outputs.new_tag }}
+          files: |
+            dist/ArcaFeed.user.js
+            dist/RuliFeed.user.js
+          generate_release_notes: true
