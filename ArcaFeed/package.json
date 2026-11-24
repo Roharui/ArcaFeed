@@ -1,6 +1,6 @@
 {
   "name": "arcafeed",
-  "version": "4.0.1",
+  "version": "4.1.0",
   "main": "main.js",
   "scripts": {
     "dev": "webpack --config ../webpack.config.js --mode development --env APP=arcafeed",
