@@ -262,13 +262,15 @@ test('default channel settings arrays are isolated between stores', () => {
   assert.deepEqual(second.getState().uiSettings.homeSeriesChannels, []);
 });
 
-test('saving an unchanged state makes no storage writes; navigation saves only the index', () => {
+test('saving an unchanged state skips repository reads and writes; navigation saves only the index', (t) => {
   const load = sourceLoader({ mocks: { 'toastify-js': toastMock } });
   const { StorageRepository } = load('src/vault/repository.ts');
   const { ConfigService } = load('src/vault/config.ts');
   const { createInitialState } = load('src/vault/store.ts');
   const storage = memoryStorage();
-  const config = new ConfigService(new StorageRepository(storage));
+  const repository = new StorageRepository(storage);
+  const readNavigation = t.mock.method(repository, 'readNavigation');
+  const config = new ConfigService(repository);
   const state = {
     ...createInitialState(),
     articleKey: 'session',
@@ -276,8 +278,12 @@ test('saving an unchanged state makes no storage writes; navigation saves only t
     activeIndex: 0,
   };
   config.saveConfig(state);
+  assert.ok(readNavigation.mock.callCount() > 0);
+  readNavigation.mock.resetCalls();
   storage.writes.length = 0;
   config.saveConfig(state);
+  config.saveConfig(state);
+  assert.equal(readNavigation.mock.callCount(), 0);
   assert.equal(storage.writes.length, 0);
   config.saveConfig({ ...state, activeIndex: 1 });
   assert.deepEqual(storage.writes, [

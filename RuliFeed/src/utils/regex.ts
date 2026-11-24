@@ -22,9 +22,18 @@ function resolve(href: string): URL | null {
   }
 }
 
-export function parseHref(href = window.location.href): HrefImpl {
-  const url = resolve(href);
-  const match = url?.pathname.match(boardRoute);
+function matchBoardPath(href: string): RegExpExecArray | null {
+  return href.startsWith('/') && !href.includes('?') && !href.includes('#')
+    ? boardRoute.exec(href)
+    : null;
+}
+
+function parseResolvedHref(
+  href: string,
+  pathMatch: RegExpExecArray | null,
+): HrefImpl {
+  const url = pathMatch ? null : resolve(href);
+  const match = pathMatch ?? (url && boardRoute.exec(url.pathname));
   const articleId = match?.[2] ?? '';
   return {
     mode: match
@@ -41,12 +50,18 @@ export function parseHref(href = window.location.href): HrefImpl {
   };
 }
 
+export function parseHref(href = window.location.href): HrefImpl {
+  return parseResolvedHref(href, matchBoardPath(href));
+}
+
 export function getArticleId(href: string): string {
-  return parseHref(href).articleId;
+  const match = matchBoardPath(href);
+  return match ? (match[2] ?? '') : parseResolvedHref(href, null).articleId;
 }
 
 export function extractChannelId(href: string): string | null {
-  return parseHref(href).channelId || null;
+  const match = matchBoardPath(href);
+  return match ? match[1]! : parseResolvedHref(href, null).channelId || null;
 }
 
 export function normalizeArticlePath(href: string): string | null {

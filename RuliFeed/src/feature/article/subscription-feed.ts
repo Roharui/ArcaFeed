@@ -98,6 +98,14 @@ export function retrySubscriptionStart(
   return buildSubscriptionFeed(p, result.channels, result, channelId);
 }
 
+function sortArticlesById(paths: string[]): string[] {
+  const ids = new Map<string, number>();
+  for (const path of paths) {
+    if (!ids.has(path)) ids.set(path, Number(getArticleId(path)));
+  }
+  return paths.sort((a, b) => ids.get(b)! - ids.get(a)!);
+}
+
 async function buildSubscriptionFeed(
   p: VaultAdapter,
   channels: string[],
@@ -126,12 +134,12 @@ async function buildSubscriptionFeed(
         .filter((batch) => !batch.failure && !batch.articles.length)
         .map((batch) => batch.channelId),
     ];
-    const articles = [
+    const articles = sortArticlesById([
       ...new Set([
         ...(previous?.articles ?? []),
         ...batches.flatMap((batch) => batch.articles),
       ]),
-    ].sort((a, b) => Number(getArticleId(b)) - Number(getArticleId(a)));
+    ]);
     const visited = p.skipVisitedArticles
       ? p.reading.getVisitedPaths()
       : undefined;
@@ -202,9 +210,7 @@ function mergeArticles(p: VaultAdapter, additions: string[]): string[] {
   if (!unique.length) return p.articleList;
   return [
     ...p.articleList.slice(0, p.activeIndex + 1),
-    ...[...p.articleList.slice(p.activeIndex + 1), ...unique].sort(
-      (a, b) => Number(getArticleId(b)) - Number(getArticleId(a)),
-    ),
+    ...sortArticlesById([...p.articleList.slice(p.activeIndex + 1), ...unique]),
   ];
 }
 

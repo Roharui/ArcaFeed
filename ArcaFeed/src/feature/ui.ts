@@ -99,22 +99,24 @@ function installResizeHandle(p: VaultAdapter): void {
 
 // ── UI Settings ─────────────────────────────────────────
 
+const BODY_CLASSES = {
+  hideBlur: 'hide-blur',
+  hideNavControl: 'hide-nav-control',
+  hideArticleTitle: 'hide-article-title',
+  hideArticleAuthor: 'hide-article-author',
+  hideArticleTime: 'hide-article-time',
+  hideArticleView: 'hide-article-view',
+} as const;
+const BODY_CLASS_KEYS = Object.keys(
+  BODY_CLASSES,
+) as (keyof typeof BODY_CLASSES)[];
+
 function applyUISettings(settings: UISettings, previous?: UISettings): void {
-  const bodyClasses = {
-    hideBlur: 'hide-blur',
-    hideNavControl: 'hide-nav-control',
-    hideArticleTitle: 'hide-article-title',
-    hideArticleAuthor: 'hide-article-author',
-    hideArticleTime: 'hide-article-time',
-    hideArticleView: 'hide-article-view',
-  } as const;
   if (
     previous &&
     previous.hideScrollbar === settings.hideScrollbar &&
     previous.contentWidth === settings.contentWidth &&
-    (Object.keys(bodyClasses) as (keyof typeof bodyClasses)[]).every(
-      (key) => previous[key] === settings[key],
-    )
+    BODY_CLASS_KEYS.every((key) => previous[key] === settings[key])
   )
     return;
 
@@ -124,9 +126,9 @@ function applyUISettings(settings: UISettings, previous?: UISettings): void {
       'hide-scrollbar',
       settings.hideScrollbar,
     );
-  for (const key of Object.keys(bodyClasses) as (keyof typeof bodyClasses)[]) {
+  for (const key of BODY_CLASS_KEYS) {
     if (!previous || previous[key] !== settings[key])
-      document.body.classList.toggle(bodyClasses[key], settings[key]);
+      document.body.classList.toggle(BODY_CLASSES[key], settings[key]);
   }
 
   // Content width (CSS variable on content-wrapper)

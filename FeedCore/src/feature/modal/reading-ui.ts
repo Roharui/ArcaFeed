@@ -36,32 +36,59 @@ export function createReadingSearchMatcher<T extends object>(
   };
 }
 
+let readingTimeFormatter: Intl.DateTimeFormat | undefined;
+let readingDateFormatter: Intl.DateTimeFormat | undefined;
+let readingDateWithYearFormatter: Intl.DateTimeFormat | undefined;
+let readingTitleFormatter: Intl.DateTimeFormat | undefined;
+
 export function formatReadingTime(timestamp: number): string {
   const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000));
   if (minutes < 1) return '방금 전';
   if (minutes < 60) return `${minutes}분 전`;
   if (minutes < 1440) return `${Math.floor(minutes / 60)}시간 전`;
-  return new Date(timestamp).toLocaleString('ko-KR', {
-    month: 'numeric',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return Math.abs(timestamp) <= 8.64e15
+    ? (readingTimeFormatter ??= new Intl.DateTimeFormat('ko-KR', {
+        month: 'numeric',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })).format(timestamp)
+    : 'Invalid Date';
 }
 
 export function readingDateLabel(timestamp: number): string {
   const date = new Date(timestamp);
+  const year = date.getFullYear();
+  if (Number.isNaN(year)) return 'Invalid Date';
+  const month = date.getMonth();
+  const day = date.getDate();
   const today = new Date();
-  if (date.toDateString() === today.toDateString()) return '오늘';
+  const currentYear = today.getFullYear();
+  if (
+    year === currentYear &&
+    month === today.getMonth() &&
+    day === today.getDate()
+  )
+    return '오늘';
   today.setDate(today.getDate() - 1);
-  if (date.toDateString() === today.toDateString()) return '어제';
-  return date.toLocaleDateString('ko-KR', {
-    month: 'long',
-    day: 'numeric',
-    ...(date.getFullYear() !== new Date().getFullYear()
-      ? { year: 'numeric' }
-      : {}),
-  });
+  if (
+    year === today.getFullYear() &&
+    month === today.getMonth() &&
+    day === today.getDate()
+  )
+    return '어제';
+  return (
+    year === currentYear
+      ? (readingDateFormatter ??= new Intl.DateTimeFormat('ko-KR', {
+          month: 'long',
+          day: 'numeric',
+        }))
+      : (readingDateWithYearFormatter ??= new Intl.DateTimeFormat('ko-KR', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        }))
+  ).format(date);
 }
 
 export function readingChannelId(path: string): string {
@@ -178,11 +205,19 @@ export function createReadingUi({
   }
 
   function readingTime(timestamp: number): HTMLElement {
+    const date = new Date(timestamp);
     return createElement('time', {
       class: `${classPrefix}-reading-time`,
       text: formatReadingTime(timestamp),
-      datetime: new Date(timestamp).toISOString(),
-      title: new Date(timestamp).toLocaleString('ko-KR'),
+      datetime: date.toISOString(),
+      title: (readingTitleFormatter ??= new Intl.DateTimeFormat('ko-KR', {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+      })).format(date),
     });
   }
 

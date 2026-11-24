@@ -54,8 +54,12 @@ export class StorageRepository {
   pruneArticleKeyCaches(currentId: string): void {
     if (!currentId) return;
     let rows = this.storage.all('navigationSessions');
-    const current = rows.find((row) => row.id === currentId);
-    const newest = [...rows].sort((a, b) => b.lastUsedAt - a.lastUsedAt)[0];
+    let current: DataRow | undefined;
+    let newest: DataRow | undefined;
+    for (const row of rows) {
+      if (row.id === currentId) current = row;
+      if (!newest || row.lastUsedAt > newest.lastUsedAt) newest = row;
+    }
     if (current && newest && newest.id !== currentId) {
       this.storage.set('navigationSessions', currentId, {
         ...current,
@@ -63,6 +67,8 @@ export class StorageRepository {
       });
       rows = this.storage.all('navigationSessions');
     }
+    // Reserve a slot for the current ID even before it has a stored row.
+    if (rows.length + Number(!current) <= ARTICLE_KEY_CACHE_LIMIT) return;
     const ordered = [
       currentId,
       ...rows
@@ -140,15 +146,14 @@ export class StorageRepository {
       previous.updatedAt === value.updatedAt
     )
       return;
-    const sequence =
-      Math.max(
-        0,
-        ...this.storage.all('progress').map((row) => row.sequence ?? 0),
-      ) + 1;
+    let maxSequence = 0;
+    for (const row of this.storage.all('progress')) {
+      maxSequence = Math.max(maxSequence, row.sequence ?? 0);
+    }
     this.storage.set('progress', ['resume', value.id], {
       ...value,
       kind: 'resume',
-      sequence,
+      sequence: maxSequence + 1,
     });
   }
 

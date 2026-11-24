@@ -1,3 +1,4 @@
+import { findArticleIndex } from '@/vault/article-window';
 import { createElement, fromTemplate } from '@feed/core/utils/dom';
 import { createFloatingControlButtons } from '@/feature/button';
 import { disposeDialogElement } from '@feed/core/feature/modal/cleanup';
@@ -305,10 +306,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
     trigger.classList.toggle('is-loading', loading);
     trigger.setAttribute('aria-busy', String(loading));
     const current = currentArticlePath(p.href);
-    const index =
-      p.articleList[p.activeIndex] === current
-        ? p.activeIndex
-        : p.articleList.indexOf(current);
+    const index = findArticleIndex(p.articleList, current, p.activeIndex);
     const label =
       index >= 0
         ? `탐색 ${index + 1} / ${p.articleList.length}`

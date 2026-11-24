@@ -112,6 +112,7 @@ export class ConfigService {
 
   private writeConfig(state: Readonly<AppState>): void {
     const previous = this.lastSavedState;
+    if (previous === state) return;
 
     // Global settings — saved regardless of articleKey
     if (!sameField(previous, state, 'uiSettings')) {

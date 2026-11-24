@@ -121,7 +121,12 @@ export class IndexedStorage implements RecordCache {
   private saving: Promise<void> | undefined;
   private refreshing: Promise<void> | undefined;
   private pending = new Map<string, RecordEdit>();
-  private cache = new Map<string, { address: RecordAddress; value: DataRow }>();
+  private cache = new Map(
+    RECORD_STORES.map((store) => [
+      store,
+      new Map<string, { address: RecordAddress; value: DataRow }>(),
+    ]),
+  );
   private arrays = new Map<RecordStore, readonly DataRow[]>();
   private loadedLists = new Map<string, RecordAddress>();
   private readyLists = new Set<string>();
@@ -217,16 +222,16 @@ export class IndexedStorage implements RecordCache {
   }
 
   get<T = DataRow>(store: RecordStore, key: RecordKey): T | undefined {
-    return this.cache.get(addressId({ store, key }))?.value as T | undefined;
+    return this.cache.get(store)!.get(addressId({ store, key }))?.value as
+      | T
+      | undefined;
   }
 
   all<T = DataRow>(store: RecordStore): readonly T[] {
     if (!this.arrays.has(store)) {
       this.arrays.set(
         store,
-        [...this.cache.values()]
-          .filter((entry) => entry.address.store === store)
-          .map((entry) => entry.value),
+        Array.from(this.cache.get(store)!.values(), (entry) => entry.value),
       );
     }
     return this.arrays.get(store)! as readonly T[];
@@ -234,7 +239,8 @@ export class IndexedStorage implements RecordCache {
 
   private apply(address: RecordAddress, value: DataRow | undefined): boolean {
     const id = addressId(address);
-    const old = this.cache.get(id)?.value;
+    const cache = this.cache.get(address.store)!;
+    const old = cache.get(id)?.value;
     if (address.store === 'lists' && !value) {
       const parent = parentSessionAddress(address);
       if (!this.get(parent.store, parent.key)) {
@@ -243,8 +249,8 @@ export class IndexedStorage implements RecordCache {
       }
     }
     if (equalData(old, value)) return false;
-    if (value) this.cache.set(id, { address, value });
-    else this.cache.delete(id);
+    if (value) cache.set(id, { address, value });
+    else cache.delete(id);
     this.arrays.delete(address.store);
     return true;
   }
@@ -336,13 +342,13 @@ export class IndexedStorage implements RecordCache {
   }
 
   private collectSnapshotLists(
-    selected?: readonly RecordAddress[],
+    selected: readonly RecordAddress[] | undefined,
+    wanted: ReadonlySet<string>,
   ): Map<string, RecordAddress> {
     const full = !selected;
-    const wanted = new Set((selected ?? []).map(addressId));
     const requestedLists = new Map(
-      [...this.loadedLists].filter(([, address]) => {
-        if (full || wanted.has(addressId(address))) return true;
+      [...this.loadedLists].filter(([id, address]) => {
+        if (full || wanted.has(id)) return true;
         return wanted.has(addressId(parentSessionAddress(address)));
       }),
     );
@@ -375,17 +381,16 @@ export class IndexedStorage implements RecordCache {
   private readSnapshotLists(
     tx: IDBTransaction,
     requestedLists: ReadonlyMap<string, RecordAddress>,
-    selected: readonly RecordAddress[] | undefined,
+    wanted: ReadonlySet<string>,
     entries: Map<string, SnapshotEntry>,
   ): void {
     for (const [id, address] of requestedLists) {
       const parent = parentSessionAddress(address);
-      const metadata = entries.has(addressId(parent))
-        ? entries.get(addressId(parent))!.value
-        : this.get(parent.store, parent.key);
+      const entry = entries.get(addressId(parent));
+      const metadata = entry ? entry.value : this.get(parent.store, parent.key);
       if (
         metadata?.listVersion === this.get('lists', address.key)?.version &&
-        !selected?.some((item) => addressId(item) === id)
+        !wanted.has(id)
       )
         continue;
       const request = tx.objectStore('lists').get(address.key);
@@ -407,16 +412,8 @@ export class IndexedStorage implements RecordCache {
           const address = { store, key: keyOf(store, row) };
           entries.set(addressId(address), { address, value: row });
         }
-        for (const entry of this.cache.values()) {
-          if (
-            entry.address.store === store &&
-            !entries.has(addressId(entry.address))
-          ) {
-            entries.set(addressId(entry.address), {
-              address: entry.address,
-              value: undefined,
-            });
-          }
+        for (const [id, { address }] of this.cache.get(store)!) {
+          if (!entries.has(id)) entries.set(id, { address, value: undefined });
         }
         if (--count === 0) onSmallComplete();
       };
@@ -446,12 +443,13 @@ export class IndexedStorage implements RecordCache {
   private async snapshot(selected?: readonly RecordAddress[]): Promise<void> {
     const revision = this.revision;
     const entries = new Map<string, SnapshotEntry>();
+    const wanted = new Set(selected?.map(addressId));
     const full = !selected;
     await this.activity.run(
       (track) =>
         new Promise<void>((resolve, reject) => {
           entries.clear();
-          const requestedLists = this.collectSnapshotLists(selected);
+          const requestedLists = this.collectSnapshotLists(selected, wanted);
           const scope = new Set<RecordStore>(
             full ? SMALL_STORES : selected.map((address) => address.store),
           );
@@ -463,7 +461,7 @@ export class IndexedStorage implements RecordCache {
           const tx = this.database!.transaction([...scope], 'readonly');
           track(tx);
           const readLists = () =>
-            this.readSnapshotLists(tx, requestedLists, selected, entries);
+            this.readSnapshotLists(tx, requestedLists, wanted, entries);
           if (full) {
             this.readFullSnapshot(tx, entries, readLists);
           } else {

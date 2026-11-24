@@ -18,6 +18,90 @@ const windowFixture = {
   history: { replaceState() {} },
 };
 
+test('Ruliweb route IDs parse standard pathnames without constructing URLs', () => {
+  let urls = 0;
+  class CountedURL extends URL {
+    constructor(...args) {
+      super(...args);
+      urls++;
+    }
+  }
+  const { getArticleId, extractChannelId } = sourceLoader({
+    globals: { URL: CountedURL },
+  })('src/utils/regex.ts');
+  const board = '/community/board/300143';
+  const article = board + '/read/100';
+  const ids = (href) => [getArticleId(href), extractChannelId(href)];
+
+  assert.deepEqual(ids(board), ['', board.slice(1)]);
+  assert.deepEqual(ids(article + '/'), ['100', board.slice(1)]);
+  assert.equal(urls, 0);
+
+  for (const [href, expected] of [
+    ['https://bbs.ruliweb.com' + article, ['100', board.slice(1)]],
+    ['https://m.ruliweb.com' + board + '?page=2', ['', board.slice(1)]],
+    [article + '?articleKey=session', ['100', board.slice(1)]],
+    ['https://example.com' + article, ['', null]],
+    ['//example.com' + board, ['', null]],
+  ]) {
+    const before = urls;
+    assert.deepEqual(ids(href), expected, href);
+    assert.equal(urls - before, 2, href);
+  }
+});
+
+test('reading formatters are created on demand and preserve the Korean timestamp title', () => {
+  let formatters = 0;
+  class CountedDateTimeFormat extends Intl.DateTimeFormat {
+    constructor(...args) {
+      super(...args);
+      formatters++;
+    }
+  }
+  const now = new Date(2021, 5, 15, 12).getTime();
+  class FixedDate extends Date {
+    constructor(timestamp = now) {
+      super(timestamp);
+    }
+    static now() {
+      return now;
+    }
+  }
+  const { document } = domFixture();
+  const { createReadingUi, formatReadingTime, readingDateLabel } = sourceLoader(
+    {
+      globals: {
+        document,
+        Date: FixedDate,
+        Intl: { DateTimeFormat: CountedDateTimeFormat },
+      },
+    },
+  )('@feed/core/feature/modal/reading-ui');
+  assert.equal(formatters, 0);
+  const { readingTime } = createReadingUi({ classPrefix: 'test' });
+  assert.equal(formatReadingTime(now), '방금 전');
+  assert.equal(readingDateLabel(now), '오늘');
+  assert.equal(formatters, 0);
+  for (const hour of [0, 9, 13, 23]) {
+    const date = new Date(2020, 0, 2, hour, 4, 5);
+    assert.equal(
+      readingTime(date.getTime()).getAttribute('title'),
+      date.toLocaleString('ko-KR'),
+    );
+  }
+  assert.equal(formatters, 2);
+  for (const [year, count, options] of [
+    [2021, 3, { month: 'long', day: 'numeric' }],
+    [2020, 4, { year: 'numeric', month: 'long', day: 'numeric' }],
+  ]) {
+    const date = new Date(year, 0, 2);
+    const expected = date.toLocaleDateString('ko-KR', options);
+    assert.equal(readingDateLabel(date.getTime()), expected);
+    assert.equal(readingDateLabel(date.getTime()), expected);
+    assert.equal(formatters, count);
+  }
+});
+
 test('native article paths avoid per-link URL parsing and preserve input rules', () => {
   let urls = 0;
   class CountedURL extends URL {
@@ -312,13 +396,15 @@ test('default channel settings arrays are isolated between stores', () => {
   assert.deepEqual(second.getState().uiSettings.homeSeriesChannels, []);
 });
 
-test('saving an unchanged state makes no storage writes; navigation saves only the index', () => {
+test('saving an unchanged state skips repository reads and writes; navigation saves only the index', (t) => {
   const load = sourceLoader({ mocks: { 'toastify-js': toastMock } });
   const { StorageRepository } = load('src/vault/repository.ts');
   const { ConfigService } = load('src/vault/config.ts');
   const { createInitialState } = load('src/vault/store.ts');
   const storage = memoryStorage();
-  const config = new ConfigService(new StorageRepository(storage));
+  const repository = new StorageRepository(storage);
+  const readNavigation = t.mock.method(repository, 'readNavigation');
+  const config = new ConfigService(repository);
   const state = {
     ...createInitialState(),
     articleKey: 'session',
@@ -326,8 +412,12 @@ test('saving an unchanged state makes no storage writes; navigation saves only t
     activeIndex: 0,
   };
   config.saveConfig(state);
+  assert.ok(readNavigation.mock.callCount() > 0);
+  readNavigation.mock.resetCalls();
   storage.writes.length = 0;
   config.saveConfig(state);
+  config.saveConfig(state);
+  assert.equal(readNavigation.mock.callCount(), 0);
   assert.equal(storage.writes.length, 0);
   config.saveConfig({ ...state, activeIndex: 1 });
   assert.deepEqual(storage.writes, [

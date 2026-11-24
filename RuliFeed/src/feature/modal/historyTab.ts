@@ -99,9 +99,8 @@ export function createHistoryModal(p: VaultAdapter): HTMLElement {
     }
     count.textContent = String(filtered.length);
     total.textContent = `전체 ${p.reading.entries.length}개`;
-    entries.replaceChildren();
     if (!filtered.length)
-      entries.append(
+      entries.replaceChildren(
         p.reading.entries.length
           ? readingEmptyState(
               'bi-search',
@@ -114,16 +113,17 @@ export function createHistoryModal(p: VaultAdapter): HTMLElement {
               '게시글을 열면 이 목록에 표시됩니다.',
             ),
       );
+    const rows: HTMLElement[] = [];
     let previousDate = '';
     for (const entry of filtered.slice(0, visibleCount)) {
       const date = readingDateLabel(entry.visitedAt);
       if (date !== previousDate) {
-        entries.append(
+        rows.push(
           createElement('div', { class: 'rulifeed-reading-date', text: date }),
         );
         previousDate = date;
       }
-      entries.append(
+      rows.push(
         createElement(
           'a',
           { href: entry.path, class: 'rulifeed-history-row' },
@@ -152,6 +152,7 @@ export function createHistoryModal(p: VaultAdapter): HTMLElement {
         ),
       );
     }
+    if (rows.length) entries.replaceChildren(...rows);
     more.hidden = filtered.length <= visibleCount;
     more.textContent = `더 보기 · ${Math.min(PAGE_SIZE, Math.max(0, filtered.length - visibleCount))}개`;
   };

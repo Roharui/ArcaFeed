@@ -261,10 +261,9 @@ export function createResumeModal(p: VaultAdapter): HTMLElement {
           session.seriesChannels.includes(filterChannel)) &&
         matchesSearch(session, query),
     );
-    sessions.replaceChildren();
     count.textContent = String(checkpoints.length);
     if (!checkpoints.length) {
-      sessions.append(
+      sessions.replaceChildren(
         p.reading.sessions.length
           ? readingEmptyState(
               'bi-search',
@@ -279,8 +278,8 @@ export function createResumeModal(p: VaultAdapter): HTMLElement {
       );
       return;
     }
-    for (const session of checkpoints) {
-      sessions.append(
+    sessions.replaceChildren(
+      ...checkpoints.map((session) =>
         createResumeCard(
           p,
           session,
@@ -288,8 +287,8 @@ export function createResumeModal(p: VaultAdapter): HTMLElement {
           sessions,
           focusAction,
         ),
-      );
-    }
+      ),
+    );
   };
   channel.addEventListener('change', render);
   const unsubscribe = p.reading.subscribe(render, ['entries', 'sessions']);

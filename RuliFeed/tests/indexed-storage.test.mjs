@@ -342,6 +342,34 @@ test('position updates write one small native record without reading lists or wh
   );
 });
 
+test('budget commits reuse bulk reads and preserve cascade deletes', async () => {
+  const { storage } = fixture();
+  await storage.initialize();
+  const calls = observe(storage);
+  storage.delete('resumeSessions', 'missing');
+  storage.delete('navigationSessions', 'missing');
+  storage.delete('progress', ['resume', 'missing']);
+  storage.delete('progress', ['navigation', 'missing']);
+  await storage.flush();
+  assert.deepEqual(
+    calls.filter((call) => call.method === 'getAll').map((call) => call.store),
+    ['resumeSessions', 'navigationSessions', 'progress'],
+  );
+  assert.deepEqual(
+    calls.filter((call) => call.method === 'get'),
+    [],
+  );
+  assert.deepEqual(
+    calls
+      .filter((call) => call.method === 'delete')
+      .map(({ store, key }) => [store, key]),
+    [
+      ['lists', ['navigation', 'missing']],
+      ['lists', ['resume', 'missing']],
+    ],
+  );
+});
+
 test('initial hydration and selecting one resume leave unrelated list payloads unread', async () => {
   const f = fixture();
   await f.storage.initialize();
@@ -625,8 +653,17 @@ test('combined resume budgets trim only needed lists and retain every current ar
   a.saveSession(session('community/board/300151', { articleList: paths }));
   a.saveSession(session('b', { articleList: paths, updatedAt: 2 }));
   await f.storage.flush();
+  const calls = observe(other);
   b.saveSession(session('c', { articleList: paths, updatedAt: 3 }));
   await other.flush();
+  assert.deepEqual(
+    calls.filter((call) => call.method === 'getAll').map((call) => call.store),
+    ['resumeSessions', 'progress'],
+  );
+  assert.deepEqual(
+    calls.filter((call) => call.method === 'get' && call.store !== 'lists'),
+    [],
+  );
   const check = await reopen(f);
   const rows = check.all('resumeSessions');
   assert.equal(rows.length, 3);

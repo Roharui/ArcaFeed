@@ -29,7 +29,9 @@ export function isVisitedPath(
   path: string,
 ): boolean {
   return (
-    !!paths && (paths.has(path) || paths.has(`/b/my/${path.split('/').pop()}`))
+    !!paths &&
+    (paths.has(path) ||
+      paths.has(`/b/my/${path.slice(path.lastIndexOf('/') + 1)}`))
   );
 }
 
@@ -83,12 +85,12 @@ export class SiteRecentHistory {
   }
 
   private updateVisitedPaths(): void {
-    this.visitedPaths = new Set(
-      this.recentEntries.flatMap((entry) => [
-        entry.path,
-        `/b/my/${entry.path.split('/').pop()}`,
-      ]),
-    );
+    const paths = new Set<string>();
+    for (const { path } of this.recentEntries) {
+      paths.add(path);
+      paths.add(`/b/my/${path.slice(path.lastIndexOf('/') + 1)}`);
+    }
+    this.visitedPaths = paths;
   }
 
   private loadEntries(): void {

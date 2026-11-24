@@ -62,7 +62,7 @@ RuliFeed ──┘
 
 - `kind`는 `navigation` 또는 `resume`입니다. 탐색 캐시는 최근 사용 시각 기준으로 5개, 이어보기는 최대 20개 세션(세션당 최대 2,000개·전체 5,000개 링크) 한도를 트랜잭션 안에서 유지합니다.
 - 지원하지 않는 `OTHER` 페이지는 DB를 열지 않습니다. 지원 페이지는 작은 레코드와 현재 `articleKey`의 탐색 목록만 읽고 앱을 생성합니다.
-- 쓰기·삭제는 메모리 캐시에 먼저 반영하고 microtask에서 모아 커밋합니다. 트랜잭션 범위는 변경된 object store와 검증에 필요한 저장소만 포함합니다.
+- 쓰기·삭제는 object store별 메모리 캐시에 먼저 반영하고 microtask에서 모아 커밋합니다. 트랜잭션 범위는 변경된 object store와 검증에 필요한 저장소만 포함합니다. 보관 한도를 검증할 때는 일괄 조회 결과를 개별 레코드 병합에도 재사용합니다.
 - `StorageActivity`는 문서가 숨겨지거나 `pagehide`·`freeze` 상태가 되면 진행 중인 트랜잭션을 abort해 다른 탭의 잠금을 해제하고, 복귀(`visibilitychange`·`pageshow`·`resume`) 시 중단된 작업을 최신 DB 값에 다시 적용합니다.
 - `BroadcastChannel`(`arcaFeed:records` / `ruliFeed:records`)은 `{ store, key }` 주소 배열을 알리고, 수신 탭은 변경된 작은 레코드와 이미 로드된 목록만 조회한 뒤 커스텀 이벤트(`arcafeed:storage` / `rulifeed:storage`)를 한 번 발행합니다.
 - `record-migration.ts`는 DB `versionchange` 트랜잭션에서만 실행해 구형 v1 `values`와 localStorage 키를 일회성으로 이전하며, 실패 시 원본을 유지합니다.

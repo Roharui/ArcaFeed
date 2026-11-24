@@ -33,13 +33,11 @@ export function normalizeArticles(value: unknown, origin: string): string[] {
   } catch {
     return [];
   }
-  return [
-    ...new Set(
-      value.flatMap((href) => {
-        const path =
-          typeof href === 'string' ? normalizeArticlePath(href) : null;
-        return path ? [path] : [];
-      }),
-    ),
-  ];
+  const articles = new Set<string>();
+  for (const href of value) {
+    if (typeof href !== 'string') continue;
+    const path = normalizeArticlePath(href);
+    if (path) articles.add(path);
+  }
+  return [...articles];
 }

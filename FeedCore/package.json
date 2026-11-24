@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "sideEffects": false,
   "description": "Shared core utilities, event engine, storage vault, and UI helpers for ArcaFeed and RuliFeed",
   "exports": {
     ".": "./src/index.ts",

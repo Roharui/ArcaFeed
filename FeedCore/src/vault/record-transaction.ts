@@ -97,10 +97,22 @@ function mergeProgressEdit(
   return value;
 }
 
+function changedSessionIds(
+  store: SessionStore,
+  changes: ReadonlyMap<string, CommittedRecord>,
+): Set<string> {
+  const ids = new Set<string>();
+  for (const change of changes.values()) {
+    if (change.store === store) ids.add(String(change.key));
+  }
+  return ids;
+}
+
 function enforceNavigationBudget(
   state: TransactionState,
   navigation: readonly DataRow[],
 ): void {
+  const changedIds = changedSessionIds('navigationSessions', state.changes);
   const rows = overlayRows(
     'navigationSessions',
     navigation,
@@ -108,16 +120,7 @@ function enforceNavigationBudget(
   ).sort(
     (a, b) =>
       b.lastUsedAt - a.lastUsedAt ||
-      Number(
-        state.changes.has(
-          addressId({ store: 'navigationSessions', key: b.id }),
-        ),
-      ) -
-        Number(
-          state.changes.has(
-            addressId({ store: 'navigationSessions', key: a.id }),
-          ),
-        ),
+      Number(changedIds.has(b.id)) - Number(changedIds.has(a.id)),
   );
   for (const row of rows.slice(ARTICLE_KEY_CACHE_LIMIT))
     state.removeSession('navigationSessions', row.id);
@@ -137,6 +140,7 @@ function enforceResumeBudget(
   onTrimStart: () => void,
   onTrimEnd: () => void,
 ): void {
+  const changedIds = changedSessionIds('resumeSessions', state.changes);
   const rows = overlayRows('resumeSessions', resumes, state.changes);
   const effectiveProgress = overlayRows('progress', progress, state.changes);
   const dates = new Map(
@@ -148,12 +152,7 @@ function enforceResumeBudget(
     (a, b) =>
       Number(!!b.pinned) - Number(!!a.pinned) ||
       (dates.get(b.id) ?? b.updatedAt) - (dates.get(a.id) ?? a.updatedAt) ||
-      Number(
-        state.changes.has(addressId({ store: 'resumeSessions', key: b.id })),
-      ) -
-        Number(
-          state.changes.has(addressId({ store: 'resumeSessions', key: a.id })),
-        ),
+      Number(changedIds.has(b.id)) - Number(changedIds.has(a.id)),
   );
 
   const kept = rows.slice(0, SESSION_LIMIT);
@@ -309,23 +308,26 @@ export function commitRecords(
       }
     };
 
-    for (const edit of batch) {
-      read(tx.objectStore(edit.store).get(edit.key), (value) =>
-        latest.set(addressId(edit), {
-          store: edit.store,
-          key: edit.key,
-          value,
-        }),
-      );
-    }
+    const bulkStores = new Set<RecordStore>();
+    if (resumeBudget) bulkStores.add('resumeSessions');
+    if (navigationBudget) bulkStores.add('navigationSessions');
+    if (resumeBudget || navigationBudget) bulkStores.add('progress');
+
+    const readOriginal = (address: RecordAddress) => {
+      const id = addressId(address);
+      const { store, key } = address;
+      if (latest.has(id)) return;
+      // Keep known-missing keys in latest so flush can skip no-op deletes.
+      latest.set(id, { store, key, value: undefined });
+      if (!bulkStores.has(store)) {
+        read(tx.objectStore(store).get(key), (value) =>
+          latest.set(id, { store, key, value }),
+        );
+      }
+    };
+    for (const edit of batch) readOriginal(edit);
     for (const edit of positions) {
-      const address: RecordAddress = {
-        store: 'resumeSessions',
-        key: edit.value!.id,
-      };
-      read(tx.objectStore('resumeSessions').get(address.key), (value) =>
-        latest.set(addressId(address), { ...address, value }),
-      );
+      readOriginal({ store: 'resumeSessions', key: edit.value!.id });
     }
     if (resumeBudget) {
       read(tx.objectStore('resumeSessions').getAll(), (value) => {

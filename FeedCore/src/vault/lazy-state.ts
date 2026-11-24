@@ -34,6 +34,7 @@ export function sameField<T extends object>(
   next: T,
   key: keyof T,
 ): boolean {
+  if (previous === next) return true;
   if (!previous) return false;
   const a = Object.getOwnPropertyDescriptor(previous, key);
   const b = Object.getOwnPropertyDescriptor(next, key);

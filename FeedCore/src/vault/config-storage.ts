@@ -24,9 +24,13 @@ export class ConfigStorage {
   }
 
   filters(_articleKey: string): ArticleFilterConfigImpl {
-    let ids: string[] | undefined;
+    let channels: { ids: string[]; membership: Set<string> } | undefined;
     const index = () => {
-      return (ids ??= this.channelIds());
+      if (!channels) {
+        const ids = this.channelIds();
+        channels = { ids, membership: new Set(ids) };
+      }
+      return channels;
     };
     const getters = new Map<string, () => ArticleFilterImpl | undefined>();
     const getter = (id: string) => {
@@ -50,11 +54,11 @@ export class ConfigStorage {
         typeof id === 'string' && this.adapter.isChannelId(id)
           ? getter(id)()
           : undefined,
-      ownKeys: index,
+      ownKeys: () => index().ids,
       getOwnPropertyDescriptor: (_, id) =>
         typeof id === 'string' &&
         this.adapter.isChannelId(id) &&
-        index().includes(id)
+        index().membership.has(id)
           ? { configurable: true, enumerable: true, get: getter(id) }
           : undefined,
     });
@@ -64,11 +68,11 @@ export class ConfigStorage {
     next: ArticleFilterConfigImpl,
     previous?: ArticleFilterConfigImpl,
   ): void {
-    const ids = Object.keys(next).filter(this.adapter.isChannelId);
+    const ids = new Set(Object.keys(next).filter(this.adapter.isChannelId));
     const previousIds = previous
       ? Object.keys(previous).filter(this.adapter.isChannelId)
       : this.channelIds();
-    const removed = previousIds.filter((id) => !ids.includes(id));
+    const removed = previousIds.filter((id) => !ids.has(id));
     for (const id of ids) {
       if (!sameField(previous, next, id)) this.repo.saveFilter(id, next[id]);
     }

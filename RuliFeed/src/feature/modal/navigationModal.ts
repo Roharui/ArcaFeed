@@ -1,3 +1,4 @@
+import { findArticleIndex } from '@/vault/article-window';
 import { createElement } from '@feed/core/utils/dom';
 import { setDialogCleanup } from '@feed/core/feature/modal/cleanup';
 import { createSubscriptionStatus } from './subscriptionStatus';
@@ -56,7 +57,7 @@ function createNavigationRow(
   const name =
     entry?.channelName || p.articleFilterConfig[id]?.channelName || id;
   const row = readingButton('', () => {
-    const latestIndex = p.articleList.indexOf(path);
+    const latestIndex = findArticleIndex(p.articleList, path, index);
     if (latestIndex >= 0)
       void navigateToArticle(p, latestIndex).catch(() => {});
   });
@@ -124,10 +125,7 @@ export function createNavigationModal(
   const render = () => {
     const paths = p.articleList;
     const currentPath = currentArticlePath(p.href);
-    const currentIndex =
-      paths[p.activeIndex] === currentPath
-        ? p.activeIndex
-        : paths.indexOf(currentPath);
+    const currentIndex = findArticleIndex(paths, currentPath, p.activeIndex);
     position.textContent =
       currentIndex >= 0
         ? `${currentIndex + 1} / ${paths.length}`
@@ -157,12 +155,13 @@ export function createNavigationModal(
       );
     }
     // Render in small pages; opening a long series need not create thousands of nodes.
-    const items: NavigationItem[] = paths
-      .map((path, index) => ({ path, index }))
-      .filter(({ path }) => !filter || readingChannelId(path) === filter);
-    const currentOffset = items.findIndex(
-      ({ index }) => index === currentIndex,
-    );
+    const items: NavigationItem[] = [];
+    let currentOffset = -1;
+    for (const [index, path] of paths.entries()) {
+      if (filter && readingChannelId(path) !== filter) continue;
+      if (index === currentIndex) currentOffset = items.length;
+      items.push({ path, index });
+    }
     let start =
       currentOffset >= 0 ? Math.max(0, currentOffset - INITIAL_OFFSET) : 0;
     let end = Math.min(items.length, start + PAGE_WINDOW);

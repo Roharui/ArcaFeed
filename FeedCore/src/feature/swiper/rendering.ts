@@ -17,6 +17,7 @@ export function createOffscreenSectionDeferrer({
     if (
       typeof ResizeObserver !== 'function' ||
       typeof CSS === 'undefined' ||
+      typeof CSS?.supports !== 'function' ||
       !CSS.supports('content-visibility', 'auto') ||
       !CSS.supports('contain-intrinsic-block-size', 'auto 1px')
     )

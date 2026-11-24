@@ -100,9 +100,8 @@ export function createHistoryModal(p: VaultAdapter): HTMLElement {
     }
     count.textContent = String(filtered.length);
     total.textContent = `전체 ${p.reading.entries.length}개`;
-    entries.replaceChildren();
     if (!filtered.length)
-      entries.append(
+      entries.replaceChildren(
         p.reading.entries.length
           ? readingEmptyState(
               'bi-search',
@@ -115,16 +114,17 @@ export function createHistoryModal(p: VaultAdapter): HTMLElement {
               '사이트의 최근 읽은 글에서 기록 사용 설정을 확인해주세요.',
             ),
       );
+    const rows: HTMLElement[] = [];
     let previousDate = '';
     for (const entry of filtered.slice(0, visibleCount)) {
       const date = readingDateLabel(entry.visitedAt);
       if (date !== previousDate) {
-        entries.append(
+        rows.push(
           createElement('div', { class: 'arcafeed-reading-date', text: date }),
         );
         previousDate = date;
       }
-      entries.append(
+      rows.push(
         createElement(
           'a',
           { href: entry.path, class: 'arcafeed-history-row' },
@@ -153,6 +153,7 @@ export function createHistoryModal(p: VaultAdapter): HTMLElement {
         ),
       );
     }
+    if (rows.length) entries.replaceChildren(...rows);
     more.hidden = filtered.length <= visibleCount;
     more.textContent = `더 보기 · ${Math.min(PAGE_SIZE, Math.max(0, filtered.length - visibleCount))}개`;
   };

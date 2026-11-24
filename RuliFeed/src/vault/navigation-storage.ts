@@ -6,6 +6,15 @@ import { isChannelId } from './record-schema';
 import type { StorageRepository } from './repository';
 import type { AppState } from './store';
 import type { ReadingSession } from './reading-history';
+const NAVIGATION_METADATA_FIELDS = [
+  'isSeriesMode',
+  'isScrapMode',
+  'seriesChannels',
+  'subscriptionFailures',
+  'searchQuery',
+  'nextPageUrl',
+] as const;
+
 /** Metadata, frequently changed cursor, and large lists have independent records. */
 export class NavigationStorage {
   constructor(private repo: StorageRepository) {}
@@ -43,9 +52,9 @@ export class NavigationStorage {
   save(state: Readonly<AppState>, previous?: Readonly<AppState>): void {
     const id = state.articleKey;
     if (!id) return;
-    const fresh =
-      !previous || previous.articleKey !== id || !this.repo.readNavigation(id);
-    let record = this.repo.readNavigation(id) ?? { id };
+    const stored = this.repo.readNavigation(id);
+    const fresh = !previous || previous.articleKey !== id || !stored;
+    let record = stored ?? { id };
     let changed = false;
     if (fresh || !sameField(previous, state, 'articleList')) {
       record = {
@@ -56,16 +65,9 @@ export class NavigationStorage {
     }
     if (
       fresh ||
-      (
-        [
-          'isSeriesMode',
-          'isScrapMode',
-          'seriesChannels',
-          'subscriptionFailures',
-          'searchQuery',
-          'nextPageUrl',
-        ] as const
-      ).some((field) => !sameField(previous, state, field))
+      NAVIGATION_METADATA_FIELDS.some(
+        (field) => !sameField(previous, state, field),
+      )
     ) {
       record = {
         ...record,

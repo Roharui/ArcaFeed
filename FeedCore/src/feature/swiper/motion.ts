@@ -45,20 +45,24 @@ export function createSwipeCompositing({
     function useRestingTransform(): void {
       // Keep Swiper's computed coordinates, including RTL and rounding.
       const { style } = wrapperEl;
-      if (!style.transform) return;
-      style.transform = style.transform.replace(
+      const { transform } = style;
+      if (!transform?.startsWith('translate3d(')) return;
+      const next = transform.replace(
         /^translate3d\(([^,]+),\s*([^,]+),\s*[^)]+\)$/,
         'translate($1, $2)',
       );
+      if (next !== transform) style.transform = next;
     }
 
     function useMovingTransform(): void {
       const { style } = wrapperEl;
-      if (!style.transform) return;
-      style.transform = style.transform.replace(
+      const { transform } = style;
+      if (!transform?.startsWith('translate(')) return;
+      const next = transform.replace(
         /^translate\(([^,]+),\s*([^)]+)\)$/,
         'translate3d($1, $2, 0px)',
       );
+      if (next !== transform) style.transform = next;
     }
 
     function startMoving(): void {
