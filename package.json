@@ -1,6 +1,6 @@
 {
   "name": "feed",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "private": true,
   "type": "module",
   "description": "ArcaFeed, RuliFeed 및 공용 @feed/core 통합 개발 환경",
