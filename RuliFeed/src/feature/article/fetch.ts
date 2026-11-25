@@ -1,6 +1,7 @@
 import { navigate } from '@/feature/navigation';
 import { handoffTabArticleKey } from '@/utils/article-key';
 import { OperationError } from '@/utils/operation-error';
+import { getArticleId } from '@/utils/regex';
 import { shuffle } from '@feed/core/utils/func';
 import { showToast, showConfirmToast } from '@/utils/toast';
 import { captureArticleSession } from '@feed/core/vault/article-session';
@@ -13,6 +14,16 @@ import type { VaultAdapter } from '@/vault';
 
 // Preserve the article API while parsing and pagination live in their own module.
 export { extractLinks, withBestMode } from './listing';
+
+function previousListingPage(url: string, basePath: string): string {
+  const listing = new URL(url, 'https://m.ruliweb.com');
+  const page = Number(listing.searchParams.get('page'));
+  if (listing.pathname !== basePath || !Number.isSafeInteger(page) || page < 2)
+    return url;
+  if (page === 2) listing.searchParams.delete('page');
+  else listing.searchParams.set('page', String(page - 1));
+  return listing.pathname + listing.search;
+}
 
 function resolveListingStartUrl(
   p: VaultAdapter,
@@ -27,7 +38,8 @@ function resolveListingStartUrl(
       savedNext.startsWith(`${basePath}?`) ||
       savedNext.startsWith(`${basePath}/`))
   ) {
-    return savedNext;
+    // Rows can shift across page boundaries as the board changes.
+    return previousListingPage(savedNext, basePath);
   }
   const path =
     articleId && !scrap ? articlePath(p.href.channelId, articleId) : basePath;
@@ -66,6 +78,15 @@ async function fetchFirstBatch(
 ): Promise<void> {
   showFetchLoader();
   const isCurrent = captureArticleSession(p);
+  const currentPath = articlePath(p.href.channelId, p.href.articleId);
+  const initialList = p.articleList;
+  const needsAnchor =
+    p.href.mode === 'ARTICLE' && !initialList.includes(currentPath);
+  const tail = initialList.at(-1);
+  const beforeId = needsAnchor
+    ? Number(p.href.articleId)
+    : Number(tail && getArticleId(tail));
+  let anchored = !needsAnchor;
   try {
     let searchCancelled = false;
     let nextPageUrl = p.nextPageUrl ?? '';
@@ -98,8 +119,15 @@ async function fetchFirstBatch(
         nextPageUrl = nextUrl ?? pageUrl;
       },
     );
-    for await (const links of pages) {
+    for await (const pageLinks of pages) {
       if (!isCurrent()) return;
+      // A detail request can show page 1 even if the article is much older.
+      const containsCurrent = !anchored && pageLinks.includes(currentPath);
+      const links =
+        !beforeId || containsCurrent
+          ? pageLinks
+          : pageLinks.filter((path) => Number(getArticleId(path)) < beforeId);
+      if (containsCurrent || links.length > 0) anchored = true;
       const nextList =
         links.length > 0
           ? [...new Set([...p.articleList, ...links])]
@@ -108,10 +136,12 @@ async function fetchFirstBatch(
         p.updateState({
           articleList: nextList,
           nextPageUrl,
+          ...(containsCurrent
+            ? { activeIndex: nextList.indexOf(currentPath) }
+            : {}),
         });
       }
       if (links.length > 0) {
-        const currentPath = articlePath(p.href.channelId, p.href.articleId);
         const currentIndex =
           p.href.mode === 'ARTICLE' ? p.articleList.indexOf(currentPath) : -1;
         const hasNextLink =
@@ -261,8 +291,12 @@ async function fetchChannelArticlesBefore(
     existingUrls,
     isCurrent,
   })) {
-    results.push(...links);
-    if (links.some((path) => !isVisitedPath(visitedPaths, path))) break;
+    const older =
+      beforeArticleId > 0
+        ? links.filter((path) => Number(getArticleId(path)) < beforeArticleId)
+        : links;
+    results.push(...older);
+    if (older.some((path) => !isVisitedPath(visitedPaths, path))) break;
   }
   return results;
 }

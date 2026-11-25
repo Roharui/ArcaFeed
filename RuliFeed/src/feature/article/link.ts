@@ -77,11 +77,22 @@ function installNavigationHandoff(p: VaultAdapter): void {
 
 async function initArticleLink(p: VaultAdapter): Promise<void> {
   parseSearchQuery(p);
+  const currentPath = articlePath(p.href.channelId, p.href.articleId);
+  if (!p.isSeriesMode && p.articleList.length) {
+    if (!p.articleList.includes(currentPath)) {
+      p.resetArticleList();
+    } else {
+      const links = [...new Set(p.articleList)].filter(
+        (path) => extractChannelId(path) === p.href.channelId,
+      );
+      if (links.length !== p.articleList.length) p.articleList = links;
+    }
+  }
   const links = filterLink(p, true);
   if (
     !p.isSeriesMode &&
     p.articleList.length === 0 &&
-    links.length > 0 &&
+    links.includes(currentPath) &&
     !p.articleFilterConfig[p.href.channelId]?.onlyBest
   ) {
     const nextPageUrl = currentDocumentNextPageUrl(p.href.channelId);

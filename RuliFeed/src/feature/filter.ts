@@ -1,4 +1,4 @@
-import { normalizeArticlePath } from '@/utils/regex';
+import { extractChannelId, normalizeArticlePath } from '@/utils/regex';
 import type { VaultAdapter } from '@/vault';
 import type { ArticleFilterImpl } from '@/types';
 
@@ -90,7 +90,11 @@ function filterLink(
 
     if (!allowed) return;
 
-    if (href && !existingUrls.has(href)) {
+    if (
+      href &&
+      (!p.href.channelId || extractChannelId(href) === p.href.channelId) &&
+      !existingUrls.has(href)
+    ) {
       existingUrls.add(href);
       result.push(href);
     }

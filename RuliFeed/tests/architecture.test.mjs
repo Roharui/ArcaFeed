@@ -732,12 +732,15 @@ test('fetchFirstBatch continues past the current article at page end and resumes
   ]);
   assert.equal(p.nextPageUrl, '/community/board/300143?view_best=1&page=3');
 
-  // Subsequent refill must start directly at page 3 instead of restarting from page 1.
+  // A removed row shifts the unseen article onto the already fetched page.
+  pages['/community/board/300143?view_best=1&page=2'].rows.push({
+    href: '/community/board/300143/read/95',
+  });
   await fetchFirstBatch(p, '96');
   assert.deepEqual(requests, [
     '/community/board/300143/read/98?view_best=1',
     '/community/board/300143?view_best=1&page=2',
-    '/community/board/300143?view_best=1&page=3',
+    '/community/board/300143?view_best=1&page=2',
   ]);
   assert.deepEqual(p.articleList, [
     '/community/board/300143/read/100',
@@ -747,11 +750,56 @@ test('fetchFirstBatch continues past the current article at page end and resumes
     '/community/board/300143/read/96',
     '/community/board/300143/read/95',
   ]);
-  assert.equal(p.nextPageUrl, '/community/board/300143?view_best=1&page=4');
+  assert.equal(p.nextPageUrl, '/community/board/300143?view_best=1&page=3');
 
   // Resetting the list clears the pagination cursor.
   p.resetArticleList();
   assert.equal(p.nextPageUrl, '');
+});
+
+test('article and subscription refills ignore unrelated newer listing pages', async () => {
+  const base = '/community/board/300143';
+  const path = (id) => `${base}/read/${id}`;
+  const pages = {
+    [path(98)]: {
+      rows: [
+        ...[101, 100].map((id) => ({ href: path(id) })),
+        { href: '/community/board/300149/read/42' },
+      ],
+      next: '?page=2',
+    },
+    [`${base}?page=2`]: {
+      rows: [99, 98, 97].map((id) => ({ href: path(id) })),
+    },
+  };
+  const { fetchFirstBatch, fetchChannelArticlesBefore } = sourceLoader({
+    globals: {
+      window: windowFixture,
+      DOMParser: class {
+        parseFromString(text) {
+          return listingFixture(pages[text]);
+        }
+      },
+    },
+    mocks: {
+      '@feed/core/utils/fetch': {
+        fetchUrl: async (url) => ({ responseText: url }),
+      },
+      '@/utils/toast': { showToast: () => assert.fail('unexpected toast') },
+    },
+  })('src/feature/article/fetch.ts');
+  const p = vaultFixture({
+    href: { ...vaultFixture().href, articleId: '98' },
+    articleList: [],
+  });
+  await fetchFirstBatch(p, '98');
+  assert.deepEqual(p.articleList, [99, 98, 97].map(path));
+  assert.equal(p.activeIndex, 1);
+  assert.equal(p.articleList[p.getAdjacentArticleIndex('NEXT')], path(97));
+  assert.deepEqual(
+    await fetchChannelArticlesBefore('community/board/300143', 98),
+    [path(97)],
+  );
 });
 
 test('NavigationStorage persists and restores nextPageUrl across navigations', () => {

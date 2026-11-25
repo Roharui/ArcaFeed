@@ -5,6 +5,7 @@ import {
 } from '@/feature/filter';
 import { fetchUrl } from '@feed/core/utils/fetch';
 import { appendSearchParam } from '@feed/core/utils/url';
+import { BOARD_PATH, extractChannelId } from '@/utils/regex';
 import type { ArticleFilterImpl } from '@/types';
 
 function normalizeUrl(pageUrl: string): string {
@@ -65,6 +66,9 @@ export async function* fetchListingPages({
   let nextUrl: string | null = withBestMode(initialUrl, filter);
   const seen = new Set<string>();
   const visitedPages = new Set<string>();
+  const channelId = BOARD_PATH.test(basePath)
+    ? extractChannelId(basePath)
+    : null;
 
   for (let page = 0; nextUrl; page++) {
     if (!isCurrent()) return;
@@ -78,7 +82,9 @@ export async function* fetchListingPages({
     const html = await fetchAndParse(url);
     if (!isCurrent()) return;
 
-    const links = extractLinks(html, filter, existingUrls, seen);
+    const links = extractLinks(html, filter, existingUrls, seen).filter(
+      (path) => !channelId || extractChannelId(path) === channelId,
+    );
     for (const link of links) seen.add(link);
     nextUrl = extractNextPageUrl(html, basePath);
     onPageLoaded?.(nextUrl, url);
