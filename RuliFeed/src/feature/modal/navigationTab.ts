@@ -3,6 +3,7 @@ import { createElement, fromTemplate } from '@feed/core/utils/dom';
 import { createFloatingControlButtons } from '@/feature/button';
 import { disposeDialogElement } from '@feed/core/feature/modal/cleanup';
 import { installDialogFocus } from '@feed/core/feature/modal/focus';
+import { installNavigationPosition } from '@feed/core/feature/modal/navigation-position';
 import { createNavigationModal } from './navigationModal';
 import '@css/modal.css';
 import '@css/reading.css';
@@ -19,93 +20,22 @@ export { createNavigationModal } from './navigationModal';
 const LIST_ICON =
   '<svg class="rulifeed-control-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg>';
 
-interface PositionCache {
-  styledNativeButton: HTMLElement | null;
-  baseBottom: number | undefined;
-  appliedBottom: string | undefined;
-}
-function positionNavigationControl(
-  control: HTMLElement,
-  trigger: HTMLElement | undefined,
-  cache: PositionCache,
-): void {
-  const nativeButton = document.querySelector<HTMLElement>(
-    '.nav-control a, .nav-control button',
-  );
-  if (trigger && nativeButton && nativeButton !== cache.styledNativeButton) {
-    cache.styledNativeButton = nativeButton;
-    const style = getComputedStyle(nativeButton);
-    // Keep the native theme while retaining our rounded corners.
-    for (const property of ['border', 'box-shadow', 'font-size']) {
-      trigger.style.setProperty(property, style.getPropertyValue(property));
-    }
-  }
-  // Measure baseline CSS bottom once per viewport/settings change to avoid forced reflows.
-  if (cache.baseBottom === undefined) {
-    if (control.style.bottom) {
-      control.style.bottom = '';
-      cache.appliedBottom = undefined;
-    }
-    const baseRect = control.getBoundingClientRect();
-    cache.baseBottom = window.innerHeight - baseRect.bottom;
-  }
-  const rect = control.getBoundingClientRect();
-  const obstacles = Array.from(
-    document.querySelectorAll<HTMLElement>('.nav-control'),
-  )
-    .map((navControl) => navControl.getBoundingClientRect())
-    .filter(
-      (box) =>
-        box.width > 0 &&
-        box.height > 0 &&
-        box.left < rect.right + 12 &&
-        box.right > rect.left - 12,
-    )
-    .sort((a, b) => b.top - a.top);
-  let top = window.innerHeight - cache.baseBottom - rect.height;
-  // The site's navigation may change size, visibility, or location.
-  for (const box of obstacles) {
-    if (top < box.bottom + 12 && top + rect.height > box.top - 12)
-      top = box.top - rect.height - 12;
-  }
-  const nextBottom = `${window.innerHeight - top - rect.height}px`;
-  if (nextBottom !== cache.appliedBottom) {
-    cache.appliedBottom = nextBottom;
-    control.style.bottom = nextBottom;
-  }
-}
 function installControlPositioning(
   p: VaultAdapter,
   control: HTMLElement,
   trigger: HTMLElement | undefined,
-  isDisposed: () => boolean,
 ) {
   let touchTimer: ReturnType<typeof setTimeout> | undefined;
   let suppressClickUntil = 0;
-  let frame: number | undefined;
-  const cache: PositionCache = {
-    styledNativeButton: null,
-    baseBottom: undefined,
-    appliedBottom: undefined,
-  };
+  const positioning = installNavigationPosition(
+    control,
+    trigger,
+    () => p.swiper,
+  );
   const setRevealed = (visible: boolean) => {
     control.classList.toggle('is-hovered', visible);
     trigger?.classList.toggle('is-hovered', visible);
   };
-  const position = () => {
-    if (isDisposed()) return;
-    positionNavigationControl(control, trigger, cache);
-  };
-  const schedulePosition = (resetBase = false) => {
-    if (resetBase) cache.baseBottom = undefined;
-    if (frame === undefined) {
-      frame = requestAnimationFrame(() => {
-        frame = undefined;
-        updateAfterSwipe(p.swiper, position);
-      });
-    }
-  };
-  const onResize = () => schedulePosition(true);
   const hide = () => {
     clearTimeout(touchTimer);
     suppressClickUntil = 0;
@@ -132,62 +62,15 @@ function installControlPositioning(
     return true;
   };
   document.addEventListener('scroll', hide, { passive: true, capture: true });
-  window.addEventListener('resize', onResize);
-  const resizeObserver = new ResizeObserver(() => schedulePosition());
-  resizeObserver.observe(control);
-  // Observe only .nav-control attributes and body direct children to avoid waking on swipe transforms.
-  const observedControls = new WeakSet<Element>();
-  const navAttributeObserver = new MutationObserver(() => schedulePosition());
-  const observeControls = () => {
-    document.querySelectorAll('.nav-control').forEach((navControl) => {
-      if (observedControls.has(navControl)) return;
-      observedControls.add(navControl);
-      resizeObserver.observe(navControl);
-      navAttributeObserver.observe(navControl, {
-        attributes: true,
-        attributeFilter: ['class', 'style', 'hidden'],
-      });
-    });
-    schedulePosition();
-  };
-  const hasNavControlNode = (nodes: NodeList): boolean => {
-    for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i];
-      if (
-        node instanceof Element &&
-        !node.closest('.rulifeed-navigation-control') &&
-        (node.matches('.nav-control') || !!node.querySelector('.nav-control'))
-      )
-        return true;
-    }
-    return false;
-  };
-  const bodyObserver = new MutationObserver((records) => {
-    if (
-      records.some(
-        (record) =>
-          hasNavControlNode(record.addedNodes) ||
-          hasNavControlNode(record.removedNodes),
-      )
-    )
-      observeControls();
-  });
-  bodyObserver.observe(document.body, { childList: true });
-  observeControls();
   return {
     setRevealed,
     hide,
     consumeSuppressedClick,
-    schedulePosition,
+    schedulePosition: positioning.schedulePosition,
     cleanup: () => {
       clearTimeout(touchTimer);
-      suppressClickUntil = 0;
-      if (frame !== undefined) cancelAnimationFrame(frame);
-      resizeObserver.disconnect?.();
-      navAttributeObserver.disconnect?.();
-      bodyObserver.disconnect?.();
+      positioning.cleanup();
       document.removeEventListener('scroll', hide, true);
-      window.removeEventListener('resize', onResize);
     },
   };
 }
@@ -248,12 +131,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
   }
 
   document.body.append(control);
-  const positioning = installControlPositioning(
-    p,
-    control,
-    trigger,
-    () => disposed,
-  );
+  const positioning = installControlPositioning(p, control, trigger);
 
   const close = () => {
     if (!panel) return;

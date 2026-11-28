@@ -2,6 +2,7 @@ import { findArticleIndex } from '@/vault/article-window';
 import { createElement, fromTemplate } from '@feed/core/utils/dom';
 import { disposeDialogElement } from '@feed/core/feature/modal/cleanup';
 import { installDialogFocus } from '@feed/core/feature/modal/focus';
+import { installNavigationPosition } from '@feed/core/feature/modal/navigation-position';
 import { createNavigationModal } from './navigationModal';
 import '@css/modal.css';
 import '@css/reading.css';
@@ -14,91 +15,23 @@ import { currentArticlePath } from '@/vault/navigation-context';
 import { activeSubscriptionFailures } from '@/vault/subscription-failures';
 import type { VaultAdapter } from '@/vault';
 export { createNavigationModal } from './navigationModal';
-interface PositionCache {
-  styledNativeButton: HTMLElement | null;
-  baseBottom: number | undefined;
-  appliedBottom: string | undefined;
-}
-function positionNavigationControl(
-  control: HTMLElement,
-  trigger: HTMLElement,
-  cache: PositionCache,
-): void {
-  const nativeButton = document.querySelector<HTMLElement>(
-    '.nav-control a, .nav-control button',
-  );
-  if (nativeButton && nativeButton !== cache.styledNativeButton) {
-    cache.styledNativeButton = nativeButton;
-    const style = getComputedStyle(nativeButton);
-    // Keep the native theme while retaining our rounded corners.
-    for (const property of ['border', 'box-shadow', 'font-size']) {
-      trigger.style.setProperty(property, style.getPropertyValue(property));
-    }
-  }
-  // Measure baseline CSS bottom once per viewport/settings change to avoid forced reflows.
-  if (cache.baseBottom === undefined) {
-    if (control.style.bottom) {
-      control.style.bottom = '';
-      cache.appliedBottom = undefined;
-    }
-    const baseRect = control.getBoundingClientRect();
-    cache.baseBottom = window.innerHeight - baseRect.bottom;
-  }
-  const rect = control.getBoundingClientRect();
-  const obstacles = Array.from(
-    document.querySelectorAll<HTMLElement>('.nav-control'),
-  )
-    .map((navControl) => navControl.getBoundingClientRect())
-    .filter(
-      (box) =>
-        box.width > 0 &&
-        box.height > 0 &&
-        box.left < rect.right + 12 &&
-        box.right > rect.left - 12,
-    )
-    .sort((a, b) => b.top - a.top);
-  let top = window.innerHeight - cache.baseBottom - rect.height;
-  // The site's navigation may change size, visibility, or location.
-  for (const box of obstacles) {
-    if (top < box.bottom + 12 && top + rect.height > box.top - 12)
-      top = box.top - rect.height - 12;
-  }
-  const nextBottom = `${window.innerHeight - top - rect.height}px`;
-  if (nextBottom !== cache.appliedBottom) {
-    cache.appliedBottom = nextBottom;
-    control.style.bottom = nextBottom;
-  }
-}
 function installControlPositioning(
   p: VaultAdapter,
   control: HTMLElement,
   trigger: HTMLElement,
-  isDisposed: () => boolean,
 ) {
   let touchTimer: ReturnType<typeof setTimeout> | undefined;
-  let frame: number | undefined;
-  const cache: PositionCache = {
-    styledNativeButton: null,
-    baseBottom: undefined,
-    appliedBottom: undefined,
-  };
-  const position = () => {
-    if (isDisposed()) return;
-    positionNavigationControl(control, trigger, cache);
-  };
-  const schedulePosition = (resetBase = false) => {
-    if (resetBase) cache.baseBottom = undefined;
-    if (frame === undefined) {
-      frame = requestAnimationFrame(() => {
-        frame = undefined;
-        updateAfterSwipe(p.swiper, position);
-      });
-    }
-  };
-  const onResize = () => schedulePosition(true);
+  const positioning = installNavigationPosition(
+    control,
+    trigger,
+    () => p.swiper,
+  );
   const hide = () => {
-    clearTimeout(touchTimer);
-    trigger.classList.remove('is-hovered');
+    if (touchTimer !== undefined) {
+      clearTimeout(touchTimer);
+      touchTimer = undefined;
+    }
+    trigger.classList.toggle('is-hovered', false);
   };
   control.addEventListener('pointerenter', (event) => {
     if (event.pointerType === 'mouse') trigger.classList.add('is-hovered');
@@ -110,61 +43,18 @@ function installControlPositioning(
     if (event.pointerType !== 'touch') return;
     trigger.classList.add('is-hovered');
     clearTimeout(touchTimer);
-    touchTimer = setTimeout(() => trigger.classList.remove('is-hovered'), 1500);
+    touchTimer = setTimeout(() => {
+      touchTimer = undefined;
+      trigger.classList.toggle('is-hovered', false);
+    }, 1500);
   });
   document.addEventListener('scroll', hide, { passive: true, capture: true });
-  window.addEventListener('resize', onResize);
-  const resizeObserver = new ResizeObserver(() => schedulePosition());
-  resizeObserver.observe(control);
-  // Observe only .nav-control attributes and body direct children to avoid waking on swipe transforms.
-  const observedControls = new WeakSet<Element>();
-  const navAttributeObserver = new MutationObserver(() => schedulePosition());
-  const observeControls = () => {
-    document.querySelectorAll('.nav-control').forEach((navControl) => {
-      if (observedControls.has(navControl)) return;
-      observedControls.add(navControl);
-      resizeObserver.observe(navControl);
-      navAttributeObserver.observe(navControl, {
-        attributes: true,
-        attributeFilter: ['class', 'style', 'hidden'],
-      });
-    });
-    schedulePosition();
-  };
-  const hasNavControlNode = (nodes: NodeList): boolean => {
-    for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i];
-      if (
-        node instanceof Element &&
-        !node.closest('.arcafeed-navigation-control') &&
-        (node.matches('.nav-control') || !!node.querySelector('.nav-control'))
-      )
-        return true;
-    }
-    return false;
-  };
-  const bodyObserver = new MutationObserver((records) => {
-    if (
-      records.some(
-        (record) =>
-          hasNavControlNode(record.addedNodes) ||
-          hasNavControlNode(record.removedNodes),
-      )
-    )
-      observeControls();
-  });
-  bodyObserver.observe(document.body, { childList: true });
-  observeControls();
   return {
-    schedulePosition,
+    schedulePosition: positioning.schedulePosition,
     cleanup: () => {
       clearTimeout(touchTimer);
-      if (frame !== undefined) cancelAnimationFrame(frame);
-      resizeObserver.disconnect?.();
-      navAttributeObserver.disconnect?.();
-      bodyObserver.disconnect?.();
+      positioning.cleanup();
       document.removeEventListener('scroll', hide, true);
-      window.removeEventListener('resize', onResize);
     },
   };
 }
@@ -205,12 +95,7 @@ export function initNavigationList(p: VaultAdapter): (() => void) | undefined {
   let disposed = false;
   control.append(trigger);
   document.body.append(control);
-  const positioning = installControlPositioning(
-    p,
-    control,
-    trigger,
-    () => disposed,
-  );
+  const positioning = installControlPositioning(p, control, trigger);
   const close = () => {
     if (!panel) return;
     cleanupFocus?.();

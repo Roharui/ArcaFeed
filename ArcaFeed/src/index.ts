@@ -1,19 +1,8 @@
+import { waitForHead } from '@feed/core/utils/document-head';
 import { afterPaint } from '@/utils/after-paint';
 import { parseHref } from '@/utils/regex';
 
 const GUARD_KEY = '__arcaFeedInitialized__';
-
-function waitForHead(): Promise<void> | undefined {
-  if (document.head) return;
-  return new Promise((resolve) => {
-    const observer = new MutationObserver(() => {
-      if (!document.head) return;
-      observer.disconnect();
-      resolve();
-    });
-    observer.observe(document, { childList: true, subtree: true });
-  });
-}
 
 async function start(): Promise<void> {
   // style-loader needs a head. Storage can open while the rest of the DOM parses.

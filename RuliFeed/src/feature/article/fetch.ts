@@ -142,23 +142,18 @@ async function fetchFirstBatch(
         });
       }
       if (links.length > 0) {
+        const articles = p.articleList;
         const currentIndex =
-          p.href.mode === 'ARTICLE' ? p.articleList.indexOf(currentPath) : -1;
-        const hasNextLink =
-          currentIndex >= 0
-            ? p.articleList
-                .slice(currentIndex + 1)
-                .some(
-                  (path) =>
-                    path !== currentPath &&
-                    (!p.skipVisitedArticles || !p.reading.hasVisited(path)),
-                )
-            : links.some(
-                (path) =>
-                  path !== currentPath &&
-                  (!p.skipVisitedArticles || !p.reading.hasVisited(path)),
-              );
-        if (hasNextLink) return;
+          p.href.mode === 'ARTICLE' ? articles.indexOf(currentPath) : -1;
+        const candidates = currentIndex >= 0 ? articles : links;
+        for (let index = currentIndex + 1; index < candidates.length; index++) {
+          const path = candidates[index]!;
+          if (
+            path !== currentPath &&
+            (!p.skipVisitedArticles || !p.reading.hasVisited(path))
+          )
+            return;
+        }
       }
     }
     if (isCurrent() && !searchCancelled && !p.isNextPageActive())

@@ -141,14 +141,16 @@ function extractArticleHref(element: HTMLElement): string | null {
 
 /**
  * Filter article rows, optionally apply CSS opacity, and return
- * deduplicated normalized hrefs.
+ * deduplicated normalized hrefs when the caller needs a new list.
  */
 function filterLink(
   p: VaultAdapter,
-  applyCss: boolean = false,
+  applyCss: boolean | 'style-only' = false,
   scope?: ParentNode,
 ): string[] {
+  const collectLinks = applyCss !== 'style-only';
   const rows = extractArticleRows(scope);
+  if (rows.length === 0) return [];
 
   if (applyCss) injectArticleKeys(rows, p.href.articleKey);
 
@@ -160,31 +162,29 @@ function filterLink(
     channelName: '',
   };
   const predicate = buildFilterPredicate(filter);
-  const existingUrls = new Set(p.articleList);
   // Best status comes from the site's best-only listing, not vote thresholds.
-  const bestListing = new URLSearchParams(p.href.search).get('mode') === 'best';
-
+  const needsBestCheck =
+    applyCss &&
+    filter.onlyBest &&
+    new URLSearchParams(p.href.search).get('mode') !== 'best';
+  const existingUrls =
+    collectLinks || needsBestCheck ? new Set(p.articleList) : undefined;
   const result: string[] = [];
 
-  rows.forEach((ele) => {
-    const allowed = predicate(ele);
-    const href = extractArticleHref(ele);
-
+  for (const row of rows) {
+    const allowed = predicate(row);
+    const href = allowed && existingUrls ? extractArticleHref(row) : null;
     if (applyCss) {
       const matchesBest =
-        !filter.onlyBest ||
-        bestListing ||
-        (href !== null && existingUrls.has(href));
-      ele.style.opacity = allowed && matchesBest ? '1' : '0.5';
+        !needsBestCheck || (href !== null && existingUrls?.has(href));
+      const opacity = allowed && matchesBest ? '1' : '0.5';
+      if (row.style.opacity !== opacity) row.style.opacity = opacity;
     }
-
-    if (!allowed) return;
-
-    if (href && !existingUrls.has(href)) {
+    if (href && existingUrls && !existingUrls.has(href)) {
       existingUrls.add(href);
-      result.push(href);
+      if (collectLinks) result.push(href);
     }
-  });
+  }
 
   return result;
 }

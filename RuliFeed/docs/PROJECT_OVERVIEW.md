@@ -43,6 +43,9 @@ RuliFeed는 루리웹(`bbs.ruliweb.com`, `m.ruliweb.com`) 게시판과 게시글
 | [src/vault/](../src/vault/)                                                                                                  | IndexedDB `RuliFeed` v2 어댑터, `navigationSessions.nextPageUrl` 커서 및 게시판 ID 정규식                                                        |
 | [css/](../css/)                                                                                                              | `ruliweb.css` 및 기능별 스타일 (`rulifeed-*` 접두사)                                                                                             |
 
+저장된 글 목록을 이어 읽을 때 페이지에 표시된 행에는 필터 스타일을 적용하고 탐색 링크 목록을 다시 수집하지 않습니다.
+추천글 전용 필터는 필요한 경우 저장 목록을 조회해 행을 표시합니다. 공통 최적화는 [성능 최적화](../../docs/PERFORMANCE.md)를 참고하세요.
+
 ## 빌드 및 의존성 특징
 
 - 프로덕션 빌드([webpack.config.js](../../webpack.config.js))는 루트 `dist/RuliFeed.user.js`를 생성하며, 배포 번들에 `Swiper`와 `Toastify`를 포함합니다.

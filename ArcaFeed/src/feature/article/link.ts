@@ -21,13 +21,12 @@ import type { VaultAdapter } from '@/vault';
 
 async function initArticleLink(p: VaultAdapter): Promise<void> {
   parseSearchQuery(p);
-  const links = filterLink(p, true);
-  if (
+  const shouldSeedList =
     !p.isSeriesMode &&
     p.articleList.length === 0 &&
-    links.length > 0 &&
-    !p.articleFilterConfig[p.href.channelId]?.onlyBest
-  ) {
+    !p.articleFilterConfig[p.href.channelId]?.onlyBest;
+  const links = filterLink(p, shouldSeedList ? true : 'style-only');
+  if (shouldSeedList && links.length > 0) {
     p.articleList = links;
   }
   await activateArticleLink(p, p.href.articleId);
@@ -38,7 +37,7 @@ async function initChannelLink(p: VaultAdapter): Promise<void> {
   parseSearchQuery(p);
 
   const channelFilter = p.articleFilterConfig[p.href.channelId];
-  const newLinks = filterLink(p, true);
+  const newLinks = filterLink(p, channelFilter?.onlyBest ? 'style-only' : true);
 
   if (channelFilter?.onlyBest) {
     startBackgroundLoad(p, () => fetchFirstBatch(p, p.href.articleId));
@@ -144,7 +143,7 @@ function getArticleLoad(
     if (backgroundLoads.get(p)?.request === request) backgroundLoads.delete(p);
     if (isCurrent()) {
       if (p.articleFilterConfig[p.href.channelId]?.onlyBest)
-        filterLink(p, true);
+        filterLink(p, 'style-only');
       p.flushSave();
     }
   });

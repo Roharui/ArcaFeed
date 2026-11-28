@@ -915,6 +915,7 @@ function listingAdapter(
   {
     showConfirmToast = () => assert.fail('unexpected search confirmation'),
     showToast = () => {},
+    onParse = () => {},
   } = {},
 ) {
   const load = sourceLoader({
@@ -924,6 +925,7 @@ function listingAdapter(
       AbortController,
       DOMParser: class {
         parseFromString(text) {
+          onParse();
           return listingFixture(pages[text]);
         }
       },
@@ -1217,7 +1219,9 @@ test('cyclic pagination stops before requesting a page again', async () => {
 test('a filter change during a listing request discards its stale result', async () => {
   const gate = deferred();
   const pages = { first: { rows: [{ href: '/b/test/98' }], next: null } };
-  const { load } = listingAdapter(pages, () => gate.promise);
+  const { load } = listingAdapter(pages, () => gate.promise, {
+    onParse: () => assert.fail('stale listing response reached DOMParser'),
+  });
   const { fetchFirstBatch } = load('src/feature/article/fetch.ts');
   const p = vaultFixture();
   const work = fetchFirstBatch(p, '100');
@@ -1372,7 +1376,7 @@ test('best-only mode never seeds ordinary DOM rows and empty channels initialize
     },
     ['/b/test/99'],
     (p, applyCss) => {
-      assert.equal(applyCss, true);
+      assert.equal(applyCss, 'style-only');
       styledModes.push(p.href.mode);
     },
   );
@@ -1417,30 +1421,35 @@ test('best-only opacity follows fetched membership and resets when the option is
       test: { tab: [], title: ['excluded'], onlyBest: true },
     },
   });
-  filterLink(p, true);
+  assert.deepEqual(filterLink(p, 'style-only'), []);
   assert.deepEqual(
     rows.map((row) => row.style.opacity),
     ['0.5', '0.5', '0.5'],
   );
   p.articleList = ['/b/test/100', '/b/test/98'];
-  filterLink(p, true);
+  assert.deepEqual(filterLink(p, 'style-only'), []);
   assert.deepEqual(
     rows.map((row) => row.style.opacity),
     ['1', '0.5', '0.5'],
   );
   p.href.search = '?mode=best';
-  filterLink(p, true);
+  assert.deepEqual(filterLink(p, 'style-only'), []);
   assert.deepEqual(
     rows.map((row) => row.style.opacity),
     ['1', '1', '0.5'],
   );
   p.href.search = '';
   p.articleFilterConfig.test.onlyBest = false;
-  filterLink(p, true);
+  assert.deepEqual(filterLink(p, 'style-only'), []);
   assert.deepEqual(
     rows.map((row) => row.style.opacity),
     ['1', '1', '0.5'],
   );
+  Object.defineProperty(p, 'articleList', {
+    get: () =>
+      assert.fail('style-only filtering without best mode read the list'),
+  });
+  assert.deepEqual(filterLink(p, 'style-only'), []);
 });
 
 test('step execution keeps parallel work, sequential dependencies and follow-ups in order', async () => {

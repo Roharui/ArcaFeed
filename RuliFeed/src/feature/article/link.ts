@@ -88,13 +88,12 @@ async function initArticleLink(p: VaultAdapter): Promise<void> {
       if (links.length !== p.articleList.length) p.articleList = links;
     }
   }
-  const links = filterLink(p, true);
-  if (
+  const shouldSeedList =
     !p.isSeriesMode &&
     p.articleList.length === 0 &&
-    links.includes(currentPath) &&
-    !p.articleFilterConfig[p.href.channelId]?.onlyBest
-  ) {
+    !p.articleFilterConfig[p.href.channelId]?.onlyBest;
+  const links = filterLink(p, shouldSeedList ? true : 'style-only');
+  if (shouldSeedList && links.includes(currentPath)) {
     const nextPageUrl = currentDocumentNextPageUrl(p.href.channelId);
     p.updateState({
       articleList: links,
@@ -109,7 +108,7 @@ async function initChannelLink(p: VaultAdapter): Promise<void> {
   parseSearchQuery(p);
 
   const channelFilter = p.articleFilterConfig[p.href.channelId];
-  const newLinks = filterLink(p, true);
+  const newLinks = filterLink(p, channelFilter?.onlyBest ? 'style-only' : true);
 
   if (channelFilter?.onlyBest) {
     startBackgroundLoad(p, () => fetchFirstBatch(p, p.href.articleId));
@@ -223,7 +222,7 @@ function getArticleLoad(
     if (backgroundLoads.get(p)?.request === request) backgroundLoads.delete(p);
     if (isCurrent()) {
       if (p.articleFilterConfig[p.href.channelId]?.onlyBest)
-        filterLink(p, true);
+        filterLink(p, 'style-only');
       p.flushSave();
     }
   });

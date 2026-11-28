@@ -13,21 +13,16 @@ function normalizeUrl(pageUrl: string): string {
   return `${u.pathname}${u.search}`;
 }
 
-async function fetchAndParse(url: string): Promise<Document> {
-  const res = await fetchUrl(url);
-  return new DOMParser().parseFromString(res.responseText, 'text/html');
-}
-
 function extractNextPageUrl(html: Document, basePath: string): string | null {
-  const nextLink = Array.from(html.querySelectorAll('.page-item.active'))
-    .map((active) => active.nextElementSibling?.querySelector('a'))
-    .find((link) => link)
-    ?.getAttribute('href');
-  return nextLink
-    ? nextLink.startsWith('?')
-      ? `${basePath}${nextLink}`
-      : nextLink
-    : null;
+  const activeItems = html.querySelectorAll('.page-item.active');
+  for (let index = 0; index < activeItems.length; index++) {
+    const active = activeItems[index]!;
+    const link = active.nextElementSibling?.querySelector('a');
+    if (!link) continue;
+    const href = link.getAttribute('href');
+    return href?.startsWith('?') ? basePath + href : href || null;
+  }
+  return null;
 }
 
 const MAX_PAGES = 10;
@@ -63,15 +58,33 @@ export async function* fetchListingPages({
       if (!(await continueSearch?.()) || !isCurrent()) return;
     }
     visitedPages.add(url);
-    const html = await fetchAndParse(url);
-    if (!isCurrent()) return;
-
-    const links = extractLinks(html, filter, existingUrls, seen);
-    for (const link of links) seen.add(link);
-    yield links;
-
-    nextUrl = extractNextPageUrl(html, basePath);
+    const result = await fetchListingPage(
+      url,
+      isCurrent,
+      basePath,
+      filter,
+      existingUrls,
+      seen,
+    );
+    if (!result || !isCurrent()) return;
+    nextUrl = result.next;
+    yield result.links;
   }
+}
+
+async function fetchListingPage(
+  url: string,
+  isCurrent: () => boolean,
+  basePath: string,
+  filter: ArticleFilterImpl | undefined,
+  existingUrls: ReadonlySet<string> | undefined,
+  seen: Set<string>,
+): Promise<{ links: string[]; next: string | null } | undefined> {
+  const { responseText } = await fetchUrl(url);
+  if (!isCurrent()) return;
+  const html = new DOMParser().parseFromString(responseText, 'text/html');
+  const links = collectLinks(html, filter, existingUrls, seen);
+  return { links, next: extractNextPageUrl(html, basePath) };
 }
 
 /**
@@ -99,23 +112,30 @@ export function extractLinks(
   existingUrls?: ReadonlySet<string>,
   additionalUrls?: ReadonlySet<string>,
 ): string[] {
-  const rows = extractArticleRows(html);
-  const predicate = filter ? buildFilterPredicate(filter) : () => true;
+  return collectLinks(html, filter, existingUrls, new Set(), additionalUrls);
+}
 
-  const seen = new Set<string>();
+function collectLinks(
+  html: ParentNode,
+  filter: ArticleFilterImpl | undefined,
+  existingUrls: ReadonlySet<string> | undefined,
+  seen: Set<string>,
+  additionalUrls?: ReadonlySet<string>,
+): string[] {
+  const predicate = filter && buildFilterPredicate(filter);
   const links: string[] = [];
-  rows.forEach((ele) => {
-    if (!predicate(ele)) return;
-    const href = extractArticleHref(ele);
+  for (const row of extractArticleRows(html)) {
+    if (predicate && !predicate(row)) continue;
+    const href = extractArticleHref(row);
     if (
       !href ||
       existingUrls?.has(href) ||
       additionalUrls?.has(href) ||
       seen.has(href)
     )
-      return;
+      continue;
     seen.add(href);
     links.push(href);
-  });
+  }
   return links;
 }
